@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "convert-font": "lv_font_conv --font assets/fonts/fa-solid-900.ttf --size 64 --bpp 4 --format lvgl --range 0xf015,0xf1de,0xf576,0xf013,0xf142 --no-compress -o assets/fonts/fa_icons_64.c",
+    "convert-font": "lv_font_conv --font assets/fonts/fa-solid-900.ttf --size 64 --bpp 4 --format lvgl --range 0xf015,0xf1de,0xf576,0xf013,0xf142,0xf07c --no-compress -o assets/fonts/fa_icons_64.c",
     "convert-font-48": "lv_font_conv --font assets/fonts/fa-solid-900.ttf --size 48 --bpp 4 --format lvgl --range 0xf015,0xf1de,0xf576,0xf013,0xf142,0xf2c7,0xf1eb,0xf796,0xf127,0xf0eb --no-compress -o assets/fonts/fa_icons_48.c",
-    "convert-font-32": "lv_font_conv --font assets/fonts/fa-solid-900.ttf --size 32 --bpp 4 --format lvgl --range 0xf015,0xf1de,0xf576,0xf013,0xf142,0xf2c7,0xf1eb,0xf796,0xf127,0xf0eb --no-compress -o assets/fonts/fa_icons_32.c"
+    "convert-font-32": "lv_font_conv --font assets/fonts/fa-solid-900.ttf --size 32 --bpp 4 --format lvgl --range 0xf015,0xf1de,0xf576,0xf013,0xf142,0xf2c7,0xf1eb,0xf796,0xf127,0xf0eb --no-compress -o assets/fonts/fa_icons_32.c",
+    "convert-font-16": "lv_font_conv --font assets/fonts/fa-solid-900.ttf --size 16 --bpp 4 --format lvgl --range 0xf017,0xf06c --no-compress -o assets/fonts/fa_icons_16.c"
   },
   "keywords": [],
   "author": "",

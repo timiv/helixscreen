@@ -33,10 +33,13 @@
 		<!-- Run: python3 scripts/generate-icon-consts.py                         -->
 		<!-- ===================================================================== -->
 		<str name="icon_advanced" value=""/>  <!-- U+F142 ellipsis-vertical -->
+		<str name="icon_clock" value=""/>  <!-- U+F017 clock-o -->
 		<str name="icon_controls" value=""/>  <!-- U+F1DE sliders -->
 		<str name="icon_ethernet" value=""/>  <!-- U+F796 ethernet -->
 		<str name="icon_filament" value=""/>  <!-- U+F576 fill-drip -->
+		<str name="icon_folder" value=""/>  <!-- U+F07C folder-open -->
 		<str name="icon_home" value=""/>  <!-- U+F015 house -->
+		<str name="icon_leaf" value=""/>  <!-- U+F06C leaf -->
 		<str name="icon_lightbulb" value=""/>  <!-- U+F0EB lightbulb -->
 		<str name="icon_settings" value=""/>  <!-- U+F013 gear -->
 		<str name="icon_temperature" value=""/>  <!-- U+F2C7 thermometer-half -->

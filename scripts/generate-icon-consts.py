@@ -25,11 +25,14 @@ ICONS = {
     'icon_filament': (0xF576, 'fill-drip'),
     'icon_settings': (0xF013, 'gear'),
     'icon_advanced': (0xF142, 'ellipsis-vertical'),
+    'icon_folder': (0xF07C, 'folder-open'),
     'icon_temperature': (0xF2C7, 'thermometer-half'),
     'icon_wifi': (0xF1EB, 'wifi'),
     'icon_ethernet': (0xF796, 'ethernet'),
     'icon_wifi_slash': (0xF127, 'wifi-slash'),
     'icon_lightbulb': (0xF0EB, 'lightbulb'),
+    'icon_clock': (0xF017, 'clock-o'),
+    'icon_leaf': (0xF06C, 'leaf'),
 }
 
 GLOBALS_FILE = 'ui_xml/globals.xml'
