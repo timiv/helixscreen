@@ -14,12 +14,33 @@ This is the **LVGL 9 UI Prototype** for GuppyScreen - a declarative XML-based to
 make                          # Incremental build (auto-parallel)
 make clean && make            # Clean rebuild
 ./build/bin/guppy-ui-proto    # Run simulator
-./scripts/screenshot.sh       # Build + screenshot (2s capture)
 python3 scripts/generate-icon-consts.py  # Regenerate icon constants
 ```
 
 **Binary:** `build/bin/guppy-ui-proto`
-**Panels:** home, controls, motion, filament, settings, advanced, print-select
+**Panels:** home, controls, motion, nozzle-temp, bed-temp, extrusion, filament, settings, advanced, print-select
+
+### Screenshot Workflow ⚠️
+
+**ALWAYS use the screenshot script instead of manual BMP/magick commands:**
+
+```bash
+# Correct approach:
+./scripts/screenshot.sh guppy-ui-proto output [panel_name]
+
+# Examples:
+./scripts/screenshot.sh guppy-ui-proto extrusion-test extrusion
+./scripts/screenshot.sh guppy-ui-proto controls-launcher controls
+./scripts/screenshot.sh guppy-ui-proto home-panel home
+```
+
+The script handles:
+- Building the binary
+- Running with 2-second auto-screenshot
+- Converting BMP → PNG automatically
+- Saving to `/tmp/[output-name].png`
+
+**❌ Avoid:** Reading raw BMPs from `/tmp` and manually running `magick` commands. The screenshot script is the canonical way to capture UI states.
 
 ## Architecture
 
@@ -45,6 +66,15 @@ app_layout.xml
 All components reference `globals.xml` for shared constants (`#primary_color`, `#nav_width`, etc).
 
 ## Critical Patterns (Project-Specific)
+
+**⚠️ IMPORTANT:** When implementing new features, **always reference existing, working code/XML implementations** for:
+- Design patterns and architectural approaches
+- Naming conventions and file organization
+- Event handler patterns and reactive data flow
+- XML component structure and styling patterns
+- Error handling and logging practices
+
+**Example:** When creating a new sub-screen panel, review `motion_panel.xml` / `ui_panel_motion.cpp` or `nozzle_temp_panel.xml` / `ui_panel_controls_temp.cpp` for established patterns rather than inventing new approaches.
 
 ### 1. Subject Initialization Order ⚠️
 
@@ -108,6 +138,27 @@ make                                      # Rebuild
 4. Rebuild with `make`
 
 See **docs/LVGL9_XML_GUIDE.md** for font generation details.
+
+### 5. Copyright Headers ⚠️
+
+**CRITICAL:** All new source files MUST include the GPL v3 copyright header.
+
+```bash
+# Reference templates are in:
+docs/COPYRIGHT_HEADERS.md
+```
+
+**When creating new files:**
+1. For `.cpp` and `.h` files: Use the C-style comment header
+2. For `.xml` files: Use the XML comment header (after `<?xml version="1.0"?>` if present)
+3. Update copyright year if creating files in a new year
+
+The headers identify:
+- **Copyright holder:** 356C LLC
+- **Author:** Preston Brown <pbrown@brown-house.net>
+- **License:** GPL v3.0 or later
+
+**Never create files without copyright headers.** See `docs/COPYRIGHT_HEADERS.md` for complete templates.
 
 ## Common Gotchas
 

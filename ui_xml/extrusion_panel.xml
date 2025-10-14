@@ -1,0 +1,140 @@
+<?xml version="1.0"?>
+<!--
+  Copyright (C) 2025 356C LLC
+  Author: Preston Brown <pbrown@brown-house.net>
+
+  This file is part of GuppyScreen.
+
+  GuppyScreen is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  GuppyScreen is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with GuppyScreen. If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<component>
+  <!-- Extrusion Sub-Screen -->
+  <!-- Extrude/Retract controls with safety checks -->
+
+  <view extends="lv_obj" name="extrusion_panel" width="#overlay_panel_width" height="100%" align="right_mid" style_bg_color="#panel_bg" style_border_width="0" style_pad_all="0" flag_scrollable="false" flex_flow="column">
+    <!-- Header Bar -->
+    <header_bar name="extrusion_header" title="Extrude / Retract"/>
+
+    <!-- Content Area: Two Columns -->
+    <lv_obj name="extrusion_content" flex_grow="1" width="100%"
+            style_bg_opa="0" style_pad_all="20"
+            flag_scrollable="false" style_border_width="0" style_border_opa="0"
+            flex_flow="row" style_flex_main_place="space_between">
+
+      <!-- Left Column (50%): Extruder Visualization + Temperature Status -->
+      <lv_obj name="left_column" width="50%" height="100%"
+              style_bg_opa="0" style_pad_all="0"
+              flag_scrollable="false" style_border_width="0" style_border_opa="0"
+              flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center"
+              style_pad_gap="16">
+
+        <!-- Extruder Visualization -->
+        <lv_obj name="viz_container" width="280" height="320"
+                style_bg_color="#card_bg" style_radius="12" style_border_width="0"
+                flag_scrollable="false"
+                flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+          <lv_label text="#icon_arrow_up_line" style_text_font="fa_icons_64" style_text_color="#primary_color" align="center"/>
+        </lv_obj>
+
+        <!-- Temperature Status Card -->
+        <lv_obj name="temp_status_card" width="280" height="80"
+                style_bg_color="#card_bg" style_radius="8" style_border_width="0" style_pad_all="16"
+                flag_scrollable="false"
+                flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+                style_pad_gap="4">
+          <lv_label text="Nozzle Temperature" style_text_font="montserrat_14" style_text_color="#text_secondary" align="center"/>
+          <lv_label name="temp_status_display" bind_text="extrusion_temp_status" style_text_font="montserrat_20" style_text_color="#text_primary" align="center"/>
+        </lv_obj>
+      </lv_obj>
+
+      <!-- Right Column (50%): Controls -->
+      <lv_obj name="right_column" width="50%" height="100%"
+              style_bg_opa="0" style_pad_all="0"
+              flag_scrollable="false" style_border_width="0" style_border_opa="0"
+              flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center"
+              style_pad_gap="16">
+
+        <!-- Amount Selector Label -->
+        <lv_label text="Extrusion Amount:"
+                  width="100%"
+                  style_text_font="montserrat_16"
+                  style_text_color="#text_secondary"
+                  style_text_align="left"/>
+
+        <!-- Amount Radio Buttons (4 options: 5mm, 10mm, 25mm, 50mm) -->
+        <lv_obj name="amount_selector" width="100%" height="48"
+                style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                flag_scrollable="false"
+                flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
+                style_pad_gap="8">
+          <lv_button name="amount_5mm" width="80" height="40"
+                  style_bg_color="#jog_button_bg" style_radius="6" style_border_width="0">
+            <lv_label text="5mm" style_text_font="montserrat_14" style_text_color="#text_primary" align="center"/>
+          </lv_button>
+          <lv_button name="amount_10mm" width="80" height="40"
+                  style_bg_color="#primary_color" style_radius="6" style_border_width="0">
+            <lv_label text="10mm" style_text_font="montserrat_14" style_text_color="#ffffff" align="center"/>
+          </lv_button>
+          <lv_button name="amount_25mm" width="80" height="40"
+                  style_bg_color="#jog_button_bg" style_radius="6" style_border_width="0">
+            <lv_label text="25mm" style_text_font="montserrat_14" style_text_color="#text_primary" align="center"/>
+          </lv_button>
+          <lv_button name="amount_50mm" width="80" height="40"
+                  style_bg_color="#jog_button_bg" style_radius="6" style_border_width="0">
+            <lv_label text="50mm" style_text_font="montserrat_14" style_text_color="#text_primary" align="center"/>
+          </lv_button>
+        </lv_obj>
+
+        <!-- Extrude Button (Green) -->
+        <lv_button name="btn_extrude" width="100%" height="72"
+                style_bg_color="#success_color" style_radius="8" style_border_width="0"
+                flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
+                style_pad_gap="12">
+          <lv_label text="↑" style_text_font="montserrat_32" style_text_color="#ffffff"/>
+          <lv_label text="Extrude" style_text_font="montserrat_20" style_text_color="#ffffff"/>
+        </lv_button>
+
+        <!-- Retract Button (Orange) -->
+        <lv_button name="btn_retract" width="100%" height="72"
+                style_bg_color="#warning_color" style_radius="8" style_border_width="0"
+                flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
+                style_pad_gap="12">
+          <lv_label text="↓" style_text_font="montserrat_32" style_text_color="#ffffff"/>
+          <lv_label text="Retract" style_text_font="montserrat_20" style_text_color="#ffffff"/>
+        </lv_button>
+
+        <!-- Safety Warning Card (shown when nozzle < 170°C) -->
+        <lv_obj name="safety_warning" width="100%" height="96"
+                style_bg_color="#000000" style_bg_opa="50"
+                style_border_color="#primary_color" style_border_width="2"
+                style_radius="8" style_pad_all="16"
+                flag_scrollable="false" flag_hidden="true"
+                flex_flow="column" style_flex_main_place="center" style_flex_cross_place="start"
+                style_pad_gap="8">
+          <lv_label text="⚠ Nozzle must be >170°C to extrude"
+                    width="100%"
+                    style_text_font="montserrat_14"
+                    style_text_color="#primary_color"
+                    style_text_align="left"/>
+          <lv_label name="warning_temps" bind_text="extrusion_warning_temps"
+                    width="100%"
+                    style_text_font="montserrat_12"
+                    style_text_color="#primary_color"
+                    style_text_align="left"/>
+        </lv_obj>
+      </lv_obj>
+    </lv_obj>
+  </view>
+</component>

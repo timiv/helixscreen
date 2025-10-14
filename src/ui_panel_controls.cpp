@@ -1,7 +1,28 @@
+/*
+ * Copyright (C) 2025 356C LLC
+ * Author: Preston Brown <pbrown@brown-house.net>
+ *
+ * This file is part of GuppyScreen.
+ *
+ * GuppyScreen is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * GuppyScreen is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with GuppyScreen. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "ui_panel_controls.h"
 #include "ui_component_keypad.h"
 #include "ui_panel_motion.h"
 #include "ui_panel_controls_temp.h"
+#include "ui_panel_controls_extrusion.h"
 #include <cstdio>
 
 // Panel object references
@@ -9,6 +30,7 @@ static lv_obj_t* controls_panel = nullptr;
 static lv_obj_t* motion_panel = nullptr;
 static lv_obj_t* nozzle_temp_panel = nullptr;
 static lv_obj_t* bed_temp_panel = nullptr;
+static lv_obj_t* extrusion_panel = nullptr;
 static lv_obj_t* parent_screen = nullptr;
 
 // Card click event handlers
@@ -178,8 +200,35 @@ static void card_bed_temp_clicked(lv_event_t* e) {
 }
 
 static void card_extrusion_clicked(lv_event_t* e) {
+    (void)e;
     LV_LOG_USER("Extrusion card clicked - opening Extrusion sub-screen");
-    // TODO: Create and show extrusion sub-screen
+
+    // Create extrusion panel on first access
+    if (!extrusion_panel && parent_screen) {
+        LV_LOG_USER("Creating extrusion panel...");
+        extrusion_panel = (lv_obj_t*)lv_xml_create(parent_screen, "extrusion_panel", nullptr);
+
+        if (!extrusion_panel) {
+            LV_LOG_ERROR("Failed to create extrusion panel from XML");
+            return;
+        }
+
+        // Setup event handlers for extrusion panel
+        ui_panel_controls_extrusion_setup(extrusion_panel, parent_screen);
+
+        // Initially hidden
+        lv_obj_add_flag(extrusion_panel, LV_OBJ_FLAG_HIDDEN);
+        LV_LOG_USER("Extrusion panel created and initialized");
+    }
+
+    // Show extrusion panel, hide controls launcher
+    if (extrusion_panel) {
+        lv_obj_clear_flag(extrusion_panel, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    if (controls_panel) {
+        lv_obj_add_flag(controls_panel, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 static void card_fan_clicked(lv_event_t* e) {

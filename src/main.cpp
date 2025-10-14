@@ -1,3 +1,23 @@
+/*
+ * Copyright (C) 2025 356C LLC
+ * Author: Preston Brown <pbrown@brown-house.net>
+ *
+ * This file is part of GuppyScreen.
+ *
+ * GuppyScreen is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * GuppyScreen is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with GuppyScreen. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include "lvgl/lvgl.h"
 #include "lvgl/src/others/xml/lv_xml.h"
 #include "ui_nav.h"
@@ -8,6 +28,7 @@
 #include "ui_panel_controls.h"
 #include "ui_panel_motion.h"
 #include "ui_panel_controls_temp.h"
+#include "ui_panel_controls_extrusion.h"
 #include "ui_component_keypad.h"
 #include <SDL.h>
 #include <cstdio>
@@ -119,6 +140,7 @@ int main(int argc, char** argv) {
     bool show_motion = false;  // Special flag for motion sub-screen
     bool show_nozzle_temp = false;  // Special flag for nozzle temp sub-screen
     bool show_bed_temp = false;  // Special flag for bed temp sub-screen
+    bool show_extrusion = false;  // Special flag for extrusion sub-screen
 
     if (argc > 1) {
         const char* panel_arg = argv[1];
@@ -135,6 +157,9 @@ int main(int argc, char** argv) {
         } else if (strcmp(panel_arg, "bed-temp") == 0) {
             initial_panel = UI_PANEL_CONTROLS;
             show_bed_temp = true;
+        } else if (strcmp(panel_arg, "extrusion") == 0) {
+            initial_panel = UI_PANEL_CONTROLS;
+            show_extrusion = true;
         } else if (strcmp(panel_arg, "filament") == 0) {
             initial_panel = UI_PANEL_FILAMENT;
         } else if (strcmp(panel_arg, "settings") == 0) {
@@ -146,7 +171,7 @@ int main(int argc, char** argv) {
         } else {
             printf("Unknown panel: %s\n", panel_arg);
             printf("Usage: %s [panel_name]\n", argv[0]);
-            printf("Available panels: home, controls, motion, nozzle-temp, bed-temp, filament, settings, advanced, print-select\n");
+            printf("Available panels: home, controls, motion, nozzle-temp, bed-temp, extrusion, filament, settings, advanced, print-select\n");
             return 1;
         }
     }
@@ -201,6 +226,7 @@ int main(int argc, char** argv) {
     lv_xml_component_register_from_file("A:ui_xml/motion_panel.xml");
     lv_xml_component_register_from_file("A:ui_xml/nozzle_temp_panel.xml");
     lv_xml_component_register_from_file("A:ui_xml/bed_temp_panel.xml");
+    lv_xml_component_register_from_file("A:ui_xml/extrusion_panel.xml");
     lv_xml_component_register_from_file("A:ui_xml/filament_panel.xml");
     lv_xml_component_register_from_file("A:ui_xml/settings_panel.xml");
     lv_xml_component_register_from_file("A:ui_xml/advanced_panel.xml");
@@ -215,6 +241,7 @@ int main(int argc, char** argv) {
     ui_panel_controls_init_subjects();  // Controls panel launcher
     ui_panel_motion_init_subjects();  // Motion sub-screen position display
     ui_panel_controls_temp_init_subjects();  // Temperature sub-screens
+    ui_panel_controls_extrusion_init_subjects();  // Extrusion sub-screen
 
     // Create entire UI from XML (single component contains everything)
     lv_obj_t* app_layout = (lv_obj_t*)lv_xml_create(screen, "app_layout", NULL);
@@ -320,6 +347,25 @@ int main(int argc, char** argv) {
             ui_panel_controls_temp_set_bed(25, 0);
 
             printf("Bed temp panel displayed\n");
+        }
+    }
+
+    // Special case: Show extrusion panel if requested
+    if (show_extrusion) {
+        printf("Creating and showing extrusion sub-screen...\n");
+
+        // Create extrusion panel
+        lv_obj_t* extrusion_panel = (lv_obj_t*)lv_xml_create(screen, "extrusion_panel", nullptr);
+        if (extrusion_panel) {
+            ui_panel_controls_extrusion_setup(extrusion_panel, screen);
+
+            // Hide controls launcher, show extrusion panel
+            lv_obj_add_flag(panels[UI_PANEL_CONTROLS], LV_OBJ_FLAG_HIDDEN);
+
+            // Set mock temperature data (nozzle at room temp)
+            ui_panel_controls_extrusion_set_temp(25, 0);
+
+            printf("Extrusion panel displayed\n");
         }
     }
 
