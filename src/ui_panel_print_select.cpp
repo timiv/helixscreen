@@ -49,33 +49,95 @@ struct PrintFileData {
 };
 
 // ============================================================================
-// Screen size responsive card component selection
+// Card layout calculation
 // ============================================================================
-struct CardLayout {
-    const char* component_name;
-    int gap;
+static const char* CARD_COMPONENT_NAME = "print_file_card";
+static const int CARD_GAP = 20;
+static const int CARD_MIN_WIDTH = 165;  // Increased to prevent metadata wrapping
+static const int CARD_MAX_WIDTH = 220;
+static const int CARD_DEFAULT_HEIGHT = 245;  // Default height (overridden by dynamic calculation)
+
+// Row count breakpoint: minimum container height for 3 rows vs 2 rows
+static const int ROW_COUNT_3_MIN_HEIGHT = 520;
+
+struct CardDimensions {
+    int num_columns;
+    int num_rows;
+    int card_width;
+    int card_height;
 };
 
-static CardLayout get_card_layout() {
-    lv_coord_t screen_width = lv_display_get_horizontal_resolution(lv_display_get_default());
-
-    CardLayout layout;
-
-    if (screen_width >= 1024) {
-        // 1280 & 1024: 5 columns, large thumbnails (defined in print_file_card_5col.xml)
-        layout.component_name = "print_file_card_5col";
-        layout.gap = 20;
-    } else if (screen_width >= 700) {
-        // 800: 4 columns, medium thumbnails (defined in print_file_card_4col.xml)
-        layout.component_name = "print_file_card_4col";
-        layout.gap = 20;
-    } else {
-        // 480: 3 columns, small thumbnails (defined in print_file_card_3col.xml)
-        layout.component_name = "print_file_card_3col";
-        layout.gap = 12;
+static CardDimensions calculate_card_dimensions(lv_obj_t* container) {
+    if (!container) {
+        LV_LOG_ERROR("Cannot calculate dimensions: container is null");
+        CardDimensions dims = {4, 2, CARD_MIN_WIDTH, CARD_DEFAULT_HEIGHT};
+        return dims;
     }
 
-    return layout;
+    // Get container width
+    lv_coord_t container_width = lv_obj_get_content_width(container);
+
+    // Calculate available height from parent panel dimensions
+    lv_obj_t* panel_root = lv_obj_get_parent(container);
+    if (!panel_root) {
+        LV_LOG_ERROR("Cannot find panel root");
+        CardDimensions dims = {4, 2, CARD_MIN_WIDTH, CARD_DEFAULT_HEIGHT};
+        return dims;
+    }
+
+    // Get actual panel height
+    lv_coord_t panel_height = lv_obj_get_height(panel_root);
+
+    // Find the top bar to subtract its height
+    lv_obj_t* top_bar = lv_obj_get_child(panel_root, 0);  // First child is top bar
+    lv_coord_t top_bar_height = top_bar ? lv_obj_get_height(top_bar) : 60;
+
+    // Check for gap between panel children in flex layout
+    lv_coord_t panel_gap = lv_obj_get_style_pad_row(panel_root, LV_PART_MAIN);
+
+    // Calculate available height for cards (panel minus top bar minus container padding minus any gaps)
+    lv_coord_t container_padding = lv_obj_get_style_pad_top(container, LV_PART_MAIN) +
+                                   lv_obj_get_style_pad_bottom(container, LV_PART_MAIN);
+    lv_coord_t container_actual_height = lv_obj_get_height(container);
+    lv_coord_t available_height = panel_height - top_bar_height - container_padding - panel_gap;
+
+    LV_LOG_USER("Heights: panel=%d, top_bar=%d, container_actual=%d, container_padding=%d, panel_gap=%d, available=%d",
+               panel_height, top_bar_height, container_actual_height, container_padding, panel_gap, available_height);
+
+    CardDimensions dims;
+
+    // Determine optimal number of rows based on available height
+    if (available_height >= ROW_COUNT_3_MIN_HEIGHT) {
+        dims.num_rows = 3;
+    } else {
+        dims.num_rows = 2;
+    }
+
+    // Calculate card height based on rows
+    int total_row_gaps = (dims.num_rows - 1) * CARD_GAP;
+    dims.card_height = (available_height - total_row_gaps) / dims.num_rows;
+
+    // Try different column counts, starting from maximum
+    for (int cols = 10; cols >= 1; cols--) {
+        int total_gaps = (cols - 1) * CARD_GAP;
+        int card_width = (container_width - total_gaps) / cols;
+
+        if (card_width >= CARD_MIN_WIDTH && card_width <= CARD_MAX_WIDTH) {
+            dims.num_columns = cols;
+            dims.card_width = card_width;
+
+            LV_LOG_USER("Calculated card layout: %d rows × %d columns, card=%dx%d",
+                       dims.num_rows, dims.num_columns, dims.card_width, dims.card_height);
+            return dims;
+        }
+    }
+
+    // Fallback to minimum width if nothing fits perfectly
+    dims.num_columns = container_width / (CARD_MIN_WIDTH + CARD_GAP);
+    dims.card_width = CARD_MIN_WIDTH;
+
+    LV_LOG_WARN("No optimal card layout found, using fallback: %d columns", dims.num_columns);
+    return dims;
 }
 
 // ============================================================================
@@ -125,6 +187,18 @@ static void attach_card_click_handler(lv_obj_t* card, const PrintFileData& file_
 static void attach_row_click_handler(lv_obj_t* row, const PrintFileData& file_data);
 static void create_detail_view();
 static void create_confirmation_dialog();
+
+// ============================================================================
+// Resize handling callback
+// ============================================================================
+static void on_resize() {
+    LV_LOG_USER("Print select panel handling resize event");
+
+    // Only recalculate card view dimensions if currently in card view mode
+    if (current_view_mode == PrintSelectViewMode::CARD && card_view_container) {
+        populate_card_view();
+    }
+}
 
 // ============================================================================
 // Subject initialization
@@ -207,6 +281,9 @@ void ui_panel_print_select_setup(lv_obj_t* panel_root, lv_obj_t* parent_screen) 
     // Create detail view and confirmation dialog
     create_detail_view();
     create_confirmation_dialog();
+
+    // Register resize callback for responsive card layout
+    ui_resize_handler_register(on_resize);
 
     LV_LOG_USER("Print select panel setup complete");
 }
@@ -392,11 +469,11 @@ static void populate_card_view() {
     // Clear existing cards
     lv_obj_clean(card_view_container);
 
-    // Get responsive layout for current screen size
-    CardLayout layout = get_card_layout();
+    // Calculate optimal card dimensions based on actual container width
+    CardDimensions dims = calculate_card_dimensions(card_view_container);
 
     // Update container gap
-    lv_obj_set_style_pad_gap(card_view_container, layout.gap, LV_PART_MAIN);
+    lv_obj_set_style_pad_gap(card_view_container, CARD_GAP, LV_PART_MAIN);
 
     for (const auto& file : file_list) {
         // Create XML attributes array
@@ -408,11 +485,43 @@ static void populate_card_view() {
             NULL
         };
 
-        // Create card from appropriate responsive component (5col, 4col, or 3col)
-        lv_obj_t* card = (lv_obj_t*)lv_xml_create(card_view_container, layout.component_name, attrs);
+        // Create card component
+        lv_obj_t* card = (lv_obj_t*)lv_xml_create(card_view_container, CARD_COMPONENT_NAME, attrs);
 
-        // Attach click handler
         if (card) {
+            // Override card dimensions to calculated optimal size
+            lv_obj_set_width(card, dims.card_width);
+            lv_obj_set_height(card, dims.card_height);
+            lv_obj_set_style_flex_grow(card, 0, LV_PART_MAIN);  // Disable flex_grow
+
+            // Calculate proper filename label height based on font
+            lv_obj_t* filename_label = lv_obj_find_by_name(card, "filename_label");
+            if (filename_label) {
+                const lv_font_t* font = lv_obj_get_style_text_font(filename_label, LV_PART_MAIN);
+                if (font) {
+                    lv_coord_t line_height = lv_font_get_line_height(font);
+                    lv_obj_set_height(filename_label, line_height);
+                }
+            }
+
+            // Scale thumbnail image to fill card width
+            lv_obj_t* thumbnail = lv_obj_find_by_name(card, "thumbnail");
+            if (thumbnail) {
+                // Get image source size
+                int32_t img_w = lv_image_get_src_width(thumbnail);
+                int32_t img_h = lv_image_get_src_height(thumbnail);
+
+                if (img_w > 0 && img_h > 0) {
+                    // Calculate zoom to make width fill card (256 = 100% scale)
+                    uint16_t zoom = (dims.card_width * 256) / img_w;
+                    lv_image_set_scale(thumbnail, zoom);
+
+                    LV_LOG_USER("Thumbnail zoom: img=%dx%d, card_width=%d, zoom=%d",
+                               img_w, img_h, dims.card_width, zoom);
+                }
+            }
+
+            // Attach click handler
             attach_card_click_handler(card, file);
         }
     }

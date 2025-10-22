@@ -1,28 +1,38 @@
 # Session Handoff Document
 
-**Last Updated:** 2025-10-15
-**Current Focus:** Interactive button wiring and Moonraker integration prep
+**Last Updated:** 2025-10-22
+**Current Focus:** Responsive print file cards complete, app-level resize handler implemented
 
 ---
 
 ## Current State
 
 **Completed Phases:**
+- ✅ Phase 6: Responsive Print File Card System with App-Level Resize Handler
 - ✅ Phase 5.5: Extrusion Panel with safety checks
 - ✅ Phase 5.4: Temperature Sub-Screens (Nozzle + Bed)
 - ✅ Phase 5.3: Motion Panel with 8-direction jog pad
 - ✅ Phase 5.2: Numeric Keypad modal component
 - ✅ Phase 5.1: Controls Panel launcher
-- ✅ Phase 4: Print Select Panel (dual views, sorting, responsive cards)
+- ✅ Phase 4: Print Select Panel (dual views, sorting, file operations)
 
 **What Works:**
 - Navigation between all 6 main panels
 - Home panel with temperature/network/light displays
 - Controls launcher → sub-screens (motion, temps, extrusion)
-- Print Select panel with card/list views, sorting, file operations
+- **Print Select panel:**
+  - Card/list dual views with toggle
+  - Fully responsive cards (adapt to any screen size)
+  - Dynamic dimension calculation in C++
+  - Image scaling and top-alignment
+  - Metadata overlays with transparency
+  - Window resize handling with debounced callbacks
+  - Sorting by filename, size, date, print time
+  - File detail view and confirmation dialogs
 - Responsive design across tiny/small/medium/large screens
 - Material Design icon system with dynamic recoloring
 - Reactive Subject-Observer data binding
+- **App-level resize handler** for responsive layouts
 
 **What Needs Wiring:**
 - Temperature panel preset buttons → update target temps
@@ -30,7 +40,8 @@
 - Confirm/back buttons on all sub-screens
 - Extrusion/retract buttons
 - Motion jog buttons → position updates
-- All interactive flows need end-to-end testing
+- Print Select file operations → actual printer integration
+- All interactive flows need end-to-end testing with Moonraker
 
 See **STATUS.md** for complete chronological development history.
 
@@ -159,6 +170,109 @@ lv_xml_register_event_cb(NULL, "my_handler", my_handler_function);
 ```
 
 **Benefits:** Single codebase supports tiny/small/medium/large screens without duplication.
+
+### 8. Responsive Card Layout with Flexbox (CRITICAL)
+
+**Pattern: flex_basis + flex_grow + min/max constraints**
+
+```xml
+<!-- Print file card - adapts to any container width -->
+<view extends="lv_obj"
+      style_flex_basis="#card_base_width"   <!-- Starting point (e.g., 170px) -->
+      flex_grow="1"                          <!-- Allow growth to fill space -->
+      style_min_width="#card_min_width"      <!-- Floor (e.g., 140px) -->
+      style_max_width="#card_max_width"      <!-- Ceiling (e.g., 220px) -->
+      height="#card_height">
+```
+
+**When cards need identical sizes across rows:**
+
+```cpp
+// Calculate exact dimensions based on container
+CardDimensions dims = calculate_card_dimensions(container);
+
+// Set explicit size and disable flex_grow
+lv_obj_set_width(card, dims.card_width);
+lv_obj_set_height(card, dims.card_height);
+lv_obj_set_style_flex_grow(card, 0, LV_PART_MAIN);  // Prevent uneven distribution
+```
+
+**Why disable flex_grow?** Flexbox distributes *leftover* space unevenly when rows have different numbers of items. Setting explicit dimensions ensures all cards are identical.
+
+**Reference:** `ui_xml/print_file_card.xml`, `src/ui_panel_print_select.cpp:430-510`
+
+### 9. Image Inner Alignment (CRITICAL)
+
+**Distinction: `align` vs `inner_align`**
+
+- `align` - Positions the **widget** relative to its parent
+- `inner_align` - Positions the **image content** within the widget bounds
+
+```xml
+<!-- Thumbnail fills card, content top-aligned -->
+<lv_image src="$thumbnail_src"
+          width="100%"
+          height="100%"
+          align="top_mid"           <!-- Widget position in parent -->
+          inner_align="top_mid"     <!-- Image content position in widget -->
+          name="thumbnail"/>
+```
+
+**Available inner_align values:**
+- `top_left`, `top_mid`, `top_right`
+- `bottom_left`, `bottom_mid`, `bottom_right`
+- `left_mid`, `center`, `right_mid`
+- `stretch`, `tile`, `contain`, `cover`
+
+**Scaling images to fill:**
+```cpp
+// Get source dimensions
+int32_t img_w = lv_image_get_src_width(thumbnail);
+
+// Calculate zoom factor (256 = 100% scale in LVGL)
+uint16_t zoom = (card_width * 256) / img_w;
+
+// Apply scale
+lv_image_set_scale(thumbnail, zoom);
+```
+
+**IMPORTANT:** By default, LVGL images maintain aspect ratio and center within their widget. Always set `inner_align` explicitly for predictable behavior.
+
+**Reference:** `ui_xml/print_file_card.xml:72-78`, LVGL docs `widgets/image.html`
+
+### 10. App-Level Resize Handler (CRITICAL)
+
+**Architecture: Centralized handler with panel registration**
+
+```cpp
+// In main.cpp - initialize once at startup
+ui_resize_handler_init(screen);
+
+// In panel setup - register callback
+static void on_resize() {
+    populate_card_view();  // Recalculate dimensions, repopulate
+}
+ui_resize_handler_register(on_resize);
+```
+
+**Implementation details:**
+- **Debounce period:** 250ms (prevents excessive calls during rapid resize)
+- **Event trigger:** `LV_EVENT_SIZE_CHANGED` on main screen
+- **Timer behavior:** One-shot, resets on each resize event
+- **Callback execution:** All registered callbacks invoked after debounce settles
+
+**Benefits:**
+- Panels own their resize logic (separation of concerns)
+- Single timer handles all resize events (no per-panel timers)
+- Debouncing prevents performance issues
+- Easily scalable for future responsive panels
+
+**Files:**
+- API: `include/ui_utils.h:84-106`
+- Implementation: `src/ui_utils.cpp:135-207`
+- Example usage: `src/ui_panel_print_select.cpp:194-201,286`
+
+**When to use:** Any panel with responsive layouts that need recalculation on window resize (primarily for testing, since real hardware has fixed screen sizes).
 
 ---
 

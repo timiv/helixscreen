@@ -19,9 +19,9 @@
 -->
 
 <component>
-	<!-- Print File Card Component - 4 Column Layout
-	     For 800 screens: 151px wide, 127px thumbnails
-	     Displays a single print file with thumbnail, filename, and metadata
+	<!-- Print File Card Component - Responsive Flexbox Layout
+	     Uses flex_grow with min/max constraints to adapt to any screen size.
+	     Container's flex_flow="row_wrap" will automatically fit cards and wrap.
 	-->
 
 	<api>
@@ -32,46 +32,75 @@
 	</api>
 
 	<consts>
-		<!-- Consistent spacing values -->
-		<px name="filename_top_pad" value="8"/>
+		<!-- Component-specific spacing (not in globals) -->
 		<px name="metadata_top_pad" value="4"/>
 		<px name="icon_text_gap" value="3"/>
-		<px name="metadata_item_gap" value="6"/>
 
-		<!-- Thumbnail styling -->
-		<px name="thumbnail_radius" value="6"/>
+		<!-- Card size constraints for responsive behavior -->
+		<px name="card_base_width" value="170"/>
+		<px name="card_min_width" value="140"/>
+		<px name="card_max_width" value="220"/>
+		<px name="card_height" value="245"/>
+
+		<!-- Thumbnail height (overridden by C++ based on card width) -->
+		<px name="thumbnail_height" value="150"/>
+
+		<!-- Metadata overlay minimum height -->
+		<px name="metadata_overlay_min_height" value="70"/>
+
+		<!-- Filename label height (single line, recalculated in C++ based on font) -->
+		<px name="filename_label_height" value="20"/>
 
 		<!-- Metadata label minimum width to prevent crushing -->
 		<px name="metadata_label_min_width" value="35"/>
 	</consts>
 
 	<view extends="lv_obj"
-	      width="#print_file_card_width_4col"
-	      height="#print_file_card_height_4col"
+	      style_flex_basis="#card_base_width"
+	      flex_grow="1"
+	      style_min_width="#card_min_width"
+	      style_max_width="#card_max_width"
+	      height="#card_height"
 	      style_bg_color="#card_bg"
 	      style_radius="#card_radius"
 	      style_border_width="0"
-	      style_pad_all="#print_file_card_padding"
-	      flex_flow="column"
+	      style_pad_all="0"
 	      flag_clickable="true"
 	      flag_scrollable="false">
 
-		<!-- Thumbnail image (square, responsive width) -->
+		<!-- Thumbnail image (will be scaled in C++ to fill card) -->
 		<lv_image src="$thumbnail_src"
 		          width="100%"
-		          height="#print_file_card_thumb_4col"
-		          style_radius="#thumbnail_radius"
-		          style_bg_color="#print_file_card_thumbnail_bg"
+		          height="100%"
+		          style_bg_opa="0"
+		          align="top_mid"
+		          inner_align="top_mid"
 		          name="thumbnail"/>
 
-		<!-- Filename label (single line, truncated with ...) -->
-		<lv_label text="$filename"
-		          width="100%"
-		          long_mode="dots"
-		          style_text_color="#text_primary"
-		          style_text_font="montserrat_14"
-		          style_pad_top="#filename_top_pad"
-		          name="filename_label"/>
+		<!-- Metadata overlay (absolute positioned at bottom with transparency) -->
+		<lv_obj width="100%"
+		        height="#metadata_overlay_min_height"
+		        style_bg_color="#card_bg"
+		        style_bg_opa="204"
+		        style_border_width="0"
+		        style_radius="0"
+		        style_pad_left="#gap_tiny"
+		        style_pad_right="#gap_tiny"
+		        style_pad_top="#gap_tiny"
+		        style_pad_bottom="#gap_tiny"
+		        align="bottom_mid"
+		        flex_flow="column"
+		        flag_scrollable="false"
+		        name="metadata_overlay">
+
+			<!-- Filename label (single line, truncated with ...) -->
+			<lv_label text="$filename"
+			          width="100%"
+			          height="#filename_label_height"
+			          long_mode="dots"
+			          style_text_color="#text_primary"
+			          style_text_font="montserrat_14"
+			          name="filename_label"/>
 
 		<!-- Metadata row (horizontal layout, responsive) -->
 		<lv_obj width="100%"
@@ -80,7 +109,7 @@
 		        style_pad_all="0"
 		        style_pad_top="#metadata_top_pad"
 		        flex_flow="row"
-		        style_pad_gap="#metadata_item_gap"
+		        style_pad_gap="#gap_tiny"
 		        flex_grow="1"
 		        name="metadata_row">
 
@@ -124,5 +153,6 @@
 				          name="filament_label"/>
 			</lv_obj>
 		</lv_obj>
+		</lv_obj>  <!-- Close metadata_overlay -->
 	</view>
 </component>

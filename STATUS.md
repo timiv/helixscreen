@@ -1,8 +1,194 @@
 # Project Status - LVGL 9 UI Prototype
 
-**Last Updated:** 2025-10-15 (Home Panel Layout Complete + LVGL XML Event System Debugged)
+**Last Updated:** 2025-10-22 (Responsive Print File Cards + App-Level Resize Handler)
 
-## Recent Updates (2025-10-15)
+## Recent Updates (2025-10-22)
+
+### Responsive Print File Card System ✅ COMPLETE
+
+**Objective:** Implement fully responsive print file cards that adapt to any screen size, eliminate gray padding/insets around thumbnails, and handle window resize during testing.
+
+**Status:** 100% Complete - Single responsive card component, perfect thumbnail filling, app-level resize handler
+
+**Implementation Journey:**
+
+**1. Initial Problem: Hard-Coded Screen Detection**
+- **Found:** Three separate card XML files (`print_file_card_3col.xml`, `4col`, `5col`) with hard-coded breakpoints
+- **Issue:** Cards weren't truly responsive - flex wasn't working to fill space
+- **User Insight:** "Is using flex layout the best way? Should the card ITSELF be reactive to display size?"
+
+**2. Major Refactor: Single Responsive Card Component**
+- **Decision:** Delete all 3 variants, create single `print_file_card.xml` with flexbox
+- **Key Attributes:**
+  ```xml
+  <view extends="lv_obj"
+        style_flex_basis="#card_base_width"
+        flex_grow="1"
+        style_min_width="#card_min_width"
+        style_max_width="#card_max_width"
+        height="#card_height">
+  ```
+- **Pattern:** Use `flex_basis` as starting point, let `flex_grow` distribute remaining space, constrain with min/max
+- **Files Modified:**
+  - Created: `ui_xml/print_file_card.xml` (single responsive version)
+  - Deleted: `ui_xml/print_file_card_3col.xml`, `4col.xml`, `5col.xml`
+  - Modified: `src/main.cpp` (removed 3 component registrations)
+
+**3. Card Sizing Issues**
+- **Problem #1:** Cards had different widths per row (first row 5 cards, second row 3 cards, all different sizes)
+- **Root Cause:** Flex distributing leftover space unevenly across rows
+- **Solution:** Calculate exact dimensions in C++, set explicit width/height, disable `flex_grow` after calculation
+- **Implementation:**
+  ```cpp
+  CardDimensions dims = calculate_card_dimensions(card_view_container);
+  lv_obj_set_width(card, dims.card_width);
+  lv_obj_set_height(card, dims.card_height);
+  lv_obj_set_style_flex_grow(card, 0, LV_PART_MAIN);  // Disable after sizing
+  ```
+
+**4. Panel Gap Discovery**
+- **Problem:** Calculations seemed right but vertical space was short
+- **Found:** Panel root had 11px default `style_pad_gap` between children
+- **Solution:** Set `style_pad_gap="0"` in `print_select_panel.xml` to maximize card area
+- **Result:** Recovered vertical space, cards fit 2 full rows without scrolling
+
+**5. Thumbnail Filling Challenge - The Gray Inset Issue**
+- **Problem:** User screenshot showed thumbnails with gray padding on all sides, not filling card
+- **Multiple Attempts:**
+  1. ❌ Tried `lv_image` with `width="100%" height="100%"` - aspect ratio preserved, didn't fill
+  2. ❌ Tried `style_bg_image_src` on card - LVGL doesn't stretch background images
+  3. ❌ Added padding removal in C++ - had no effect
+- **User Insight:** "Claude, LOOK at this screenshot carefully. The thumbnail has gray inset. WHERE is this coming from?"
+
+**6. Solution: Image Scaling + Inner Alignment**
+- **Discovery:** LVGL images maintain aspect ratio by default
+- **Two-Part Fix:**
+  - **Part 1 - Scale to fill width:**
+    ```cpp
+    int32_t img_w = lv_image_get_src_width(thumbnail);
+    uint16_t zoom = (dims.card_width * 256) / img_w;  // 256 = 100% in LVGL
+    lv_image_set_scale(thumbnail, zoom);
+    ```
+  - **Part 2 - Top-align image content (NOT center):**
+    ```xml
+    <lv_image src="$thumbnail_src"
+              width="100%"
+              height="100%"
+              align="top_mid"           <!-- Widget position -->
+              inner_align="top_mid"     <!-- Image content position -->
+              name="thumbnail"/>
+    ```
+- **Key Distinction:** `align` positions the *widget*, `inner_align` positions *image content within widget*
+- **User Correction:** "You're being dumb. You're not looking CAREFULLY. The thumbnail is still vertically centered."
+- **Resolution:** Added `inner_align="top_mid"` in XML (not C++) - declarative approach
+
+**7. App-Level Resize Handler System**
+- **User Request:** "If window gets resized, card calculations need to run again. Hook into that event with debouncing."
+- **Architecture Decision:** "We should have a top-level app timer, and panels register themselves for app-wide resize handler."
+- **Implementation:**
+  - **New Files:** Added to `ui_utils.h` and `ui_utils.cpp`
+  - **API:**
+    ```cpp
+    void ui_resize_handler_init(lv_obj_t* screen);  // Call once in main
+    void ui_resize_handler_register(ui_resize_callback_t callback);  // Panels register
+    ```
+  - **Debounce:** 250ms timer resets on each SIZE_CHANGED event, fires once after settling
+  - **Integration:**
+    - `main.cpp:271` - Initialize handler on screen after creation
+    - `ui_panel_print_select.cpp:286` - Register callback during setup
+    - `ui_panel_print_select.cpp:194-201` - Callback repopulates card view on resize
+
+**Files Modified:**
+- `ui_xml/print_file_card.xml` - Complete rewrite, single responsive component
+- `ui_xml/print_select_panel.xml` - Added `style_pad_gap="0"` to panel root
+- `src/ui_panel_print_select.cpp` - Dimension calculation, image scaling, resize callback
+- `src/ui_utils.cpp` - Resize handler implementation with debouncing
+- `include/ui_utils.h` - Resize handler API declarations
+- `src/main.cpp` - Initialize resize handler, remove old card variant registrations
+
+**Technical Patterns Discovered:**
+
+**Responsive Card Layout:**
+```xml
+<!-- Card component uses flex_basis + grow + constraints -->
+<view extends="lv_obj"
+      style_flex_basis="#card_base_width"  <!-- Starting point -->
+      flex_grow="1"                         <!-- Allow growth -->
+      style_min_width="#card_min_width"     <!-- Floor -->
+      style_max_width="#card_max_width"     <!-- Ceiling -->
+      height="#card_height"/>
+```
+
+**C++ Dimension Calculation:**
+```cpp
+// Calculate based on container size, not screen detection
+lv_coord_t container_width = lv_obj_get_content_width(container);
+int card_width = (container_width - total_gaps) / num_columns;
+
+// Set explicit size, disable flex_grow
+lv_obj_set_width(card, card_width);
+lv_obj_set_style_flex_grow(card, 0, LV_PART_MAIN);
+```
+
+**Image Scaling to Fill:**
+```cpp
+// Get source dimensions
+int32_t img_w = lv_image_get_src_width(thumbnail);
+
+// Calculate zoom factor (256 = 100% scale)
+uint16_t zoom = (card_width * 256) / img_w;
+
+// Apply scale
+lv_image_set_scale(thumbnail, zoom);
+```
+
+**Image Inner Alignment (XML vs C++):**
+```xml
+<!-- PREFERRED: Set in XML for declarative approach -->
+<lv_image inner_align="top_mid"/>
+```
+```cpp
+// Alternative: Set in C++ if dynamic
+lv_image_set_inner_align(thumbnail, LV_IMAGE_ALIGN_TOP_MID);
+```
+
+**App-Level Resize Handler Pattern:**
+```cpp
+// In main.cpp - initialize once
+ui_resize_handler_init(screen);
+
+// In panel setup - register callback
+static void on_resize() {
+    populate_card_view();  // Recalculate and repopulate
+}
+ui_resize_handler_register(on_resize);
+```
+
+**Results:**
+- ✅ All cards identical size across all rows
+- ✅ Cards fill 100% of available horizontal space
+- ✅ 2 full rows fit without scrolling (1024x600)
+- ✅ Thumbnails fill card width, top-aligned
+- ✅ Metadata overlay at bottom with 80% opacity
+- ✅ No gray padding/inset around thumbnails
+- ✅ Responsive to window resize with 250ms debounce
+- ✅ Scalable architecture for future responsive panels
+
+**Key Learnings:**
+1. Use `flex_basis` + `min/max` constraints for truly responsive flex items
+2. Disable `flex_grow` in C++ after setting explicit size to prevent uneven distribution
+3. `align` ≠ `inner_align`: widget position vs content position
+4. Centralized resize handlers are cleaner than per-panel timers
+5. Debouncing is essential for resize events (they fire rapidly)
+6. Always use `lv_obj_get_content_width()` for calculations, not screen width
+7. Read documentation carefully but verify with source code (avoid guessing function names)
+
+**User Feedback:**
+- "works great! update docs and prepare for handoff"
+
+---
+
+## Previous Updates (2025-10-15)
 
 ### Home Panel Layout Finalization & XML Event Discovery ✅ COMPLETE
 

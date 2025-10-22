@@ -80,3 +80,27 @@ bool ui_header_bar_hide_right_button(lv_obj_t* header_bar_widget);
  * @return true if button was found and updated, false otherwise
  */
 bool ui_header_bar_set_right_button_text(lv_obj_t* header_bar_widget, const char* text);
+
+// ============================================================================
+// App-level resize handling
+// ============================================================================
+
+/**
+ * Callback type for resize notifications
+ * Called when the display size changes (debounced to avoid excessive calls)
+ */
+typedef void (*ui_resize_callback_t)(void);
+
+/**
+ * Initialize the app-level resize handler
+ * Must be called once during app initialization, after screen is created
+ * @param screen The main screen object to monitor for size changes
+ */
+void ui_resize_handler_init(lv_obj_t* screen);
+
+/**
+ * Register a callback to be called when the display is resized
+ * Callbacks are invoked after a brief debounce period (250ms by default)
+ * @param callback Function to call on resize
+ */
+void ui_resize_handler_register(ui_resize_callback_t callback);

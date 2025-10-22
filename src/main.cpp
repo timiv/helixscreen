@@ -23,6 +23,7 @@
 #include "ui_nav.h"
 #include "ui_theme.h"
 #include "ui_fonts.h"
+#include "ui_utils.h"
 #include "material_icons.h"
 #include "ui_panel_home.h"
 #include "ui_panel_print_select.h"
@@ -267,6 +268,9 @@ int main(int argc, char** argv) {
     lv_obj_t* screen = lv_screen_active();
     lv_obj_set_style_bg_color(screen, UI_COLOR_PANEL_BG, LV_PART_MAIN);
 
+    // Initialize app-level resize handler for responsive layouts
+    ui_resize_handler_init(screen);
+
     // Register fonts and images for XML (must be done before loading components)
     LV_LOG_USER("Registering fonts and images...");
     lv_xml_register_font(NULL, "fa_icons_64", &fa_icons_64);
@@ -302,9 +306,7 @@ int main(int argc, char** argv) {
     lv_xml_component_register_from_file("A:ui_xml/header_bar.xml");
     lv_xml_component_register_from_file("A:ui_xml/confirmation_dialog.xml");
     lv_xml_component_register_from_file("A:ui_xml/numeric_keypad_modal.xml");
-    lv_xml_component_register_from_file("A:ui_xml/print_file_card_5col.xml");
-    lv_xml_component_register_from_file("A:ui_xml/print_file_card_4col.xml");
-    lv_xml_component_register_from_file("A:ui_xml/print_file_card_3col.xml");
+    lv_xml_component_register_from_file("A:ui_xml/print_file_card.xml");
     lv_xml_component_register_from_file("A:ui_xml/print_file_list_row.xml");
     lv_xml_component_register_from_file("A:ui_xml/print_file_detail.xml");
     lv_xml_component_register_from_file("A:ui_xml/navigation_bar.xml");

@@ -21,6 +21,7 @@
 #include "ui_utils.h"
 #include <cstdio>
 #include <ctime>
+#include <vector>
 
 std::string format_print_time(int minutes) {
     char buf[32];
@@ -129,4 +130,78 @@ bool ui_header_bar_set_right_button_text(lv_obj_t* header_bar_widget, const char
     }
 
     return false;
+}
+
+// ============================================================================
+// App-level Resize Handling
+// ============================================================================
+
+// Storage for registered resize callbacks
+static std::vector<ui_resize_callback_t> resize_callbacks;
+
+// Debounce timer and period
+static lv_timer_t* resize_debounce_timer = nullptr;
+static constexpr uint32_t RESIZE_DEBOUNCE_MS = 250;
+
+// Debounce timer callback - invokes all registered callbacks
+static void resize_timer_cb(lv_timer_t* timer) {
+    (void)timer;
+
+    LV_LOG_USER("Resize debounce complete, calling %zu registered callbacks", resize_callbacks.size());
+
+    // Call all registered callbacks
+    for (auto callback : resize_callbacks) {
+        if (callback) {
+            callback();
+        }
+    }
+
+    // Delete one-shot timer
+    if (resize_debounce_timer) {
+        lv_timer_delete(resize_debounce_timer);
+        resize_debounce_timer = nullptr;
+    }
+}
+
+// Screen resize event handler - starts/resets debounce timer
+static void resize_event_cb(lv_event_t* e) {
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if (code == LV_EVENT_SIZE_CHANGED) {
+        lv_obj_t* screen = (lv_obj_t*)lv_event_get_target(e);
+        lv_coord_t width = lv_obj_get_width(screen);
+        lv_coord_t height = lv_obj_get_height(screen);
+
+        LV_LOG_USER("Screen size changed to %dx%d, resetting debounce timer", width, height);
+
+        // Reset or create debounce timer
+        if (resize_debounce_timer) {
+            lv_timer_reset(resize_debounce_timer);
+        } else {
+            resize_debounce_timer = lv_timer_create(resize_timer_cb, RESIZE_DEBOUNCE_MS, nullptr);
+            lv_timer_set_repeat_count(resize_debounce_timer, 1);  // One-shot
+        }
+    }
+}
+
+void ui_resize_handler_init(lv_obj_t* screen) {
+    if (!screen) {
+        LV_LOG_ERROR("Cannot init resize handler: screen is null");
+        return;
+    }
+
+    // Add SIZE_CHANGED event listener to screen
+    lv_obj_add_event_cb(screen, resize_event_cb, LV_EVENT_SIZE_CHANGED, nullptr);
+
+    LV_LOG_USER("Resize handler initialized on screen");
+}
+
+void ui_resize_handler_register(ui_resize_callback_t callback) {
+    if (!callback) {
+        LV_LOG_WARN("Attempted to register null resize callback");
+        return;
+    }
+
+    resize_callbacks.push_back(callback);
+    LV_LOG_USER("Registered resize callback (%zu total)", resize_callbacks.size());
 }
