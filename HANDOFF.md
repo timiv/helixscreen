@@ -124,7 +124,7 @@ PYEOF
 **Build & Test:**
 ```bash
 make clean && make                    # Clean rebuild
-./build/bin/guppy-ui-proto -k         # Test keypad
+./build/bin/helix-ui-proto -k         # Test keypad
 ./scripts/test_keypad_sizes.sh        # Test all screen sizes
 ```
 
@@ -655,13 +655,13 @@ make                          # Incremental build (auto-parallel)
 make clean && make            # Clean rebuild
 
 # Run with different configs
-./build/bin/guppy-ui-proto                    # Default (medium screen, home panel)
-./build/bin/guppy-ui-proto -s tiny            # 480x320 screen
-./build/bin/guppy-ui-proto -s large           # 1280x720 screen
-./build/bin/guppy-ui-proto -p controls        # Start at Controls panel
-./build/bin/guppy-ui-proto -p print-select    # Print select card view
-./build/bin/guppy-ui-proto -p file-detail     # Print file detail overlay (NEW)
-./build/bin/guppy-ui-proto -s small -p print-select  # Combined options
+./build/bin/helix-ui-proto                    # Default (medium screen, home panel)
+./build/bin/helix-ui-proto -s tiny            # 480x320 screen
+./build/bin/helix-ui-proto -s large           # 1280x720 screen
+./build/bin/helix-ui-proto -p controls        # Start at Controls panel
+./build/bin/helix-ui-proto -p print-select    # Print select card view
+./build/bin/helix-ui-proto -p file-detail     # Print file detail overlay (NEW)
+./build/bin/helix-ui-proto -s small -p print-select  # Combined options
 
 # Controls (when running)
 # Press Cmd+Q (macOS) or Win+Q (Windows) to quit
@@ -669,13 +669,13 @@ make clean && make            # Clean rebuild
 # Close window to exit
 
 # Screenshot
-./scripts/screenshot.sh guppy-ui-proto output-name [panel-name]
+./scripts/screenshot.sh helix-ui-proto output-name [panel-name]
 
 # Examples:
-./scripts/screenshot.sh guppy-ui-proto home-test home
-./scripts/screenshot.sh guppy-ui-proto controls-launcher controls
-./scripts/screenshot.sh guppy-ui-proto motion-panel motion
-./scripts/screenshot.sh guppy-ui-proto file-detail file-detail
+./scripts/screenshot.sh helix-ui-proto home-test home
+./scripts/screenshot.sh helix-ui-proto controls-launcher controls
+./scripts/screenshot.sh helix-ui-proto motion-panel motion
+./scripts/screenshot.sh helix-ui-proto file-detail file-detail
 
 # Unit tests
 make test                     # Run all tests
@@ -747,7 +747,7 @@ make test                     # Run all tests
 **Test Commands:**
 ```bash
 # Test with live printer (requires Moonraker URL in config)
-./build/bin/guppy-ui-proto
+./build/bin/helix-ui-proto
 # Click any file → Print button → observe print status panel
 ```
 
@@ -767,7 +767,7 @@ make test                     # Run all tests
 **Implementation Steps:**
 
 **Step 1: WebSocket Foundation**
-- Review existing GuppyScreen Moonraker client code (parent repo)
+- Review existing HelixScreen Moonraker client code (parent repo)
 - Adapt libhv WebSocket implementation for prototype
 - Connect to Moonraker on startup
 - Handle connection/disconnection events
@@ -797,7 +797,7 @@ make test                     # Run all tests
 - Live print status updates (progress, layer, times)
 
 **Reference Code:**
-- Parent repo: `/Users/pbrown/code/guppyscreen/` has working Moonraker client
+- Parent repo: `/Users/pbrown/code/helixscreen/` has working Moonraker client
 - Look for WebSocket handling, JSON-RPC protocol, subscription management
 
 **Testing Strategy:**

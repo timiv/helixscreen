@@ -1,4 +1,4 @@
-# GuppyScreen UI Prototype - Testing Framework
+# HelixScreen UI Prototype - Testing Framework
 
 This directory contains the testing infrastructure for the LVGL 9 UI prototype.
 

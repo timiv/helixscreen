@@ -186,7 +186,7 @@
 ## Images & Assets
 
 ### Printer Image
-- [x] Source: `A:/Users/pbrown/code/guppyscreen/prototype-ui9/assets/images/printer_400.png`
+- [x] Source: `A:/Users/pbrown/code/helixscreen/prototype-ui9/assets/images/printer_400.png`
 - [x] Dimensions: 400x400px
 - [x] Format: PNG
 - [x] Recoloring: None

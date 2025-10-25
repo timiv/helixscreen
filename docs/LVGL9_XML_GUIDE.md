@@ -1,6 +1,6 @@
 # LVGL 9 XML UI System - Complete Guide
 
-This comprehensive guide covers LVGL 9's declarative XML UI system with reactive data binding, based on LVGL 9.3 documentation and practical experience building the GuppyScreen UI prototype.
+This comprehensive guide covers LVGL 9's declarative XML UI system with reactive data binding, based on LVGL 9.3 documentation and practical experience building the HelixScreen UI prototype.
 
 **Last Updated:** 2025-01-11
 
@@ -79,7 +79,7 @@ project_name/
 └── ui_project_name_gen.c # Generated code (auto-created by LVGL Editor)
 ```
 
-### GuppyScreen Prototype Structure
+### HelixScreen Prototype Structure
 
 ```
 prototype-ui9/
@@ -1356,4 +1356,4 @@ Unlike web browsers, there's no inspect tool. Use temporary background colors:
 - XML_UI_SYSTEM.md - Architecture and implementation patterns
 - Vertical Accent Bar Pattern - New UI pattern documentation
 
-**Contributors:** GuppyScreen development team, based on LVGL 9.3 documentation and extensive prototype testing.
+**Contributors:** HelixScreen development team, based on LVGL 9.3 documentation and extensive prototype testing.

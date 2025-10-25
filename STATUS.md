@@ -59,9 +59,9 @@
 **Testing:**
 ```bash
 # Verified responsive behavior on all screen sizes
-./build/bin/guppy-ui-proto -s tiny -p motion    # 40px header, 6px padding
-./build/bin/guppy-ui-proto -s small -p motion   # 48px header, 10px padding
-./build/bin/guppy-ui-proto -s large -p motion   # 60px header, 20px padding
+./build/bin/helix-ui-proto -s tiny -p motion    # 40px header, 6px padding
+./build/bin/helix-ui-proto -s small -p motion   # 48px header, 10px padding
+./build/bin/helix-ui-proto -s large -p motion   # 60px header, 20px padding
 ```
 
 **Pattern Established:**
@@ -123,10 +123,10 @@
 **Testing:**
 ```bash
 make clean && make
-./scripts/screenshot.sh guppy-ui-proto controls-tiny-fixed controls -s tiny
-./scripts/screenshot.sh guppy-ui-proto controls-small-fixed controls -s small
-./scripts/screenshot.sh guppy-ui-proto controls-medium-fixed controls
-./scripts/screenshot.sh guppy-ui-proto controls-large-fixed controls -s large
+./scripts/screenshot.sh helix-ui-proto controls-tiny-fixed controls -s tiny
+./scripts/screenshot.sh helix-ui-proto controls-small-fixed controls -s small
+./scripts/screenshot.sh helix-ui-proto controls-medium-fixed controls
+./scripts/screenshot.sh helix-ui-proto controls-large-fixed controls -s large
 ```
 
 **Screenshots:**
@@ -181,7 +181,7 @@ Percentage-based widths for uniform card sizing across rows (similar to print fi
 **Testing:**
 ```bash
 make                          # Now uses all cores automatically
-./build/bin/guppy-ui-proto    # Press Cmd+Q to quit
+./build/bin/helix-ui-proto    # Press Cmd+Q to quit
 ```
 
 **Benefits:**
@@ -265,7 +265,7 @@ EOF
 
 # Rebuild and test
 make clean && make
-./build/bin/guppy-ui-proto -k  # Auto-open keypad for testing
+./build/bin/helix-ui-proto -k  # Auto-open keypad for testing
 ```
 
 ---
@@ -897,7 +897,7 @@ This is documented in `docs/LVGL9_XML_ATTRIBUTES_REFERENCE.md:97` but we were us
 **7. Added Test Support** (src/main.cpp:149, 206-208, 493-505)
 - New command line flag: `--file-detail` or `--print-file-detail`
 - Automatically shows detail view with test data
-- Usage: `./build/bin/guppy-ui-proto file-detail`
+- Usage: `./build/bin/helix-ui-proto file-detail`
 
 **Files Modified:**
 - `ui_xml/print_file_detail.xml` - Complete redesign to match card layout
@@ -1637,7 +1637,7 @@ find ui_xml -name "*.xml" -exec sed -i '' 's/zoom="48"/scale_x="48" scale_y="48"
 **Material Design Icon System:**
 
 All 56 Material Design icons successfully converted and integrated:
-- **Source:** `/Users/pbrown/Code/Printing/guppyscreen/assets/material_svg/` (64x64 SVG)
+- **Source:** `/Users/pbrown/Code/Printing/helixscreen/assets/material_svg/` (64x64 SVG)
 - **Format:** RGB565A8 (16-bit RGB + 8-bit alpha) LVGL 9 C arrays
 - **Conversion:** Automated via `scripts/convert-material-icons-lvgl9.sh`
 
@@ -2273,8 +2273,8 @@ ui_panel_controls_extrusion_set_limits(extruder.min_temp, extruder.max_temp);
 - **Color scheme** - Red accent icons with gray text (`#text_secondary`) per design spec
 
 **Infrastructure Improvements:**
-- **Command-line panel selection** - `./build/bin/guppy-ui-proto print-select` launches directly to Print Select panel
-- **Updated screenshot.sh** - Added panel argument support: `./scripts/screenshot.sh guppy-ui-proto output print-select`
+- **Command-line panel selection** - `./build/bin/helix-ui-proto print-select` launches directly to Print Select panel
+- **Updated screenshot.sh** - Added panel argument support: `./scripts/screenshot.sh helix-ui-proto output print-select`
 - **String lifetime fix** - Used `lv_strdup()` to create persistent copies of metadata strings
 - **Card height adjustment** - Increased from 256px to 280px to accommodate metadata without scrollbars
 

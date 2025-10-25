@@ -1,6 +1,6 @@
-# GuppyScreen LVGL 9 UI Prototype
+# HelixScreen LVGL 9 UI Prototype
 
-Modern, declarative XML-based UI for GuppyScreen using LVGL 9 with reactive data binding.
+Modern, declarative XML-based UI for HelixScreen using LVGL 9 with reactive data binding.
 
 ## Features
 
@@ -54,7 +54,7 @@ make
 make clean && make
 
 # Run
-./build/bin/guppy-ui-proto
+./build/bin/helix-ui-proto
 
 # Quick build + screenshot
 ./scripts/screenshot.sh [binary_name] [output_name]
@@ -216,8 +216,8 @@ lv_xml_register_image(NULL, "filament_spool", "A:/path/to/filament_spool.png");
 
 **Automated Mode:**
 ```bash
-./scripts/screenshot.sh                    # Default: guppy-ui-proto
-./scripts/screenshot.sh guppy-ui-proto ui5 # Named: ui-screenshot-ui5.png
+./scripts/screenshot.sh                    # Default: helix-ui-proto
+./scripts/screenshot.sh helix-ui-proto ui5 # Named: ui-screenshot-ui5.png
 ```
 
 **Implementation:**

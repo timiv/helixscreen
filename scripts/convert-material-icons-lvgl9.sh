@@ -4,7 +4,7 @@
 
 set -e
 
-SVG_SOURCE="/Users/pbrown/Code/Printing/guppyscreen/assets/material_svg"
+SVG_SOURCE="/Users/pbrown/Code/Printing/helixscreen/assets/material_svg"
 TEMP_PNG_DIR="/tmp/material_png"
 OUTPUT_DIR="assets/images/material"
 VENV_PYTHON=".venv/bin/python3"
@@ -53,4 +53,4 @@ echo "Generated $(ls "$OUTPUT_DIR"/*.c | wc -l | tr -d ' ') LVGL 9 C files"
 echo ""
 echo "Next steps:"
 echo "  1. Run: make clean && make"
-echo "  2. Test: ./build/bin/guppy-ui-proto"
+echo "  2. Test: ./build/bin/helix-ui-proto"

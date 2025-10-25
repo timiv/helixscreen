@@ -1,7 +1,7 @@
 #!/bin/bash
 # Batch convert Material Design SVGs to LVGL 9 C arrays
 
-SVG_SOURCE="/Users/pbrown/Code/Printing/guppyscreen/assets/material_svg"
+SVG_SOURCE="/Users/pbrown/Code/Printing/helixscreen/assets/material_svg"
 OUTPUT_DIR="assets/images/material"
 
 echo "Converting Material Design SVGs to LVGL 9 C arrays..."

@@ -1,4 +1,4 @@
-# GuppyScreen UI Prototype Makefile
+# HelixScreen UI Prototype Makefile
 # LVGL 9 + SDL2 simulator
 
 # Compilers
@@ -47,7 +47,7 @@ INCLUDES := -I. -I$(INC_DIR) $(LVGL_INC) $(SDL2_CFLAGS)
 LDFLAGS := $(SDL2_LIBS) -lm -lpthread
 
 # Binary
-TARGET := $(BIN_DIR)/guppy-ui-proto
+TARGET := $(BIN_DIR)/helix-ui-proto
 
 # LVGL configuration
 LV_CONF := -DLV_CONF_INCLUDE_SIMPLE

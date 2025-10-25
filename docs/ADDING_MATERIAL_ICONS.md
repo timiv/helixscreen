@@ -1,6 +1,6 @@
-# Adding Material Design Icons to GuppyScreen
+# Adding Material Design Icons to HelixScreen
 
-This guide documents the complete process for adding new Material Design icons to the GuppyScreen prototype UI.
+This guide documents the complete process for adding new Material Design icons to the HelixScreen prototype UI.
 
 ## Prerequisites
 
@@ -93,7 +93,7 @@ LV_LOG_USER("Registering Material Design icons (58 total)...");  // Increment co
 make clean && make
 
 # Test with a panel that uses the icon
-./build/bin/guppy-ui-proto print_select
+./build/bin/helix-ui-proto print_select
 ```
 
 ### 6. Use the Icon in XML

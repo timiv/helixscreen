@@ -2,7 +2,7 @@
 # UI Prototype Screenshot Helper
 # Builds, runs, captures, and compresses screenshot in one command
 # Usage: ./screenshot.sh [binary_name] [output_name] [panel_name] [additional args...]
-#   binary_name: Name of binary to run (default: guppy-ui-proto)
+#   binary_name: Name of binary to run (default: helix-ui-proto)
 #   output_name: Name for output file (default: timestamp)
 #   panel_name:  Panel to display (default: home)
 #   Additional args: Forwarded to binary (e.g., -s small, --size large)
@@ -11,7 +11,7 @@
 set -e
 
 # Get binary name (first arg) or default
-BINARY="${1:-guppy-ui-proto}"
+BINARY="${1:-helix-ui-proto}"
 BINARY_PATH="./build/bin/${BINARY}"
 
 # Get unique name or use timestamp

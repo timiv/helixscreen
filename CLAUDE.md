@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the **LVGL 9 UI Prototype** for GuppyScreen - a declarative XML-based touch UI system using LVGL 9.3 with reactive Subject-Observer data binding. The prototype runs on SDL2 for rapid development and will eventually target framebuffer displays on embedded hardware.
+This is the **LVGL 9 UI Prototype** for HelixScreen - a declarative XML-based touch UI system using LVGL 9.3 with reactive Subject-Observer data binding. The prototype runs on SDL2 for rapid development and will eventually target framebuffer displays on embedded hardware.
 
 **Key Innovation:** Complete separation of UI layout (XML) from business logic (C++), similar to modern web frameworks. No manual widget management - all updates happen through reactive subjects.
 
@@ -13,11 +13,11 @@ This is the **LVGL 9 UI Prototype** for GuppyScreen - a declarative XML-based to
 ```bash
 make                          # Incremental build (auto-parallel)
 make clean && make            # Clean rebuild
-./build/bin/guppy-ui-proto    # Run simulator
+./build/bin/helix-ui-proto    # Run simulator
 python3 scripts/generate-icon-consts.py  # Regenerate icon constants
 ```
 
-**Binary:** `build/bin/guppy-ui-proto`
+**Binary:** `build/bin/helix-ui-proto`
 **Panels:** home, controls, motion, nozzle-temp, bed-temp, extrusion, filament, settings, advanced, print-select
 
 ### Screenshot Workflow ⚠️
@@ -26,12 +26,12 @@ python3 scripts/generate-icon-consts.py  # Regenerate icon constants
 
 ```bash
 # Correct approach:
-./scripts/screenshot.sh guppy-ui-proto output [panel_name]
+./scripts/screenshot.sh helix-ui-proto output [panel_name]
 
 # Examples:
-./scripts/screenshot.sh guppy-ui-proto extrusion-test extrusion
-./scripts/screenshot.sh guppy-ui-proto controls-launcher controls
-./scripts/screenshot.sh guppy-ui-proto home-panel home
+./scripts/screenshot.sh helix-ui-proto extrusion-test extrusion
+./scripts/screenshot.sh helix-ui-proto controls-launcher controls
+./scripts/screenshot.sh helix-ui-proto home-panel home
 ```
 
 The script handles:
@@ -255,7 +255,7 @@ Available specialized agents: **general-purpose**, **Explore**, **widget-maker**
 
 1. Edit XML for layout changes (no recompilation needed)
 2. Edit C++ for logic/subjects changes → `make`
-3. Test with `./build/bin/guppy-ui-proto [panel_name]`
+3. Test with `./build/bin/helix-ui-proto [panel_name]`
 4. Screenshot with `./scripts/screenshot.sh` or press 'S' in UI
 5. For complex multi-step tasks → use appropriate agent (see above)
 

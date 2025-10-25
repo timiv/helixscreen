@@ -244,7 +244,7 @@ style_flex_track_place="start|end|center|space_between|space_evenly|space_around
 ./scripts/screenshot.sh [binary_name] [output_name]
 
 # Examples
-./scripts/screenshot.sh                    # guppy-ui-proto, timestamp
+./scripts/screenshot.sh                    # helix-ui-proto, timestamp
 ./scripts/screenshot.sh test_nav navbar    # test_nav, navbar.png
 ./scripts/screenshot.sh test_home_panel hp # test_home_panel, hp.png
 ```

@@ -221,7 +221,7 @@ lv_subject_t temp_text_subject;    // Bound to temperature display
 ### Build & Run
 ```bash
 make
-./build/bin/guppy-ui-proto
+./build/bin/helix-ui-proto
 # Press 'S' to capture screenshot
 ```
 

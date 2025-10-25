@@ -14,7 +14,7 @@ echo "You should manually test clicking the icons in the UI!"
 echo ""
 
 # Run app for 10 seconds
-timeout 10 ./build/bin/guppy-ui-proto 2>&1 | grep -E "USER|ERROR|Active panel|Switched to"
+timeout 10 ./build/bin/helix-ui-proto 2>&1 | grep -E "USER|ERROR|Active panel|Switched to"
 
 echo ""
 echo "Check latest screenshot at:"

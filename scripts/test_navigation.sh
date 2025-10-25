@@ -1,10 +1,10 @@
 #!/bin/bash
-# Test navigation flows for GuppyScreen prototype UI
+# Test navigation flows for HelixScreen prototype UI
 # Verifies panel stack behavior and multi-level navigation
 
 set -e
 
-BIN="./build/bin/guppy-ui-proto"
+BIN="./build/bin/helix-ui-proto"
 TIMEOUT_CMD="timeout"
 
 # Colors for output
