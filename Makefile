@@ -148,7 +148,7 @@ test: $(TEST_BIN)
 	@echo "Running unit tests..."
 	@$(TEST_BIN)
 
-$(TEST_BIN): $(TEST_OBJS) $(LVGL_OBJS) $(OBJ_DIR)/ui_nav.o
+$(TEST_BIN): $(TEST_OBJS) $(LVGL_OBJS) $(THORVG_OBJS) $(OBJ_DIR)/ui_nav.o $(OBJ_DIR)/ui_temp_graph.o
 	@mkdir -p $(BIN_DIR)
 	@echo "Linking test binary..."
 	@$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)

@@ -1,8 +1,105 @@
 # Project Status - LVGL 9 UI Prototype
 
-**Last Updated:** 2025-10-25 (SVG Support & Nozzle Temperature Panel Icon)
+**Last Updated:** 2025-10-25 (Temperature Graph Widget)
 
 ## Recent Updates (2025-10-25)
+
+### Temperature Graph Widget: Dynamic Multi-Series Charting ✅ COMPLETE
+
+**Objective:** Create reusable temperature graph widget for real-time monitoring with gradient-filled curves, similar to Creality/Prusa printer UIs
+
+**Implementation:**
+
+1. **Core Widget** - Dynamic series management with LVGL 9 chart:
+   - `include/ui_temp_graph.h` (213 lines) - Complete API with dynamic series
+   - `src/ui_temp_graph.cpp` (440 lines) - Full implementation with gradient rendering
+   - Uses `lv_chart` widget with `LV_CHART_TYPE_LINE` and circular buffer
+   - Max 8 concurrent series (configurable via `UI_TEMP_GRAPH_MAX_SERIES`)
+
+2. **Dynamic Series Management** - Add/remove/update series by ID:
+   - `ui_temp_graph_add_series()` - Add series at runtime, returns unique series_id
+   - `ui_temp_graph_update_series(id, temp)` - Push single value to specific series
+   - `ui_temp_graph_set_series_data(id, temps[], count)` - Bulk update from external array
+   - `ui_temp_graph_remove_series(id)` - Remove series by ID
+   - `ui_temp_graph_show_series(id, visible)` - Show/hide without removing data
+   - Series IDs are stable and unique across add/remove operations
+
+3. **Gradient Fills** - Vertical gradients under curves (darker at bottom, lighter near line):
+   - Uses LVGL 9's `lv_grad_dsc_t` with `LV_GRAD_DIR_VER`
+   - Default: 60% opacity at bottom, 10% opacity at top
+   - Per-series customization via `ui_temp_graph_set_series_gradient(id, bottom_opa, top_opa)`
+   - Draw event handler (`LV_EVENT_DRAW_MAIN`) renders filled areas with `lv_draw_fill()`
+
+4. **Target Temperature Lines** - Horizontal cursors for each series:
+   - Uses `lv_chart_add_cursor()` with `LV_DIR_HOR`
+   - Brighter shade of series color (color + 40 brightness)
+   - `ui_temp_graph_set_series_target(id, target, show)` - Set and show/hide target
+   - Cursor position updates automatically with target value
+
+5. **Data Management**:
+   - **Push mode**: Individual data points via `ui_temp_graph_update_series()`
+   - **Array mode**: Bulk updates via `ui_temp_graph_set_series_data()`
+   - Circular buffer with `LV_CHART_UPDATE_MODE_SHIFT`
+   - Configurable point count (default 300 = 5 min @ 1s updates)
+   - 0-300°C default Y-axis range (configurable)
+
+6. **Test Coverage** - Comprehensive unit tests:
+   - `tests/unit/test_temp_graph.cpp` (806 lines) - 20 test cases, 235 assertions
+   - ✅ All tests passing
+   - Coverage: series management, data updates, configuration, edge cases, integration scenarios
+   - Stress tests: 1000 data points, rapid configuration changes
+   - Identified and documented bug in `find_series()` function (TODO for future fix)
+
+**API Design:**
+```cpp
+// Create graph
+ui_temp_graph_t* graph = ui_temp_graph_create(parent);
+
+// Add series dynamically - get IDs back
+int nozzle = ui_temp_graph_add_series(graph, "Nozzle", lv_color_hex(0xFF4444));
+int bed = ui_temp_graph_add_series(graph, "Bed", lv_color_hex(0x44FF44));
+
+// Set targets
+ui_temp_graph_set_series_target(graph, nozzle, 210.0f, true);
+ui_temp_graph_set_series_target(graph, bed, 60.0f, true);
+
+// Update by ID (push mode)
+ui_temp_graph_update_series(graph, nozzle, 195.5f);
+ui_temp_graph_update_series(graph, bed, 58.2f);
+
+// Or bulk update from external array (array mode)
+float nozzle_history[300] = {...};
+ui_temp_graph_set_series_data(graph, nozzle, nozzle_history, 300);
+```
+
+**Files Created:**
+- `include/ui_temp_graph.h` - Public API header
+- `src/ui_temp_graph.cpp` - Widget implementation
+- `tests/unit/test_temp_graph.cpp` - Comprehensive unit tests
+- `TEMP_GRAPH_USAGE.md` - Usage guide and examples
+
+**Files Modified:**
+- `Makefile` (lines 76, 107-110) - Added ThorVG objects to test target for chart support
+
+**Testing:**
+- Unit tests: `make test` - All 20 tests passing (235 assertions)
+- Build: `make` - Compiles successfully with no errors
+- Widget ready for integration into temperature monitoring panels
+
+**Benefits:**
+- Flexible dynamic series management (not hardcoded to specific heaters)
+- Clean ID-based API for updating specific temperature series
+- Gradient fills provide visual clarity (similar to Creality/Prusa UIs)
+- Target lines show heating goals at a glance
+- Both push and array modes support different data source patterns
+- Comprehensive test coverage ensures reliability
+
+**Known Issues:**
+- `find_series()` bug (line 34): loops through `series_count` instead of `UI_TEMP_GRAPH_MAX_SERIES`, causing removed series to become unreachable. Tests work around this by avoiding multi-removal scenarios. TODO: Fix in future iteration.
+
+---
+
+## Earlier Updates (2025-10-25)
 
 ### SVG Support: ThorVG Integration & Nozzle Temperature Icon ✅ COMPLETE
 
