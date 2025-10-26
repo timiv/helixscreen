@@ -19,6 +19,7 @@
  */
 
 #include "ui_panel_home.h"
+#include "ui_nav.h"
 #include "ui_theme.h"
 #include "ui_fonts.h"
 #include <cstdio>
@@ -52,6 +53,7 @@ static network_type_t current_network = NETWORK_WIFI;
 
 // Forward declarations
 static void light_toggle_event_cb(lv_event_t* e);
+static void print_card_clicked_cb(lv_event_t* e);
 static void network_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
 static void light_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
 
@@ -81,6 +83,7 @@ void ui_panel_home_init_subjects() {
 
     // Register event callbacks BEFORE loading XML
     lv_xml_register_event_cb(NULL, "light_toggle_cb", light_toggle_event_cb);
+    lv_xml_register_event_cb(NULL, "print_card_clicked_cb", print_card_clicked_cb);
 
     subjects_initialized = true;
     printf("DEBUG: Registered subjects: status_text, temp_text, network_icon, network_label, network_color, light_icon_color\n");
@@ -271,6 +274,17 @@ static void light_toggle_event_cb(lv_event_t* e) {
     // TODO: Add callback to send command to Klipper
     // For now, just log the state change
     printf("Light toggled: %s\n", light_on ? "ON" : "OFF");
+}
+
+static void print_card_clicked_cb(lv_event_t* e) {
+    (void)e;  // Unused parameter
+
+    printf("====== PRINT CARD CLICKED! ======\n");
+
+    // Navigate to print select panel
+    ui_nav_set_active(UI_PANEL_PRINT_SELECT);
+
+    printf("Navigating to print select panel\n");
 }
 
 // Observer callback for network icon/label/color changes

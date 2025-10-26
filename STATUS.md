@@ -1,8 +1,42 @@
 # Project Status - LVGL 9 UI Prototype
 
-**Last Updated:** 2025-10-25 (Filament Panel Mockup)
+**Last Updated:** 2025-10-26 (Home Panel Print Card Navigation)
 
-## Recent Updates (2025-10-25)
+## Recent Updates (2025-10-26)
+
+### Home Panel Print Card Navigation ✅ COMPLETE
+
+**Objective:** Enable navigation to print select panel when clicking the Print Files card on the home panel
+
+**Implementation:**
+
+1. **XML Changes** (`ui_xml/home_panel.xml:107-119`):
+   - Converted Print Files card from `<lv_obj>` to `<lv_button>` for click handling
+   - Added `name="print_card"` attribute for widget identification
+   - Added `style_shadow_width="0"` to maintain flat card appearance
+   - Added event callback: `<lv_event-call_function trigger="clicked" callback="print_card_clicked_cb"/>`
+   - Centered label text with `align="center"`
+
+2. **C++ Implementation** (`src/ui_panel_home.cpp`):
+   - Added `#include "ui_nav.h"` for navigation API access (line 22)
+   - Added forward declaration for `print_card_clicked_cb` (line 55)
+   - Registered callback in `ui_panel_home_init_subjects()` (line 85)
+   - Implemented `print_card_clicked_cb()` event handler (lines 278-287):
+     - Logs click event for debugging
+     - Calls `ui_nav_set_active(UI_PANEL_PRINT_SELECT)` to switch panels
+     - Navigation system automatically handles panel visibility
+
+**Behavior:**
+- Clicking the Print Files card navigates to the print select panel
+- Navigation follows the same pattern as navbar icon clicks
+- Panel switching is handled by the centralized navigation system
+- Button maintains card appearance (no shadows, card background color)
+
+**Result:** Users can now navigate from the home panel to the print select panel by clicking the Print Files card, providing intuitive access to the file browser.
+
+---
+
+## Earlier Updates (2025-10-25)
 
 ### Filament Panel Mockup ⚠️ UNTESTED / LIKELY BROKEN
 
