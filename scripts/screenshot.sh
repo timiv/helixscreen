@@ -92,8 +92,9 @@ else
     info "Using display $HELIX_SCREENSHOT_DISPLAY from HELIX_SCREENSHOT_DISPLAY env var"
 fi
 
-# Add display argument to extra args
-EXTRA_ARGS="--display $HELIX_SCREENSHOT_DISPLAY $EXTRA_ARGS"
+# Add display and screenshot arguments to extra args
+# Screenshot after 2 seconds (within the 3-second timeout)
+EXTRA_ARGS="--display $HELIX_SCREENSHOT_DISPLAY --screenshot 2 $EXTRA_ARGS"
 
 # Check dependencies
 info "Checking dependencies..."

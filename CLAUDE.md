@@ -120,6 +120,13 @@ HELIX_SCREENSHOT_DISPLAY=0 ./scripts/screenshot.sh helix-ui-proto output panel
 - `HELIX_SCREENSHOT_DISPLAY` - Override display (default: 1)
 - `HELIX_SCREENSHOT_OPEN` - Auto-open in Preview after capture
 
+**Manual screenshot usage:**
+- The binary accepts `--screenshot [seconds]` flag to take a screenshot after the specified delay
+- Default delay is 2 seconds if no value is provided (e.g., `--screenshot` or `--screenshot 2`)
+- Without the flag, no screenshot is taken (useful for interactive development)
+- The screenshot script automatically passes `--screenshot 2` for automated capture
+- Example: `./build/bin/helix-ui-proto --panel home --screenshot 3` (screenshot after 3 seconds)
+
 **❌ Avoid:** Reading raw BMPs from `/tmp` and manually running `magick` commands. The screenshot script is the canonical way to capture UI states.
 
 ## Logging Policy
@@ -299,9 +306,12 @@ if (!ui_nav_go_back()) {
 
 **⚠️ READ DOCUMENTATION FIRST:** Before implementing features in these areas, **ALWAYS read the relevant documentation** to avoid common pitfalls:
 - **Build system/patches:** Read **docs/BUILD_SYSTEM.md** for patch management and multi-display support
-- **XML syntax/attributes:** Read **docs/LVGL9_XML_GUIDE.md** "Troubleshooting" section (lines 1130-1323) FIRST
+- **XML syntax/attributes:** Read **docs/LVGL9_XML_GUIDE.md** "Troubleshooting" section FIRST
+- **Flex/Grid layouts:** Read **docs/LVGL9_XML_GUIDE.md** "Layouts & Positioning" section - comprehensive flex and grid reference with verified attributes
+- **Data binding patterns:** Read **docs/LVGL9_XML_GUIDE.md** "Data Binding" section for attribute vs child element bindings
+- **Component API patterns:** Read **docs/LVGL9_XML_GUIDE.md** "Custom Component API" for advanced component properties
 - **Component patterns/registration:** Read **docs/QUICK_REFERENCE.md** "Registration Order" and examples FIRST
-- **Icon workflow:** Read **docs/QUICK_REFERENCE.md** "Icon & Image Assets" section (lines 273-377) FIRST
+- **Icon workflow:** Read **docs/QUICK_REFERENCE.md** "Icon & Image Assets" section FIRST
 - **Architecture patterns:** Reference existing working implementations (motion_panel, nozzle_temp_panel) FIRST
 
 ### Quick Gotcha Reference
@@ -313,6 +323,27 @@ if (!ui_nav_go_back()) {
    **Why:** LVGL 9 XML property system auto-generates simplified attribute names from enum values. The C enum is `LV_PROPERTY_OBJ_FLAG_HIDDEN` but the XML attribute is just `hidden`. Parser silently ignores attributes with `flag_` prefix.
 
    **Status:** ✅ **FIXED** (2025-10-24) - All 12 XML files updated, 80+ incorrect usages corrected.
+
+1a. **✅ Conditional Flag Bindings Use Child Elements** - For conditional show/hide based on subjects, use child elements NOT attributes:
+   - ❌ Wrong: `<lv_obj bind_flag_if_eq="subject=value flag=hidden ref_value=0"/>`
+   - ✅ Correct: `<lv_obj><lv_obj-bind_flag_if_eq subject="value" flag="hidden" ref_value="0"/></lv_obj>`
+
+   **Available:** `bind_flag_if_eq`, `bind_flag_if_ne`, `bind_flag_if_gt`, `bind_flag_if_ge`, `bind_flag_if_lt`, `bind_flag_if_le`
+
+   **When to use:** Dynamic visibility, conditional enable/disable, responsive UI based on state
+
+1b. **✅ Flex Alignment Uses Three Properties** - Never use `flex_align` (doesn't exist). Use three separate style properties:
+   - ❌ Wrong: `<lv_obj flex_align="center center center">`
+   - ✅ Correct: `<lv_obj style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="start">`
+
+   **Three properties explained:**
+   - `style_flex_main_place` - Item distribution along main axis (CSS: justify-content)
+   - `style_flex_cross_place` - Item alignment along cross axis (CSS: align-items)
+   - `style_flex_track_place` - Track distribution for wrapping (CSS: align-content)
+
+   **Values:** `start`, `center`, `end`, `space_evenly`, `space_around`, `space_between`
+
+   **Verified flex_flow values:** `row`, `column`, `row_reverse`, `column_reverse`, `row_wrap`, `column_wrap`, `row_wrap_reverse`, `column_wrap_reverse`
 
 2. **Subject registration conflict** - If `globals.xml` declares subjects, they're registered with empty values before C++ initialization. Solution: Remove `<subjects>` from globals.xml.
 

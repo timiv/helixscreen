@@ -320,10 +320,13 @@ int main(int argc, char** argv) {
     bool show_keypad = false;  // Special flag for keypad testing
     bool show_step_test = false;  // Special flag for step progress widget testing
     bool force_wizard = false;  // Force wizard to run even if config exists
+    int wizard_step = -1;  // Specific wizard step to show (-1 means normal flow)
     bool panel_requested = false;  // Track if user explicitly requested a panel via CLI
     int display_num = -1;  // Display number for window placement (-1 means unset)
     int x_pos = -1;  // X position for window placement (-1 means unset)
     int y_pos = -1;  // Y position for window placement (-1 means unset)
+    bool screenshot_enabled = false;  // Enable automatic screenshot
+    int screenshot_delay_sec = 2;  // Screenshot delay in seconds (default: 2)
 
     // Parse arguments
     for (int i = 1; i < argc; i++) {
@@ -399,6 +402,35 @@ int main(int argc, char** argv) {
             show_keypad = true;
         } else if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "--wizard") == 0) {
             force_wizard = true;
+        } else if (strcmp(argv[i], "--wizard-step") == 0) {
+            if (i + 1 < argc) {
+                const char* step_arg = argv[++i];
+                force_wizard = true;  // Force wizard to show
+                if (strcmp(step_arg, "wifi") == 0 || strcmp(step_arg, "wifi-setup") == 0) {
+                    wizard_step = static_cast<int>(WizardStep::WIFI_SETUP);
+                } else if (strcmp(step_arg, "connection") == 0) {
+                    wizard_step = static_cast<int>(WizardStep::CONNECTION);
+                } else if (strcmp(step_arg, "printer-identify") == 0 || strcmp(step_arg, "identify") == 0) {
+                    wizard_step = static_cast<int>(WizardStep::PRINTER_IDENTIFY);
+                } else if (strcmp(step_arg, "bed") == 0 || strcmp(step_arg, "bed-select") == 0) {
+                    wizard_step = static_cast<int>(WizardStep::BED_SELECT);
+                } else if (strcmp(step_arg, "hotend") == 0 || strcmp(step_arg, "hotend-select") == 0) {
+                    wizard_step = static_cast<int>(WizardStep::HOTEND_SELECT);
+                } else if (strcmp(step_arg, "fan") == 0 || strcmp(step_arg, "fan-select") == 0) {
+                    wizard_step = static_cast<int>(WizardStep::FAN_SELECT);
+                } else if (strcmp(step_arg, "led") == 0 || strcmp(step_arg, "led-select") == 0) {
+                    wizard_step = static_cast<int>(WizardStep::LED_SELECT);
+                } else if (strcmp(step_arg, "summary") == 0) {
+                    wizard_step = static_cast<int>(WizardStep::SUMMARY);
+                } else {
+                    printf("Unknown wizard step: %s\n", step_arg);
+                    printf("Available steps: wifi, connection, printer-identify, bed, hotend, fan, led, summary\n");
+                    return 1;
+                }
+            } else {
+                printf("Error: --wizard-step requires an argument\n");
+                return 1;
+            }
         } else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--display") == 0) {
             if (i + 1 < argc) {
                 char* endptr;
@@ -438,6 +470,19 @@ int main(int argc, char** argv) {
                 printf("Error: -y/--y-pos requires a number argument\n");
                 return 1;
             }
+        } else if (strcmp(argv[i], "--screenshot") == 0) {
+            screenshot_enabled = true;
+            // Check if next arg is a number (delay in seconds)
+            if (i + 1 < argc) {
+                char* endptr;
+                long val = strtol(argv[i + 1], &endptr, 10);
+                // If next arg is a valid number, use it as delay
+                if (*endptr == '\0' && val > 0 && val <= 60) {
+                    screenshot_delay_sec = (int)val;
+                    i++;  // Consume the delay argument
+                }
+                // Otherwise, use default delay (next arg is probably a different flag)
+            }
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             printf("Usage: %s [options]\n", argv[0]);
             printf("Options:\n");
@@ -445,9 +490,11 @@ int main(int argc, char** argv) {
             printf("  -p, --panel <panel>  Initial panel (default: home)\n");
             printf("  -k, --keypad         Show numeric keypad for testing\n");
             printf("  -w, --wizard         Force first-run configuration wizard\n");
+            printf("  --wizard-step <step> Jump to specific wizard step for testing\n");
             printf("  -d, --display <n>    Display number for window placement (0, 1, 2...)\n");
             printf("  -x, --x-pos <n>      X coordinate for window position\n");
             printf("  -y, --y-pos <n>      Y coordinate for window position\n");
+            printf("  --screenshot [sec]   Take screenshot after delay (default: 2 seconds)\n");
             printf("  -h, --help           Show this help message\n");
             printf("\nAvailable panels:\n");
             printf("  home, controls, motion, nozzle-temp, bed-temp, extrusion,\n");
@@ -457,6 +504,8 @@ int main(int argc, char** argv) {
             printf("  small  = %dx%d\n", UI_SCREEN_SMALL_W, UI_SCREEN_SMALL_H);
             printf("  medium = %dx%d (default)\n", UI_SCREEN_MEDIUM_W, UI_SCREEN_MEDIUM_H);
             printf("  large  = %dx%d\n", UI_SCREEN_LARGE_W, UI_SCREEN_LARGE_H);
+            printf("\nWizard steps:\n");
+            printf("  wifi, connection, printer-identify, bed, hotend, fan, led, summary\n");
             printf("\nWindow placement:\n");
             printf("  Use -d to center window on specific display\n");
             printf("  Use -x/-y for exact pixel coordinates (both required)\n");
@@ -608,6 +657,7 @@ int main(int argc, char** argv) {
     lv_xml_component_register_from_file("A:ui_xml/step_progress_test.xml");
     lv_xml_component_register_from_file("A:ui_xml/app_layout.xml");
     lv_xml_component_register_from_file("A:ui_xml/wizard_container.xml");
+    lv_xml_component_register_from_file("A:ui_xml/wizard_wifi_setup.xml");
     lv_xml_component_register_from_file("A:ui_xml/wizard_connection.xml");
     lv_xml_component_register_from_file("A:ui_xml/wizard_printer_identify.xml");
     lv_xml_component_register_from_file("A:ui_xml/wizard_bed_select.xml");
@@ -632,6 +682,9 @@ int main(int argc, char** argv) {
 
     // Create entire UI from XML (single component contains everything)
     lv_obj_t* app_layout = (lv_obj_t*)lv_xml_create(screen, "app_layout", NULL);
+
+    // Force layout calculation for all LV_SIZE_CONTENT widgets
+    lv_obj_update_layout(screen);
 
     // Register app_layout with navigation system (to prevent hiding it)
     ui_nav_set_app_layout(app_layout);
@@ -890,6 +943,12 @@ int main(int argc, char** argv) {
         if (wizard) {
             LV_LOG_USER("Wizard created successfully");
 
+            // Jump to specific wizard step if requested via --wizard-step
+            if (wizard_step >= 0) {
+                LV_LOG_USER("Jumping to wizard step %d", wizard_step);
+                ui_wizard_goto_step(static_cast<WizardStep>(wizard_step));
+            }
+
             // Move keyboard to top layer so it appears above the full-screen wizard overlay
             lv_obj_t* keyboard = ui_keyboard_get_instance();
             if (keyboard) {
@@ -937,8 +996,8 @@ int main(int argc, char** argv) {
         printer_state.set_connection_state(0, "Disconnected");
     }
 
-    // Auto-screenshot timer (2 seconds after UI creation)
-    uint32_t screenshot_time = SDL_GetTicks() + 2000;
+    // Auto-screenshot timer (configurable delay after UI creation)
+    uint32_t screenshot_time = SDL_GetTicks() + (screenshot_delay_sec * 1000);
     bool screenshot_taken = false;
 
     // Mock print simulation timer (tick every second)
@@ -958,8 +1017,8 @@ int main(int argc, char** argv) {
             break;
         }
 
-        // Auto-screenshot after 2 seconds
-        if (!screenshot_taken && SDL_GetTicks() >= screenshot_time) {
+        // Auto-screenshot after configured delay (only if enabled)
+        if (screenshot_enabled && !screenshot_taken && SDL_GetTicks() >= screenshot_time) {
             save_screenshot();
             screenshot_taken = true;
         }
