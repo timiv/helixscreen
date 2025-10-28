@@ -1,8 +1,8 @@
 # LVGL 9 XML UI System - Complete Guide
 
-This comprehensive guide covers LVGL 9's declarative XML UI system with reactive data binding, based on LVGL 9.3 documentation and practical experience building the HelixScreen UI prototype.
+This comprehensive guide covers LVGL 9's declarative XML UI system with reactive data binding, based on LVGL 9.4 documentation and practical experience building the HelixScreen UI prototype.
 
-**Last Updated:** 2025-01-11
+**Last Updated:** 2025-10-28
 
 ---
 

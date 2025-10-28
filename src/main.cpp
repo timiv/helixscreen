@@ -41,6 +41,7 @@
 #include "ui_keyboard.h"
 #include "ui_wizard.h"
 #include "ui_panel_step_test.h"
+#include "ui_icon_loader.h"
 #include "printer_state.h"
 #include "moonraker_client.h"
 #include "config.h"
@@ -605,6 +606,9 @@ int main(int argc, char** argv) {
     lv_obj_t* screen = lv_screen_active();
     lv_obj_set_style_bg_color(screen, UI_COLOR_PANEL_BG, LV_PART_MAIN);
 
+    // Set window icon (after screen is created)
+    ui_set_window_icon(display);
+
     // Initialize app-level resize handler for responsive layouts
     ui_resize_handler_init(screen);
 
@@ -661,40 +665,40 @@ int main(int argc, char** argv) {
 
     // Register XML components (globals first to make constants available)
     LV_LOG_USER("Registering XML components...");
-    lv_xml_component_register_from_file("A:ui_xml/globals.xml");
-    lv_xml_component_register_from_file("A:ui_xml/icon.xml");
-    lv_xml_component_register_from_file("A:ui_xml/header_bar.xml");
-    lv_xml_component_register_from_file("A:ui_xml/confirmation_dialog.xml");
-    lv_xml_component_register_from_file("A:ui_xml/tip_detail_dialog.xml");
-    lv_xml_component_register_from_file("A:ui_xml/numeric_keypad_modal.xml");
-    lv_xml_component_register_from_file("A:ui_xml/print_file_card.xml");
-    lv_xml_component_register_from_file("A:ui_xml/print_file_list_row.xml");
-    lv_xml_component_register_from_file("A:ui_xml/print_file_detail.xml");
-    lv_xml_component_register_from_file("A:ui_xml/navigation_bar.xml");
-    lv_xml_component_register_from_file("A:ui_xml/home_panel.xml");
-    lv_xml_component_register_from_file("A:ui_xml/controls_panel.xml");
-    lv_xml_component_register_from_file("A:ui_xml/motion_panel.xml");
-    lv_xml_component_register_from_file("A:ui_xml/nozzle_temp_panel.xml");
-    lv_xml_component_register_from_file("A:ui_xml/bed_temp_panel.xml");
-    lv_xml_component_register_from_file("A:ui_xml/extrusion_panel.xml");
-    lv_xml_component_register_from_file("A:ui_xml/print_status_panel.xml");
-    lv_xml_component_register_from_file("A:ui_xml/filament_panel.xml");
-    lv_xml_component_register_from_file("A:ui_xml/settings_panel.xml");
-    lv_xml_component_register_from_file("A:ui_xml/advanced_panel.xml");
-    lv_xml_component_register_from_file("A:ui_xml/print_select_panel.xml");
-    lv_xml_component_register_from_file("A:ui_xml/step_progress_test.xml");
-    lv_xml_component_register_from_file("A:ui_xml/app_layout.xml");
-    lv_xml_component_register_from_file("A:ui_xml/wizard_container.xml");
-    lv_xml_component_register_from_file("A:ui_xml/network_list_item.xml");
-    lv_xml_component_register_from_file("A:ui_xml/wifi_password_modal.xml");
-    lv_xml_component_register_from_file("A:ui_xml/wizard_wifi_setup.xml");
-    lv_xml_component_register_from_file("A:ui_xml/wizard_connection.xml");
-    lv_xml_component_register_from_file("A:ui_xml/wizard_printer_identify.xml");
-    lv_xml_component_register_from_file("A:ui_xml/wizard_bed_select.xml");
-    lv_xml_component_register_from_file("A:ui_xml/wizard_hotend_select.xml");
-    lv_xml_component_register_from_file("A:ui_xml/wizard_fan_select.xml");
-    lv_xml_component_register_from_file("A:ui_xml/wizard_led_select.xml");
-    lv_xml_component_register_from_file("A:ui_xml/wizard_summary.xml");
+    lv_xml_register_component_from_file("A:ui_xml/globals.xml");
+    lv_xml_register_component_from_file("A:ui_xml/icon.xml");
+    lv_xml_register_component_from_file("A:ui_xml/header_bar.xml");
+    lv_xml_register_component_from_file("A:ui_xml/confirmation_dialog.xml");
+    lv_xml_register_component_from_file("A:ui_xml/tip_detail_dialog.xml");
+    lv_xml_register_component_from_file("A:ui_xml/numeric_keypad_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/print_file_card.xml");
+    lv_xml_register_component_from_file("A:ui_xml/print_file_list_row.xml");
+    lv_xml_register_component_from_file("A:ui_xml/print_file_detail.xml");
+    lv_xml_register_component_from_file("A:ui_xml/navigation_bar.xml");
+    lv_xml_register_component_from_file("A:ui_xml/home_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/controls_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/motion_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/nozzle_temp_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/bed_temp_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/extrusion_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/print_status_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/filament_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/settings_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/advanced_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/print_select_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/step_progress_test.xml");
+    lv_xml_register_component_from_file("A:ui_xml/app_layout.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_container.xml");
+    lv_xml_register_component_from_file("A:ui_xml/network_list_item.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wifi_password_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_wifi_setup.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_connection.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_printer_identify.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_bed_select.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_hotend_select.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_fan_select.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_led_select.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_summary.xml");
 
     // Initialize reactive subjects BEFORE creating XML
     LV_LOG_USER("Initializing reactive subjects...");

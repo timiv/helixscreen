@@ -52,6 +52,6 @@
  * Example initialization order:
  *   material_icons_register();
  *   ui_icon_register_widget();  // <-- This must come before icon.xml registration
- *   lv_xml_component_register_from_file("A:ui_xml/icon.xml");
+ *   lv_xml_register_component_from_file("A:ui_xml/icon.xml");
  */
 void ui_icon_register_widget();

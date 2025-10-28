@@ -86,7 +86,7 @@
 						style_text_align="left"
 						clickable="true"
 					>
-						<lv_event-call_function trigger="clicked" callback="tip_text_clicked_cb"/>
+						<event_cb trigger="clicked" callback="tip_text_clicked_cb"/>
 					</lv_label>
 				</lv_obj>
 			</lv_obj>
@@ -118,7 +118,7 @@
 				style_shadow_width="0"
 			>
 				<lv_label text="Print Files" style_text_color="#text_primary" style_text_font="#font_body" align="center" />
-				<lv_event-call_function trigger="clicked" callback="print_card_clicked_cb"/>
+				<event_cb trigger="clicked" callback="print_card_clicked_cb"/>
 			</lv_button>
 
 			<!-- Status Card (Temperature, Network, Light) -->
@@ -216,7 +216,7 @@
 				>
 					<lv_image name="light_icon" src="mat_light" width="64" height="64" align="center" />
 					<!-- NOTE: LVGL source uses lv_event-call_function, NOT event_cb (despite what web docs say) -->
-					<lv_event-call_function trigger="clicked" callback="light_toggle_cb"/>
+					<event_cb trigger="clicked" callback="light_toggle_cb"/>
 				</lv_button>
 			</lv_obj>
 		</lv_obj>

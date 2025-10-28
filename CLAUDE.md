@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the **LVGL 9 UI Prototype** for HelixScreen - a declarative XML-based touch UI system using LVGL 9.3 with reactive Subject-Observer data binding. The prototype runs on SDL2 for rapid development and will eventually target framebuffer displays on embedded hardware.
+This is the **LVGL 9 UI Prototype** for HelixScreen - a declarative XML-based touch UI system using LVGL 9.4 with reactive Subject-Observer data binding. The prototype runs on SDL2 for rapid development and will eventually target framebuffer displays on embedded hardware.
 
 **Key Innovation:** Complete separation of UI layout (XML) from business logic (C++), similar to modern web frameworks. No manual widget management - all updates happen through reactive subjects.
 
@@ -36,8 +36,9 @@ sudo yum install SDL2-devel bear ImageMagick python3 clang make
 **Optional (for IDE support):**
 - `bear` - Generates `compile_commands.json` for LSP/clangd
 
-**Optional (for screenshots):**
-- `imagemagick` - BMP to PNG conversion in screenshot script
+**Optional (for screenshots/icon generation):**
+- `imagemagick` - BMP to PNG conversion in screenshot script, icon generation (`make icon`)
+- `iconutil` - macOS .icns icon generation (macOS only, built-in; Linux generates PNG only)
 
 ## Build System
 
@@ -218,6 +219,53 @@ app_layout.xml
 
 All components reference `globals.xml` for shared constants (`#primary_color`, `#nav_width`, etc).
 
+## LVGL 9.4 API Changes
+
+**Upgraded from v9.3.0 to v9.4.0** (2025-10-28)
+
+### C++ API Renames
+
+```cpp
+// OLD (v9.3):
+lv_xml_component_register_from_file("A:/ui_xml/globals.xml");
+lv_xml_widget_register("widget_name", create_cb, apply_cb);
+
+// NEW (v9.4):
+lv_xml_register_component_from_file("A:/ui_xml/globals.xml");
+lv_xml_register_widget("widget_name", create_cb, apply_cb);
+```
+
+**Pattern:** All XML registration functions now use `lv_xml_register_*` prefix for consistency.
+
+### XML Event Syntax Change
+
+```xml
+<!-- OLD (v9.3): -->
+<lv_button>
+    <lv_event-call_function trigger="clicked" callback="my_callback"/>
+</lv_button>
+
+<!-- NEW (v9.4): -->
+<lv_button>
+    <event_cb trigger="clicked" callback="my_callback"/>
+</lv_button>
+```
+
+**Why:** The event callback is now a proper child element (`access="add"` in schema), not a standalone widget tag. This aligns with LVGL's pattern where child elements use simple names.
+
+### Object Alignment Values
+
+```xml
+<!-- CORRECT: -->
+<lv_obj align="left_mid"/>    <!-- Object positioning -->
+<lv_label style_text_align="left"/>  <!-- Text alignment within object -->
+
+<!-- WRONG: -->
+<lv_obj align="left"/>  <!-- "left" is not a valid lv_align_t value -->
+```
+
+**Valid align values:** `left_mid`, `right_mid`, `top_left`, `top_mid`, `top_right`, `bottom_left`, `bottom_mid`, `bottom_right`, `center`
+
 ## Critical Patterns (Project-Specific)
 
 **⚠️ IMPORTANT:** When implementing new features, **always reference existing, working code/XML implementations** for:
@@ -235,8 +283,8 @@ All components reference `globals.xml` for shared constants (`#primary_color`, `
 
 ```cpp
 // CORRECT ORDER:
-lv_xml_component_register_from_file("A:/ui_xml/globals.xml");
-lv_xml_component_register_from_file("A:/ui_xml/home_panel.xml");
+lv_xml_register_component_from_file("A:/ui_xml/globals.xml");
+lv_xml_register_component_from_file("A:/ui_xml/home_panel.xml");
 
 ui_nav_init();                      // Initialize subjects
 ui_panel_home_init_subjects();
@@ -308,6 +356,26 @@ if (!ui_nav_go_back()) {
 - All back buttons should use this pattern
 
 **Reference:** ui_nav.h:54-62, ui_nav.cpp:250-327, HANDOFF.md Pattern #0
+
+### 7. LVGL Public API Only ⚠️
+
+**NEVER use private LVGL interfaces or internal structures:**
+
+```cpp
+// ❌ WRONG - Private interfaces (will break on updates):
+lv_obj_mark_dirty()              // Internal layout/rendering
+obj->coords.x1                   // Direct structure access
+_lv_* functions                  // Underscore-prefixed internals
+
+// ✅ CORRECT - Public API:
+lv_obj_get_x()                   // Public getters/setters
+lv_obj_update_layout()           // Public layout control
+lv_obj_invalidate()              // Public redraw trigger
+```
+
+**Why:** Private APIs can change without notice between LVGL versions, breaking compatibility. They also bypass safety checks and validation.
+
+**When you need internal behavior:** Search for public API alternatives or file an issue with LVGL if no public interface exists.
 
 ## Common Gotchas
 

@@ -243,6 +243,6 @@ static void ui_icon_xml_apply(lv_xml_parser_state_t* state, const char** attrs) 
  * Register the icon widget with LVGL's XML system
  */
 void ui_icon_register_widget() {
-    lv_xml_widget_register("icon", ui_icon_xml_create, ui_icon_xml_apply);
+    lv_xml_register_widget("icon", ui_icon_xml_create, ui_icon_xml_apply);
     LV_LOG_USER("Icon widget registered with XML system");
 }

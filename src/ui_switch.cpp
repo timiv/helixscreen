@@ -97,6 +97,6 @@ static void ui_switch_xml_apply(lv_xml_parser_state_t *state, const char **attrs
  */
 void ui_switch_register()
 {
-    lv_xml_widget_register("ui_switch", ui_switch_xml_create, ui_switch_xml_apply);
+    lv_xml_register_widget("ui_switch", ui_switch_xml_create, ui_switch_xml_apply);
     spdlog::info("[Switch] Registered ui_switch widget with XML system");
 }

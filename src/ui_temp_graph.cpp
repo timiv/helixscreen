@@ -20,7 +20,6 @@
 
 #include "ui_temp_graph.h"
 #include "ui_theme.h"
-#include "../lvgl/src/widgets/chart/lv_chart_private.h"  // For checking LV_CHART_POINT_NONE only
 #include <spdlog/spdlog.h>
 #include <string.h>
 #include <stdlib.h>

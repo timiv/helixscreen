@@ -518,7 +518,8 @@ static void jog_pad_draw_cb(lv_event_t* e) {
 static void jog_pad_press_cb(lv_event_t* e) {
     lv_obj_t* obj = (lv_obj_t*)lv_event_get_target(e);
     lv_point_t point;
-    lv_indev_get_point(lv_indev_get_act(), &point);
+    lv_indev_t* indev = lv_indev_active();
+    lv_indev_get_point(indev, &point);
 
     // Get container dimensions and center
     lv_area_t obj_coords;
@@ -578,7 +579,8 @@ static void jog_pad_release_cb(lv_event_t* e) {
 static void jog_pad_click_cb(lv_event_t* e) {
     lv_obj_t* obj = (lv_obj_t*)lv_event_get_target(e);
     lv_point_t point;
-    lv_indev_get_point(lv_indev_get_act(), &point);
+    lv_indev_t* indev = lv_indev_active();
+    lv_indev_get_point(indev, &point);
 
     // Get container dimensions and center
     lv_area_t obj_coords;

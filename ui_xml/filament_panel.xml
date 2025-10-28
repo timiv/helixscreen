@@ -102,7 +102,7 @@
       <lv_label text="Material Selection"
                 style_text_font="montserrat_16"
                 style_text_color="#text_secondary"
-                align="left"/>
+                align="left_mid"/>
 
       <!-- Material Preset Buttons (2x2 Grid) -->
       <lv_obj name="preset_grid" width="100%" height="116"
@@ -163,7 +163,7 @@
                 style_text_font="montserrat_16"
                 style_text_color="#text_secondary"
                 style_pad_top="#gap_normal"
-                align="left"/>
+                align="left_mid"/>
 
       <!-- Action Buttons (Vertical Stack) -->
       <lv_obj name="action_buttons" width="100%" height="220"
@@ -233,7 +233,7 @@
                   width="100%"
                   style_text_font="montserrat_14"
                   style_text_color="#text_secondary"
-                  align="left"/>
+                  align="left_mid"/>
 
         <!-- Current Temp Display -->
         <lv_label name="warning_temps"
@@ -241,7 +241,7 @@
                   style_text_font="montserrat_14"
                   style_text_color="#text_secondary"
                   style_pad_top="#gap_tiny"
-                  align="left"/>
+                  align="left_mid"/>
       </lv_obj>
     </lv_obj>
   </view>

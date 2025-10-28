@@ -98,8 +98,8 @@ int main(int, char**) {
 
     // Register XML components (globals first, then test_card)
     LV_LOG_USER("Registering XML components...");
-    lv_xml_component_register_from_file("A:ui_xml/globals.xml");
-    lv_xml_component_register_from_file("A:ui_xml/test_card.xml");
+    lv_xml_register_component_from_file("A:ui_xml/globals.xml");
+    lv_xml_register_component_from_file("A:ui_xml/test_card.xml");
 
     // Create scrollable grid container
     lv_obj_t* container = lv_obj_create(screen);
