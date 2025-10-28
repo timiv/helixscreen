@@ -249,7 +249,7 @@
 	<px name="step_spacing" value="16" />
 	<!-- Gap between step items -->
 
-						<!-- ===================================================================== -->
+									<!-- ===================================================================== -->
 		<!-- FontAwesome icon constants - AUTO-GENERATED - DO NOT EDIT MANUALLY   -->
 		<!-- Run: python3 scripts/generate-icon-consts.py                         -->
 		<!-- ===================================================================== -->
@@ -266,6 +266,7 @@
 		<str name="icon_arrow_up_right" value="↗"/>  <!-- U+2197 diagonal up-right -->
 		<str name="icon_arrows_all" value=""/>  <!-- U+F0B2 arrows-up-down-left-right -->
 		<str name="icon_backspace" value=""/>  <!-- U+F55A delete-left -->
+		<str name="icon_check_circle" value=""/>  <!-- U+F058 circle-check (connected) -->
 		<str name="icon_chevron_down" value=""/>  <!-- U+F078 chevron-down -->
 		<str name="icon_chevron_left" value=""/>  <!-- U+F053 chevron-left -->
 		<str name="icon_chevron_up" value=""/>  <!-- U+F077 chevron-up -->
@@ -283,6 +284,7 @@
 		<str name="icon_leaf" value=""/>  <!-- U+F06C leaf -->
 		<str name="icon_lightbulb" value=""/>  <!-- U+F0EB lightbulb -->
 		<str name="icon_list" value=""/>  <!-- U+F03A list -->
+		<str name="icon_lock" value=""/>  <!-- U+F023 lock (encrypted) -->
 		<str name="icon_power_off" value=""/>  <!-- U+F011 power-off -->
 		<str name="icon_question_circle" value=""/>  <!-- U+F059 circle-question -->
 		<str name="icon_settings" value=""/>  <!-- U+F013 gear -->

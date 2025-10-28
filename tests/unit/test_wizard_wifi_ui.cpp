@@ -56,11 +56,11 @@ static bool components_registered = false;
 
 static void ensure_components_registered() {
     if (!components_registered) {
-        lv_xml_component_register_from_file("A:ui_xml/globals.xml");
-        lv_xml_component_register_from_file("A:ui_xml/network_list_item.xml");
-        lv_xml_component_register_from_file("A:ui_xml/wifi_password_modal.xml");
-        lv_xml_component_register_from_file("A:ui_xml/wizard_wifi_setup.xml");
-        lv_xml_component_register_from_file("A:ui_xml/wizard_container.xml");
+        lv_xml_register_component_from_file("A:ui_xml/globals.xml");
+        lv_xml_register_component_from_file("A:ui_xml/network_list_item.xml");
+        lv_xml_register_component_from_file("A:ui_xml/wifi_password_modal.xml");
+        lv_xml_register_component_from_file("A:ui_xml/wizard_wifi_setup.xml");
+        lv_xml_register_component_from_file("A:ui_xml/wizard_container.xml");
         ui_switch_register();
         components_registered = true;
     }

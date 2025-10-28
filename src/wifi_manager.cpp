@@ -45,17 +45,18 @@ static lv_timer_t* scan_timer = nullptr;
 static std::function<void(const std::vector<WiFiNetwork>&)> scan_callback;
 
 // Mock network list (for simulator) - ~10 networks with varying signal/encryption
+// Signal strength ranges: 0-39 (weak), 40-69 (medium), 70-100 (strong)
 static std::vector<WiFiNetwork> mock_networks = {
-    WiFiNetwork("HomeNetwork-5G", 95, true, "WPA2"),
-    WiFiNetwork("CoffeeShop_Free", 72, false, "Open"),
-    WiFiNetwork("Printers-WiFi", 88, true, "WPA2"),
-    WiFiNetwork("Neighbor-Network", 45, true, "WPA3"),
-    WiFiNetwork("Guest-Access", 58, false, "Open"),
-    WiFiNetwork("Office-Main", 82, true, "WPA2"),
-    WiFiNetwork("IoT-Devices", 65, true, "WPA"),
-    WiFiNetwork("Public-Hotspot", 38, false, "Open"),
-    WiFiNetwork("Printer-Direct", 91, true, "WPA2"),
-    WiFiNetwork("SmartHome-Net", 54, true, "WPA3")
+    WiFiNetwork("HomeNetwork-5G", 92, true, "WPA2"),      // Strong, encrypted
+    WiFiNetwork("Office-Main", 78, true, "WPA2"),         // Strong, encrypted
+    WiFiNetwork("Printers-WiFi", 85, true, "WPA2"),       // Strong, encrypted
+    WiFiNetwork("CoffeeShop_Free", 68, false, "Open"),    // Medium, open
+    WiFiNetwork("IoT-Devices", 55, true, "WPA"),          // Medium, encrypted
+    WiFiNetwork("Guest-Access", 48, false, "Open"),       // Medium, open
+    WiFiNetwork("Neighbor-Network", 38, true, "WPA3"),    // Weak, encrypted
+    WiFiNetwork("Public-Hotspot", 25, false, "Open"),     // Weak, open
+    WiFiNetwork("SmartHome-Net", 32, true, "WPA3"),       // Weak, encrypted
+    WiFiNetwork("Distant-Router", 18, true, "WPA2")       // Weak, encrypted
 };
 
 // ============================================================================

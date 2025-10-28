@@ -254,6 +254,12 @@ lv_obj_t* ui_wizard_create(lv_obj_t* parent,
 }
 
 void ui_wizard_goto_step(WizardStep step) {
+    // Stop wifi scanning when leaving wifi setup screen
+    if (current_step == WizardStep::WIFI_SETUP && step != WizardStep::WIFI_SETUP) {
+        spdlog::debug("[Wizard] Leaving WiFi setup screen, stopping scan");
+        WiFiManager::stop_scan();
+    }
+
     current_step = step;
 
     // Hide all screens
@@ -719,26 +725,50 @@ static void populate_network_list(const std::vector<WiFiNetwork>& networks) {
 
         // Find child widgets
         lv_obj_t* ssid_label = lv_obj_find_by_name(item, "network_ssid");
-        lv_obj_t* signal_label = lv_obj_find_by_name(item, "network_signal");
-        lv_obj_t* lock_icon = lv_obj_find_by_name(item, "network_lock");
+        lv_obj_t* signal_icon = lv_obj_find_by_name(item, "network_signal");
+        lv_obj_t* connected_icon = lv_obj_find_by_name(item, "network_connected");
 
         // Populate data
         if (ssid_label) {
             lv_label_set_text(ssid_label, network.ssid.c_str());
         }
 
-        if (signal_label) {
-            char signal_buf[16];
-            snprintf(signal_buf, sizeof(signal_buf), "%d%%", network.signal_strength);
-            lv_label_set_text(signal_label, signal_buf);
+        // Set wifi signal strength icon based on signal percentage and encryption status
+        if (signal_icon) {
+            // Determine icon name based on signal strength (1-4 bars) and encryption
+            const char* icon_name = nullptr;
+
+            if (network.signal_strength >= 70) {
+                icon_name = network.is_secured ? "mat_wifi_strength_4_lock" : "mat_wifi_strength_4";
+            } else if (network.signal_strength >= 50) {
+                icon_name = network.is_secured ? "mat_wifi_strength_3_lock" : "mat_wifi_strength_3";
+            } else if (network.signal_strength >= 30) {
+                icon_name = network.is_secured ? "mat_wifi_strength_2_lock" : "mat_wifi_strength_2";
+            } else {
+                icon_name = network.is_secured ? "mat_wifi_strength_1_lock" : "mat_wifi_strength_1";
+            }
+
+            // Get the registered image data
+            const lv_image_dsc_t* img_dsc = (const lv_image_dsc_t*)lv_xml_get_image(NULL, icon_name);
+            if (img_dsc) {
+                lv_image_set_src(signal_icon, img_dsc);
+                spdlog::debug("[WiFi] Set icon '{}' for network '{}' ({}%, {})",
+                             icon_name, network.ssid, network.signal_strength,
+                             network.is_secured ? "secured" : "open");
+            } else {
+                spdlog::warn("[WiFi] Failed to find icon '{}' for network '{}'",
+                            icon_name, network.ssid);
+            }
         }
 
-        // Hide lock icon for open networks
-        if (lock_icon) {
-            if (network.is_secured) {
-                lv_obj_remove_flag(lock_icon, LV_OBJ_FLAG_HIDDEN);
+        // Show connected indicator if this is the currently connected network
+        if (connected_icon) {
+            bool is_connected = WiFiManager::is_connected() &&
+                              WiFiManager::get_connected_ssid() == network.ssid;
+            if (is_connected) {
+                lv_obj_remove_flag(connected_icon, LV_OBJ_FLAG_HIDDEN);
             } else {
-                lv_obj_add_flag(lock_icon, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(connected_icon, LV_OBJ_FLAG_HIDDEN);
             }
         }
 

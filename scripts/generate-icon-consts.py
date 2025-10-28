@@ -35,6 +35,8 @@ ICONS = {
     'icon_wifi_slash': (0xF127, 'wifi-slash'),
     'icon_lightbulb': (0xF0EB, 'lightbulb'),
     'icon_question_circle': (0xF059, 'circle-question'),
+    'icon_check_circle': (0xF058, 'circle-check (connected)'),
+    'icon_lock': (0xF023, 'lock (encrypted)'),
 
     # Metadata icons
     'icon_clock': (0xF017, 'clock-o'),

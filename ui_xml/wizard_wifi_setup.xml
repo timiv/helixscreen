@@ -184,7 +184,7 @@
 					          style_text_font="montserrat_14"
 					          style_text_color="#text_muted"
 					          style_text_align="center"
-					          style_pad_top="#padding_large"/>
+					          style_pad_top="#padding_normal"/>
 				</lv_obj>
 			</lv_obj>
 		</lv_obj>
