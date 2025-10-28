@@ -136,6 +136,7 @@ TEST_INTEGRATION_OBJS := $(patsubst $(TEST_UNIT_DIR)/%.cpp,$(OBJ_DIR)/tests/%.o,
 
 TEST_MAIN_OBJ := $(OBJ_DIR)/tests/test_main.o
 CATCH2_OBJ := $(OBJ_DIR)/tests/catch_amalgamated.o
+UI_TEST_UTILS_OBJ := $(OBJ_DIR)/tests/ui_test_utils.o
 
 # Mock objects for integration testing
 MOCK_SRCS := $(wildcard $(TEST_MOCK_DIR)/*.cpp)
@@ -324,7 +325,7 @@ run: $(TARGET)
 # Clean build artifacts
 clean-tests:
 	$(ECHO) "$(YELLOW)Cleaning test artifacts...$(RESET)"
-	$(Q)rm -f $(TEST_BIN) $(TEST_MAIN_OBJ) $(CATCH2_OBJ) $(TEST_OBJS)
+	$(Q)rm -f $(TEST_BIN) $(TEST_MAIN_OBJ) $(CATCH2_OBJ) $(UI_TEST_UTILS_OBJ) $(TEST_OBJS)
 	$(ECHO) "$(GREEN)✓ Test artifacts cleaned$(RESET)"
 
 clean:
@@ -397,7 +398,7 @@ test-config: $(TEST_BIN)
 	}
 	$(ECHO) "$(GREEN)$(BOLD)✓ Config tests passed!$(RESET)"
 
-$(TEST_BIN): $(TEST_MAIN_OBJ) $(CATCH2_OBJ) $(TEST_OBJS) $(OBJ_DIR)/wizard_validation.o $(OBJ_DIR)/config.o $(LVGL_OBJS) $(THORVG_OBJS) $(OBJ_DIR)/ui_nav.o $(OBJ_DIR)/ui_temp_graph.o $(OBJ_DIR)/wifi_manager.o $(OBJ_DIR)/tips_manager.o
+$(TEST_BIN): $(TEST_MAIN_OBJ) $(CATCH2_OBJ) $(UI_TEST_UTILS_OBJ) $(TEST_OBJS) $(OBJ_DIR)/wizard_validation.o $(OBJ_DIR)/config.o $(LVGL_OBJS) $(THORVG_OBJS) $(OBJ_DIR)/ui_nav.o $(OBJ_DIR)/ui_temp_graph.o $(OBJ_DIR)/wifi_manager.o $(OBJ_DIR)/tips_manager.o $(OBJ_DIR)/ui_wizard.o $(OBJ_DIR)/ui_keyboard.o $(OBJ_DIR)/ui_switch.o $(OBJ_DIR)/moonraker_client.o $(OBJ_DIR)/printer_state.o $(LIBHV_LIB)
 	$(Q)mkdir -p $(BIN_DIR)
 	$(ECHO) "$(MAGENTA)$(BOLD)[LD]$(RESET) run_tests"
 	$(Q)$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS) || { \
@@ -436,6 +437,12 @@ $(CATCH2_OBJ): $(TEST_DIR)/catch_amalgamated.cpp
 	$(Q)mkdir -p $(dir $@)
 	$(ECHO) "$(BLUE)[CATCH2]$(RESET) $<"
 	$(Q)$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Compile UI test utilities
+$(UI_TEST_UTILS_OBJ): $(TEST_DIR)/ui_test_utils.cpp
+	$(Q)mkdir -p $(dir $@)
+	$(ECHO) "$(CYAN)[UI-TEST]$(RESET) $<"
+	$(Q)$(CXX) $(CXXFLAGS) -I$(TEST_DIR) $(INCLUDES) -c $< -o $@
 
 # Compile test sources
 $(OBJ_DIR)/tests/%.o: $(TEST_UNIT_DIR)/%.cpp

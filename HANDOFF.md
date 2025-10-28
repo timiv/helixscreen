@@ -1,50 +1,34 @@
 # Session Handoff Document
 
 **Last Updated:** 2025-10-27
-**Current Focus:** Wizard screens implementation
+**Current Focus:** WiFi password modal and connection flow
 
 ---
 
 ## 🎯 Active Work & Next Priorities
 
-### Wizard Step 0 (WiFi Setup) - READY TO COMMIT ✅
+### WiFi Password Modal - IN PROGRESS 🔄
 
-**Status:** Fully implemented and tested - awaiting commit
+**Next Implementation:**
+- Password entry modal component (popup over network list)
+- Modal trigger: Click secured network → show password input
+- Connection flow with spinner/feedback
+- Success: Show connected status, hide modal
+- Error: Show error message, keep modal open for retry
 
-**Major Implementation Complete:**
-- ✅ WiFi Manager platform abstraction (`wifi_manager.h/cpp`, 298 lines)
-  - macOS mock mode with 10 test networks
-  - Linux hardware detection (WiFi via `/sys/class/net/*/wireless`, Ethernet via interface names)
-  - Periodic scanning with 7-second refresh timer
-  - Async connection flow with callbacks
-- ✅ Custom `<ui_switch>` widget (fixed LVGL 9 XML registration)
-- ✅ Network list item component (`network_list_item.xml`)
-- ✅ Two-column flex layout working (WiFi/Ethernet cards 30%, network list 70%)
-- ✅ WiFi toggle event handler with 3-second scan delay
-- ✅ Dynamic network list population from scan results
-- ✅ Network list dimming when WiFi disabled (UI_DISABLED_OPA constant)
-- ✅ Wizard integration as Step 0 with auto-skip logic
-- ✅ CLI support: `--wizard-step wifi`
-
-**Key Technical Decisions:**
-- Reactive data flow: Toggle → 3s delay → scan → populate list (all async)
-- Critical bug fix: `clear_network_list()` iterates backwards when deleting children
-- One-shot timer: `lv_timer_create()` + `lv_timer_set_repeat_count(1)` for delay
-- UI_DISABLED_OPA constant (50%) in both `ui_theme.h` and `globals.xml`
-
-**Remaining WiFi Work:**
-- Password entry modal component (for encrypted networks)
-- Connection flow with success/error feedback
-- Unit tests for wifi_manager
-- Integration tests for wizard WiFi UI
+**Technical Approach:**
+- Modal: `lv_obj` with `align="center"` overlay
+- Password field: `lv_textarea` with `password_mode="true"`
+- Keyboard: Use existing `ui_keyboard` global system
+- Connection: `WiFiManager::connect(ssid, password, callback)`
+- State tracking: Show "Connecting..." spinner during async operation
 
 ### Next Priorities
 
-1. **COMMIT WiFi wizard implementation** (all functionality working)
-2. Fix wizard Step 3 (Printer Identify) - roller widget collapsed/not visible
-3. Implement WiFi password modal and connection flow
-4. Hardware detection/mapping screens (Steps 4-7)
-5. Integration tests for complete wizard flow
+1. **Implement WiFi password modal** - popup with password input and connect button
+2. **WiFi connection flow** - spinner, success/error feedback, state updates
+3. Hardware detection/mapping screens (Steps 4-7)
+4. Integration tests for complete wizard flow
 
 ---
 
@@ -181,23 +165,18 @@ spdlog::error("Failed: {}", (int)enum_val);     // Cast enums
 
 ## 🔧 Known Issues & Gotchas
 
-### Wizard Step 3: Printer Type Roller Collapsed 🔴 OPEN
+### LVGL 9 XML Roller Options ⚠️ WORKAROUND
 
-**Problem:** Printer type roller widget appears collapsed - only shows label, not dropdown options
+**Problem:** LVGL 9 XML roller parser fails with `options="'item1\nitem2' normal"` syntax
 
-**Symptoms:**
-- Gray box where roller should be
-- Options (Voron, Creality, Prusa, etc.) not visible
-- Cannot select printer type
+**Workaround:** Set roller options programmatically in C++:
+```cpp
+lv_roller_set_options(roller, "Item 1\nItem 2\nItem 3", LV_ROLLER_MODE_NORMAL);
+```
 
-**Screenshot:** `/tmp/ui-screenshot-wizard-step3-current.png` (2025-10-27)
+**Status:** Applied to wizard step 3 printer selection (32 printer types)
 
-**Possible causes:**
-1. Height too small for visible rows (currently 160px)
-2. Missing `visible_row_count` attribute
-3. Flex layout calculation issue
-
-**Files:** `ui_xml/wizard_printer_identify.xml`, `src/ui_wizard.cpp`
+**Files:** `src/ui_wizard.cpp:352-387`
 
 ### LVGL 9 XML Flag Syntax ✅ FIXED
 
