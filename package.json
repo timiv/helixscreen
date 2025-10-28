@@ -23,5 +23,8 @@
     "@swc/core": "^1.13.5",
     "lv_font_conv": "^1.5.3",
     "lv_img_conv": "^0.4.0"
+  },
+  "overrides": {
+    "canvas": "3.2.0"
   }
 }

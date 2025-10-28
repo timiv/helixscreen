@@ -61,7 +61,7 @@ ifeq ($(origin CXX),default)
     endif
 endif
 
-CFLAGS := -std=c11 -Wall -Wextra -O2 -g
+CFLAGS := -std=c11 -Wall -Wextra -O2 -g -D_GNU_SOURCE
 CXXFLAGS := -std=c++17 -Wall -Wextra -O2 -g
 
 # Directories
