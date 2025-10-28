@@ -249,7 +249,7 @@
 	<px name="step_spacing" value="16" />
 	<!-- Gap between step items -->
 
-					<!-- ===================================================================== -->
+						<!-- ===================================================================== -->
 		<!-- FontAwesome icon constants - AUTO-GENERATED - DO NOT EDIT MANUALLY   -->
 		<!-- Run: python3 scripts/generate-icon-consts.py                         -->
 		<!-- ===================================================================== -->

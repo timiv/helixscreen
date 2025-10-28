@@ -51,7 +51,10 @@ LV_FONT_DECLARE(arrows_32);    // ←↑→↓↖↗↙↘ at 32px
 
 // Metadata icons (available in 16px)
 #define ICON_CLOCK             "\xEF\x80\x97"      // U+F017 clock-o
+#define ICON_EDIT              "\xEF\x81\x84"      // U+F044 edit
 #define ICON_LEAF              "\xEF\x81\xAC"      // U+F06C leaf
+#define ICON_FIRE              "\xEF\x81\xAD"      // U+F06D fire
+#define ICON_CUBE              "\xEF\x86\xB2"      // U+F1B2 cube
 
 // Detail view icons (available in 32px)
 #define ICON_CHEVRON_LEFT      "\xEF\x81\x93"      // U+F053 chevron-left
