@@ -675,11 +675,30 @@ This project has specialized agents - use them proactively to keep context small
 
 ## Development Workflow
 
-1. Edit XML for layout changes (no recompilation needed)
-2. Edit C++ for logic/subjects changes → `make`
-3. Test with `./build/bin/helix-ui-proto [panel_name]` (default size: `small`)
-4. Screenshot with `./scripts/screenshot.sh` or press 'S' in UI
-5. For complex multi-step tasks → use appropriate agent (see above)
+### Session Startup (CRITICAL)
+
+**ALWAYS start sessions by checking recent git history:**
+
+```bash
+git log --oneline -10   # Recent commits and what was just completed
+git log --stat -5       # Recent changes with file details
+git status              # Current working state
+```
+
+**Why this matters:**
+- Understand recent work and current project focus
+- Avoid suggesting approaches that were just tried/rejected
+- Build on recent architectural decisions instead of starting from scratch
+- Maintain context about what was just implemented or refactored
+
+### Daily Development Cycle
+
+1. **Check git history** (see above) to understand recent context
+2. Edit XML for layout changes (no recompilation needed)
+3. Edit C++ for logic/subjects changes → `make`
+4. Test with `./build/bin/helix-ui-proto [panel_name]` (default size: `small`)
+5. Screenshot with `./scripts/screenshot.sh` or press 'S' in UI
+6. For complex multi-step tasks → use appropriate agent (see above)
 
 **For current work status:** See HANDOFF.md
 **For planned features:** See docs/ROADMAP.md
