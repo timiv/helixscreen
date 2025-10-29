@@ -264,6 +264,54 @@ app_layout.xml
 
 All components reference `globals.xml` for shared constants (`#primary_color`, `#nav_width`, etc).
 
+### WiFi Backend Architecture
+
+**Security-hardened modular WiFi system using pluggable backends:**
+
+```
+WiFiManager (UI Integration)
+    ↓ Factory Pattern
+WifiBackend (Abstract Interface)
+    ├── WifiBackendWpaSupplicant (Linux - Real wpa_supplicant)
+    └── WifiBackendMock (macOS/Simulator - LVGL timers)
+```
+
+**Key Design Principles:**
+- **No platform ifdefs** in manager code - clean abstraction
+- **Security-first** - Input validation, resource cleanup, thread safety
+- **Event-driven** - libhv async I/O + callback dispatch to UI
+- **Extensible** - Easy to add NetworkManager, systemd-networkd backends
+
+**Thread Safety Model:**
+```
+libhv EventLoop Thread          LVGL Main Thread
+    ↓ wpa_supplicant events          ↓ UI updates
+WifiBackend::handle_events  →  WiFiManager callbacks
+    (mutex protected)           (LVGL timer dispatch)
+```
+
+**Security Features:**
+- Command injection prevention (input validation)
+- Resource leak elimination (RAII cleanup)
+- Password redaction in logs
+- Buffer overflow protection
+- Exception-safe callback dispatch
+
+**Usage Pattern:**
+```cpp
+// Initialize in wizard/app
+auto wifi_manager = std::make_unique<WiFiManager>();
+
+// Register callbacks
+wifi_manager->register_event_callback("SCAN_COMPLETE", [](const std::string& data) {
+    // Handle scan results in UI thread
+});
+
+// Trigger operations
+wifi_manager->start_scan(on_networks_updated);
+wifi_manager->connect_network(ssid, password, on_connect_complete);
+```
+
 ## LVGL 9.4 API Changes
 
 **Upgraded from v9.3.0 to v9.4.0** (2025-10-28)
