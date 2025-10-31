@@ -28,15 +28,11 @@ extern "C" {
 #include "lvgl/lvgl.h"
 
 /**
- * Initialize card theming system
- * Reads card_bg_light and card_bg_dark colors from globals.xml
- * Must be called AFTER theme is initialized and BEFORE ui_card_register()
- */
-void ui_card_init(bool use_dark_mode);
-
-/**
  * Register the ui_card component with the LVGL XML system
  * Must be called before any XML files using <ui_card> are registered
+ *
+ * Card colors are fetched dynamically via ui_theme_get_color("card_bg")
+ * which automatically uses light/dark variants based on current theme mode.
  */
 void ui_card_register(void);
 

@@ -28,35 +28,7 @@
 #include "lvgl/src/others/xml/parsers/lv_xml_obj_parser.h"
 #include <spdlog/spdlog.h>
 
-/**
- * Card theme colors (read from globals.xml at initialization)
- */
-static lv_color_t card_bg_color_light;
-static lv_color_t card_bg_color_dark;
-static bool card_theme_initialized = false;
-static bool use_dark_mode = false;
-
-void ui_card_init(bool use_dark_mode_param) {
-    use_dark_mode = use_dark_mode_param;
-
-    // Read card background colors from globals.xml
-    const char* light_str = lv_xml_get_const(NULL, "card_bg_light");
-    const char* dark_str = lv_xml_get_const(NULL, "card_bg_dark");
-
-    if (!light_str || !dark_str) {
-        spdlog::error("[Card] Failed to read card_bg_light/card_bg_dark from globals.xml");
-        // Fallback to LVGL defaults
-        card_bg_color_light = lv_color_white();
-        card_bg_color_dark = lv_color_hex(0x282b30);
-        spdlog::warn("[Card] Using LVGL default colors as fallback");
-    } else {
-        card_bg_color_light = ui_theme_parse_color(light_str);
-        card_bg_color_dark = ui_theme_parse_color(dark_str);
-        spdlog::info("[Card] Initialized: light={}, dark={}", light_str, dark_str);
-    }
-
-    card_theme_initialized = true;
-}
+// No static state needed - colors fetched dynamically via ui_theme_get_color()
 
 /**
  * XML create handler for ui_card
@@ -92,16 +64,11 @@ static void ui_card_xml_apply(lv_xml_parser_state_t *state, const char **attrs)
         return;
     }
 
-    if (!card_theme_initialized) {
-        spdlog::error("[Card] Theme not initialized - call ui_card_init() before registering components");
-        return;
-    }
-
     // Apply theme-aware defaults FIRST (lowest priority)
     // These can be overridden by XML attributes
 
-    // 1. Background color (theme-aware: light/dark)
-    lv_color_t bg_color = use_dark_mode ? card_bg_color_dark : card_bg_color_light;
+    // 1. Background color (theme-aware: light/dark via ui_theme_get_color)
+    lv_color_t bg_color = ui_theme_get_color("card_bg");
     lv_obj_set_style_bg_color(obj, bg_color, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
 
@@ -118,8 +85,7 @@ static void ui_card_xml_apply(lv_xml_parser_state_t *state, const char **attrs)
     // 5. Padding: Let LVGL theme provide responsive default (16/20/24px)
     //    User can override per-instance with style_pad_all attribute
 
-    spdlog::trace("[Card] Applied theme defaults: bg={}, border=0, shadow=0",
-                  use_dark_mode ? "dark" : "light");
+    spdlog::trace("[Card] Applied theme defaults: bg=card_bg, border=0, shadow=0");
 
     // Now apply standard lv_obj properties from XML (highest priority)
     // This allows XML attributes to override our defaults
@@ -128,11 +94,6 @@ static void ui_card_xml_apply(lv_xml_parser_state_t *state, const char **attrs)
 
 void ui_card_register(void)
 {
-    if (!card_theme_initialized) {
-        spdlog::error("[Card] Cannot register - theme not initialized. Call ui_card_init() first.");
-        return;
-    }
-
     lv_xml_register_widget("ui_card", ui_card_xml_create, ui_card_xml_apply);
     spdlog::info("[Card] Registered <ui_card> widget with LVGL XML system");
 }

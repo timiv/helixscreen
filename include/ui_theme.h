@@ -100,3 +100,7 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode);
 void ui_theme_toggle_dark_mode();
 bool ui_theme_is_dark_mode();
 lv_color_t ui_theme_parse_color(const char* hex_str);
+
+// Theme color variant helpers (DRY pattern for light/dark color selection)
+lv_color_t ui_theme_get_color(const char* base_name);
+void ui_theme_apply_bg_color(lv_obj_t* obj, const char* base_name, lv_part_t part = LV_PART_MAIN);

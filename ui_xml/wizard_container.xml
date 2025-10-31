@@ -36,19 +36,20 @@
     <view name="wizard_container" extends="lv_obj" width="100%" height="100%">
 
         <!-- Root: Vertical stack (header, content, footer) -->
+        <!-- Background color applied from C++ (theme-aware: light/dark variants) -->
         <lv_obj name="wizard_root"
                 width="100%" height="100%"
                 flex_flow="column"
-                style_flex_main_place="start"
+                style_flex_main_place="space_between"
                 style_pad_all="0"
                 style_bg_opa="255"
                 style_border_width="0">
 
             <!-- ==================== HEADER ==================== -->
             <lv_obj name="wizard_header"
-                    width="100%" height="LV_SIZE_CONTENT"
+                    width="100%" 
+                    height="LV_SIZE_CONTENT"
                     style_min_height="#wizard_header_height"
-                    style_pad_all="#wizard_padding"
                     style_pad_column="#wizard_gap"
                     flex_flow="row"
                     style_flex_main_place="space_between"
@@ -57,26 +58,24 @@
                     style_bg_opa="0"
                     style_border_width="0">
 
-                <!-- Progress indicator: "Step 2 of 7" -->
-                <lv_label name="wizard_progress"
-                          bind_text="wizard_progress"
-                          style_text_font="#wizard_header_font"
-                          style_text_color="#text_secondary"/>
-
                 <!-- Title: "WiFi Setup" -->
                 <lv_label name="wizard_title"
                           bind_text="wizard_title"
                           style_text_font="#wizard_title_font"
                          />
+
+                <!-- Progress indicator: "Step 2 of 7" -->
+                <lv_label name="wizard_progress"
+                          bind_text="wizard_progress"
+                          style_text_font="#wizard_header_font"
+                          style_text_color="#text_secondary"/>
             </lv_obj>
 
             <!-- ==================== CONTENT ==================== -->
             <lv_obj name="wizard_content"
                     width="100%" height="0"
                     flex_grow="1"
-                    style_pad_all="0"
                     scrollable="true"
-                    scroll_dir="VER"
                     style_bg_opa="0"
                     style_border_width="0">
                 <!-- Wizard screens loaded here by C++ (lv_obj_set_parent) -->
@@ -84,15 +83,16 @@
 
             <!-- ==================== FOOTER ==================== -->
             <lv_obj name="wizard_footer"
-                    width="100%" height="LV_SIZE_CONTENT"
-                    style_pad_all="#wizard_padding"
+                    width="100%" 
+                    height="LV_SIZE_CONTENT"
+                    style_min_height="#wizard_header_height"
                     style_pad_column="#wizard_gap"
                     flex_flow="row"
                     style_flex_main_place="space_between"
                     style_flex_cross_place="center"
                     scrollable="false"
                     style_bg_opa="0"
-                    style_border_width="0">
+                    style_border_width="1">
 
                 <!-- BACK BUTTON (hidden on step 1 via conditional binding) -->
                 <lv_button name="btn_back"
@@ -103,6 +103,13 @@
                     <!-- Hide when current_step == 1 -->
                     <lv_obj-bind_flag_if_eq subject="current_step" flag="hidden" ref_value="1"/>
                 </lv_button>
+
+                <lv_obj name="wizard_footer_spacer"
+                        width="0"
+                        height="#button_height"
+                        style_pad_ver="#wizard_padding"
+                        style_border_width="0"
+                        flex_grow="1"/>
 
                 <!-- NEXT/FINISH BUTTON (text bound to subject) -->
                 <lv_button name="btn_next"

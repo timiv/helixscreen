@@ -19,7 +19,6 @@
  */
 
 #include "ui_theme.h"
-#include "ui_card.h"
 #include "lvgl/lvgl.h"
 #include "lvgl/src/others/xml/lv_xml.h"
 #include <spdlog/spdlog.h>
@@ -112,9 +111,6 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
         lv_display_set_theme(display, current_theme);
         spdlog::info("[Theme] Initialized: {} mode, primary={}, secondary={}, base_font={}",
                      use_dark_mode ? "dark" : "light", primary_str, secondary_str, font_body_name);
-
-        // Initialize card widget with theme colors
-        ui_card_init(use_dark_mode);
     } else {
         spdlog::error("[Theme] Failed to initialize default theme");
     }
@@ -135,4 +131,76 @@ void ui_theme_toggle_dark_mode() {
 
 bool ui_theme_is_dark_mode() {
     return use_dark_mode;
+}
+
+/**
+ * Get theme-appropriate color variant
+ *
+ * Looks up {base_name}_light and {base_name}_dark from globals.xml,
+ * selects the appropriate one based on current theme mode, and returns
+ * the parsed lv_color_t.
+ *
+ * @param base_name Color constant base name (e.g., "app_bg_color", "card_bg")
+ * @return Parsed color, or black (0x000000) if not found
+ *
+ * Example:
+ *   lv_color_t bg = ui_theme_get_color("app_bg_color");
+ *   // Returns app_bg_color_light in light mode, app_bg_color_dark in dark mode
+ */
+lv_color_t ui_theme_get_color(const char* base_name) {
+    if (!base_name) {
+        spdlog::error("[Theme] ui_theme_get_color: NULL base_name");
+        return lv_color_hex(0x000000);
+    }
+
+    // Construct variant names: {base_name}_light and {base_name}_dark
+    char light_name[128];
+    char dark_name[128];
+    snprintf(light_name, sizeof(light_name), "%s_light", base_name);
+    snprintf(dark_name, sizeof(dark_name), "%s_dark", base_name);
+
+    // Look up color strings from globals.xml
+    const char* light_str = lv_xml_get_const(nullptr, light_name);
+    const char* dark_str = lv_xml_get_const(nullptr, dark_name);
+
+    if (!light_str || !dark_str) {
+        spdlog::error("[Theme] Color variant not found: {} (light={}, dark={})",
+                      base_name, light_str ? "found" : "missing", dark_str ? "found" : "missing");
+        return lv_color_hex(0x000000);
+    }
+
+    // Select appropriate variant based on theme mode
+    const char* selected_str = use_dark_mode ? dark_str : light_str;
+    lv_color_t color = ui_theme_parse_color(selected_str);
+
+    spdlog::trace("[Theme] ui_theme_get_color({}) = {} ({} mode)",
+                  base_name, selected_str, use_dark_mode ? "dark" : "light");
+
+    return color;
+}
+
+/**
+ * Apply theme-appropriate background color to object
+ *
+ * Convenience wrapper that gets the color variant and applies it to the object.
+ *
+ * @param obj LVGL object to apply color to
+ * @param base_name Color constant base name (e.g., "app_bg_color", "card_bg")
+ * @param part Style part to apply to (default: LV_PART_MAIN)
+ *
+ * Example:
+ *   ui_theme_apply_bg_color(screen, "app_bg_color", LV_PART_MAIN);
+ *   // Applies app_bg_color_light/dark depending on theme mode
+ */
+void ui_theme_apply_bg_color(lv_obj_t* obj, const char* base_name, lv_part_t part) {
+    if (!obj) {
+        spdlog::error("[Theme] ui_theme_apply_bg_color: NULL object");
+        return;
+    }
+
+    lv_color_t color = ui_theme_get_color(base_name);
+    lv_obj_set_style_bg_color(obj, color, part);
+
+    spdlog::trace("[Theme] Applied background color {} to object (part={})",
+                  base_name, static_cast<int>(part));
 }

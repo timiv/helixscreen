@@ -20,7 +20,9 @@
 
 #include "ui_wizard.h"
 #include "ui_wizard_wifi.h"
+#include "ui_theme.h"
 #include "lvgl/lvgl.h"
+#include "lvgl/src/others/xml/lv_xml.h"
 #include <spdlog/spdlog.h>
 #include <cstdio>
 
@@ -98,7 +100,7 @@ void ui_wizard_register_responsive_constants() {
         padding_value = "12";
         gap_value = "8";
         list_item_padding = "6";
-        header_height = "36";  // Increased for better text fit
+        header_height = "42";  // Increased for better text fit
         button_width = "140";
         header_font = "montserrat_16";
         title_font = "montserrat_20";
@@ -107,7 +109,7 @@ void ui_wizard_register_responsive_constants() {
         padding_value = "20";
         gap_value = "12";
         list_item_padding = "8";
-        header_height = "44";  // Increased for better text fit
+        header_height = "48";  // Increased for better text fit
         button_width = "160";
         header_font = "montserrat_20";
         title_font = "montserrat_24";
@@ -146,6 +148,9 @@ lv_obj_t* ui_wizard_create(lv_obj_t* parent) {
         spdlog::error("[Wizard] Failed to create wizard_container from XML");
         return nullptr;
     }
+
+    // Apply theme-aware background color to wizard container
+    ui_theme_apply_bg_color(wizard_root, "app_bg_color", LV_PART_MAIN);
 
     // Update layout to ensure SIZE_CONTENT calculates correctly
     lv_obj_update_layout(wizard_root);
