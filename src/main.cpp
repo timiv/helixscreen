@@ -23,6 +23,7 @@
 #include "lvgl/src/others/xml/lv_xml.h"
 #include "ui_nav.h"
 #include "ui_theme.h"
+#include "ui_text.h"
 #include "ui_fonts.h"
 #include "ui_utils.h"
 #include "material_icons.h"
@@ -38,6 +39,7 @@
 #include "ui_component_header_bar.h"
 #include "ui_icon.h"
 #include "ui_switch.h"
+#include "ui_card.h"
 #include "ui_keyboard.h"
 #include "ui_wizard.h"
 #include "ui_panel_step_test.h"
@@ -694,12 +696,26 @@ int main(int argc, char** argv) {
     config->set<bool>("/dark_mode", dark_mode);
     config->save();
 
+    // Apply theme background color to screen (read theme-specific variant from XML)
+    const char* app_bg_light = lv_xml_get_const(NULL, "app_bg_color_light");
+    const char* app_bg_dark = lv_xml_get_const(NULL, "app_bg_color_dark");
+    const char* app_bg_str = dark_mode ? app_bg_dark : app_bg_light;
+
+    if (app_bg_str) {
+        lv_color_t app_bg = ui_theme_parse_color(app_bg_str);
+        lv_obj_set_style_bg_color(screen, app_bg, LV_PART_MAIN);
+        spdlog::debug("[Main] Set screen background to {} ({} mode)", app_bg_str, dark_mode ? "dark" : "light");
+    } else {
+        spdlog::warn("[Main] Failed to read app background color from XML");
+    }
+
     // Register Material Design icons (64x64, scalable)
     material_icons_register();
 
     // Register custom widgets (must be before XML component registration)
     ui_icon_register_widget();
     ui_switch_register();
+    ui_card_register();
 
     // Initialize component systems (BEFORE XML registration)
     ui_component_header_bar_init();
@@ -713,6 +729,9 @@ int main(int argc, char** argv) {
 
     // Register responsive constants (AFTER globals, BEFORE components that use them)
     ui_switch_register_responsive_constants();
+
+    // Register semantic text widgets (AFTER theme init, BEFORE components that use them)
+    ui_text_init();
 
     lv_xml_register_component_from_file("A:ui_xml/icon.xml");
     lv_xml_register_component_from_file("A:ui_xml/header_bar.xml");

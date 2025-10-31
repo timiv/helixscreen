@@ -96,7 +96,7 @@ extern const lv_font_t lv_font_montserrat_28;
 #define UI_FONT_SMALL             (&lv_font_montserrat_12)  // Small text (hints, helpers, warnings, chart labels)
 
 // Theme initialization and control
-void ui_theme_init(lv_display_t* display, bool dark_mode);
+void ui_theme_init(lv_display_t* display, bool use_dark_mode);
 void ui_theme_toggle_dark_mode();
 bool ui_theme_is_dark_mode();
 lv_color_t ui_theme_parse_color(const char* hex_str);

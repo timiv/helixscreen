@@ -144,8 +144,28 @@
 	<!-- Theme colors -->
 	<color name="primary_color" value="#FF4444" />
 	<color name="secondary_color" value="#00AAFF" />
-	<color name="text_primary" value="#FFFFFF" />
+
+	<!-- App background colors (theme-specific variants) -->
+	<color name="app_bg_color_light" value="#F0F3F9" />  <!-- Light mode: soft blue-gray -->
+	<color name="app_bg_color_dark" value="#1F1F1F" />   <!-- Dark mode: very dark gray -->
+	<color name="app_bg_color" value="#1F1F1F" />        <!-- Runtime-adjusted (default: dark) -->
+
+	<!-- Primary text colors (theme-specific variants) -->
+	<color name="text_primary_light" value="#565656" />  <!-- Light mode: dark gray -->
+	<color name="text_primary_dark" value="#C4C5C6" />   <!-- Dark mode: light gray -->
+	<color name="text_primary" value="#C4C5C6" />        <!-- Runtime-adjusted (default: dark) -->
+
+	<!-- Header text colors (theme-specific variants) -->
+	<color name="header_text_light" value="#1F1F1F" />   <!-- Light mode: very dark -->
+	<color name="header_text_dark" value="#E3E3E3" />    <!-- Dark mode: very light -->
+	<color name="header_text_color" value="#E3E3E3" />   <!-- Runtime-adjusted (default: dark) -->
+
+	<!-- Secondary text color (same for both themes) -->
 	<color name="text_secondary" value="#AAAAAA" />
+
+	<!-- Card background colors (theme-aware: light/dark modes) -->
+	<color name="card_bg_light" value="#FFFFFF" />  <!-- Light mode: Pure white -->
+	<color name="card_bg_dark" value="#131313" />   <!-- Dark mode: Very dark gray -->
 
 	<!-- Component dimensions -->
 	<px name="header_height" value="60" />
