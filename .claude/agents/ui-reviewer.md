@@ -627,22 +627,41 @@ lv_obj_t* wizard = lv_xml_create(parent, "wizard_container", NULL);
 
 ## Review Process
 
-When reviewing LVGL 9 XML:
+When reviewing LVGL 9 XML and C++:
 
-1. **Scan for critical issues** (flex_align, flag_ prefix, zoom, img abbreviations)
-2. **Check data binding syntax:**
+1. **Check pattern conformance FIRST** (naming conventions, code patterns)
+   - C++ naming: PascalCase types, SCREAMING_SNAKE_CASE constants, snake_case variables
+   - XML naming: lowercase_with_underscores for all identifiers
+   - Logging: spdlog only (no printf/cout/cerr)
+   - Subject init order: before XML creation
+   - Widget lookup: name-based, not index-based
+   - Theme constants: used instead of hardcoded values
+   - APIs: LVGL 9.4, not deprecated 9.3
+
+2. **Scan for critical issues** (flex_align, flag_ prefix, zoom, img abbreviations)
+
+3. **Check data binding syntax:**
    - Conditional bindings use child elements
    - Correct binding type (flag for behavior, state for visual, style for whole styles)
    - Check for non-existent bindings (text conditionals, style property conditionals)
-3. **Verify component instantiations** (explicit name attributes)
-4. **Review alignment patterns** (three-property system, height/width requirements)
-5. **Check for hardcoded values** (suggest constants)
-6. **Evaluate responsive design:**
+
+4. **Verify component instantiations** (explicit name attributes)
+
+5. **Review alignment patterns** (three-property system, height/width requirements)
+
+6. **Check for hardcoded values** (suggest constants from globals.xml)
+
+7. **Evaluate responsive design:**
    - Multiple XML variants → suggest runtime constants
    - Screen-size specific values → suggest responsive pattern
-7. **Validate flex_flow values** (against verified list)
-8. **Look for layout conflicts** (flex + align="center")
-9. **Check for missing lv_obj_update_layout()** (if sizing/layout issues present)
+
+8. **Validate flex_flow values** (against verified list)
+
+9. **Look for layout conflicts** (flex + align="center")
+
+10. **Check for missing lv_obj_update_layout()** (if sizing/layout issues present)
+
+11. **Compare to existing patterns** (motion_panel, nozzle_temp_panel references)
 
 ---
 
@@ -772,6 +791,127 @@ The LVGL 9 XML property system auto-generates simplified attribute names from en
 2. **Status text updates** - Verify subject initialized before XML creation
 3. **Icon rendering** - Check UTF-8 byte sequences in globals.xml
 4. **Component communication** - Verify explicit `name` attributes for `lv_obj_find_by_name()`
+
+---
+
+## Code Pattern Conformance (C++ & XML)
+
+**CRITICAL:** All code MUST conform to established project patterns and conventions. Check every implementation against these norms:
+
+### C++ Naming Conventions ⭐
+
+**ENFORCE STRICTLY:**
+
+1. **Types (structs/classes/enums):** `PascalCase`
+   - ✅ `IconSize`, `OverlayPanels`, `NetworkItemData`
+   - ❌ `icon_size`, `overlay_panels`, `network_item_data`
+
+2. **Enum Classes:** `enum class Name` (always scoped)
+   - ✅ `enum class IconVariant { Small, Medium, Large };`
+   - ❌ `enum IconVariant { ... };` (unscoped)
+
+3. **Static Constants:** `SCREAMING_SNAKE_CASE`
+   - ✅ `SIZE_XS`, `MIN_EXTRUSION_TEMP`, `CARD_GAP`
+   - ❌ `size_xs`, `minExtrusionTemp`, `cardGap`
+
+4. **Variables/Functions/Subjects:** `snake_case`
+   - ✅ `pos_x_subject`, `status_subject`, `ui_panel_home_init_subjects()`
+   - ❌ `posXSubject`, `statusSubject`, `uiPanelHomeInitSubjects()`
+
+5. **Module-Prefixed Functions:** `ui_*`, `lv_*` prefix
+   - ✅ `ui_panel_motion_init()`, `ui_nav_push_overlay()`
+   - ❌ `panel_motion_init()`, `nav_push_overlay()`
+
+### C++ Code Patterns ⭐
+
+**MUST CHECK:**
+
+1. **Logging Policy (CRITICAL):**
+   - ✅ `spdlog::info("Temperature: {}°C", temp);` (fmt-style)
+   - ❌ `printf("Temperature: %d°C\n", temp);` (FORBIDDEN)
+   - ❌ `std::cout << "Temperature: " << temp;` (FORBIDDEN)
+   - ❌ `LV_LOG_USER("...");` (FORBIDDEN)
+   - **Enum formatting:** `spdlog::debug("Panel: {}", (int)panel_id);` (must cast)
+
+2. **Subject Initialization Order:**
+   - ✅ Initialize subjects → then create XML
+   ```cpp
+   ui_nav_init();
+   ui_panel_home_init_subjects();
+   lv_xml_create(screen, "app_layout", NULL);
+   ```
+   - ❌ Create XML before subject initialization
+
+3. **Widget Lookup:**
+   - ✅ `lv_obj_find_by_name(parent, "widget_name")`
+   - ❌ `lv_obj_get_child(parent, 3)` (index-based)
+
+4. **LVGL Public API Only:**
+   - ✅ `lv_obj_get_x()`, `lv_obj_update_layout()`, `lv_obj_invalidate()`
+   - ❌ `lv_obj_mark_dirty()`, `obj->coords.x1`, `_lv_*` functions
+
+5. **Navigation Patterns:**
+   - ✅ `ui_nav_push_overlay(panel)`, `ui_nav_go_back()`
+   - ❌ Manual history management
+
+6. **Image Scaling:**
+   - ✅ Call `lv_obj_update_layout()` BEFORE querying dimensions
+   - ✅ Use `ui_image_scale_to_cover()` / `ui_image_scale_to_contain()`
+
+7. **Copyright Headers:**
+   - ✅ ALL new files MUST have GPL v3 header
+   - Reference: `docs/COPYRIGHT_HEADERS.md`
+
+### XML Naming Conventions ⭐
+
+**ENFORCE STRICTLY:**
+
+1. **Constants in globals.xml:** `lowercase_with_underscores`
+   - ✅ `#primary_color`, `#nav_width`, `#padding_normal`, `#icon_backspace`
+   - ❌ `#primaryColor`, `#NavWidth`, `#PADDING_NORMAL`, `#iconBackspace`
+
+2. **Component Names:** `lowercase_with_underscores` (matches filename)
+   - ✅ File: `nozzle_temp_panel.xml` → Component: `nozzle_temp_panel`
+   - ❌ File: `nozzleTemp.xml` or `NozzleTempPanel.xml`
+
+3. **Widget Instance Names:** `lowercase_with_underscores`
+   - ✅ `<lv_label name="temp_display"/>`
+   - ❌ `<lv_label name="tempDisplay"/>` or `<lv_label name="TempDisplay"/>`
+
+4. **Subject Names:** `lowercase_with_underscores`
+   - ✅ `bind_text="status_subject"`, `bind_text="network_label_subject"`
+   - ❌ `bind_text="statusSubject"`, `bind_text="networkLabelSubject"`
+
+### XML Pattern Conformance ⭐
+
+**MUST CHECK:**
+
+1. **Theme Constants Usage (HIGH PRIORITY):**
+   - ❌ Hardcoded: `style_bg_color="0x1a1a1a"`, `width="102"`, `style_pad_all="20"`
+   - ✅ Semantic: `style_bg_color="#panel_bg"`, `width="#nav_width"`, `style_pad_all="#padding_normal"`
+   - **When to flag:** ANY hardcoded color/dimension that appears in globals.xml
+
+2. **Component Registration Alignment:**
+   - Verify C++ uses correct LVGL 9.4 API:
+   - ✅ `lv_xml_register_component_from_file()` (v9.4)
+   - ❌ `lv_xml_component_register_from_file()` (v9.3, deprecated)
+
+3. **Event Callback Syntax:**
+   - ✅ `<event_cb trigger="clicked" callback="on_button_click"/>`
+   - ❌ `<lv_event-call_function trigger="clicked" callback="..."/>` (v9.3, deprecated)
+
+4. **Consistent Pattern Usage:**
+   - Compare to existing implementations (motion_panel, nozzle_temp_panel)
+   - Flag deviations without clear justification
+   - Suggest referencing working patterns instead of inventing new approaches
+
+### Documentation References
+
+When flagging pattern violations, reference:
+- **C++ Patterns:** CLAUDE.md "Critical Patterns"
+- **Logging:** CLAUDE.md "Logging Policy"
+- **Naming:** ARCHITECTURE.md "Code Organization"
+- **Copyright:** docs/COPYRIGHT_HEADERS.md
 
 ---
 
