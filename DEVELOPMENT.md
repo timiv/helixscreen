@@ -271,7 +271,70 @@ Tests cover:
 - Verifying touch target sizes are appropriate
 - Validating spacing/padding looks good at actual density
 - Generating screenshots that match real device appearance
+
+## spdlog Logging Library
+
+### Overview
+
+HelixScreen uses [spdlog](https://github.com/gabime/spdlog) for all console/file logging. The library is integrated as an **independent git submodule** (not shared with parent guppyscreen project).
+
+**Version:** fmt 11.2.0 branch (updated 2025-11-01)
+- Eliminates fmt deprecation warnings
+- Clean build output
+- Header-only integration
+
+### Submodule Management
+
+**Initialize after clone:**
+```bash
+git submodule update --init --recursive spdlog
 ```
+
+**Check submodule status:**
+```bash
+git submodule status spdlog
+# Should show: 14ab43ec0b9df6cf793c75785ec5f70b65f2f965 spdlog (v1.2.1-2508-g14ab43ec)
+```
+
+**Update to latest fmt-11.2.0:**
+```bash
+cd spdlog
+git fetch origin
+git checkout origin/fmt-11.2.0
+cd ..
+git add spdlog
+git commit -m "update: spdlog to latest fmt-11.2.0"
+```
+
+### Usage in Code
+
+**ALWAYS use spdlog** - NEVER printf/cout/cerr/LV_LOG_*:
+
+```cpp
+#include <spdlog/spdlog.h>
+
+spdlog::info("Application started");
+spdlog::debug("Debug value: {}", variable);
+spdlog::warn("Warning: {}", message);
+spdlog::error("Error occurred: {}", error_msg);
+```
+
+**Log levels:** `trace()`, `debug()`, `info()`, `warn()`, `error()`, `critical()`
+
+**Verbosity flags:** `-v` (info), `-vv` (debug), `-vvv` (trace). Default: warn only.
+
+### Why Independent Submodule?
+
+Previously, spdlog was a symlink to `../spdlog` (shared with parent guppyscreen project). This caused issues:
+- Couldn't upgrade HelixScreen's fmt version independently
+- Build warnings from old fmt 9.0.1
+- Tight coupling between projects
+
+**Solution:** Separate submodule allows independent version control and eliminates deprecation warnings.
+
+## Multi-Display Development (macOS)
+
+Control which display the UI window appears on for dual-monitor workflows:
 
 **How it works:**
 - Uses `SDL_GetDisplayBounds()` to query actual display geometry

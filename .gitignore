@@ -17,3 +17,6 @@ helixconfig.json
 
 # auto generated libhv log
 libhv.*.log
+
+# Session notes (developer-specific)
+SESSION_SUMMARY.md
