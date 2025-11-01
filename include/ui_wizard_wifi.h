@@ -38,6 +38,10 @@
  *   3. ui_wizard_wifi_register_callbacks()
  *   4. ui_wizard_wifi_create(parent)
  *   5. ui_wizard_wifi_init_wifi_manager() <- Start WiFi backend integration
+ *
+ * NOTE: WiFi screen responsive constants (wifi_card_height, wifi_toggle_height, etc.)
+ *       are now registered by ui_wizard_container_register_responsive_constants()
+ *       and propagated to this screen automatically.
  */
 
 /**
@@ -64,17 +68,6 @@ void ui_wizard_wifi_init_subjects();
  * MUST be called BEFORE creating XML components.
  */
 void ui_wizard_wifi_register_callbacks();
-
-/**
- * Register responsive constants for WiFi screen
- *
- * Detects screen size and registers size-specific constants:
- * - wifi_card_height, wifi_ethernet_height, wifi_toggle_height
- * - wifi_title_font, wifi_status_font, wifi_help_font
- *
- * MUST be called BEFORE creating XML components.
- */
-void ui_wizard_wifi_register_responsive_constants();
 
 /**
  * Create WiFi setup screen

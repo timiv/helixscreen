@@ -1113,7 +1113,7 @@ int main(int argc, char** argv) {
 
         // Register wizard event callbacks and responsive constants BEFORE creating
         ui_wizard_register_event_callbacks();
-        ui_wizard_register_responsive_constants();
+        ui_wizard_container_register_responsive_constants();
 
         lv_obj_t* wizard = ui_wizard_create(screen);
 

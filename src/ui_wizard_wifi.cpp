@@ -139,67 +139,6 @@ void ui_wizard_wifi_register_callbacks() {
     spdlog::info("[WiFi Screen] Callbacks registered");
 }
 
-void ui_wizard_wifi_register_responsive_constants() {
-    spdlog::debug("[WiFi Screen] Registering responsive constants");
-
-    // Use custom breakpoints optimized for our hardware: max(hor_res, ver_res)
-    lv_display_t* display = lv_display_get_default();
-    int32_t hor_res = lv_display_get_horizontal_resolution(display);
-    int32_t ver_res = lv_display_get_vertical_resolution(display);
-    int32_t greater_res = LV_MAX(hor_res, ver_res);
-
-    // Calculate responsive values
-    const char* card_height;
-    const char* ethernet_height;
-    const char* toggle_height;
-    const char* network_title_font;
-    const char* network_item_height;
-    const char* network_icon_size;
-    const char* size_label;
-
-    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) {  // ≤480: 480x320
-        card_height = "80";
-        ethernet_height = "70";
-        toggle_height = "32";  // size="medium" switch + minimal padding
-        network_title_font = "montserrat_14";
-        network_item_height = "60";
-        network_icon_size = "20";
-        size_label = "SMALL";
-    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) {  // 481-800: 800x480
-        card_height = "120";
-        ethernet_height = "100";
-        toggle_height = "48";  // size="medium" switch + moderate padding
-        network_title_font = "montserrat_16";
-        network_item_height = "80";
-        network_icon_size = "24";
-        size_label = "MEDIUM";
-    } else {  // >800: 1024x600+
-        card_height = "140";
-        ethernet_height = "120";
-        toggle_height = "64";  // size="medium" switch + comfortable padding
-        network_title_font = lv_xml_get_const(NULL, "font_body");
-        network_item_height = "100";
-        network_icon_size = "32";
-        size_label = "LARGE";
-    }
-
-    spdlog::info("[WiFi Screen] Screen size: {} (greater_res={}px)", size_label, greater_res);
-
-    // Get globals scope
-    lv_xml_component_scope_t* scope = lv_xml_component_get_scope("globals");
-
-    // Register constants BEFORE creating WiFi screen
-    lv_xml_register_const(scope, "wifi_card_height", card_height);
-    lv_xml_register_const(scope, "wifi_ethernet_height", ethernet_height);
-    lv_xml_register_const(scope, "wifi_toggle_height", toggle_height);
-    lv_xml_register_const(scope, "wifi_network_title_font", network_title_font);
-    lv_xml_register_const(scope, "network_item_height", network_item_height);
-    lv_xml_register_const(scope, "network_icon_size", network_icon_size);
-
-    spdlog::debug("[WiFi Screen] Registered constants: card={}px, ethernet={}px, toggle={}px, network_item={}px",
-                  card_height, ethernet_height, toggle_height, network_item_height);
-}
-
 lv_obj_t* ui_wizard_wifi_create(lv_obj_t* parent) {
     spdlog::debug("[WiFi Screen] Creating WiFi setup screen");
 

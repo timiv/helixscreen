@@ -72,65 +72,147 @@ void ui_wizard_init_subjects() {
     spdlog::info("[Wizard] Subjects initialized");
 }
 
-void ui_wizard_register_responsive_constants() {
-    spdlog::debug("[Wizard] Registering responsive constants");
+// Helper type for constant name/value pairs
+struct WizardConstant {
+    const char* name;
+    const char* value;
+};
 
-    // Use custom breakpoints optimized for our hardware: max(hor_res, ver_res)
+// Helper: Register array of constants to a scope
+static void register_constants_to_scope(lv_xml_component_scope_t* scope,
+                                        const WizardConstant* constants) {
+    if (!scope) return;
+    for (int i = 0; constants[i].name != NULL; i++) {
+        lv_xml_register_const(scope, constants[i].name, constants[i].value);
+    }
+}
+
+void ui_wizard_container_register_responsive_constants() {
+    spdlog::debug("[Wizard] Registering responsive constants to wizard_container scope");
+
+    // 1. Detect screen size using custom breakpoints
     lv_display_t* display = lv_display_get_default();
     int32_t hor_res = lv_display_get_horizontal_resolution(display);
     int32_t ver_res = lv_display_get_vertical_resolution(display);
     int32_t greater_res = LV_MAX(hor_res, ver_res);
 
-    // Calculate wizard-specific responsive values
-    // Note: padding_normal, padding_small, gap_normal are now provided by ui_theme_register_responsive_padding()
+    // 2. Determine responsive values based on breakpoint
     const char* list_item_padding;
     const char* header_height;
+    const char* footer_height;
     const char* button_width;
     const char* header_font;
     const char* title_font;
+    const char* wifi_card_height;
+    const char* wifi_ethernet_height;
+    const char* wifi_toggle_height;
+    const char* network_title_font;
+    const char* network_item_height;
+    const char* network_icon_size;
     const char* size_label;
 
     if (greater_res <= UI_BREAKPOINT_SMALL_MAX) {  // ≤480: 480x320
         list_item_padding = "4";
         header_height = "32";
+        footer_height = "72";  // header + 40
         button_width = "110";
         header_font = "montserrat_14";
         title_font = "montserrat_16";
+        wifi_card_height = "80";
+        wifi_ethernet_height = "70";
+        wifi_toggle_height = "32";
+        network_title_font = "montserrat_14";
+        network_item_height = "60";
+        network_icon_size = "20";
         size_label = "SMALL";
     } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) {  // 481-800: 800x480
         list_item_padding = "6";
         header_height = "42";
+        footer_height = "82";  // header + 40
         button_width = "140";
         header_font = "montserrat_16";
         title_font = "montserrat_20";
+        wifi_card_height = "120";
+        wifi_ethernet_height = "100";
+        wifi_toggle_height = "48";
+        network_title_font = "montserrat_16";
+        network_item_height = "80";
+        network_icon_size = "24";
         size_label = "MEDIUM";
     } else {  // >800: 1024x600+
         list_item_padding = "8";
         header_height = "48";
+        footer_height = "88";  // header + 40
         button_width = "160";
         header_font = "montserrat_20";
         title_font = lv_xml_get_const(NULL, "font_heading");
+        wifi_card_height = "140";
+        wifi_ethernet_height = "120";
+        wifi_toggle_height = "64";
+        network_title_font = lv_xml_get_const(NULL, "font_body");
+        network_item_height = "100";
+        network_icon_size = "32";
         size_label = "LARGE";
     }
 
     spdlog::info("[Wizard] Screen size: {} (greater_res={}px)", size_label, greater_res);
 
-    // Get globals scope and read centralized padding constants
-    lv_xml_component_scope_t* scope = lv_xml_component_get_scope("globals");
+    // 3. Read padding/gap from globals (centralized responsive values)
     const char* padding_value = lv_xml_get_const(NULL, "padding_normal");
     const char* gap_value = lv_xml_get_const(NULL, "gap_normal");
 
-    // Register wizard-specific constants BEFORE creating wizard
-    lv_xml_register_const(scope, "wizard_padding", padding_value);
-    lv_xml_register_const(scope, "wizard_gap", gap_value);
-    lv_xml_register_const(scope, "list_item_padding", list_item_padding);
-    lv_xml_register_const(scope, "wizard_header_height", header_height);
-    lv_xml_register_const(scope, "wizard_button_width", button_width);
-    lv_xml_register_const(scope, "wizard_header_font", header_font);
-    lv_xml_register_const(scope, "wizard_title_font", title_font);
+    // 4. Define all wizard constants in array
+    WizardConstant constants[] = {
+        // Layout dimensions
+        {"wizard_padding", padding_value},
+        {"wizard_gap", gap_value},
+        {"list_item_padding", list_item_padding},
+        {"wizard_header_height", header_height},
+        {"wizard_footer_height", footer_height},
+        {"wizard_button_width", button_width},
+        // Typography
+        {"wizard_header_font", header_font},
+        {"wizard_title_font", title_font},
+        // WiFi screen specific
+        {"wifi_toggle_height", wifi_toggle_height},
+        {"wifi_card_height", wifi_card_height},
+        {"wifi_ethernet_height", wifi_ethernet_height},
+        {"network_item_height", network_item_height},
+        {"network_icon_size", network_icon_size},
+        {"wifi_network_title_font", network_title_font},
+        {NULL, NULL}  // Sentinel
+    };
 
-    spdlog::debug("[Wizard] Registered constants: padding={}, gap={}, list_item_padding={}, header_height={}, button_width={}",
-                  padding_value, gap_value, list_item_padding, header_height, button_width);
+    // 5. Register to wizard_container scope (parent)
+    lv_xml_component_scope_t* parent_scope = lv_xml_component_get_scope("wizard_container");
+    register_constants_to_scope(parent_scope, constants);
+
+    // 6. Define child components that inherit these constants
+    const char* children[] = {
+        "wizard_wifi_setup",
+        "wizard_connection",
+        "wizard_printer_identify",
+        "wizard_bed_select",
+        "wizard_hotend_select",
+        "wizard_fan_select",
+        "wizard_led_select",
+        "wizard_summary",
+        NULL  // Sentinel
+    };
+
+    // 7. Propagate to all children
+    int child_count = 0;
+    for (int i = 0; children[i] != NULL; i++) {
+        lv_xml_component_scope_t* child_scope = lv_xml_component_get_scope(children[i]);
+        if (child_scope) {
+            register_constants_to_scope(child_scope, constants);
+            child_count++;
+        }
+    }
+
+    spdlog::info("[Wizard] Registered 14 constants to wizard_container and propagated to {} children", child_count);
+    spdlog::debug("[Wizard] Values: padding={}, gap={}, header_h={}, footer_h={}, button_w={}",
+                  padding_value, gap_value, header_height, footer_height, button_width);
 }
 
 void ui_wizard_register_event_callbacks() {
@@ -227,7 +309,7 @@ static void ui_wizard_load_screen(int step) {
             spdlog::info("[Wizard] Creating WiFi setup screen");
             ui_wizard_wifi_init_subjects();
             ui_wizard_wifi_register_callbacks();
-            ui_wizard_wifi_register_responsive_constants();
+            // Note: WiFi constants now registered by ui_wizard_container_register_responsive_constants()
             ui_wizard_wifi_create(content);
             ui_wizard_wifi_init_wifi_manager();
             ui_wizard_set_title("WiFi Setup");

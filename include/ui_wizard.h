@@ -28,10 +28,10 @@
  * Screen content and business logic belong in the wizard screen components.
  *
  * Initialization Order (CRITICAL):
- *   1. Register XML components (globals.xml, wizard_container.xml)
+ *   1. Register XML components (globals.xml, wizard_container.xml, all wizard_*.xml)
  *   2. ui_wizard_init_subjects()
  *   3. ui_wizard_register_event_callbacks()
- *   4. ui_wizard_register_responsive_constants()  <- BEFORE creating XML
+ *   4. ui_wizard_container_register_responsive_constants()  <- BEFORE creating XML
  *   5. ui_wizard_create(parent)
  *   6. ui_wizard_navigate_to_step(1)
  */
@@ -51,18 +51,22 @@
 void ui_wizard_init_subjects();
 
 /**
- * Register responsive constants based on screen size
+ * Register responsive constants to wizard_container scope and propagate to children
  *
- * Detects screen width and overrides globals.xml constants BEFORE widget creation:
- * - TINY (width < 600):   padding=6,  gap=4,  header=28, button=110
- * - SMALL (600-899):      padding=12, gap=8,  header=32, button=140
- * - LARGE (width >= 900): padding=20, gap=12, header=40, button=160
+ * Detects screen size and registers wizard-specific constants to wizard_container scope,
+ * then propagates to all child wizard screens. Uses parent-defined constants pattern
+ * to avoid polluting globals scope.
  *
- * Also sets responsive fonts (montserrat_14/16/20 for header, montserrat_16/20/24 for title).
+ * Responsive values by screen size:
+ * - SMALL (≤480):    list_padding=4,  header=32,  footer=72,  button=110
+ * - MEDIUM (481-800): list_padding=6,  header=42,  footer=82,  button=140
+ * - LARGE (>800):     list_padding=8,  header=48,  footer=88,  button=160
  *
- * MUST be called AFTER ui_wizard_init_subjects() and BEFORE ui_wizard_create().
+ * Also sets responsive fonts and WiFi screen dimensions.
+ *
+ * MUST be called AFTER all wizard_*.xml components are registered and BEFORE ui_wizard_create().
  */
-void ui_wizard_register_responsive_constants();
+void ui_wizard_container_register_responsive_constants();
 
 /**
  * Register event callbacks
@@ -84,7 +88,7 @@ void ui_wizard_register_event_callbacks();
  * Prerequisites:
  * - ui_wizard_init_subjects() called
  * - ui_wizard_register_event_callbacks() called
- * - ui_wizard_register_responsive_constants() called
+ * - ui_wizard_container_register_responsive_constants() called
  *
  * @param parent Parent object (typically screen root)
  * @return The wizard root object, or NULL on failure
