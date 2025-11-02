@@ -193,43 +193,12 @@
 	<!-- Right action button width -->
 	<px name="header_right_button_height" value="40" />
 	<!-- Right action button height -->
-	<px name="progress_bar_height" value="16" />
-	<!-- Progress indicator height -->
-	<px name="divider_height" value="1" />
-	<!-- Separator line height -->
-	<opa name="divider_opacity" value="30" />
-	<!-- Separator line opacity -->
-	<opa name="disabled_opa" value="128" />
-	<!-- Opacity for disabled/dimmed UI elements (50% of 255) -->
 
-	<!-- Detail view dimensions -->
-	<px name="detail_metadata_height" value="100" />
-	<px name="detail_back_icon_size" value="32" />
-	<px name="detail_separator_height" value="2" />
-
-	<!-- Motion panel dimensions -->
-	<px name="jog_button_size" value="76" />
-	<!-- Reduced from 80 to fit 3 buttons + gaps in container -->
-	<px name="jog_pad_size" value="320" />
-	<px name="jog_pad_padding" value="20" />
-	<px name="jog_pad_gap" value="12" />
-	<!-- Circular jog pad styling (container radius=160 = width/2 for perfect circle) -->
-	<!-- Individual button radii set inline: corners=24, cardinals=12, center=38 -->
-	<px name="distance_button_width" value="85" />
-	<!-- Increased from 70 to fit "100mm" text -->
-	<px name="distance_button_height" value="42" />
-	<!-- Increased from 36 to fit text without clipping -->
-	<px name="home_button_width" value="120" />
-	<!-- Increased from 100 to fit "Home All" text -->
-	<px name="home_button_height" value="44" />
-	<!-- Increased from 40 for better proportions -->
+	<!-- Motion panel dimensions (Z-axis controls) -->
 	<px name="z_button_width" value="140" />
 	<!-- Increased from 120 to fit icon + "10mm" text -->
 	<px name="z_button_height" value="58" />
 	<!-- Increased slightly for better proportions -->
-	<px name="position_card_height" value="140" />
-	<px name="z_controls_height" value="280" />
-	<!-- Increased to accommodate taller Z buttons -->
 
 	<!-- Overlay/Modal Panel Dimensions -->
 	<!-- Used for numeric keypad, temperature panels, and other overlay panels -->
@@ -238,14 +207,6 @@
 	<!-- Standard overlay width (temps, simple panels) -->
 	<percentage name="overlay_panel_width_large" value="83%" />
 	<!-- Large overlay width (motion, complex 2-column panels) -->
-
-	<!-- Step Progress Indicator -->
-	<px name="step_indicator_size" value="24" />
-	<!-- Circle indicator diameter -->
-	<px name="step_connector_width" value="2" />
-	<!-- Line thickness between steps -->
-	<px name="step_spacing" value="16" />
-	<!-- Gap between step items -->
 
 										<!-- ===================================================================== -->
 		<!-- FontAwesome icon constants - AUTO-GENERATED - DO NOT EDIT MANUALLY   -->
