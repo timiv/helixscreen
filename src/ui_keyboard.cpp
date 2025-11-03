@@ -23,8 +23,6 @@
 
 // Global keyboard instance
 static lv_obj_t* g_keyboard = NULL;
-// Currently active textarea (not assigned to keyboard widget to preserve physical keyboard input)
-static lv_obj_t* g_active_textarea = NULL;
 
 /**
  * @brief Textarea focus event callback - handles auto show/hide
@@ -45,51 +43,13 @@ static void textarea_focus_event_cb(lv_event_t* e)
 }
 
 /**
- * @brief Keyboard event callback - handles button clicks and forwards to active textarea
- *
- * Instead of using lv_keyboard_set_textarea() which blocks physical keyboard input,
- * we manually forward virtual keyboard button clicks to the active textarea.
+ * @brief Keyboard event callback - handles ready/cancel events
  */
 static void keyboard_event_cb(lv_event_t* e)
 {
     lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t* kb = lv_event_get_target_obj(e);
 
-    if (code == LV_EVENT_VALUE_CHANGED) {
-        if (!g_active_textarea) {
-            spdlog::warn("[Keyboard] Button clicked but no active textarea");
-            return;
-        }
-
-        // Get button text and manually add to textarea
-        uint32_t btn_id = lv_buttonmatrix_get_selected_button(kb);
-        const char* txt = lv_buttonmatrix_get_button_text(kb, btn_id);
-
-        if (txt == NULL) return;
-
-        // Handle special keys (same logic as lv_keyboard.c)
-        if (strcmp(txt, "Enter") == 0 || strcmp(txt, LV_SYMBOL_NEW_LINE) == 0) {
-            lv_textarea_add_char(g_active_textarea, '\n');
-        }
-        else if (strcmp(txt, LV_SYMBOL_LEFT) == 0) {
-            lv_textarea_cursor_left(g_active_textarea);
-        }
-        else if (strcmp(txt, LV_SYMBOL_RIGHT) == 0) {
-            lv_textarea_cursor_right(g_active_textarea);
-        }
-        else if (strcmp(txt, LV_SYMBOL_BACKSPACE) == 0) {
-            lv_textarea_delete_char(g_active_textarea);
-        }
-        else if (strcmp(txt, "+/-") == 0) {
-            // Number pad +/- toggle
-            lv_textarea_add_char(g_active_textarea, '+');
-        }
-        else {
-            // Regular character - add to textarea
-            lv_textarea_add_text(g_active_textarea, txt);
-        }
-    }
-    else if (code == LV_EVENT_READY) {
+    if (code == LV_EVENT_READY) {
         spdlog::info("[Keyboard] OK pressed - input confirmed");
         ui_keyboard_hide();
     }
@@ -128,8 +88,7 @@ void ui_keyboard_init(lv_obj_t* parent)
     // Start hidden
     lv_obj_add_flag(g_keyboard, LV_OBJ_FLAG_HIDDEN);
 
-    // Add event handlers for button clicks, ready, and cancel events
-    lv_obj_add_event_cb(g_keyboard, keyboard_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    // Add event handlers for ready and cancel events
     lv_obj_add_event_cb(g_keyboard, keyboard_event_cb, LV_EVENT_READY, NULL);
     lv_obj_add_event_cb(g_keyboard, keyboard_event_cb, LV_EVENT_CANCEL, NULL);
 
@@ -163,8 +122,8 @@ void ui_keyboard_show(lv_obj_t* textarea)
 
     spdlog::debug("[Keyboard] Showing keyboard for textarea: {}", (void*)textarea);
 
-    // Store active textarea (DON'T use lv_keyboard_set_textarea - it blocks physical keyboard!)
-    g_active_textarea = textarea;
+    // Assign textarea to keyboard (standard LVGL API)
+    lv_keyboard_set_textarea(g_keyboard, textarea);
 
     // Show keyboard
     lv_obj_remove_flag(g_keyboard, LV_OBJ_FLAG_HIDDEN);
@@ -231,8 +190,8 @@ void ui_keyboard_hide()
 
     spdlog::debug("[Keyboard] Hiding keyboard");
 
-    // Clear active textarea
-    g_active_textarea = NULL;
+    // Clear keyboard assignment
+    lv_keyboard_set_textarea(g_keyboard, NULL);
 
     // Hide keyboard
     lv_obj_add_flag(g_keyboard, LV_OBJ_FLAG_HIDDEN);
