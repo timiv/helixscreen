@@ -40,6 +40,9 @@ static lv_subject_t wizard_title;
 static lv_subject_t wizard_progress;
 static lv_subject_t wizard_next_button_text;
 
+// Non-static: accessible from ui_wizard_connection.cpp
+lv_subject_t connection_test_passed;  // Global: 0=connection not validated, 1=validated or N/A
+
 // String buffers (must be persistent)
 static char wizard_title_buffer[64];
 static char wizard_progress_buffer[32];
@@ -69,12 +72,17 @@ void ui_wizard_init_subjects() {
     lv_subject_init_string(&wizard_next_button_text, wizard_next_button_text_buffer,
                            nullptr, sizeof(wizard_next_button_text_buffer), "Next");
 
+    // Initialize connection_test_passed to 1 (enabled by default for all steps)
+    // Step 2 (connection) will set it to 0 until test passes
+    lv_subject_init_int(&connection_test_passed, 1);
+
     // Register subjects globally
     lv_xml_register_subject(nullptr, "current_step", &current_step);
     lv_xml_register_subject(nullptr, "total_steps", &total_steps);
     lv_xml_register_subject(nullptr, "wizard_title", &wizard_title);
     lv_xml_register_subject(nullptr, "wizard_progress", &wizard_progress);
     lv_xml_register_subject(nullptr, "wizard_next_button_text", &wizard_next_button_text);
+    lv_xml_register_subject(nullptr, "connection_test_passed", &connection_test_passed);
 
     spdlog::info("[Wizard] Subjects initialized");
 }
@@ -262,6 +270,11 @@ void ui_wizard_navigate_to_step(int step) {
     // Load screen content
     ui_wizard_load_screen(step);
 
+    // Force layout update on entire wizard after screen is loaded
+    if (wizard_root) {
+        lv_obj_update_layout(wizard_root);
+    }
+
     spdlog::debug("[Wizard] Updated to step {}/{}, button: {}",
                   step, total, (step == total) ? "Finish" : "Next");
 }
@@ -305,6 +318,7 @@ static void ui_wizard_load_screen(int step) {
             ui_wizard_wifi_register_callbacks();
             // Note: WiFi constants now registered by ui_wizard_container_register_responsive_constants()
             ui_wizard_wifi_create(content);
+            lv_obj_update_layout(content);
             ui_wizard_wifi_init_wifi_manager();
             ui_wizard_set_title("WiFi Setup");
             break;
@@ -314,6 +328,7 @@ static void ui_wizard_load_screen(int step) {
             ui_wizard_connection_init_subjects();
             ui_wizard_connection_register_callbacks();
             ui_wizard_connection_create(content);
+            lv_obj_update_layout(content);
             ui_wizard_set_title("Moonraker Connection");
             break;
 
@@ -322,6 +337,7 @@ static void ui_wizard_load_screen(int step) {
             ui_wizard_printer_identify_init_subjects();
             ui_wizard_printer_identify_register_callbacks();
             ui_wizard_printer_identify_create(content);
+            lv_obj_update_layout(content);
             ui_wizard_set_title("Printer Identification");
             break;
 
@@ -330,6 +346,7 @@ static void ui_wizard_load_screen(int step) {
             ui_wizard_bed_select_init_subjects();
             ui_wizard_bed_select_register_callbacks();
             ui_wizard_bed_select_create(content);
+            lv_obj_update_layout(content);
             ui_wizard_set_title("Bed Configuration");
             break;
 
@@ -338,6 +355,7 @@ static void ui_wizard_load_screen(int step) {
             ui_wizard_hotend_select_init_subjects();
             ui_wizard_hotend_select_register_callbacks();
             ui_wizard_hotend_select_create(content);
+            lv_obj_update_layout(content);
             ui_wizard_set_title("Hotend Configuration");
             break;
 
@@ -346,6 +364,7 @@ static void ui_wizard_load_screen(int step) {
             ui_wizard_fan_select_init_subjects();
             ui_wizard_fan_select_register_callbacks();
             ui_wizard_fan_select_create(content);
+            lv_obj_update_layout(content);
             ui_wizard_set_title("Fan Configuration");
             break;
 
@@ -354,6 +373,7 @@ static void ui_wizard_load_screen(int step) {
             ui_wizard_led_select_init_subjects();
             ui_wizard_led_select_register_callbacks();
             ui_wizard_led_select_create(content);
+            lv_obj_update_layout(content);
             ui_wizard_set_title("LED Configuration");
             break;
 
@@ -362,6 +382,7 @@ static void ui_wizard_load_screen(int step) {
             ui_wizard_summary_init_subjects();
             ui_wizard_summary_register_callbacks();
             ui_wizard_summary_create(content);
+            lv_obj_update_layout(content);
             ui_wizard_set_title("Configuration Summary");
             break;
 
@@ -398,41 +419,3 @@ static void on_next_clicked(lv_event_t* e) {
     }
 }
 
-// ============================================================================
-// Button Control Functions
-// ============================================================================
-
-void ui_wizard_set_button_enabled(bool back_enabled, bool next_enabled) {
-    if (!wizard_root) {
-        spdlog::warn("[Wizard] Cannot set button state: wizard not created");
-        return;
-    }
-
-    // Find buttons by name
-    lv_obj_t* back_btn = lv_obj_find_by_name(wizard_root, "back_button");
-    lv_obj_t* next_btn = lv_obj_find_by_name(wizard_root, "next_button");
-
-    if (back_btn) {
-        if (back_enabled) {
-            lv_obj_remove_state(back_btn, LV_STATE_DISABLED);
-        } else {
-            lv_obj_add_state(back_btn, LV_STATE_DISABLED);
-        }
-    }
-
-    if (next_btn) {
-        if (next_enabled) {
-            lv_obj_remove_state(next_btn, LV_STATE_DISABLED);
-        } else {
-            lv_obj_add_state(next_btn, LV_STATE_DISABLED);
-        }
-    }
-
-    spdlog::debug("[Wizard] Button states updated - back: {}, next: {}",
-                  back_enabled, next_enabled);
-}
-
-void ui_wizard_set_next_button_enabled(bool enabled) {
-    // Keep back button in its current state, only change next button
-    ui_wizard_set_button_enabled(true, enabled);
-}

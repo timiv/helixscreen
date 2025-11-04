@@ -113,22 +113,3 @@ void ui_wizard_navigate_to_step(int step);
  * @param title New title string
  */
 void ui_wizard_set_title(const char* title);
-
-/**
- * Enable/disable navigation buttons
- *
- * Controls enabled state of Back and Next buttons.
- *
- * @param back_enabled Enable/disable back button
- * @param next_enabled Enable/disable next button
- */
-void ui_wizard_set_button_enabled(bool back_enabled, bool next_enabled);
-
-/**
- * Enable/disable Next button (convenience function)
- *
- * Equivalent to ui_wizard_set_button_enabled(true, next_enabled)
- *
- * @param enabled Enable/disable next button
- */
-void ui_wizard_set_next_button_enabled(bool enabled);

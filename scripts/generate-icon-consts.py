@@ -36,6 +36,7 @@ ICONS = {
     'icon_lightbulb': (0xF0EB, 'lightbulb'),
     'icon_question_circle': (0xF059, 'circle-question'),
     'icon_check_circle': (0xF058, 'circle-check (connected)'),
+    'icon_xmark_circle': (0xF057, 'circle-xmark (error/failed)'),
     'icon_lock': (0xF023, 'lock (encrypted)'),
 
     # WiFi signal strength icons
