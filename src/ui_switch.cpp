@@ -304,7 +304,6 @@ void ui_switch_register_responsive_constants()
     const char* switch_width_large;
     const char* switch_height_large;
     const char* knob_pad_large;
-    const char* size_label;
 
     if (greater_res <= UI_BREAKPOINT_SMALL_MAX) {  // ≤480: 480x320
         switch_height = "20";
@@ -319,7 +318,6 @@ void ui_switch_register_responsive_constants()
         switch_height_large = "28";
         switch_width_large = "56";
         knob_pad_large = "2";
-        size_label = "SMALL";
 
         spdlog::debug("[Switch] Screen: SMALL (greater_res={}px), switch: {}x{}, row: {}px",
                      greater_res, switch_width, switch_height, row_height);
@@ -336,7 +334,6 @@ void ui_switch_register_responsive_constants()
         switch_height_large = "44";
         switch_width_large = "88";
         knob_pad_large = "3";
-        size_label = "MEDIUM";
 
         spdlog::debug("[Switch] Screen: MEDIUM (greater_res={}px), switch: {}x{}, row: {}px",
                      greater_res, switch_width, switch_height, row_height);
@@ -356,7 +353,6 @@ void ui_switch_register_responsive_constants()
         switch_height_large = "56";
         switch_width_large = "112";
         knob_pad_large = "4";
-        size_label = "LARGE";
 
         spdlog::info("[Switch] Screen: LARGE (greater_res={}px), switch: {}x{}, row: {}px",
                      greater_res, switch_width, switch_height, row_height);

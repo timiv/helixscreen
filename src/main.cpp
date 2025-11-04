@@ -547,30 +547,6 @@ static void initialize_subjects() {
     printer_state.init_subjects();  // Printer state subjects (CRITICAL: must be before XML creation)
 }
 
-// Create and setup overlay panel
-// Returns the created panel, or nullptr on failure
-static lv_obj_t* create_overlay_panel(lv_obj_t* screen,
-                                       const char* xml_name,
-                                       const char* debug_name,
-                                       lv_obj_t** panels,
-                                       void (*setup_fn)(lv_obj_t*, lv_obj_t*)) {
-    spdlog::debug("Creating and showing {} sub-screen...\n", debug_name);
-
-    lv_obj_t* panel = (lv_obj_t*)lv_xml_create(screen, xml_name, nullptr);
-    if (panel) {
-        setup_fn(panel, screen);
-
-        // Hide controls launcher, show overlay panel
-        lv_obj_add_flag(panels[UI_PANEL_CONTROLS], LV_OBJ_FLAG_HIDDEN);
-
-        spdlog::debug("{} panel displayed\n", debug_name);
-    } else {
-        spdlog::error("Failed to create {} panel", debug_name);
-    }
-
-    return panel;
-}
-
 // Initialize LVGL with SDL
 static bool init_lvgl() {
     lv_init();

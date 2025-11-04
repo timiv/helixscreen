@@ -171,8 +171,9 @@ bool is_safe_position(double position, const SafetyLimits& limits) {
 // ============================================================================
 
 MoonrakerAPI::MoonrakerAPI(MoonrakerClient& client, PrinterState& state)
-    : client_(client)
-    , state_(state) {
+    : client_(client) {
+    // state parameter reserved for future use
+    (void)state;
 }
 
 // ============================================================================
@@ -299,7 +300,7 @@ void MoonrakerAPI::delete_file(const std::string& filename,
     spdlog::info("Deleting file: {}", filename);
 
     client_.send_jsonrpc("server.files.delete_file", params,
-        [on_success](json response) {
+        [on_success](json) {
             spdlog::info("File deleted successfully");
             on_success();
         },
@@ -345,7 +346,7 @@ void MoonrakerAPI::move_file(const std::string& source,
     };
 
     client_.send_jsonrpc("server.files.move", params,
-        [on_success](json response) {
+        [on_success](json) {
             spdlog::info("File moved successfully");
             on_success();
         },
@@ -391,7 +392,7 @@ void MoonrakerAPI::copy_file(const std::string& source,
     };
 
     client_.send_jsonrpc("server.files.copy", params,
-        [on_success](json response) {
+        [on_success](json) {
             spdlog::info("File copied successfully");
             on_success();
         },
@@ -422,7 +423,7 @@ void MoonrakerAPI::create_directory(const std::string& path,
     };
 
     client_.send_jsonrpc("server.files.post_directory", params,
-        [on_success](json response) {
+        [on_success](json) {
             spdlog::info("Directory created successfully");
             on_success();
         },
@@ -455,7 +456,7 @@ void MoonrakerAPI::delete_directory(const std::string& path,
     };
 
     client_.send_jsonrpc("server.files.delete_directory", params,
-        [on_success](json response) {
+        [on_success](json) {
             spdlog::info("Directory deleted successfully");
             on_success();
         },
@@ -490,7 +491,7 @@ void MoonrakerAPI::start_print(const std::string& filename,
     spdlog::info("Starting print: {}", filename);
 
     client_.send_jsonrpc("printer.print.start", params,
-        [on_success](json response) {
+        [on_success](json) {
             spdlog::info("Print started successfully");
             on_success();
         },
@@ -503,7 +504,7 @@ void MoonrakerAPI::pause_print(SuccessCallback on_success,
     spdlog::info("Pausing print");
 
     client_.send_jsonrpc("printer.print.pause", json::object(),
-        [on_success](json response) {
+        [on_success](json) {
             spdlog::info("Print paused successfully");
             on_success();
         },
@@ -516,7 +517,7 @@ void MoonrakerAPI::resume_print(SuccessCallback on_success,
     spdlog::info("Resuming print");
 
     client_.send_jsonrpc("printer.print.resume", json::object(),
-        [on_success](json response) {
+        [on_success](json) {
             spdlog::info("Print resumed successfully");
             on_success();
         },
@@ -529,7 +530,7 @@ void MoonrakerAPI::cancel_print(SuccessCallback on_success,
     spdlog::info("Canceling print");
 
     client_.send_jsonrpc("printer.print.cancel", json::object(),
-        [on_success](json response) {
+        [on_success](json) {
             spdlog::info("Print canceled successfully");
             on_success();
         },
@@ -796,7 +797,7 @@ void MoonrakerAPI::execute_gcode(const std::string& gcode,
     spdlog::debug("Executing G-code: {}", gcode);
 
     client_.send_jsonrpc("printer.gcode.script", params,
-        [on_success](json response) {
+        [on_success](json) {
             on_success();
         },
         on_error
@@ -808,7 +809,7 @@ void MoonrakerAPI::emergency_stop(SuccessCallback on_success,
     spdlog::warn("Emergency stop requested!");
 
     client_.send_jsonrpc("printer.emergency_stop", json::object(),
-        [on_success](json response) {
+        [on_success](json) {
             spdlog::info("Emergency stop executed");
             on_success();
         },
@@ -821,7 +822,7 @@ void MoonrakerAPI::restart_firmware(SuccessCallback on_success,
     spdlog::info("Restarting firmware");
 
     client_.send_jsonrpc("printer.firmware_restart", json::object(),
-        [on_success](json response) {
+        [on_success](json) {
             spdlog::info("Firmware restart initiated");
             on_success();
         },
@@ -834,7 +835,7 @@ void MoonrakerAPI::restart_klipper(SuccessCallback on_success,
     spdlog::info("Restarting Klipper");
 
     client_.send_jsonrpc("printer.restart", json::object(),
-        [on_success](json response) {
+        [on_success](json) {
             spdlog::info("Klipper restart initiated");
             on_success();
         },

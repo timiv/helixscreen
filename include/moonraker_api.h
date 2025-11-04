@@ -430,7 +430,6 @@ public:
 
 private:
     MoonrakerClient& client_;
-    PrinterState& state_;
 
     SafetyLimits safety_limits_;
     bool limits_explicitly_set_ = false;
