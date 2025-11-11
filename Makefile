@@ -133,8 +133,14 @@ APP_SRCS := $(filter-out $(SRC_DIR)/test_dynamic_cards.cpp $(SRC_DIR)/test_respo
 APP_OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(APP_SRCS))
 
 # Objective-C++ sources (macOS only - .mm files)
-OBJCPP_SRCS := $(wildcard $(SRC_DIR)/*.mm)
-OBJCPP_OBJS := $(patsubst $(SRC_DIR)/%.mm,$(OBJ_DIR)/%.o,$(OBJCPP_SRCS))
+# Only include on macOS, exclude on Linux to avoid linking errors
+ifeq ($(UNAME_S),Darwin)
+    OBJCPP_SRCS := $(wildcard $(SRC_DIR)/*.mm)
+    OBJCPP_OBJS := $(patsubst $(SRC_DIR)/%.mm,$(OBJ_DIR)/%.o,$(OBJCPP_SRCS))
+else
+    OBJCPP_SRCS :=
+    OBJCPP_OBJS :=
+endif
 
 # Fonts
 FONT_SRCS := assets/fonts/fa_icons_64.c assets/fonts/fa_icons_48.c assets/fonts/fa_icons_32.c assets/fonts/fa_icons_24.c assets/fonts/fa_icons_16.c assets/fonts/arrows_64.c assets/fonts/arrows_48.c assets/fonts/arrows_32.c
@@ -171,8 +177,14 @@ else
     # No system libhv - build from submodule
     LIBHV_DIR := libhv
     LIBHV_INC := -I$(LIBHV_DIR)/include -I$(LIBHV_DIR)/cpputil -I$(LIBHV_DIR)
-    LIBHV_LIB := $(LIBHV_DIR)/lib/libhv.a
-    LIBHV_LIBS :=
+    # Check both possible locations for libhv.a (lib/ and root build directory)
+    LIBHV_LIB_PATHS := $(LIBHV_DIR)/lib/libhv.a $(LIBHV_DIR)/libhv.a
+    LIBHV_LIB := $(firstword $(wildcard $(LIBHV_LIB_PATHS)))
+    ifeq ($(LIBHV_LIB),)
+        # Neither exists yet - default to lib/ path for dependency rules
+        LIBHV_LIB := $(LIBHV_DIR)/lib/libhv.a
+    endif
+    LIBHV_LIBS := $(LIBHV_LIB)
 endif
 
 # spdlog (logging library) - Use system version if available, otherwise use submodule
@@ -213,7 +225,8 @@ ifeq ($(UNAME_S),Darwin)
 else
     # Linux - Include libwpa_client.a for WiFi control
     NPROC := $(shell nproc 2>/dev/null || echo 4)
-    LDFLAGS := $(SDL2_LIBS) $(LIBHV_LIBS) $(WPA_CLIENT_LIB) -lm -lpthread -ldl
+    # Note: LIBHV_LIBS contains the path to libhv.a when built from submodule
+    LDFLAGS := $(SDL2_LIBS) $(LIBHV_LIBS) $(WPA_CLIENT_LIB) -lssl -lcrypto -lm -lpthread -ldl
     PLATFORM := Linux
     WPA_DEPS := $(WPA_CLIENT_LIB)
 endif
