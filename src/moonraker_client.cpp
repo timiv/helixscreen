@@ -37,6 +37,8 @@ MoonrakerClient::MoonrakerClient(EventLoopPtr loop)
 
 MoonrakerClient::~MoonrakerClient() {
   spdlog::debug("[Moonraker Client] Destructor called");
+  // Set flag to prevent callbacks from executing during destruction
+  is_destroying_.store(true);
   // Disconnect cleanly to close WebSocket and cleanup all resources
   disconnect();
 }
@@ -83,15 +85,15 @@ void MoonrakerClient::disconnect() {
     spdlog::debug("[Moonraker Client] Disconnecting from WebSocket server");
   }
 
-  // Clear callbacks BEFORE closing to prevent them from firing on a destroyed object.
-  // This is critical to prevent use-after-free if callbacks capture 'this' pointer.
-  onopen = nullptr;
-  onmessage = nullptr;
-  onclose = nullptr;
-
-  // Close the WebSocket connection (calls base class close())
-  // This resets libhv internal state and stops any pending connection attempts
+  // Close the WebSocket connection FIRST (before replacing callbacks)
+  // This allows the is_destroying_ flag check in callbacks to prevent execution
+  // The callbacks will check is_destroying_ and early-return if true
   close();
+
+  // Now replace callbacks with no-op lambdas to prevent any late invocations
+  onopen = []() { /* no-op */ };
+  onmessage = [](const std::string&) { /* no-op */ };
+  onclose = []() { /* no-op */ };
 
   // Clean up any pending requests
   cleanup_pending_requests();
@@ -116,27 +118,54 @@ int MoonrakerClient::connect(const char* url,
   set_connection_state(ConnectionState::CONNECTING);
 
   // Connection opened callback
+  // Wrap entire callback body in try-catch to prevent any exception from escaping to libhv
   onopen = [this, on_connected, url]() {
-    const HttpResponsePtr& resp = getHttpResponse();
-    spdlog::info("[Moonraker Client] WebSocket connected to {}: {}", url, resp->body.c_str());
-    was_connected_ = true;
-    set_connection_state(ConnectionState::CONNECTED);
-    on_connected();
+    try {
+      // Prevent callback execution if client is being destroyed (avoid use-after-free)
+      if (is_destroying_.load()) {
+        return;
+      }
+
+      const HttpResponsePtr& resp = getHttpResponse();
+      spdlog::info("[Moonraker Client] WebSocket connected to {}: {}", url, resp->body.c_str());
+      was_connected_ = true;
+      set_connection_state(ConnectionState::CONNECTED);
+
+      // Invoke user callback with exception safety
+      try {
+        on_connected();
+      } catch (const std::exception& e) {
+        spdlog::error("[Moonraker Client] Connection callback threw exception: {}", e.what());
+      } catch (...) {
+        spdlog::error("[Moonraker Client] Connection callback threw unknown exception");
+      }
+    } catch (const std::exception& e) {
+      spdlog::error("[Moonraker Client] onopen callback threw unexpected exception: {}", e.what());
+    } catch (...) {
+      spdlog::error("[Moonraker Client] onopen callback threw unknown exception");
+    }
   };
 
   // Message received callback
+  // Wrap entire callback body in try-catch to prevent any exception from escaping to libhv
   onmessage = [this, on_connected, on_disconnected](const std::string& msg) {
-    // Validate message size to prevent memory exhaustion
-    static constexpr size_t MAX_MESSAGE_SIZE = 1024 * 1024;  // 1 MB
-    if (msg.size() > MAX_MESSAGE_SIZE) {
-      spdlog::error("[Moonraker Client] Message too large: {} bytes (max: {})",
-                    msg.size(), MAX_MESSAGE_SIZE);
-      disconnect();
-      return;
-    }
+    try {
+      // Prevent callback execution if client is being destroyed (avoid use-after-free)
+      if (is_destroying_.load()) {
+        return;
+      }
 
-    // Check for timed out requests on each message (opportunistic cleanup)
-    check_request_timeouts();
+      // Validate message size to prevent memory exhaustion
+      static constexpr size_t MAX_MESSAGE_SIZE = 1024 * 1024;  // 1 MB
+      if (msg.size() > MAX_MESSAGE_SIZE) {
+        spdlog::error("[Moonraker Client] Message too large: {} bytes (max: {})",
+                      msg.size(), MAX_MESSAGE_SIZE);
+        disconnect();
+        return;
+      }
+
+      // Check for timed out requests on each message (opportunistic cleanup)
+      check_request_timeouts();
 
     // Parse JSON message
     json j;
@@ -243,45 +272,95 @@ int MoonrakerClient::connect(const char* url,
       // Klippy disconnected from Moonraker
       if (method == "notify_klippy_disconnected") {
         spdlog::warn("[Moonraker Client] Klipper disconnected from Moonraker");
-        on_disconnected();
+
+        // Invoke user callback with exception safety
+        try {
+          on_disconnected();
+        } catch (const std::exception& e) {
+          spdlog::error("[Moonraker Client] Disconnection callback threw exception: {}", e.what());
+        } catch (...) {
+          spdlog::error("[Moonraker Client] Disconnection callback threw unknown exception");
+        }
       }
       // Klippy reconnected to Moonraker
       else if (method == "notify_klippy_ready") {
         spdlog::info("[Moonraker Client] Klipper ready");
-        on_connected();
+
+        // Invoke user callback with exception safety
+        try {
+          on_connected();
+        } catch (const std::exception& e) {
+          spdlog::error("[Moonraker Client] Connection callback threw exception: {}", e.what());
+        } catch (...) {
+          spdlog::error("[Moonraker Client] Connection callback threw unknown exception");
+        }
       }
+    }
+    } catch (const std::exception& e) {
+      spdlog::error("[Moonraker Client] onmessage callback threw unexpected exception: {}", e.what());
+    } catch (...) {
+      spdlog::error("[Moonraker Client] onmessage callback threw unknown exception");
     }
   };
 
   // Connection closed callback
+  // Wrap entire callback body in try-catch to prevent any exception from escaping
+  // to libhv (which may not handle exceptions properly or may be noexcept)
   onclose = [this, on_disconnected]() {
-    ConnectionState current = connection_state_.load();
+    try {
+      spdlog::debug("[Moonraker Client] onclose callback invoked, is_destroying={}", is_destroying_.load());
 
-    // Cleanup all pending requests (invoke error callbacks)
-    cleanup_pending_requests();
-
-    if (was_connected_) {
-      spdlog::warn("[Moonraker Client] WebSocket connection closed");
-      was_connected_ = false;
-
-      // Check if this is a reconnection scenario
-      if (current != ConnectionState::FAILED) {
-        set_connection_state(ConnectionState::RECONNECTING);
+      // Prevent callback execution if client is being destroyed (avoid use-after-free)
+      if (is_destroying_.load()) {
+        spdlog::debug("[Moonraker Client] onclose callback early return due to destruction");
+        return;
       }
 
-      on_disconnected();
-    } else {
-      spdlog::debug("[Moonraker Client] WebSocket connection failed (printer not available)");
+      ConnectionState current = connection_state_.load();
 
-      // Initial connection failed
-      if (current == ConnectionState::CONNECTING) {
-        set_connection_state(ConnectionState::DISCONNECTED);
+      // Cleanup all pending requests (invoke error callbacks)
+      cleanup_pending_requests();
+
+      if (was_connected_) {
+        spdlog::warn("[Moonraker Client] WebSocket connection closed");
+        was_connected_ = false;
+
+        // Check if this is a reconnection scenario
+        if (current != ConnectionState::FAILED) {
+          set_connection_state(ConnectionState::RECONNECTING);
+        }
+
+        // Invoke user callback with exception safety
+        try {
+          on_disconnected();
+        } catch (const std::exception& e) {
+          spdlog::error("[Moonraker Client] Disconnection callback threw exception: {}", e.what());
+        } catch (...) {
+          spdlog::error("[Moonraker Client] Disconnection callback threw unknown exception");
+        }
+      } else {
+        spdlog::debug("[Moonraker Client] WebSocket connection failed (printer not available)");
+
+        // Initial connection failed
+        if (current == ConnectionState::CONNECTING) {
+          set_connection_state(ConnectionState::DISCONNECTED);
+        }
+
+        // Call on_disconnected() to notify about connection failure
+        // Callers can use their own state tracking (e.g. connection_testing flag)
+        // to distinguish initial connection failures from reconnection scenarios
+        try {
+          on_disconnected();
+        } catch (const std::exception& e) {
+          spdlog::error("[Moonraker Client] Disconnection callback threw exception: {}", e.what());
+        } catch (...) {
+          spdlog::error("[Moonraker Client] Disconnection callback threw unknown exception");
+        }
       }
-
-      // Call on_disconnected() to notify about connection failure
-      // Callers can use their own state tracking (e.g. connection_testing flag)
-      // to distinguish initial connection failures from reconnection scenarios
-      on_disconnected();
+    } catch (const std::exception& e) {
+      spdlog::error("[Moonraker Client] onclose callback threw unexpected exception: {}", e.what());
+    } catch (...) {
+      spdlog::error("[Moonraker Client] onclose callback threw unknown exception");
     }
   };
 

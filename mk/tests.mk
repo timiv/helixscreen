@@ -59,12 +59,12 @@ TEST_WIFI_DEPS := \
     $(OBJCPP_OBJS)
 
 # Moonraker/printer components
+# Note: LIBHV_LIB is in LDFLAGS via LIBHV_LIBS, not needed here
 TEST_MOONRAKER_DEPS := \
     $(OBJ_DIR)/moonraker_client.o \
     $(OBJ_DIR)/moonraker_api.o \
     $(OBJ_DIR)/printer_state.o \
-    $(OBJ_DIR)/printer_detector.o \
-    $(LIBHV_LIB)
+    $(OBJ_DIR)/printer_detector.o
 
 # Configuration and utilities
 TEST_CONFIG_DEPS := \
@@ -127,7 +127,7 @@ $(TEST_BIN): $(TEST_CORE_DEPS) \
              $(TEST_PLATFORM_DEPS)
 	$(Q)mkdir -p $(BIN_DIR)
 	$(ECHO) "$(MAGENTA)$(BOLD)[LD]$(RESET) run_tests"
-	$(Q)$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS) || { \
+	$(Q)$(CXX) $(CXXFLAGS) $(sort $^) -o $@ $(LDFLAGS) || { \
 		echo "$(RED)$(BOLD)✗ Test linking failed!$(RESET)"; \
 		exit 1; \
 	}

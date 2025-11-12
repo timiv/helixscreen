@@ -59,6 +59,10 @@ public:
   MoonrakerClient(hv::EventLoopPtr loop = nullptr);
   ~MoonrakerClient();
 
+  // Prevent copying (WebSocket client should not be copied)
+  MoonrakerClient(const MoonrakerClient&) = delete;
+  MoonrakerClient& operator=(const MoonrakerClient&) = delete;
+
   /**
    * @brief Connect to Moonraker WebSocket server
    *
@@ -70,6 +74,14 @@ public:
   int connect(const char* url,
               std::function<void()> on_connected,
               std::function<void()> on_disconnected);
+
+  /**
+   * @brief Disconnect from Moonraker WebSocket server
+   *
+   * Closes the WebSocket connection and resets internal state.
+   * Safe to call multiple times (idempotent).
+   */
+  void disconnect();
 
   /**
    * @brief Register callback for status update notifications
@@ -293,6 +305,7 @@ private:
 
   // Persistent notify_status_update callbacks
   std::vector<std::function<void(json)>> notify_callbacks_;
+  std::mutex callbacks_mutex_;  // Protect notify_callbacks_ and method_callbacks_
 
   // Persistent method-specific callbacks
   // method_name : { handler_name : callback }
@@ -304,6 +317,7 @@ private:
   // Connection state tracking
   std::atomic_bool was_connected_;
   std::atomic<ConnectionState> connection_state_;
+  std::atomic_bool is_destroying_{false};  // Prevent callbacks during destruction
   std::function<void(ConnectionState, ConnectionState)> state_change_callback_;
   uint32_t connection_timeout_ms_;
   uint32_t reconnect_attempts_ = 0;
