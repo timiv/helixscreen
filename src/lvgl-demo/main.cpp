@@ -1,3 +1,6 @@
+// Copyright 2025 HelixScreen
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "lvgl/lvgl.h"
 #include "lvgl/demos/lv_demos.h"
 #include <SDL.h>

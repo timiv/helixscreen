@@ -1,3 +1,6 @@
+// Copyright 2025 HelixScreen
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /*
  * Generated from assets/images/helix-icon-128.png
  * DO NOT EDIT - regenerate with: make icon
