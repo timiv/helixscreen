@@ -23,13 +23,21 @@
 
 #include "ui_panel_bed_mesh.h"
 
-#include "bed_mesh_renderer.h"
 #include "ui_nav.h"
+
+#include "app_globals.h"
+#include "bed_mesh_renderer.h"
+#include "moonraker_client.h"
 
 #include <spdlog/spdlog.h>
 
 #include <cstdio>
 #include <cstring>
+#include <limits>
+
+#include "hv/json.hpp"
+
+using json = nlohmann::json;
 
 // Canvas dimensions (600×400 RGB888)
 #define CANVAS_WIDTH 600
@@ -62,6 +70,20 @@ static uint8_t canvas_buffer[CANVAS_BUFFER_SIZE];
 static int current_rotation_x = ROTATION_X_DEFAULT;
 static int current_rotation_z = ROTATION_Z_DEFAULT;
 
+// Reactive subjects for bed mesh data
+static lv_subject_t bed_mesh_available;    // 0 = no mesh, 1 = mesh loaded
+static lv_subject_t bed_mesh_profile_name; // String: active profile name
+static lv_subject_t bed_mesh_dimensions;   // String: "10x10 points"
+static lv_subject_t bed_mesh_z_range;      // String: "Z: 0.05 to 0.35mm"
+
+// String buffers for subjects (LVGL requires persistent buffers)
+static char profile_name_buf[64] = "";
+static char profile_name_prev_buf[64] = "";
+static char dimensions_buf[64] = "No mesh data";
+static char dimensions_prev_buf[64] = "";
+static char z_range_buf[64] = "";
+static char z_range_prev_buf[64] = "";
+
 // Cleanup handler for panel deletion
 static void panel_delete_cb(lv_event_t* e) {
     (void)e;
@@ -93,8 +115,7 @@ static void rotation_x_slider_cb(lv_event_t* e) {
     int32_t slider_value = lv_slider_get_value(slider);
 
     // Map to rotation angle range (-85 to -10)
-    current_rotation_x =
-        ROTATION_X_MIN + (slider_value * (ROTATION_X_MAX - ROTATION_X_MIN)) / 100;
+    current_rotation_x = ROTATION_X_MIN + (slider_value * (ROTATION_X_MAX - ROTATION_X_MIN)) / 100;
 
     // Update label
     if (rotation_x_label) {
@@ -192,10 +213,57 @@ static void create_test_mesh_data(std::vector<std::vector<float>>& mesh_data) {
     spdlog::info("[BedMesh] Created test mesh data: {}x{} dome shape", rows, cols);
 }
 
+// Update UI subjects when bed mesh data changes
+static void on_bed_mesh_update(const MoonrakerClient::BedMeshProfile& mesh) {
+    if (mesh.probed_matrix.empty()) {
+        lv_subject_set_int(&bed_mesh_available, 0);
+        lv_subject_copy_string(&bed_mesh_dimensions, "No mesh data");
+        lv_subject_copy_string(&bed_mesh_z_range, "");
+        spdlog::warn("[BedMesh] No mesh data available");
+        return;
+    }
+
+    // Update subjects
+    lv_subject_set_int(&bed_mesh_available, 1);
+
+    // Update profile name
+    lv_subject_copy_string(&bed_mesh_profile_name, mesh.name.c_str());
+
+    // Format and update dimensions
+    snprintf(dimensions_buf, sizeof(dimensions_buf), "%dx%d points", mesh.x_count, mesh.y_count);
+    lv_subject_copy_string(&bed_mesh_dimensions, dimensions_buf);
+
+    // Calculate Z range
+    float min_z = std::numeric_limits<float>::max();
+    float max_z = std::numeric_limits<float>::lowest();
+    for (const auto& row : mesh.probed_matrix) {
+        for (float z : row) {
+            min_z = std::min(min_z, z);
+            max_z = std::max(max_z, z);
+        }
+    }
+
+    // Format and update Z range
+    snprintf(z_range_buf, sizeof(z_range_buf), "Z: %.3f to %.3f mm", min_z, max_z);
+    lv_subject_copy_string(&bed_mesh_z_range, z_range_buf);
+
+    // Update renderer with new mesh data
+    ui_panel_bed_mesh_set_data(mesh.probed_matrix);
+
+    spdlog::info("[BedMesh] Mesh updated: {} ({}x{}, Z: {:.3f} to {:.3f})", mesh.name, mesh.x_count,
+                 mesh.y_count, min_z, max_z);
+}
+
 void ui_panel_bed_mesh_init_subjects() {
-    // No subjects needed for bed mesh panel currently
-    // Provided for API consistency and future expansion
-    spdlog::debug("[BedMesh] Subjects initialized (none required)");
+    lv_subject_init_int(&bed_mesh_available, 0);
+    lv_subject_init_string(&bed_mesh_profile_name, profile_name_buf, profile_name_prev_buf,
+                           sizeof(profile_name_buf), "");
+    lv_subject_init_string(&bed_mesh_dimensions, dimensions_buf, dimensions_prev_buf,
+                           sizeof(dimensions_buf), "No mesh data");
+    lv_subject_init_string(&bed_mesh_z_range, z_range_buf, z_range_prev_buf, sizeof(z_range_buf),
+                           "");
+
+    spdlog::debug("[BedMesh] Subjects initialized");
 }
 
 void ui_panel_bed_mesh_setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
@@ -295,10 +363,33 @@ void ui_panel_bed_mesh_setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         lv_label_set_text(rotation_y_label, buf);
     }
 
-    // Load test mesh data
-    std::vector<std::vector<float>> test_mesh;
-    create_test_mesh_data(test_mesh);
-    ui_panel_bed_mesh_set_data(test_mesh);
+    // Register Moonraker callback for bed mesh updates
+    MoonrakerClient* client = get_moonraker_client();
+    if (client) {
+        client->register_notify_update([client](json notification) {
+            // Check if this notification contains bed_mesh updates
+            if (notification.contains("params") && notification["params"].is_array() &&
+                !notification["params"].empty()) {
+                const json& params = notification["params"][0];
+                if (params.contains("bed_mesh") && params["bed_mesh"].is_object()) {
+                    // Mesh data was updated - refresh UI
+                    on_bed_mesh_update(client->get_active_bed_mesh());
+                }
+            }
+        });
+        spdlog::debug("[BedMesh] Registered Moonraker callback for mesh updates");
+    }
+
+    // Load initial mesh data from MoonrakerClient
+    if (client && client->has_bed_mesh()) {
+        on_bed_mesh_update(client->get_active_bed_mesh());
+    } else {
+        // Fall back to test mesh if no real data
+        spdlog::warn("[BedMesh] No mesh data from Moonraker, using test mesh");
+        std::vector<std::vector<float>> test_mesh;
+        create_test_mesh_data(test_mesh);
+        ui_panel_bed_mesh_set_data(test_mesh);
+    }
 
     // Register cleanup handler
     lv_obj_add_event_cb(panel, panel_delete_cb, LV_EVENT_DELETE, nullptr);
