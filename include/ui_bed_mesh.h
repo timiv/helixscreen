@@ -40,7 +40,7 @@ extern "C" {
 #define BED_MESH_ROTATION_X_DEFAULT (-80)
 #define BED_MESH_ROTATION_Z_MIN 0
 #define BED_MESH_ROTATION_Z_MAX 360
-#define BED_MESH_ROTATION_Z_DEFAULT 45
+#define BED_MESH_ROTATION_Z_DEFAULT 15
 
 /**
  * @brief Register <bed_mesh> widget with LVGL XML system

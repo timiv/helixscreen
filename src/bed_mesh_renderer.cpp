@@ -74,6 +74,33 @@ static void render_grid_lines(lv_obj_t* canvas, const bed_mesh_renderer_t* rende
 static void render_axis_labels(lv_obj_t* canvas, const bed_mesh_renderer_t* renderer,
                                int canvas_width, int canvas_height);
 
+// Coordinate transformation helpers
+
+/**
+ * Convert mesh column index to centered world X coordinate
+ * Centers the mesh around origin: col=0 maps to negative X, col=cols-1 to positive X
+ * Works correctly for both odd (7x7) and even (8x8) mesh sizes
+ */
+static inline double mesh_col_to_world_x(int col, int cols) {
+    return (col - (cols - 1) / 2.0) * BED_MESH_SCALE;
+}
+
+/**
+ * Convert mesh row index to centered world Y coordinate
+ * Inverts Y-axis and centers: row=0 (front edge) maps to positive Y
+ * Works correctly for both odd and even mesh sizes
+ */
+static inline double mesh_row_to_world_y(int row, int rows) {
+    return ((rows - 1 - row) - (rows - 1) / 2.0) * BED_MESH_SCALE;
+}
+
+/**
+ * Convert mesh Z height to centered/scaled world Z coordinate
+ */
+static inline double mesh_z_to_world_z(double z_height, double z_center, double z_scale) {
+    return (z_height - z_center) * z_scale;
+}
+
 // Public API implementation
 
 bed_mesh_renderer_t* bed_mesh_renderer_create(void) {
@@ -674,39 +701,38 @@ static void generate_mesh_quads(bed_mesh_renderer_t* renderer) {
 
             // Compute base X,Y positions (centered around origin)
             // Note: Y is inverted because mesh[0] = front edge
-            double base_x_0 = (col - renderer->cols / 2.0) * BED_MESH_SCALE;
-            double base_x_1 = (col + 1 - renderer->cols / 2.0) * BED_MESH_SCALE;
-            double base_y_0 = ((renderer->rows - 1 - row) - renderer->rows / 2.0) * BED_MESH_SCALE;
-            double base_y_1 =
-                ((renderer->rows - 1 - (row + 1)) - renderer->rows / 2.0) * BED_MESH_SCALE;
+            double base_x_0 = mesh_col_to_world_x(col, renderer->cols);
+            double base_x_1 = mesh_col_to_world_x(col + 1, renderer->cols);
+            double base_y_0 = mesh_row_to_world_y(row, renderer->rows);
+            double base_y_1 = mesh_row_to_world_y(row + 1, renderer->rows);
 
             // Create 4 vertices with Z values (centered and scaled)
             // Vertex order: [0]=bottom-left, [1]=bottom-right, [2]=top-left, [3]=top-right
             quad.vertices[0].x = base_x_0;
             quad.vertices[0].y = base_y_1;
-            quad.vertices[0].z =
-                (renderer->mesh[row + 1][col] - z_center) * renderer->view_state.z_scale;
+            quad.vertices[0].z = mesh_z_to_world_z(renderer->mesh[row + 1][col], z_center,
+                                                   renderer->view_state.z_scale);
             quad.vertices[0].color = height_to_color(renderer->mesh[row + 1][col],
                                                      renderer->color_min_z, renderer->color_max_z);
 
             quad.vertices[1].x = base_x_1;
             quad.vertices[1].y = base_y_1;
-            quad.vertices[1].z =
-                (renderer->mesh[row + 1][col + 1] - z_center) * renderer->view_state.z_scale;
+            quad.vertices[1].z = mesh_z_to_world_z(renderer->mesh[row + 1][col + 1], z_center,
+                                                   renderer->view_state.z_scale);
             quad.vertices[1].color = height_to_color(renderer->mesh[row + 1][col + 1],
                                                      renderer->color_min_z, renderer->color_max_z);
 
             quad.vertices[2].x = base_x_0;
             quad.vertices[2].y = base_y_0;
             quad.vertices[2].z =
-                (renderer->mesh[row][col] - z_center) * renderer->view_state.z_scale;
+                mesh_z_to_world_z(renderer->mesh[row][col], z_center, renderer->view_state.z_scale);
             quad.vertices[2].color = height_to_color(renderer->mesh[row][col],
                                                      renderer->color_min_z, renderer->color_max_z);
 
             quad.vertices[3].x = base_x_1;
             quad.vertices[3].y = base_y_0;
-            quad.vertices[3].z =
-                (renderer->mesh[row][col + 1] - z_center) * renderer->view_state.z_scale;
+            quad.vertices[3].z = mesh_z_to_world_z(renderer->mesh[row][col + 1], z_center,
+                                                   renderer->view_state.z_scale);
             quad.vertices[3].color = height_to_color(renderer->mesh[row][col + 1],
                                                      renderer->color_min_z, renderer->color_max_z);
 
@@ -771,11 +797,10 @@ static void render_grid_lines(lv_obj_t* canvas, const bed_mesh_renderer_t* rende
         projected_points[row].resize(renderer->cols);
         for (int col = 0; col < renderer->cols; col++) {
             // Convert mesh coordinates to world space (matching quad generation exactly)
-            double world_x = (col - renderer->cols / 2.0) * BED_MESH_SCALE;
-            // Y is inverted: mesh[0] = front edge (far from viewer after rotation)
-            double world_y = ((renderer->rows - 1 - row) - renderer->rows / 2.0) * BED_MESH_SCALE;
-            // Z is centered and scaled (matching quad vertex Z calculation)
-            double world_z = (renderer->mesh[row][col] - z_center) * renderer->view_state.z_scale;
+            double world_x = mesh_col_to_world_x(col, renderer->cols);
+            double world_y = mesh_row_to_world_y(row, renderer->rows);
+            double world_z =
+                mesh_z_to_world_z(renderer->mesh[row][col], z_center, renderer->view_state.z_scale);
 
             // Project to screen space
             projected_points[row][col] = project_3d_to_2d(world_x, world_y, world_z, canvas_width,
@@ -856,10 +881,12 @@ static void render_axis_labels(lv_obj_t* canvas, const bed_mesh_renderer_t* rend
     axis_line_dsc.width = 1;
     axis_line_dsc.opa = LV_OPA_80;
 
-    // Draw X-axis line (from left to right along front edge)
-    double x_axis_start_x = (0 - renderer->cols / 2.0) * BED_MESH_SCALE;
-    double x_axis_end_x = ((renderer->cols - 1) - renderer->cols / 2.0) * BED_MESH_SCALE;
-    double x_axis_y = ((renderer->rows - 1) - renderer->rows / 2.0) * BED_MESH_SCALE; // Front edge
+    // Draw X-axis line (from left to right along front edge, extend 10% beyond mesh)
+    double x_axis_start_x = mesh_col_to_world_x(0, renderer->cols);
+    double x_axis_base_end_x = mesh_col_to_world_x(renderer->cols - 1, renderer->cols);
+    double x_axis_length = x_axis_base_end_x - x_axis_start_x;
+    double x_axis_end_x = x_axis_base_end_x + x_axis_length * 0.1;             // Extend 10%
+    double x_axis_y = mesh_row_to_world_y(renderer->rows - 1, renderer->rows); // Front edge
 
     bed_mesh_point_3d_t x_start = project_3d_to_2d(x_axis_start_x, x_axis_y, grid_z, canvas_width,
                                                    canvas_height, &renderer->view_state);
@@ -872,10 +899,12 @@ static void render_axis_labels(lv_obj_t* canvas, const bed_mesh_renderer_t* rend
     axis_line_dsc.p2.y = static_cast<lv_value_precise_t>(x_end.screen_y);
     lv_draw_line(&layer, &axis_line_dsc);
 
-    // Draw Y-axis line (from front to back along left edge)
-    double y_axis_start_y = ((renderer->rows - 1) - renderer->rows / 2.0) * BED_MESH_SCALE;
-    double y_axis_end_y = (0 - renderer->rows / 2.0) * BED_MESH_SCALE;
-    double y_axis_x = (0 - renderer->cols / 2.0) * BED_MESH_SCALE; // Left edge
+    // Draw Y-axis line (from front to back along left edge, extend 10% beyond mesh)
+    double y_axis_start_y = mesh_row_to_world_y(renderer->rows - 1, renderer->rows);
+    double y_axis_base_end_y = mesh_row_to_world_y(0, renderer->rows);
+    double y_axis_length = y_axis_start_y - y_axis_base_end_y;
+    double y_axis_end_y = y_axis_base_end_y - y_axis_length * 0.1; // Extend 10%
+    double y_axis_x = mesh_col_to_world_x(0, renderer->cols);      // Left edge
 
     bed_mesh_point_3d_t y_start = project_3d_to_2d(y_axis_x, y_axis_start_y, grid_z, canvas_width,
                                                    canvas_height, &renderer->view_state);
@@ -889,10 +918,11 @@ static void render_axis_labels(lv_obj_t* canvas, const bed_mesh_renderer_t* rend
     lv_draw_line(&layer, &axis_line_dsc);
 
     // Draw Z-axis line (vertical from origin)
-    double z_axis_x = (0 - renderer->cols / 2.0) * BED_MESH_SCALE;
-    double z_axis_y = ((renderer->rows - 1) - renderer->rows / 2.0) * BED_MESH_SCALE;
+    double z_axis_x = mesh_col_to_world_x(0, renderer->cols);
+    double z_axis_y = mesh_row_to_world_y(renderer->rows - 1, renderer->rows);
     double z_axis_bottom = grid_z;
-    double z_axis_top = (renderer->mesh_max_z - z_center) * renderer->view_state.z_scale * 1.1;
+    double z_axis_top =
+        mesh_z_to_world_z(renderer->mesh_max_z, z_center, renderer->view_state.z_scale) * 1.1;
 
     bed_mesh_point_3d_t z_start = project_3d_to_2d(z_axis_x, z_axis_y, z_axis_bottom, canvas_width,
                                                    canvas_height, &renderer->view_state);
