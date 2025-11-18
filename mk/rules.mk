@@ -13,9 +13,18 @@ all: check-deps apply-patches generate-fonts $(TARGET)
 $(LIBHV_LIB):
 	$(Q)$(MAKE) libhv-build
 
+# Build TinyGL if not present (dependency rule)
+# Only build if ENABLE_TINYGL_3D=yes
+ifeq ($(ENABLE_TINYGL_3D),yes)
+$(TINYGL_LIB):
+	$(ECHO) "$(CYAN)$(BOLD)Building TinyGL...$(RESET)"
+	$(Q)cd $(TINYGL_DIR) && $(MAKE) -j$(NPROC)
+	$(ECHO) "$(GREEN)✓ TinyGL built: $(TINYGL_LIB)$(RESET)"
+endif
+
 # Link binary (SDL2_LIB is empty if using system SDL2)
 # Note: Filter out library archives from $^ to avoid duplicate linking, then add via LDFLAGS
-$(TARGET): $(SDL2_LIB) $(LIBHV_LIB) $(APP_C_OBJS) $(APP_OBJS) $(OBJCPP_OBJS) $(LVGL_OBJS) $(THORVG_OBJS) $(FONT_OBJS) $(MATERIAL_ICON_OBJS) $(WPA_DEPS)
+$(TARGET): $(SDL2_LIB) $(LIBHV_LIB) $(TINYGL_LIB) $(APP_C_OBJS) $(APP_OBJS) $(OBJCPP_OBJS) $(LVGL_OBJS) $(THORVG_OBJS) $(FONT_OBJS) $(MATERIAL_ICON_OBJS) $(WPA_DEPS)
 	$(Q)mkdir -p $(BIN_DIR)
 	$(ECHO) "$(MAGENTA)$(BOLD)[LD]$(RESET) $@"
 	$(Q)$(CXX) $(CXXFLAGS) $(filter-out %.a,$^) -o $@ $(LDFLAGS) || { \
@@ -128,6 +137,12 @@ clean:
 		echo "$(YELLOW)→ Cleaning SDL2 build...$(RESET)"; \
 		rm -rf $(SDL2_BUILD_DIR); \
 	fi
+ifeq ($(ENABLE_TINYGL_3D),yes)
+	$(Q)if [ -f "$(TINYGL_LIB)" ]; then \
+		echo "$(YELLOW)→ Cleaning TinyGL...$(RESET)"; \
+		cd $(TINYGL_DIR) && $(MAKE) clean; \
+	fi
+endif
 ifneq ($(UNAME_S),Darwin)
 	$(Q)if [ -f "$(WPA_CLIENT_LIB)" ]; then \
 		echo "$(YELLOW)→ Cleaning wpa_supplicant...$(RESET)"; \

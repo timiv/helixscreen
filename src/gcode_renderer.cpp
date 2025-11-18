@@ -25,11 +25,10 @@ GCodeRenderer::GCodeRenderer() {
     // Load colors from theme
     // Note: ui_theme_parse_color requires theme to be initialized
     // If called before theme init, will use fallback colors
-    color_extrusion_ = ui_theme_parse_color(lv_xml_get_const(NULL, "primary"));
-    color_travel_ = ui_theme_parse_color(lv_xml_get_const(NULL, "secondary_light"));
-    color_object_boundary_ = ui_theme_parse_color(lv_xml_get_const(NULL, "accent"));
-    color_highlighted_ = ui_theme_parse_color(lv_xml_get_const(NULL, "success"));
-    color_excluded_ = ui_theme_parse_color(lv_xml_get_const(NULL, "text_disabled"));
+    color_extrusion_ = ui_theme_parse_color(lv_xml_get_const(NULL, "primary_color"));
+    color_travel_ = ui_theme_parse_color(lv_xml_get_const(NULL, "text_secondary"));
+    color_object_boundary_ = ui_theme_parse_color(lv_xml_get_const(NULL, "secondary_color"));
+    color_highlighted_ = ui_theme_parse_color(lv_xml_get_const(NULL, "secondary_color"));
 
     // Save theme defaults for reset
     theme_color_extrusion_ = color_extrusion_;
@@ -113,6 +112,38 @@ void GCodeRenderer::render(lv_layer_t* layer, const ParsedGCodeFile& gcode,
     // Get view-projection matrix
     glm::mat4 transform = camera.get_view_projection_matrix();
 
+    // Store view matrix for depth calculations
+    view_matrix_ = camera.get_view_matrix();
+
+    // Calculate depth range from model bounding box for normalization
+    glm::vec3 bbox_min = gcode.global_bounding_box.min;
+    glm::vec3 bbox_max = gcode.global_bounding_box.max;
+
+    // Transform bounding box corners to view space
+    glm::vec4 corner1_view = view_matrix_ * glm::vec4(bbox_min, 1.0f);
+    glm::vec4 corner2_view = view_matrix_ * glm::vec4(bbox_max, 1.0f);
+
+    // In view space, negative Z = in front of camera (OpenGL convention)
+    // We want depth range to normalize
+    float depth_min = std::min(corner1_view.z, corner2_view.z);
+    float depth_max = std::max(corner1_view.z, corner2_view.z);
+    depth_range_ = depth_max - depth_min;
+    min_depth_ = depth_min;
+
+    // Avoid division by zero
+    if (depth_range_ < 0.001f) {
+        depth_range_ = 1.0f;
+    }
+
+    // Calculate Z-height range for color gradient mapping
+    z_min_ = bbox_min.z;
+    z_max_ = bbox_max.z;
+
+    // Avoid division by zero in gradient mapping
+    if (std::abs(z_max_ - z_min_) < 0.001f) {
+        z_max_ = z_min_ + 1.0f;
+    }
+
     // Determine layer range
     int start_layer = options_.layer_start;
     int end_layer = (options_.layer_end >= 0)
@@ -171,8 +202,17 @@ void GCodeRenderer::render_segment(lv_layer_t* layer, const ToolpathSegment& seg
         return;
     }
 
-    // Get line style and draw
-    lv_draw_line_dsc_t dsc = get_line_style(segment);
+    // Calculate view-space depth for the segment midpoint
+    glm::vec3 midpoint = (segment.start + segment.end) * 0.5f;
+    glm::vec4 view_pos = view_matrix_ * glm::vec4(midpoint, 1.0f);
+    float depth = view_pos.z;
+
+    // Normalize depth to [0, 1] where 0 = closest, 1 = farthest
+    float normalized_depth = (depth - min_depth_) / depth_range_;
+    normalized_depth = std::clamp(normalized_depth, 0.0f, 1.0f);
+
+    // Get line style with depth info, then draw
+    lv_draw_line_dsc_t dsc = get_line_style(segment, normalized_depth);
     draw_line(layer, p1, p2, dsc);
 }
 
@@ -274,43 +314,104 @@ bool GCodeRenderer::clip_line_to_viewport(glm::vec2& p1, glm::vec2& p2) const {
     return true;
 }
 
-lv_draw_line_dsc_t GCodeRenderer::get_line_style(const ToolpathSegment& segment) const {
+lv_draw_line_dsc_t GCodeRenderer::get_line_style(const ToolpathSegment& segment,
+                                                 float normalized_depth) const {
     lv_draw_line_dsc_t dsc;
     lv_draw_line_dsc_init(&dsc);
 
-    // Determine base color and opacity
+    // Determine line width and base opacity
     bool is_highlighted =
         !options_.highlighted_object.empty() && segment.object_name == options_.highlighted_object;
 
-    lv_color_t base_color;
     lv_opa_t base_opa;
+    int line_width;
 
     if (is_highlighted) {
-        base_color = color_highlighted_;
-        dsc.width = 3;
+        line_width = 3;
         base_opa = LV_OPA_COVER;
     } else if (segment.is_extrusion) {
-        base_color = color_extrusion_;
-        dsc.width = 2;
-        base_opa = LV_OPA_80;
+        line_width = 2;
+        base_opa = LV_OPA_90;
     } else {
-        base_color = color_travel_;
-        dsc.width = 1;
-        base_opa = LV_OPA_50;
+        line_width = 1;
+        base_opa = LV_OPA_60;
     }
 
-    // Apply brightness factor to color
+    dsc.width = line_width;
+
+    // ======================================================================
+    // Z-HEIGHT RAINBOW GRADIENT MAPPING
+    // ======================================================================
+    // Map Z-height to rainbow gradient: Blue (bottom) → Red (top)
+    // This makes embossed features stand out as they'll be warmer colors
+    // than surrounding layers at the same Z-height.
+    //
+    // Gradient stops:
+    //   0.00 → Blue   (#0000FF)
+    //   0.25 → Cyan   (#00FFFF)
+    //   0.50 → Green  (#00FF00)
+    //   0.75 → Yellow (#FFFF00)
+    //   1.00 → Red    (#FF0000)
+
+    // Calculate midpoint Z of segment
+    float z_mid = (segment.start.z + segment.end.z) * 0.5f;
+
+    // Normalize Z to [0, 1]
+    float z_normalized = (z_mid - z_min_) / (z_max_ - z_min_);
+    z_normalized = std::clamp(z_normalized, 0.0f, 1.0f);
+
+    // Map to rainbow gradient
+    lv_color_t gradient_color;
+    if (z_normalized < 0.25f) {
+        // Blue → Cyan (0.0 to 0.25)
+        float t = z_normalized / 0.25f;
+        gradient_color = lv_color_make(0, static_cast<uint8_t>(255 * t), 255);
+    } else if (z_normalized < 0.5f) {
+        // Cyan → Green (0.25 to 0.5)
+        float t = (z_normalized - 0.25f) / 0.25f;
+        gradient_color = lv_color_make(0, 255, static_cast<uint8_t>(255 * (1.0f - t)));
+    } else if (z_normalized < 0.75f) {
+        // Green → Yellow (0.5 to 0.75)
+        float t = (z_normalized - 0.5f) / 0.25f;
+        gradient_color = lv_color_make(static_cast<uint8_t>(255 * t), 255, 0);
+    } else {
+        // Yellow → Red (0.75 to 1.0)
+        float t = (z_normalized - 0.75f) / 0.25f;
+        gradient_color = lv_color_make(255, static_cast<uint8_t>(255 * (1.0f - t)), 0);
+    }
+
+    // Use gradient color (highlighted objects override with their special color)
+    if (is_highlighted) {
+        dsc.color = color_highlighted_;
+    } else {
+        dsc.color = gradient_color;
+    }
+
+    // ======================================================================
+    // DEPTH CUEING via OPACITY
+    // ======================================================================
+    // Far segments fade to transparent for depth perception
+    // Quadratic falloff: depth=0 (near) → opacity_factor=1.0,
+    //                    depth=1 (far)  → opacity_factor=0.0
+    float opacity_factor = 1.0f - (normalized_depth * normalized_depth);
+
+    // Map to opacity range: near=255 (full opacity), far=40 (more transparent)
+    lv_opa_t depth_opa =
+        LV_OPA_40 + static_cast<lv_opa_t>((LV_OPA_COVER - LV_OPA_40) * opacity_factor);
+
+    // Combine base opacity with depth-based opacity
+    dsc.opa = (base_opa * depth_opa) / 255;
+
+    // Apply brightness factor if configured
     if (brightness_factor_ != 1.0f) {
-        uint8_t r = std::clamp(static_cast<int>(base_color.red * brightness_factor_), 0, 255);
-        uint8_t g = std::clamp(static_cast<int>(base_color.green * brightness_factor_), 0, 255);
-        uint8_t b = std::clamp(static_cast<int>(base_color.blue * brightness_factor_), 0, 255);
+        uint8_t r = std::clamp(static_cast<int>(dsc.color.red * brightness_factor_), 0, 255);
+        uint8_t g = std::clamp(static_cast<int>(dsc.color.green * brightness_factor_), 0, 255);
+        uint8_t b = std::clamp(static_cast<int>(dsc.color.blue * brightness_factor_), 0, 255);
         dsc.color = lv_color_make(r, g, b);
-    } else {
-        dsc.color = base_color;
     }
 
-    // Apply global opacity
-    dsc.opa = static_cast<lv_opa_t>(std::clamp((base_opa * global_opacity_) / 255, 0, 255));
+    // Apply global opacity multiplier
+    dsc.opa = static_cast<lv_opa_t>(std::clamp((dsc.opa * global_opacity_) / 255, 0, 255));
 
     return dsc;
 }
@@ -332,6 +433,7 @@ std::optional<std::string> GCodeRenderer::pick_object(const glm::vec2& screen_po
                                                       const GCodeCamera& camera) const {
     // Get ray from screen position
     glm::vec3 ray_dir = camera.screen_to_world_ray(screen_pos);
+    (void)ray_dir; // Reserved for future ray-polygon intersection
 
     // For orthographic projection, ray origin is screen position projected onto Z=0 plane
     // For simplicity, just test against object center points

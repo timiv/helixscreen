@@ -302,9 +302,10 @@ class GCodeRenderer {
     /**
      * @brief Get LVGL draw descriptor for segment
      * @param segment Toolpath segment
+     * @param normalized_depth Normalized depth value (0 = closest, 1 = farthest)
      * @return Line draw descriptor with style
      */
-    lv_draw_line_dsc_t get_line_style(const ToolpathSegment& segment) const;
+    lv_draw_line_dsc_t get_line_style(const ToolpathSegment& segment, float normalized_depth) const;
 
     /**
      * @brief Draw line on LVGL layer
@@ -326,7 +327,6 @@ class GCodeRenderer {
     lv_color_t color_travel_;
     lv_color_t color_object_boundary_;
     lv_color_t color_highlighted_;
-    lv_color_t color_excluded_;
 
     // Theme default colors (for reset)
     lv_color_t theme_color_extrusion_;
@@ -337,6 +337,13 @@ class GCodeRenderer {
     bool use_custom_travel_color_{false};
     lv_opa_t global_opacity_{LV_OPA_90}; // Default opacity for all segments
     float brightness_factor_{1.0f};      // Brightness multiplier (0.5-2.0)
+
+    // Depth-based rendering (computed per frame)
+    glm::mat4 view_matrix_;   // Cached view matrix for depth calculations
+    float depth_range_{1.0f}; // Depth range for normalization
+    float min_depth_{0.0f};   // Minimum depth value
+    float z_min_{0.0f};       // Minimum Z-height for color gradient
+    float z_max_{1.0f};       // Maximum Z-height for color gradient
 
     // Statistics (updated each frame)
     size_t segments_rendered_{0};

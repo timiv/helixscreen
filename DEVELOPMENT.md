@@ -51,6 +51,7 @@ npm install  # Install lv_font_conv and lv_img_conv
 
 **Always Built from Submodules:**
 - **lvgl** - LVGL 9.4 graphics library (project-specific patches, must use submodule)
+- **TinyGL** - Software 3D rasterizer for G-code visualization (optional, enabled by default via `ENABLE_TINYGL_3D=yes`)
 
 **Development Tools (Optional):**
 - **`bear`** - Generates `compile_commands.json` for IDE/LSP support
@@ -88,7 +89,12 @@ make compile_commands
 
 # Clean rebuild (only when needed)
 make clean && make -j
+
+# Build without 3D rendering support (smaller binary, faster builds)
+make -j ENABLE_TINYGL_3D=no
 ```
+
+**Build Configuration:** See [BUILD_SYSTEM.md](docs/BUILD_SYSTEM.md) for additional build options like `ENABLE_TINYGL_3D` and `V=1` (verbose mode).
 
 ### Theme Mode Control
 

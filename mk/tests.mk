@@ -264,3 +264,58 @@ $(TEST_RESPONSIVE_THEME_OBJ): $(SRC_DIR)/test_responsive_theme.cpp
 	$(Q)mkdir -p $(dir $@)
 	$(ECHO) "$(BLUE)[TEST]$(RESET) $<"
 	$(Q)$(CXX) $(CXXFLAGS) $(INCLUDES) $(LV_CONF) -c $< -o $@
+
+# ============================================================================
+# TinyGL 3D Rendering Tests
+# ============================================================================
+
+# TinyGL Hello Triangle test (only if ENABLE_TINYGL_3D=yes)
+ifeq ($(ENABLE_TINYGL_3D),yes)
+TEST_TINYGL_TRIANGLE_BIN := $(BIN_DIR)/test_tinygl_triangle
+TEST_TINYGL_TRIANGLE_OBJ := $(OBJ_DIR)/test_tinygl_triangle.o
+
+test-tinygl-triangle: $(TEST_TINYGL_TRIANGLE_BIN)
+	$(ECHO) "$(CYAN)Running TinyGL triangle test...$(RESET)"
+	$(Q)$(TEST_TINYGL_TRIANGLE_BIN)
+	$(ECHO) ""
+
+$(TEST_TINYGL_TRIANGLE_BIN): $(TEST_TINYGL_TRIANGLE_OBJ) $(TINYGL_LIB)
+	$(Q)mkdir -p $(BIN_DIR)
+	$(ECHO) "$(MAGENTA)[LD]$(RESET) test_tinygl_triangle"
+	$(Q)$(CXX) $(CXXFLAGS) $< -o $@ $(TINYGL_LIB) -lm
+	$(ECHO) "$(GREEN)✓ TinyGL triangle test binary ready$(RESET)"
+
+$(TEST_TINYGL_TRIANGLE_OBJ): $(SRC_DIR)/test_tinygl_triangle.cpp $(TINYGL_LIB)
+	$(Q)mkdir -p $(dir $@)
+	$(ECHO) "$(BLUE)[TEST]$(RESET) $<"
+	$(Q)$(CXX) $(CXXFLAGS) $(TINYGL_INC) -c $< -o $@
+
+# G-Code Geometry Builder test (only if ENABLE_TINYGL_3D=yes)
+TEST_GCODE_GEOMETRY_BIN := $(BIN_DIR)/test_gcode_geometry
+TEST_GCODE_GEOMETRY_OBJ := $(OBJ_DIR)/test_gcode_geometry.o
+
+test-gcode-geometry: $(TEST_GCODE_GEOMETRY_BIN)
+	$(ECHO) "$(CYAN)Running G-code geometry test...$(RESET)"
+	$(Q)$(TEST_GCODE_GEOMETRY_BIN)
+	$(ECHO) ""
+
+$(TEST_GCODE_GEOMETRY_BIN): $(TEST_GCODE_GEOMETRY_OBJ) $(OBJ_DIR)/gcode_parser.o $(OBJ_DIR)/gcode_geometry_builder.o $(TINYGL_LIB)
+	$(Q)mkdir -p $(BIN_DIR)
+	$(ECHO) "$(MAGENTA)[LD]$(RESET) test_gcode_geometry"
+	$(Q)$(CXX) $(CXXFLAGS) $^ -o $@ $(TINYGL_LIB) -lm $(LDFLAGS)
+	$(ECHO) "$(GREEN)✓ G-code geometry test binary ready$(RESET)"
+
+$(TEST_GCODE_GEOMETRY_OBJ): $(SRC_DIR)/test_gcode_geometry.cpp $(TINYGL_LIB)
+	$(Q)mkdir -p $(dir $@)
+	$(ECHO) "$(BLUE)[TEST]$(RESET) $<"
+	$(Q)$(CXX) $(CXXFLAGS) $(INCLUDES) $(TINYGL_INC) -c $< -o $@
+
+else
+test-tinygl-triangle:
+	$(ECHO) "$(YELLOW)⚠ TinyGL test skipped (ENABLE_TINYGL_3D=no)$(RESET)"
+	$(ECHO) "  Rebuild with: make ENABLE_TINYGL_3D=yes test-tinygl-triangle"
+
+test-gcode-geometry:
+	$(ECHO) "$(YELLOW)⚠ G-code geometry test skipped (ENABLE_TINYGL_3D=no)$(RESET)"
+	$(ECHO) "  Rebuild with: make ENABLE_TINYGL_3D=yes test-gcode-geometry"
+endif

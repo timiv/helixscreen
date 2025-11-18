@@ -10,8 +10,7 @@
 #   Additional args: Forwarded to binary (e.g., -s small, --wizard)
 #
 # Available Panels:
-#   home, controls, motion, nozzle-temp, bed-temp, extrusion,
-#   print-status, filament, settings, advanced, print-select, file-detail, step-test
+#   See binary help: ./build/bin/helix-ui-proto --help
 #
 # Display Selection:
 #   - Automatically opens UI on display 1 (keeps terminal visible on display 0)
@@ -73,15 +72,7 @@ else
     EXTRA_ARGS="$@"
 fi
 
-# Validate panel name if provided
-VALID_PANELS="home controls motion nozzle-temp bed-temp extrusion print-status filament settings advanced print-select file-detail step-test"
-if [ -n "$PANEL" ]; then
-    if ! echo "$VALID_PANELS" | grep -qw "$PANEL"; then
-        error "Invalid panel: '$PANEL'"
-        info "Available panels: $VALID_PANELS"
-        exit 1
-    fi
-fi
+# Note: Panel validation is handled by the binary itself
 
 # Detect which display to use
 if [ -z "$HELIX_SCREENSHOT_DISPLAY" ]; then

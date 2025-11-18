@@ -132,7 +132,7 @@ APP_C_SRCS := $(wildcard $(SRC_DIR)/*.c)
 APP_C_OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(APP_C_SRCS))
 
 # Application C++ sources (exclude test binaries)
-APP_SRCS := $(filter-out $(SRC_DIR)/test_dynamic_cards.cpp $(SRC_DIR)/test_responsive_theme.cpp,$(wildcard $(SRC_DIR)/*.cpp))
+APP_SRCS := $(filter-out $(SRC_DIR)/test_dynamic_cards.cpp $(SRC_DIR)/test_responsive_theme.cpp $(SRC_DIR)/test_tinygl_triangle.cpp $(SRC_DIR)/test_gcode_geometry.cpp $(SRC_DIR)/test_gcode_analysis.cpp,$(wildcard $(SRC_DIR)/*.cpp))
 APP_OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(APP_SRCS))
 
 # Objective-C++ sources (macOS only - .mm files)
@@ -212,16 +212,32 @@ else
     FMT_LIBS :=
 endif
 
+# TinyGL (software 3D rasterizer for G-code visualization)
+# Set ENABLE_TINYGL_3D=no to build without 3D rendering support
+ENABLE_TINYGL_3D ?= yes
+
+ifeq ($(ENABLE_TINYGL_3D),yes)
+    TINYGL_DIR := tinygl
+    TINYGL_LIB := $(TINYGL_DIR)/lib/libTinyGL.a
+    TINYGL_INC := -I$(TINYGL_DIR)/include
+    TINYGL_DEFINES := -DENABLE_TINYGL_3D
+else
+    TINYGL_DIR :=
+    TINYGL_LIB :=
+    TINYGL_INC :=
+    TINYGL_DEFINES :=
+endif
+
 # wpa_supplicant (WiFi control via wpa_ctrl interface)
 WPA_DIR := wpa_supplicant
 WPA_CLIENT_LIB := $(WPA_DIR)/wpa_supplicant/libwpa_client.a
 WPA_INC := -I$(WPA_DIR)/src/common -I$(WPA_DIR)/src/utils
 
 # Include paths
-INCLUDES := -I. -I$(INC_DIR) $(LVGL_INC) $(LIBHV_INC) $(SPDLOG_INC) $(WPA_INC) $(SDL2_INC) -Iglm
+INCLUDES := -I. -I$(INC_DIR) $(LVGL_INC) $(LIBHV_INC) $(SPDLOG_INC) $(TINYGL_INC) $(WPA_INC) $(SDL2_INC) -Iglm
 
 # Common linker flags (used by both macOS and Linux)
-LDFLAGS_COMMON := $(SDL2_LIBS) $(LIBHV_LIBS) $(FMT_LIBS) -lm -lpthread
+LDFLAGS_COMMON := $(SDL2_LIBS) $(LIBHV_LIBS) $(TINYGL_LIB) $(FMT_LIBS) -lm -lpthread
 
 # Platform-specific configuration
 ifeq ($(UNAME_S),Darwin)
@@ -244,6 +260,10 @@ else
     PLATFORM := Linux
     WPA_DEPS := $(WPA_CLIENT_LIB)
 endif
+
+# Add TinyGL defines to compiler flags
+CFLAGS += $(TINYGL_DEFINES)
+CXXFLAGS += $(TINYGL_DEFINES)
 
 # Parallel build control
 # Set JOBS=N to override, or use -j directly

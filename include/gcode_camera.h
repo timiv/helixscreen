@@ -250,6 +250,22 @@ class GCodeCamera {
         return target_;
     }
 
+    /**
+     * @brief Get camera position in world space
+     * @return Camera position
+     */
+    glm::vec3 get_camera_position() const {
+        return compute_camera_position();
+    }
+
+    /**
+     * @brief Get camera distance from target
+     * @return Distance in world units
+     */
+    float get_distance() const {
+        return distance_;
+    }
+
   private:
     /**
      * @brief Recompute view and projection matrices

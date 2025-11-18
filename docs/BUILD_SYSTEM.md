@@ -63,6 +63,38 @@ make apply-patches
 make compile_commands
 ```
 
+### Build Configuration Options
+
+The build system supports several configuration flags to customize the build:
+
+**TinyGL 3D Rendering** (default: enabled)
+```bash
+# Build with TinyGL 3D rendering support (default)
+make -j
+
+# Build without TinyGL 3D rendering
+make -j ENABLE_TINYGL_3D=no
+```
+
+When `ENABLE_TINYGL_3D=yes` (default):
+- TinyGL library is built from submodule
+- 3D rendering code is compiled in
+- `ENABLE_TINYGL_3D` preprocessor define is set
+
+When `ENABLE_TINYGL_3D=no`:
+- TinyGL library is not built
+- 3D rendering code is excluded via `#ifdef ENABLE_TINYGL_3D` guards
+- Smaller binary size, faster builds
+
+**Verbosity Control** (default: quiet)
+```bash
+# Quiet mode (default) - shows progress
+make -j
+
+# Verbose mode - shows full compiler commands
+make -j V=1
+```
+
 ## Dependency Management
 
 The build system includes comprehensive dependency checking and automatic installation.

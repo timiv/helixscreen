@@ -14,7 +14,12 @@
 
 #include "gcode_camera.h"
 #include "gcode_parser.h"
+
+#ifdef ENABLE_TINYGL_3D
+#include "gcode_tinygl_renderer.h"
+#else
 #include "gcode_renderer.h"
+#endif
 
 #include <lvgl/src/xml/lv_xml_parser.h>
 #include <lvgl/src/xml/parsers/lv_xml_obj_parser.h>
@@ -32,7 +37,11 @@ struct gcode_viewer_state_t {
 
     // Rendering components
     std::unique_ptr<gcode::GCodeCamera> camera;
+#ifdef ENABLE_TINYGL_3D
+    std::unique_ptr<gcode::GCodeTinyGLRenderer> renderer;
+#else
     std::unique_ptr<gcode::GCodeRenderer> renderer;
+#endif
 
     // Gesture state (for touch interaction)
     bool is_dragging{false};
@@ -45,7 +54,13 @@ struct gcode_viewer_state_t {
     // Constructor
     gcode_viewer_state_t() {
         camera = std::make_unique<gcode::GCodeCamera>();
+#ifdef ENABLE_TINYGL_3D
+        renderer = std::make_unique<gcode::GCodeTinyGLRenderer>();
+        spdlog::info("GCode viewer using TinyGL 3D renderer");
+#else
         renderer = std::make_unique<gcode::GCodeRenderer>();
+        spdlog::info("GCode viewer using LVGL 2D renderer");
+#endif
     }
 };
 
