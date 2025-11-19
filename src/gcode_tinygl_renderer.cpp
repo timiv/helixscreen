@@ -134,6 +134,16 @@ void GCodeTinyGLRenderer::init_tinygl() {
     glEnable(GL_LIGHTING);
     glEnable(GL_COLOR_MATERIAL);
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+
+    // Explicitly disable specular highlights for matte G-code appearance
+    // GL_COLOR_MATERIAL only controls ambient/diffuse, so we must set specular separately
+    GLfloat no_specular[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    GLfloat no_emission[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    GLfloat no_shininess = 0.0f;
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, no_specular);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_emission);
+    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, no_shininess);
+
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
@@ -150,31 +160,45 @@ void GCodeTinyGLRenderer::shutdown_tinygl() {
 }
 
 void GCodeTinyGLRenderer::setup_lighting() {
-    // Balanced lighting: moderate ambient + diffuse for accurate colors with soft shadows
+    // Lighting setup matching OrcaSlicer's gouraud_light shader for consistent appearance
+    // See: OrcaSlicer/resources/shaders/110/gouraud_light.vs
+    //
+    // Key differences from previous setup:
+    // - Lower ambient (0.3 vs 0.6) for better depth perception
+    // - Directional lights (w=0.0) instead of positional for consistency
+    // - Intensity correction factor (0.6) to prevent oversaturation
+    // - Matches OrcaSlicer's exact light directions
+
+    constexpr float INTENSITY_CORRECTION = 0.6f;
+    constexpr float INTENSITY_AMBIENT = 0.3f;
+
+    // Top light: Primary light from above-right (matches OrcaSlicer LIGHT_TOP_DIR)
+    // Direction: normalized(-0.6, 0.6, 1.0) = (-0.4574957, 0.4574957, 0.7624929)
     glEnable(GL_LIGHT0);
+    GLfloat light_top_dir[] = {-0.4574957f, 0.4574957f, 0.7624929f, 0.0f}; // Directional
+    GLfloat light_top_ambient[] = {INTENSITY_AMBIENT, INTENSITY_AMBIENT, INTENSITY_AMBIENT, 1.0f};
+    GLfloat light_top_diffuse[] = {0.8f * INTENSITY_CORRECTION, 0.8f * INTENSITY_CORRECTION,
+                                   0.8f * INTENSITY_CORRECTION, 1.0f};
+    GLfloat light_top_specular[] = {0.0f, 0.0f, 0.0f, 1.0f}; // No specular (matte finish)
 
-    // Key light: Front-right
-    GLfloat key_pos[] = {100.0f, 100.0f, 200.0f, 1.0f};
-    GLfloat key_ambient[] = {0.6f, 0.6f, 0.6f, 1.0f};  // Moderate ambient for even base lighting
-    GLfloat key_diffuse[] = {0.7f, 0.7f, 0.7f, 1.0f};  // Good diffuse for form definition
-    GLfloat key_specular[] = {0.0f, 0.0f, 0.0f, 1.0f}; // No specular highlights
+    glLightfv(GL_LIGHT0, GL_POSITION, light_top_dir);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_top_ambient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_top_diffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, light_top_specular);
 
-    glLightfv(GL_LIGHT0, GL_POSITION, key_pos);
-    glLightfv(GL_LIGHT0, GL_AMBIENT, key_ambient);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, key_diffuse);
-    glLightfv(GL_LIGHT0, GL_SPECULAR, key_specular);
-
-    // Fill light: Back-left for soft fill
+    // Front light: Fill light from front-right (matches OrcaSlicer LIGHT_FRONT_DIR)
+    // Direction: normalized(1.0, 0.2, 1.0) = (0.6985074, 0.1397015, 0.6985074)
     glEnable(GL_LIGHT1);
-    GLfloat fill_pos[] = {-80.0f, -80.0f, 100.0f, 1.0f};
-    GLfloat fill_ambient[] = {0.0f, 0.0f, 0.0f, 1.0f};
-    GLfloat fill_diffuse[] = {0.5f, 0.5f, 0.5f, 1.0f}; // Moderate fill
-    GLfloat fill_specular[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    GLfloat light_front_dir[] = {0.6985074f, 0.1397015f, 0.6985074f, 0.0f}; // Directional
+    GLfloat light_front_ambient[] = {0.0f, 0.0f, 0.0f, 1.0f}; // No ambient from fill light
+    GLfloat light_front_diffuse[] = {0.3f * INTENSITY_CORRECTION, 0.3f * INTENSITY_CORRECTION,
+                                     0.3f * INTENSITY_CORRECTION, 1.0f};
+    GLfloat light_front_specular[] = {0.0f, 0.0f, 0.0f, 1.0f}; // No specular
 
-    glLightfv(GL_LIGHT1, GL_POSITION, fill_pos);
-    glLightfv(GL_LIGHT1, GL_AMBIENT, fill_ambient);
-    glLightfv(GL_LIGHT1, GL_DIFFUSE, fill_diffuse);
-    glLightfv(GL_LIGHT1, GL_SPECULAR, fill_specular);
+    glLightfv(GL_LIGHT1, GL_POSITION, light_front_dir);
+    glLightfv(GL_LIGHT1, GL_AMBIENT, light_front_ambient);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, light_front_diffuse);
+    glLightfv(GL_LIGHT1, GL_SPECULAR, light_front_specular);
 }
 
 void GCodeTinyGLRenderer::render_bounding_box(const ParsedGCodeFile& gcode) {
