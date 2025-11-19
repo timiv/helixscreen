@@ -25,44 +25,100 @@
 
 #include "lvgl/lvgl.h"
 
-// Navigation panel IDs (order matches app_layout.xml panel children)
+/**
+ * @brief Navigation panel identifiers
+ *
+ * Order matches app_layout.xml panel children for index-based access.
+ */
 typedef enum {
-    UI_PANEL_HOME,         // Panel 0: Home
-    UI_PANEL_PRINT_SELECT, // Panel 1: Print Select (beneath Home)
-    UI_PANEL_CONTROLS,     // Panel 2: Controls
-    UI_PANEL_FILAMENT,     // Panel 3: Filament
-    UI_PANEL_SETTINGS,     // Panel 4: Settings
-    UI_PANEL_ADVANCED,     // Panel 5: Advanced
-    UI_PANEL_COUNT
+    UI_PANEL_HOME,         ///< Panel 0: Home
+    UI_PANEL_PRINT_SELECT, ///< Panel 1: Print Select (beneath Home)
+    UI_PANEL_CONTROLS,     ///< Panel 2: Controls
+    UI_PANEL_FILAMENT,     ///< Panel 3: Filament
+    UI_PANEL_SETTINGS,     ///< Panel 4: Settings
+    UI_PANEL_ADVANCED,     ///< Panel 5: Advanced
+    UI_PANEL_COUNT         ///< Total number of panels
 } ui_panel_id_t;
 
-// Initialize navigation system with reactive subjects
-// MUST be called BEFORE creating navigation bar XML
+/**
+ * @brief Initialize navigation system with reactive subjects
+ *
+ * Sets up reactive subjects for icon colors and panel visibility.
+ * MUST be called BEFORE creating navigation bar XML to ensure
+ * bindings can connect to subjects.
+ *
+ * Call order: ui_nav_init() → create XML → ui_nav_wire_events()
+ */
 void ui_nav_init();
 
-// Wire up event handlers to an existing navbar widget created from XML
-// Call this after creating navigation_bar component from XML
+/**
+ * @brief Wire up event handlers to navigation bar widget
+ *
+ * Attaches click handlers to navbar icons for panel switching.
+ * Call this after creating navigation_bar component from XML.
+ *
+ * @param navbar Navigation bar widget created from XML
+ */
 void ui_nav_wire_events(lv_obj_t* navbar);
 
-// Set active panel (triggers reactive icon color updates)
+/**
+ * @brief Set active panel
+ *
+ * Updates active panel state and triggers reactive icon color updates
+ * via subject notifications. Also manages panel visibility.
+ *
+ * @param panel_id Panel identifier to activate
+ */
 void ui_nav_set_active(ui_panel_id_t panel_id);
 
-// Get current active panel
+/**
+ * @brief Get current active panel
+ *
+ * @return Currently active panel identifier
+ */
 ui_panel_id_t ui_nav_get_active();
 
-// Set panel widgets for show/hide management
-// panels array should have UI_PANEL_COUNT elements (can have NULLs for not-yet-created panels)
+/**
+ * @brief Register panel widgets for show/hide management
+ *
+ * Stores references to panel widgets so navigation system can
+ * control their visibility. Array should have UI_PANEL_COUNT
+ * elements; NULL entries are allowed for not-yet-created panels.
+ *
+ * @param panels Array of panel widgets (size: UI_PANEL_COUNT)
+ */
 void ui_nav_set_panels(lv_obj_t** panels);
 
-// Set app_layout widget reference (to prevent hiding it when hiding overlays)
+/**
+ * @brief Set app_layout widget reference
+ *
+ * Stores reference to prevent hiding app_layout when dismissing
+ * overlay panels. App layout should remain visible at all times.
+ *
+ * @param app_layout Main application layout widget
+ */
 void ui_nav_set_app_layout(lv_obj_t* app_layout);
 
-// Navigation history stack for overlay panels (motion, temp, extrusion, etc.)
-// Push an overlay panel onto the history stack and show it
-// When the overlay's back button is pressed, ui_nav_go_back() will restore the previous panel
+/**
+ * @brief Push overlay panel onto navigation history stack
+ *
+ * Shows the overlay panel and pushes it onto history stack.
+ * Used for modal panels (motion, temp, extrusion, etc.) that
+ * appear over main navigation.
+ *
+ * When overlay's back button is pressed, ui_nav_go_back()
+ * restores the previous panel.
+ *
+ * @param overlay_panel Overlay panel widget to show
+ */
 void ui_nav_push_overlay(lv_obj_t* overlay_panel);
 
-// Go back to the previous panel in the navigation history
-// Hides the current overlay and shows the previous panel
-// Returns true if navigation occurred, false if history is empty
+/**
+ * @brief Navigate back to previous panel
+ *
+ * Pops current overlay from history stack, hides it, and
+ * shows the previous panel. Used for back button handling.
+ *
+ * @return true if navigation occurred, false if history empty
+ */
 bool ui_nav_go_back();

@@ -30,11 +30,14 @@
  * @brief Printer auto-detection result with confidence and reasoning
  */
 struct PrinterDetectionResult {
-    std::string type_name; // Printer type name (e.g., "FlashForge AD5M Pro", "Voron 2.4")
-    int confidence;        // 0-100 (≥70 = high confidence, <70 = low confidence)
-    std::string reason;    // Human-readable detection reasoning
+    std::string type_name; ///< Printer type name (e.g., "FlashForge AD5M Pro", "Voron 2.4")
+    int confidence;        ///< Confidence score 0-100 (≥70 = high confidence, <70 = low confidence)
+    std::string reason;    ///< Human-readable detection reasoning
 
-    // Helper to check if detection succeeded
+    /**
+     * @brief Check if detection succeeded
+     * @return true if confidence > 0, false otherwise
+     */
     bool detected() const {
         return confidence > 0;
     }
@@ -46,11 +49,11 @@ struct PrinterDetectionResult {
  * Aggregates hardware information from Moonraker for detection analysis.
  */
 struct PrinterHardwareData {
-    std::vector<std::string> heaters; // Controllable heaters (extruders, bed, etc.)
-    std::vector<std::string> sensors; // Read-only temperature sensors
-    std::vector<std::string> fans;    // All fan types
-    std::vector<std::string> leds;    // LED outputs
-    std::string hostname;             // Printer hostname from printer.info
+    std::vector<std::string> heaters; ///< Controllable heaters (extruders, bed, etc.)
+    std::vector<std::string> sensors; ///< Read-only temperature sensors
+    std::vector<std::string> fans;    ///< All fan types
+    std::vector<std::string> leds;    ///< LED outputs
+    std::string hostname;             ///< Printer hostname from printer.info
     // TODO: Add full objects list, kinematics, build volume
 };
 

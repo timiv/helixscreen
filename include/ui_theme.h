@@ -106,16 +106,84 @@ extern const lv_font_t lv_font_montserrat_28;
 #define UI_FONT_SMALL                                                                              \
     (&lv_font_montserrat_12) // Small text (hints, helpers, warnings, chart labels)
 
-// Theme initialization and control
+/**
+ * @brief Initialize LVGL theme system
+ *
+ * Creates and applies LVGL theme with light or dark mode.
+ * Must be called before creating any widgets.
+ *
+ * @param display LVGL display instance
+ * @param use_dark_mode true for dark theme, false for light theme
+ */
 void ui_theme_init(lv_display_t* display, bool use_dark_mode);
+
+/**
+ * @brief Register responsive padding styles
+ *
+ * Creates padding styles that adapt based on screen size breakpoints.
+ * Should be called after ui_theme_init().
+ *
+ * @param display LVGL display instance
+ */
 void ui_theme_register_responsive_padding(lv_display_t* display);
+
+/**
+ * @brief Toggle between light and dark themes
+ *
+ * Switches theme mode and triggers XML constant reload to apply
+ * *_light or *_dark color variants from globals.xml.
+ * Requires lv_xml_component_reload_consts() after this call.
+ */
 void ui_theme_toggle_dark_mode();
+
+/**
+ * @brief Check if dark mode is currently active
+ *
+ * @return true if dark mode enabled, false if light mode
+ */
 bool ui_theme_is_dark_mode();
+
+/**
+ * @brief Parse hex color string to lv_color_t
+ *
+ * Supports both "#RRGGBB" and "RRGGBB" formats.
+ *
+ * @param hex_str Hex color string (e.g., "#FF0000" or "FF0000")
+ * @return LVGL color object
+ */
 lv_color_t ui_theme_parse_color(const char* hex_str);
 
-// Theme color variant helpers (DRY pattern for light/dark color selection)
+/**
+ * @brief Get themed color by base name
+ *
+ * Retrieves color from globals.xml with automatic _light/_dark
+ * variant selection based on current theme mode.
+ *
+ * Example: base_name="card_bg" → "card_bg_light" or "card_bg_dark"
+ *
+ * @param base_name Base color name (without _light/_dark suffix)
+ * @return Themed color for current mode
+ */
 lv_color_t ui_theme_get_color(const char* base_name);
+
+/**
+ * @brief Apply themed background color to widget
+ *
+ * Sets widget background color using theme-aware color lookup.
+ * Automatically selects _light or _dark variant.
+ *
+ * @param obj Widget to style
+ * @param base_name Base color name (without _light/_dark suffix)
+ * @param part Widget part to style (default: LV_PART_MAIN)
+ */
 void ui_theme_apply_bg_color(lv_obj_t* obj, const char* base_name, lv_part_t part = LV_PART_MAIN);
 
-// Font height utility
+/**
+ * @brief Get font height in pixels
+ *
+ * Returns the line height of the font, useful for layout calculations.
+ *
+ * @param font LVGL font pointer
+ * @return Font height in pixels
+ */
 int32_t ui_theme_get_font_height(const lv_font_t* font);

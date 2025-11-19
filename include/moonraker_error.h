@@ -34,30 +34,31 @@ using json = nlohmann::json;
  * @brief Error types for Moonraker operations
  */
 enum class MoonrakerErrorType {
-    NONE,              // No error
-    TIMEOUT,           // Request timed out
-    CONNECTION_LOST,   // WebSocket connection lost
-    JSON_RPC_ERROR,    // JSON-RPC protocol error from Moonraker
-    PARSE_ERROR,       // JSON parsing failed
-    VALIDATION_ERROR,  // Response validation failed
-    NOT_READY,         // Klipper not in ready state
-    FILE_NOT_FOUND,    // Requested file doesn't exist
-    PERMISSION_DENIED, // Operation not allowed
-    UNKNOWN            // Unknown error
+    NONE,              ///< No error
+    TIMEOUT,           ///< Request timed out
+    CONNECTION_LOST,   ///< WebSocket connection lost
+    JSON_RPC_ERROR,    ///< JSON-RPC protocol error from Moonraker
+    PARSE_ERROR,       ///< JSON parsing failed
+    VALIDATION_ERROR,  ///< Response validation failed
+    NOT_READY,         ///< Klipper not in ready state
+    FILE_NOT_FOUND,    ///< Requested file doesn't exist
+    PERMISSION_DENIED, ///< Operation not allowed
+    UNKNOWN            ///< Unknown error
 };
 
 /**
  * @brief Comprehensive error information for Moonraker operations
  */
 struct MoonrakerError {
-    MoonrakerErrorType type = MoonrakerErrorType::NONE;
-    int code = 0;        // JSON-RPC error code if applicable
-    std::string message; // Human-readable error message
-    std::string method;  // Method that caused the error
-    json details;        // Additional error details from Moonraker
+    MoonrakerErrorType type = MoonrakerErrorType::NONE; ///< Error type classification
+    int code = 0;        ///< JSON-RPC error code if applicable
+    std::string message; ///< Human-readable error message
+    std::string method;  ///< Method that caused the error
+    json details;        ///< Additional error details from Moonraker
 
     /**
      * @brief Check if there's an error
+     * @return true if error type is not NONE
      */
     bool has_error() const {
         return type != MoonrakerErrorType::NONE;
@@ -65,6 +66,7 @@ struct MoonrakerError {
 
     /**
      * @brief Get string representation of error type
+     * @return Error type as string (e.g., "TIMEOUT", "CONNECTION_LOST")
      */
     std::string get_type_string() const {
         switch (type) {
@@ -94,7 +96,8 @@ struct MoonrakerError {
     }
 
     /**
-     * @brief Get a user-friendly error message
+     * @brief Get user-friendly error message
+     * @return Localized error message suitable for display to users
      */
     std::string user_message() const {
         if (type == MoonrakerErrorType::TIMEOUT) {
@@ -116,6 +119,9 @@ struct MoonrakerError {
 
     /**
      * @brief Create error from JSON-RPC error response
+     * @param error_obj JSON-RPC error object from Moonraker
+     * @param method_name Method name that triggered the error
+     * @return MoonrakerError with parsed error information
      */
     static MoonrakerError from_json_rpc(const json& error_obj, const std::string& method_name) {
         MoonrakerError err;
@@ -148,6 +154,9 @@ struct MoonrakerError {
 
     /**
      * @brief Create timeout error
+     * @param method_name Method name that timed out
+     * @param timeout_ms Timeout duration in milliseconds
+     * @return MoonrakerError configured as timeout
      */
     static MoonrakerError timeout(const std::string& method_name, uint32_t timeout_ms) {
         MoonrakerError err;
@@ -159,6 +168,8 @@ struct MoonrakerError {
 
     /**
      * @brief Create connection lost error
+     * @param method_name Optional method name when connection was lost
+     * @return MoonrakerError configured as connection lost
      */
     static MoonrakerError connection_lost(const std::string& method_name = "") {
         MoonrakerError err;
@@ -170,6 +181,9 @@ struct MoonrakerError {
 
     /**
      * @brief Create parse error
+     * @param what Description of parse failure
+     * @param method_name Optional method name being parsed
+     * @return MoonrakerError configured as parse error
      */
     static MoonrakerError parse_error(const std::string& what,
                                       const std::string& method_name = "") {

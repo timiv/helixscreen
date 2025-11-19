@@ -29,48 +29,64 @@
 #include <string>
 
 /**
- * Format print time from minutes to human-readable string
+ * @brief Format print time from minutes to human-readable string
+ *
+ * Converts duration into compact time format.
  * Examples: "5m", "1h30m", "8h"
+ *
  * @param minutes Total print time in minutes
- * @return Formatted string
+ * @return Formatted time string
  */
 std::string format_print_time(int minutes);
 
 /**
- * Format filament weight from grams to human-readable string
+ * @brief Format filament weight from grams to human-readable string
+ *
+ * Converts weight to compact format with appropriate precision.
  * Examples: "2.5g", "45g", "120g"
+ *
  * @param grams Filament weight in grams
- * @return Formatted string
+ * @return Formatted weight string
  */
 std::string format_filament_weight(float grams);
 
 /**
- * Format file size from bytes to human-readable string
+ * @brief Format file size from bytes to human-readable string
+ *
+ * Converts bytes to appropriate unit (KB/MB/GB) with decimal precision.
  * Examples: "1.2 KB", "45 MB", "1.5 GB"
+ *
  * @param bytes File size in bytes
- * @return Formatted string
+ * @return Formatted size string
  */
 std::string format_file_size(size_t bytes);
 
 /**
- * Format timestamp to date/time string
+ * @brief Format Unix timestamp to date/time string
+ *
+ * Converts timestamp to localized date/time format.
  * Examples: "Jan 15 14:30", "Dec 5 09:15"
+ *
  * @param timestamp Unix timestamp (time_t)
  * @return Formatted date/time string
  */
 std::string format_modified_date(time_t timestamp);
 
 /**
- * Get responsive padding for content areas below headers
- * Returns smaller padding on tiny/small screens for more compact layouts
+ * @brief Get responsive padding for content areas below headers
+ *
+ * Returns smaller padding on tiny/small screens for more compact layouts.
+ *
  * @param screen_height Current screen height in pixels
  * @return Padding value in pixels (20px for large/medium, 10px for small, 6px for tiny)
  */
 lv_coord_t ui_get_header_content_padding(lv_coord_t screen_height);
 
 /**
- * Get responsive header height based on screen size
- * Returns smaller header on tiny/small screens for more compact layouts
+ * @brief Get responsive header height based on screen size
+ *
+ * Returns smaller header on tiny/small screens for more compact layouts.
+ *
  * @param screen_height Current screen height in pixels
  * @return Header height in pixels (60px for large/medium, 48px for small, 40px for tiny)
  */
@@ -81,22 +97,29 @@ lv_coord_t ui_get_responsive_header_height(lv_coord_t screen_height);
 // ============================================================================
 
 /**
- * Callback type for resize notifications
- * Called when the display size changes (debounced to avoid excessive calls)
+ * @brief Callback type for resize notifications
+ *
+ * Called when display size changes, debounced to avoid excessive calls.
  */
 typedef void (*ui_resize_callback_t)(void);
 
 /**
- * Initialize the app-level resize handler
- * Must be called once during app initialization, after screen is created
- * @param screen The main screen object to monitor for size changes
+ * @brief Initialize app-level resize handler
+ *
+ * Sets up automatic monitoring for display size changes.
+ * Must be called once during app initialization, after screen is created.
+ *
+ * @param screen Main screen object to monitor for size changes
  */
 void ui_resize_handler_init(lv_obj_t* screen);
 
 /**
- * Register a callback to be called when the display is resized
- * Callbacks are invoked after a brief debounce period (250ms by default)
- * @param callback Function to call on resize
+ * @brief Register callback for resize events
+ *
+ * Callbacks are invoked after debounce period (250ms default) to avoid
+ * excessive redraws during continuous resize operations.
+ *
+ * @param callback Function to call when resize occurs
  */
 void ui_resize_handler_register(ui_resize_callback_t callback);
 

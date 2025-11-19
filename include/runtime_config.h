@@ -32,17 +32,14 @@
  * In test mode, mocks are used by default but can be overridden with --real-* flags.
  */
 struct RuntimeConfig {
-    // Master test mode flag (--test)
-    bool test_mode = false;
+    bool test_mode = false;  ///< Master test mode flag (--test)
 
-    // UI/automation flags (independent of test mode)
-    bool skip_splash = false; // --skip-splash
+    bool skip_splash = false; ///< Skip splash screen (--skip-splash, independent of test mode)
 
-    // Individual component overrides (require --test to be set)
-    bool use_real_wifi = false;      // --real-wifi
-    bool use_real_ethernet = false;  // --real-ethernet
-    bool use_real_moonraker = false; // --real-moonraker
-    bool use_real_files = false;     // --real-files
+    bool use_real_wifi = false;      ///< Use real WiFi backend (--real-wifi, requires --test)
+    bool use_real_ethernet = false;  ///< Use real Ethernet backend (--real-ethernet, requires --test)
+    bool use_real_moonraker = false; ///< Use real Moonraker client (--real-moonraker, requires --test)
+    bool use_real_files = false;     ///< Use real file listing (--real-files, requires --test)
 
     /**
      * @brief Check if WiFi should use mock implementation

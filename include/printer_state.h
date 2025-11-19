@@ -45,7 +45,19 @@ using json = nlohmann::json;
  */
 class PrinterState {
   public:
+    /**
+     * @brief Construct printer state manager
+     *
+     * Initializes internal data structures. Call init_subjects() before
+     * creating XML components.
+     */
     PrinterState();
+
+    /**
+     * @brief Destroy printer state manager
+     *
+     * Cleans up LVGL subjects and releases resources.
+     */
     ~PrinterState();
 
     /**
