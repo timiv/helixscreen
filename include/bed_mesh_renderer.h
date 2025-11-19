@@ -96,6 +96,13 @@ typedef struct {
     double z_scale;   // Height amplification multiplier
     double fov_scale; // Perspective field-of-view scale
     bool is_dragging; // True during interactive drag (use fast rendering)
+
+    // Cached trigonometric values (computed once per angle change)
+    double cached_cos_x;   // cos(angle_x in radians)
+    double cached_sin_x;   // sin(angle_x in radians)
+    double cached_cos_z;   // cos(angle_z in radians)
+    double cached_sin_z;   // sin(angle_z in radians)
+    bool trig_cache_valid; // True if cached values match current angles
 } bed_mesh_view_state_t;
 
 // Main renderer instance (opaque handle)
