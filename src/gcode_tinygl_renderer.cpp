@@ -178,6 +178,9 @@ void GCodeTinyGLRenderer::setup_lighting() {
 }
 
 void GCodeTinyGLRenderer::render_bounding_box(const ParsedGCodeFile& gcode) {
+    spdlog::trace("render_bounding_box: highlighted_object_='{}', empty={}", highlighted_object_,
+                  highlighted_object_.empty());
+
     // Only render if we have a highlighted object
     if (highlighted_object_.empty()) {
         return;
@@ -186,62 +189,93 @@ void GCodeTinyGLRenderer::render_bounding_box(const ParsedGCodeFile& gcode) {
     // Find the highlighted object in the G-code data
     auto it = gcode.objects.find(highlighted_object_);
     if (it == gcode.objects.end()) {
+        spdlog::warn("TinyGL: Cannot render bounding box - object '{}' not found in G-code",
+                     highlighted_object_);
         return; // Object not found
     }
 
     const GCodeObject& obj = it->second;
     const AABB& bbox = obj.bounding_box;
 
-    // Disable lighting for wireframe (flat bright white)
-    glDisable(GL_LIGHTING);
-    glColor3f(1.0f, 1.0f, 1.0f); // Pure white
+    // IMPORTANT: The object AABB is in original G-code coordinates, but the rendered
+    // geometry has been quantized and dequantized using expanded bounds (to account for
+    // tube width). We need to transform the AABB through the same quantization process
+    // to get it into the same coordinate space as the rendered geometry.
 
-    // Draw 12 edges of the axis-aligned bounding box
-    glBegin(GL_LINES);
+    if (!geometry_) {
+        spdlog::warn("TinyGL: No geometry available for bounding box quantization");
+        return;
+    }
 
+    const auto& quant = geometry_->quantization;
+
+    // Quantize the bounding box min/max
+    auto qmin = quant.quantize_vec3(bbox.min);
+    auto qmax = quant.quantize_vec3(bbox.max);
+
+    // Dequantize back to get coordinates in the same space as rendered geometry
+    glm::vec3 bbox_min = quant.dequantize_vec3(qmin);
+    glm::vec3 bbox_max = quant.dequantize_vec3(qmax);
+
+    spdlog::debug("TinyGL: Object '{}' AABB (original): min=({:.2f},{:.2f},{:.2f}) "
+                  "max=({:.2f},{:.2f},{:.2f})",
+                  highlighted_object_, bbox.min.x, bbox.min.y, bbox.min.z, bbox.max.x, bbox.max.y,
+                  bbox.max.z);
+    spdlog::debug("TinyGL: Object AABB (transformed): min=({:.2f},{:.2f},{:.2f}) "
+                  "max=({:.2f},{:.2f},{:.2f})",
+                  bbox_min.x, bbox_min.y, bbox_min.z, bbox_max.x, bbox_max.y, bbox_max.z);
+
+    // Use material emission for bright white lines
+    glDisable(GL_DEPTH_TEST); // Draw on top
+    GLfloat white[] = {1.0f, 1.0f, 1.0f, 1.0f};
+
+    // Set bright white emission for visibility (glowing lines)
+    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, white);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, white);
+
+    // Draw 4 rectangles as line loops using transformed coordinates
     // Bottom rectangle (Z = min)
-    glVertex3f(bbox.min.x, bbox.min.y, bbox.min.z);
-    glVertex3f(bbox.max.x, bbox.min.y, bbox.min.z);
-
-    glVertex3f(bbox.max.x, bbox.min.y, bbox.min.z);
-    glVertex3f(bbox.max.x, bbox.max.y, bbox.min.z);
-
-    glVertex3f(bbox.max.x, bbox.max.y, bbox.min.z);
-    glVertex3f(bbox.min.x, bbox.max.y, bbox.min.z);
-
-    glVertex3f(bbox.min.x, bbox.max.y, bbox.min.z);
-    glVertex3f(bbox.min.x, bbox.min.y, bbox.min.z);
-
-    // Top rectangle (Z = max)
-    glVertex3f(bbox.min.x, bbox.min.y, bbox.max.z);
-    glVertex3f(bbox.max.x, bbox.min.y, bbox.max.z);
-
-    glVertex3f(bbox.max.x, bbox.min.y, bbox.max.z);
-    glVertex3f(bbox.max.x, bbox.max.y, bbox.max.z);
-
-    glVertex3f(bbox.max.x, bbox.max.y, bbox.max.z);
-    glVertex3f(bbox.min.x, bbox.max.y, bbox.max.z);
-
-    glVertex3f(bbox.min.x, bbox.max.y, bbox.max.z);
-    glVertex3f(bbox.min.x, bbox.min.y, bbox.max.z);
-
-    // Vertical edges (connecting bottom to top)
-    glVertex3f(bbox.min.x, bbox.min.y, bbox.min.z);
-    glVertex3f(bbox.min.x, bbox.min.y, bbox.max.z);
-
-    glVertex3f(bbox.max.x, bbox.min.y, bbox.min.z);
-    glVertex3f(bbox.max.x, bbox.min.y, bbox.max.z);
-
-    glVertex3f(bbox.max.x, bbox.max.y, bbox.min.z);
-    glVertex3f(bbox.max.x, bbox.max.y, bbox.max.z);
-
-    glVertex3f(bbox.min.x, bbox.max.y, bbox.min.z);
-    glVertex3f(bbox.min.x, bbox.max.y, bbox.max.z);
-
+    glBegin(GL_LINE_LOOP);
+    glVertex3f(bbox_min.x, bbox_min.y, bbox_min.z);
+    glVertex3f(bbox_max.x, bbox_min.y, bbox_min.z);
+    glVertex3f(bbox_max.x, bbox_max.y, bbox_min.z);
+    glVertex3f(bbox_min.x, bbox_max.y, bbox_min.z);
     glEnd();
 
-    // Re-enable lighting for subsequent geometry
-    glEnable(GL_LIGHTING);
+    // Top rectangle (Z = max)
+    glBegin(GL_LINE_LOOP);
+    glVertex3f(bbox_min.x, bbox_min.y, bbox_max.z);
+    glVertex3f(bbox_max.x, bbox_min.y, bbox_max.z);
+    glVertex3f(bbox_max.x, bbox_max.y, bbox_max.z);
+    glVertex3f(bbox_min.x, bbox_max.y, bbox_max.z);
+    glEnd();
+
+    // Vertical edges connecting bottom to top (4 lines)
+    glBegin(GL_LINES);
+    glVertex3f(bbox_min.x, bbox_min.y, bbox_min.z);
+    glVertex3f(bbox_min.x, bbox_min.y, bbox_max.z);
+
+    glVertex3f(bbox_max.x, bbox_min.y, bbox_min.z);
+    glVertex3f(bbox_max.x, bbox_min.y, bbox_max.z);
+
+    glVertex3f(bbox_max.x, bbox_max.y, bbox_min.z);
+    glVertex3f(bbox_max.x, bbox_max.y, bbox_max.z);
+
+    glVertex3f(bbox_min.x, bbox_max.y, bbox_min.z);
+    glVertex3f(bbox_min.x, bbox_max.y, bbox_max.z);
+    glEnd();
+
+    // Reset material state to defaults (no emission, gray diffuse)
+    // This prevents the white material from affecting the next frame's geometry
+    GLfloat no_emission[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    GLfloat default_gray[] = {0.8f, 0.8f, 0.8f, 1.0f};
+    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, no_emission);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, default_gray);
+
+    // Re-enable depth test for subsequent geometry
+    glEnable(GL_DEPTH_TEST);
+
+    spdlog::debug("TinyGL: Bounding box rendering complete");
 }
 
 void GCodeTinyGLRenderer::build_geometry(const ParsedGCodeFile& gcode) {
@@ -316,7 +350,7 @@ void GCodeTinyGLRenderer::render_geometry(const GCodeCamera& camera) {
         return; // No geometry to render
     }
 
-    // Clear framebuffer
+    // Clear buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Set up matrices from camera
@@ -426,6 +460,8 @@ void GCodeTinyGLRenderer::render(lv_layer_t* layer, const ParsedGCodeFile& gcode
     render_geometry(camera);
 
     // Render bounding box wireframe for highlighted object
+    spdlog::trace("TinyGL render: highlighted_object_='{}', gcode.objects.size()={}",
+                  highlighted_object_, gcode.objects.size());
     render_bounding_box(gcode);
 
     // Draw to LVGL
@@ -459,12 +495,14 @@ void GCodeTinyGLRenderer::set_layer_range(int start, int end) {
 }
 
 void GCodeTinyGLRenderer::set_highlighted_object(const std::string& name) {
-    highlighted_object_ = name;
-    // Could implement highlighting without full rebuild in future
-    // For now, rebuild to apply highlight color
-    if (!name.empty()) {
+    // Only rebuild if the highlighted object actually changed
+    if (highlighted_object_ != name) {
+        highlighted_object_ = name;
+        // Trigger geometry rebuild to apply/remove highlighting
         geometry_.reset();
         current_gcode_filename_.clear();
+        spdlog::debug("TinyGL: Highlighted object changed to '{}', geometry will rebuild",
+                      name.empty() ? "(none)" : name);
     }
 }
 

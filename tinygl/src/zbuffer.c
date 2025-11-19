@@ -19,11 +19,10 @@ ZBuffer* ZB_open(GLint xsize, GLint ysize, GLint mode,
 	if (zb == NULL)
 		return NULL;
 
-	zb->xsize = xsize & ~3; 
+	zb->xsize = xsize & ~3;
 	zb->ysize = ysize;
-	
-	
-	zb->linesize = (xsize * PSZB);
+
+	zb->linesize = (zb->xsize * PSZB);
 
 	switch (mode) {
 #if TGL_FEATURE_32_BITS == 1
@@ -105,12 +104,11 @@ void ZB_resize(ZBuffer* zb, void* frame_buffer, GLint xsize, GLint ysize) {
 }
 
 #if TGL_FEATURE_32_BITS == 1
- PIXEL pxReverse32(PIXEL x) {
-	return
-		((x & 0xFF000000) >> 24) | /*______AA*/
-		((x & 0x00FF0000) >> 8) |  /*____RR__*/
-		((x & 0x0000FF00) << 8) |  /*__GG____*/
-		((x & 0x000000FF) << 24);  /* BB______*/
+PIXEL pxReverse32(PIXEL x) {
+	return ((x & 0xFF000000) >> 24) | /*______AA*/
+		   ((x & 0x00FF0000) >> 8) |  /*____RR__*/
+		   ((x & 0x0000FF00) << 8) |  /*__GG____*/
+		   ((x & 0x000000FF) << 24);  /* BB______*/
 }
 #endif
 
@@ -133,8 +131,6 @@ static void ZB_copyBuffer(ZBuffer* zb, void* buf, GLint linesize) {
 #else
 		memcpy(p1, q, linesize);
 #endif
-
-
 	}
 #else
 	for (y = 0; y < zb->ysize; y++) {
@@ -182,7 +178,7 @@ static void ZB_copyFrameBufferRGB32(ZBuffer * zb,
 
 	q = zb->pbuf;
 	p1 = (GLuint *) buf;
-	
+
 	for (y = 0; y < zb->ysize; y++) {
 	p = p1;
 	n = zb->xsize >> 2;
@@ -289,25 +285,18 @@ static void ZB_copyFrameBufferRGB24(ZBuffer * zb,
 
 #if TGL_FEATURE_RENDER_BITS == 16
 
-void ZB_copyFrameBuffer(ZBuffer* zb, void* buf, GLint linesize) {
+void ZB_copyFrameBuffer(ZBuffer* zb, void* buf, GLint linesize) { ZB_copyBuffer(zb, buf, linesize); }
 
-	ZB_copyBuffer(zb, buf, linesize);
-}
-
-#endif 
+#endif
 /*^ TGL_FEATURE_RENDER_BITS == 16 */
-
 
 #if TGL_FEATURE_RENDER_BITS == 32
 
-#define RGB32_TO_RGB16(v) (((v >> 8) & 0xf800) | (((v) >> 5) & 0x07e0) | (((v)&0xff) >> 3))
+#define RGB32_TO_RGB16(v) (((v >> 8) & 0xf800) | (((v) >> 5) & 0x07e0) | (((v) & 0xff) >> 3))
 
+void ZB_copyFrameBuffer(ZBuffer* zb, void* buf, GLint linesize) { ZB_copyBuffer(zb, buf, linesize); }
 
-void ZB_copyFrameBuffer(ZBuffer* zb, void* buf, GLint linesize) {
-	ZB_copyBuffer(zb, buf, linesize);
-}
-
-#endif 
+#endif
 /* ^TGL_FEATURE_RENDER_BITS == 32 */
 
 /*
