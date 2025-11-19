@@ -795,7 +795,8 @@ void glDrawArrays(	GLenum mode,
  					GLint first,
  					GLsizei count);
 
-void glSetEnableSpecular(GLint s); 
+void glSetEnableSpecular(GLint s);
+void glPhongShading(GLint enable);  /* Enable per-pixel Phong shading (optional, slower) */
 void* glGetTexturePixmap(GLint text, GLint level, GLint* xsize, GLint* ysize); 
 void glDrawText(const GLubyte* text, GLint x, GLint y, GLuint pixel); 
 void glTextSize(GLTEXTSIZE mode); 

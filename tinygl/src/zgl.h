@@ -314,7 +314,8 @@ typedef struct GLContext {
 	GLint specbuf_used_counter;
 	GLint specbuf_num_buffers;
 #endif
-	GLint zEnableSpecular; 
+	GLint zEnableSpecular;
+	GLint zEnablePhong;  /* Enable per-pixel Phong shading instead of Gouraud */
 
 	/* raster position */
 	GLint rasterpos_zz;
@@ -426,6 +427,7 @@ void glopTranslate(GLParam *p);*/
 /* light.c */
 void gl_enable_disable_light(GLint light, GLint v);
 void gl_shade_vertex(GLVertex* v);
+void gl_shade_pixel(GLfloat* R_out, GLfloat* G_out, GLfloat* B_out, V3* normal);
 
 void glInitTextures(void);
 void glEndTextures(void);

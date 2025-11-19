@@ -224,6 +224,130 @@ void glSetEnableSpecular(GLint s) {
 	gl_add_op(p);
 }
 void glopSetEnableSpecular(GLParam* p) { gl_get_context()->zEnableSpecular = p[1].i; }
+
+void glPhongShading(GLint enable) {
+	GLParam p[2];
+#include "error_check_no_context.h"
+	p[1].i = enable;
+	p[0].op = OP_PhongShading;
+	gl_add_op(p);
+}
+void glopPhongShading(GLParam* p) { gl_get_context()->zEnablePhong = p[1].i; }
+
+/*
+ * Per-pixel lighting for Phong shading
+ * Simplified version that works with interpolated normals
+ * For full quality, use gl_shade_vertex() at vertices (Gouraud)
+ */
+void gl_shade_pixel(GLfloat* R_out, GLfloat* G_out, GLfloat* B_out, V3* normal) {
+	GLContext* c = gl_get_context();
+	GLfloat R, G, B;
+	GLMaterial* m;
+	GLLight* l;
+	V3 n, s, d;
+	GLfloat tmp, att, dot, dot_spec;
+	GLint twoside = c->light_model_two_side;
+
+	m = &c->materials[0];
+
+	/* Use provided normal (assumed to be normalized by caller) */
+	n.X = normal->X;
+	n.Y = normal->Y;
+	n.Z = normal->Z;
+
+	/* Base color: emission + global ambient */
+	R = m->emission.v[0] + m->ambient.v[0] * c->ambient_light_model.v[0];
+	G = m->emission.v[1] + m->ambient.v[1] * c->ambient_light_model.v[1];
+	B = m->emission.v[2] + m->ambient.v[2] * c->ambient_light_model.v[2];
+
+	/* Accumulate lighting from all enabled lights */
+	for (l = c->first_light; l != NULL; l = l->next) {
+		GLfloat lR, lG, lB;
+
+		/* Ambient contribution */
+		lR = l->ambient.v[0] * m->ambient.v[0];
+		lG = l->ambient.v[1] * m->ambient.v[1];
+		lB = l->ambient.v[2] * m->ambient.v[2];
+
+		/* Only directional lights supported for per-pixel (infinite distance) */
+		/* This avoids needing eye coordinates for attenuation */
+		if (l->position.v[3] == 0) {
+			/* Directional light at infinity */
+			d.X = l->norm_position.v[0];
+			d.Y = l->norm_position.v[1];
+			d.Z = l->norm_position.v[2];
+			att = 1;
+		} else {
+			/* Positional lights not yet supported in per-pixel mode */
+			/* Skip this light - would need eye coordinates for proper attenuation */
+			continue;
+		}
+
+		/* Diffuse lighting: N dot L */
+		dot = d.X * n.X + d.Y * n.Y + d.Z * n.Z;
+		if (twoside && dot < 0)
+			dot = -dot;
+
+		if (dot > 0) {
+			/* Diffuse contribution */
+			lR += dot * l->diffuse.v[0] * m->diffuse.v[0];
+			lG += dot * l->diffuse.v[1] * m->diffuse.v[1];
+			lB += dot * l->diffuse.v[2] * m->diffuse.v[2];
+
+			/* Specular lighting (simplified infinite viewer model) */
+			if (c->zEnableSpecular) {
+				/* Infinite viewer: view direction is (0, 0, 1) */
+				s.X = d.X;
+				s.Y = d.Y;
+				s.Z = d.Z - 1.0;
+
+				dot_spec = n.X * s.X + n.Y * s.Y + n.Z * s.Z;
+				if (twoside && dot_spec < 0)
+					dot_spec = -dot_spec;
+
+				if (dot_spec > 0) {
+					dot_spec = clampf(dot_spec, 0, 1);
+
+#if TGL_FEATURE_FISR == 1
+					tmp = fastInvSqrt(s.X * s.X + s.Y * s.Y + s.Z * s.Z);
+					dot_spec = dot_spec * tmp;
+#else
+					tmp = sqrt(s.X * s.X + s.Y * s.Y + s.Z * s.Z);
+					if (tmp > 1E-3) {
+						dot_spec = dot_spec / tmp;
+					} else {
+						dot_spec = 0;
+					}
+#endif
+
+#if TGL_FEATURE_SPECULAR_BUFFERS == 1
+					GLSpecBuf* specbuf = specbuf_get_buffer(c, m->shininess_i, m->shininess);
+					GLint idx = (GLint)(dot_spec * SPECULAR_BUFFER_SIZE);
+					if (idx > SPECULAR_BUFFER_SIZE)
+						idx = SPECULAR_BUFFER_SIZE;
+					dot_spec = specbuf->buf[idx];
+#else
+					dot_spec = pow(dot_spec, m->shininess);
+#endif
+
+					lR += dot_spec * l->specular.v[0] * m->specular.v[0];
+					lG += dot_spec * l->specular.v[1] * m->specular.v[1];
+					lB += dot_spec * l->specular.v[2] * m->specular.v[2];
+				}
+			}
+		}
+
+		R += att * lR;
+		G += att * lG;
+		B += att * lB;
+	}
+
+	/* Return clamped RGB */
+	*R_out = clampf(R, 0, 1);
+	*G_out = clampf(G, 0, 1);
+	*B_out = clampf(B, 0, 1);
+}
+
 /* non optimized lightening model */
 void gl_shade_vertex(GLVertex* v) {
 	GLContext* c = gl_get_context();

@@ -279,7 +279,7 @@ typedef struct {
   GLint x,y,z;     /* integer coordinates in the zbuffer */
   GLint s,t;       /* coordinates for the mapping */
   GLint r,g,b;     /* color indexes */
-  
+
   GLfloat sz,tz;   /* temporary coordinates for mapping */
 } ZBufferPoint;
 
@@ -331,6 +331,11 @@ void ZB_fillTriangleSmooth(ZBuffer *zb,
 
 void ZB_fillTriangleSmoothNOBLEND(ZBuffer *zb,
 		   ZBufferPoint *p1,ZBufferPoint *p2,ZBufferPoint *p3);
+
+void ZB_fillTrianglePhong(ZBuffer *zb,
+		   ZBufferPoint *p1,ZBufferPoint *p2,ZBufferPoint *p3,
+		   GLfloat *n1, GLfloat *n2, GLfloat *n3);
+
 /*
 This function goes unused and is removed by Gek.
 void ZB_fillTriangleMapping(ZBuffer *zb,

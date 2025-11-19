@@ -42,6 +42,11 @@ Things to keep in mind:
 	GLint g1, dgdx, dgdy, dgdl_min, dgdl_max;
 	GLint b1, dbdx, dbdy, dbdl_min, dbdl_max;
 #endif
+#ifdef INTERP_NORMAL
+	GLfloat nx1, dnxdx, dnxdy, dnxdl_min, dnxdl_max;
+	GLfloat ny1, dnydx, dnydy, dnydl_min, dnydl_max;
+	GLfloat nz1, dnzdx, dnzdy, dnzdl_min, dnzdl_max;
+#endif
 #ifdef INTERP_ST
 	GLint s1, dsdx, dsdy, dsdl_min, dsdl_max;
 	GLint t1, dtdx, dtdy, dtdl_min, dtdl_max;
@@ -122,6 +127,27 @@ Things to keep in mind:
 		}
 #endif
 
+#ifdef INTERP_NORMAL
+		{
+			d1 = p1_nx - p0_nx;
+			d2 = p2_nx - p0_nx;
+			dnxdx = (fdy2 * d1 - fdy1 * d2);
+			dnxdy = (fdx1 * d2 - fdx2 * d1);
+		}
+		{
+			d1 = p1_ny - p0_ny;
+			d2 = p2_ny - p0_ny;
+			dnydx = (fdy2 * d1 - fdy1 * d2);
+			dnydy = (fdx1 * d2 - fdx2 * d1);
+		}
+		{
+			d1 = p1_nz - p0_nz;
+			d2 = p2_nz - p0_nz;
+			dnzdx = (fdy2 * d1 - fdy1 * d2);
+			dnzdy = (fdx1 * d2 - fdx2 * d1);
+		}
+#endif
+
 #ifdef INTERP_ST
 		{
 			d1 = p1->s - p0->s;
@@ -180,24 +206,35 @@ Things to keep in mind:
 	 jakascorner.com/blog/2016/06/omp-data-sharing-attributes.html
 	 I'd also like to figure out if the main while() loop over raster lines can be OMP parallelized, but I suspect it isn't worth it.
 	*/
-	ZBufferPoint *pr1, *pr2, *l1, *l2; 
+	ZBufferPoint *pr1, *pr2, *l1, *l2;
+#ifdef INTERP_NORMAL
+	GLfloat *ln1, *ln2;  /* Normal pointers corresponding to l1, l2 */
+#endif
 	for (part = 0; part < 2; part++) {
 		GLint nb_lines;
 		{
-			register GLint update_left, update_right; 
+			register GLint update_left, update_right;
 			if (part == 0) {
-				if (fz > 0) {		 
-					update_left = 1; 
+				if (fz > 0) {
+					update_left = 1;
 					update_right = 1;
-					l1 = p0;  
-					l2 = p2;  
-					pr1 = p0; 
-					pr2 = p1; 
+					l1 = p0;
+					l2 = p2;
+#ifdef INTERP_NORMAL
+					ln1 = n0;
+					ln2 = n2;
+#endif
+					pr1 = p0;
+					pr2 = p1;
 				} else {
-					update_left = 1; 
+					update_left = 1;
 					update_right = 1;
 					l1 = p0;
 					l2 = p1;
+#ifdef INTERP_NORMAL
+					ln1 = n0;
+					ln2 = n1;
+#endif
 					pr1 = p0;
 					pr2 = p2;
 				}
@@ -214,6 +251,10 @@ Things to keep in mind:
 					update_right = 0;
 					l1 = p1;
 					l2 = p2;
+#ifdef INTERP_NORMAL
+					ln1 = n1;
+					ln2 = n2;
+#endif
 				}
 				nb_lines = p2->y - p1->y + 1;
 			}
@@ -249,6 +290,17 @@ Things to keep in mind:
 				b1 = l1->b;
 				dbdl_min = (dbdy + dbdx * dxdy_min);
 				dbdl_max = dbdl_min + dbdx;
+#endif
+#ifdef INTERP_NORMAL
+				nx1 = ln1[0];
+				dnxdl_min = (dnxdy + dnxdx * dxdy_min);
+				dnxdl_max = dnxdl_min + dnxdx;
+				ny1 = ln1[1];
+				dnydl_min = (dnydy + dnydx * dxdy_min);
+				dnydl_max = dnydl_min + dnydx;
+				nz1 = ln1[2];
+				dnzdl_min = (dnzdy + dnzdx * dxdy_min);
+				dnzdl_max = dnzdl_min + dnzdx;
 #endif
 #ifdef INTERP_ST
 				s1 = l1->s;
@@ -295,15 +347,18 @@ Things to keep in mind:
 #ifdef INTERP_RGB
 				register GLint or1, og1, ob1;
 #endif
+#ifdef INTERP_NORMAL
+				register GLfloat onx1, ony1, onz1;
+#endif
 #ifdef INTERP_ST
 				register GLuint s, t;
 #endif
 #ifdef INTERP_STZ
-				
+
 #endif
 
 				n = (x2 >> 16) - x1;
-				
+
 				pp = (PIXEL*)pp1 + x1;
 #ifdef INTERP_Z
 				pz = pz1 + x1;
@@ -313,6 +368,11 @@ Things to keep in mind:
 				or1 = r1;
 				og1 = g1;
 				ob1 = b1;
+#endif
+#ifdef INTERP_NORMAL
+				onx1 = nx1;
+				ony1 = ny1;
+				onz1 = nz1;
 #endif
 #ifdef INTERP_ST
 				s = s1;
@@ -362,6 +422,11 @@ Things to keep in mind:
 				g1 += dgdl_max;
 				b1 += dbdl_max;
 #endif
+#ifdef INTERP_NORMAL
+				nx1 += dnxdl_max;
+				ny1 += dnydl_max;
+				nz1 += dnzdl_max;
+#endif
 #ifdef INTERP_ST
 				s1 += dsdl_max;
 				t1 += dtdl_max;
@@ -379,6 +444,11 @@ Things to keep in mind:
 				r1 += drdl_min;
 				g1 += dgdl_min;
 				b1 += dbdl_min;
+#endif
+#ifdef INTERP_NORMAL
+				nx1 += dnxdl_min;
+				ny1 += dnydl_min;
+				nz1 += dnzdl_min;
 #endif
 #ifdef INTERP_ST
 				s1 += dsdl_min;
@@ -408,6 +478,7 @@ Things to keep in mind:
 #undef INTERP_RGB
 #undef INTERP_ST
 #undef INTERP_STZ
+#undef INTERP_NORMAL
 
 #undef DRAW_INIT
 #undef DRAW_LINE

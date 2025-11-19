@@ -107,7 +107,7 @@ void gl_draw_point(GLVertex* p0) {
  * Line Clipping
  */
 
-static void GLinterpolate(GLVertex* q, GLVertex* p0, GLVertex* p1, GLfloat t) { 
+static void GLinterpolate(GLVertex* q, GLVertex* p0, GLVertex* p1, GLfloat t) {
 	GLint i;
 	q->pc.X = p0->pc.X + (p1->pc.X - p0->pc.X) * t;
 	q->pc.Y = p0->pc.Y + (p1->pc.Y - p0->pc.Y) * t;
@@ -118,6 +118,11 @@ static void GLinterpolate(GLVertex* q, GLVertex* p0, GLVertex* p1, GLfloat t) {
 #endif
 	for (i = 0; i < 3; i++)
 		q->color.v[i] = p0->color.v[i] + (p1->color.v[i] - p0->color.v[i]) * t;
+
+	/* Interpolate normals for Phong shading */
+	q->normal.X = p0->normal.X + (p1->normal.X - p0->normal.X) * t;
+	q->normal.Y = p0->normal.Y + (p1->normal.Y - p0->normal.Y) * t;
+	q->normal.Z = p0->normal.Z + (p1->normal.Z - p0->normal.Z) * t;
 }
 
 /* Line Clipping algorithm from 'Computer Graphics', Principles and
@@ -215,6 +220,11 @@ static void updateTmp(GLVertex* q, GLVertex* p0, GLVertex* p1, GLfloat t) {
 		q->color.v[1] = p0->color.v[1] + (p1->color.v[1] - p0->color.v[1]) * t;
 		q->color.v[2] = p0->color.v[2] + (p1->color.v[2] - p0->color.v[2]) * t;
 	}
+
+	/* Interpolate normals for Phong shading */
+	q->normal.X = p0->normal.X + (p1->normal.X - p0->normal.X) * t;
+	q->normal.Y = p0->normal.Y + (p1->normal.Y - p0->normal.Y) * t;
+	q->normal.Z = p0->normal.Z + (p1->normal.Z - p0->normal.Z) * t;
 
 #if TGL_OPTIMIZATION_HINT_BRANCH_COST < 1
 	if (c->texture_2d_enabled)
@@ -422,14 +432,21 @@ void gl_draw_triangle_fill(GLVertex* p0, GLVertex* p1, GLVertex* p2) {
 		ZB_fillTriangleMappingPerspectiveNOBLEND(c->zb, &p0->zp, &p1->zp, &p2->zp);
 #endif
 	} else if (c->current_shade_model == GL_SMOOTH) {
+		/* Check if Phong shading is enabled (per-pixel lighting) */
+		if (c->zEnablePhong) {
+			ZB_fillTrianglePhong(c->zb, &p0->zp, &p1->zp, &p2->zp,
+			                     p0->normal.v, p1->normal.v, p2->normal.v);
+		} else {
+			/* Gouraud shading (per-vertex lighting) */
 #if TGL_FEATURE_BLEND == 1
-		if (c->zb->enable_blend)
-			ZB_fillTriangleSmooth(c->zb, &p0->zp, &p1->zp, &p2->zp);
-		else
-			ZB_fillTriangleSmoothNOBLEND(c->zb, &p0->zp, &p1->zp, &p2->zp);
+			if (c->zb->enable_blend)
+				ZB_fillTriangleSmooth(c->zb, &p0->zp, &p1->zp, &p2->zp);
+			else
+				ZB_fillTriangleSmoothNOBLEND(c->zb, &p0->zp, &p1->zp, &p2->zp);
 #else
-		ZB_fillTriangleSmoothNOBLEND(c->zb, &p0->zp, &p1->zp, &p2->zp);
+			ZB_fillTriangleSmoothNOBLEND(c->zb, &p0->zp, &p1->zp, &p2->zp);
 #endif
+		}
 	} else {
 #if TGL_FEATURE_BLEND == 1
 		if (c->zb->enable_blend)

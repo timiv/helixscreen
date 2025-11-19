@@ -3,6 +3,10 @@
 #include "zdither.h"
 #include <stdlib.h>
 
+/* Phong shading support */
+#include "zmath.h"  /* For V3 type and gl_V3_Norm_Fast */
+extern void gl_shade_pixel(GLfloat* R_out, GLfloat* G_out, GLfloat* B_out, V3* normal);
+
 
 
 
@@ -56,6 +60,7 @@ void ZB_fillTriangleFlat(ZBuffer* zb, ZBufferPoint* p0, ZBufferPoint* p1, ZBuffe
 #undef INTERP_RGB
 #undef INTERP_ST
 #undef INTERP_STZ
+#undef INTERP_NORMAL
 
 #define INTERP_Z
 
@@ -88,6 +93,7 @@ void ZB_fillTriangleFlatNOBLEND(ZBuffer* zb, ZBufferPoint* p0, ZBufferPoint* p1,
 #undef INTERP_RGB
 #undef INTERP_ST
 #undef INTERP_STZ
+#undef INTERP_NORMAL
 #define INTERP_Z
 
 #define DRAW_INIT()                                                                                                                                            \
@@ -120,6 +126,11 @@ void ZB_fillTriangleSmooth(ZBuffer* zb, ZBufferPoint* p0, ZBufferPoint* p1, ZBuf
 	TGL_BLEND_VARS
 	TGL_STIPPLEVARS
 
+#undef INTERP_Z
+#undef INTERP_RGB
+#undef INTERP_ST
+#undef INTERP_STZ
+#undef INTERP_NORMAL
 #define INTERP_Z
 #define INTERP_RGB
 
@@ -180,6 +191,11 @@ void ZB_fillTriangleSmoothNOBLEND(ZBuffer* zb, ZBufferPoint* p0, ZBufferPoint* p
 	GLubyte zbdt = zb->depth_test;
 	TGL_STIPPLEVARS
 
+#undef INTERP_Z
+#undef INTERP_RGB
+#undef INTERP_ST
+#undef INTERP_STZ
+#undef INTERP_NORMAL
 #define INTERP_Z
 #define INTERP_RGB
 
@@ -249,7 +265,117 @@ void ZB_fillTriangleSmoothNOBLEND(ZBuffer* zb, ZBufferPoint* p0, ZBufferPoint* p
 #endif
 /* End of 16 bit mode stuff*/
 #include "ztriangle.h"
-} 
+}
+
+/*
+ * Phong shading - Per-pixel lighting with interpolated normals
+ * n0, n1, n2: Normal vectors for each vertex (as float[3] arrays)
+ */
+void ZB_fillTrianglePhong(ZBuffer* zb, ZBufferPoint* p0, ZBufferPoint* p1, ZBufferPoint* p2,
+                          GLfloat* n0, GLfloat* n1, GLfloat* n2) {
+	GLubyte zbdw = zb->depth_write;
+	GLubyte zbdt = zb->depth_test;
+	TGL_BLEND_VARS
+	TGL_STIPPLEVARS
+
+#undef INTERP_Z
+#undef INTERP_RGB
+#undef INTERP_ST
+#undef INTERP_STZ
+#undef INTERP_NORMAL
+#define INTERP_Z
+#define INTERP_NORMAL
+
+#define SAR_RND_TO_ZERO(v, n) (v / (1 << n))
+
+#if TGL_FEATURE_RENDER_BITS == 32
+#define DRAW_INIT()                                                                                                                                            \
+	{}
+
+#define PUT_PIXEL(_a)                                                                                                                                          \
+	{                                                                                                                                                          \
+		register GLuint zz = z >> ZB_POINT_Z_FRAC_BITS;                                                                                                        \
+		if (ZCMPSIMP(zz, pz[_a], _a, 0)) {                                                                                                                     \
+			/* Normalize interpolated normal */                                                                                                               \
+			V3 normal;                                                                                                                                         \
+			normal.X = onx1;                                                                                                                                   \
+			normal.Y = ony1;                                                                                                                                   \
+			normal.Z = onz1;                                                                                                                                   \
+			gl_V3_Norm_Fast(&normal);                                                                                                                          \
+			                                                                                                                                                   \
+			/* Calculate per-pixel lighting */                                                                                                                \
+			GLfloat R, G, B;                                                                                                                                   \
+			gl_shade_pixel(&R, &G, &B, &normal);                                                                                                               \
+			                                                                                                                                                   \
+			/* Convert to integer color */                                                                                                                    \
+			GLint or1 = (GLint)(R * (GLfloat)COLOR_MULT_MASK);                                                                                                \
+			GLint og1 = (GLint)(G * (GLfloat)COLOR_MULT_MASK);                                                                                                \
+			GLint ob1 = (GLint)(B * (GLfloat)COLOR_MULT_MASK);                                                                                                \
+			                                                                                                                                                   \
+			TGL_BLEND_FUNC_RGB(or1, og1, ob1, (pp[_a]));                                                                                                       \
+			if (zbdw)                                                                                                                                          \
+				pz[_a] = zz;                                                                                                                                   \
+		}                                                                                                                                                      \
+		z += dzdx;                                                                                                                                             \
+		onx1 += dnxdx;                                                                                                                                         \
+		ony1 += dnydx;                                                                                                                                         \
+		onz1 += dnzdx;                                                                                                                                         \
+	}
+
+#elif TGL_FEATURE_RENDER_BITS == 16
+
+#define DRAW_INIT()                                                                                                                                            \
+	{}
+
+#define PUT_PIXEL(_a)                                                                                                                                          \
+	{                                                                                                                                                          \
+		register GLuint zz = z >> ZB_POINT_Z_FRAC_BITS;                                                                                                        \
+		if (ZCMPSIMP(zz, pz[_a], _a, 0)) {                                                                                                                     \
+			/* Normalize interpolated normal */                                                                                                               \
+			V3 normal;                                                                                                                                         \
+			normal.X = onx1;                                                                                                                                   \
+			normal.Y = ony1;                                                                                                                                   \
+			normal.Z = onz1;                                                                                                                                   \
+			gl_V3_Norm_Fast(&normal);                                                                                                                          \
+			                                                                                                                                                   \
+			/* Calculate per-pixel lighting */                                                                                                                \
+			GLfloat R, G, B;                                                                                                                                   \
+			gl_shade_pixel(&R, &G, &B, &normal);                                                                                                               \
+			                                                                                                                                                   \
+			/* Convert to integer color */                                                                                                                    \
+			GLint or1 = (GLint)(R * (GLfloat)COLOR_MULT_MASK);                                                                                                \
+			GLint og1 = (GLint)(G * (GLfloat)COLOR_MULT_MASK);                                                                                                \
+			GLint ob1 = (GLint)(B * (GLfloat)COLOR_MULT_MASK);                                                                                                \
+			                                                                                                                                                   \
+			TGL_BLEND_FUNC_RGB(or1, og1, ob1, (pp[_a]));                                                                                                       \
+			                                                                                                                                                   \
+			if (zbdw)                                                                                                                                          \
+				pz[_a] = zz;                                                                                                                                   \
+		}                                                                                                                                                      \
+		z += dzdx;                                                                                                                                             \
+		onx1 += dnxdx;                                                                                                                                         \
+		ony1 += dnydx;                                                                                                                                         \
+		onz1 += dnzdx;                                                                                                                                         \
+	}
+
+#endif
+
+	/* Copy normal parameters to local variables for ztriangle.h template */
+	GLfloat p0_nx = n0[0], p0_ny = n0[1], p0_nz = n0[2];
+	GLfloat p1_nx = n1[0], p1_ny = n1[1], p1_nz = n1[2];
+	GLfloat p2_nx = n2[0], p2_ny = n2[1], p2_nz = n2[2];
+	/* Keep the original pointers for ln1/ln2 assignments */
+	GLfloat *n0_ptr = n0, *n1_ptr = n1, *n2_ptr = n2;
+	#define n0 n0_ptr
+	#define n1 n1_ptr
+	#define n2 n2_ptr
+
+#include "ztriangle.h"
+
+	#undef n0
+	#undef n1
+	#undef n2
+}
 
 /*
 
@@ -337,6 +463,11 @@ void ZB_fillTriangleMappingPerspective(ZBuffer* zb, ZBufferPoint* p0, ZBufferPoi
 	GLubyte zbdt = zb->depth_test;
 	TGL_BLEND_VARS
 	TGL_STIPPLEVARS
+#undef INTERP_Z
+#undef INTERP_RGB
+#undef INTERP_ST
+#undef INTERP_STZ
+#undef INTERP_NORMAL
 #define INTERP_Z
 #define INTERP_STZ
 #define INTERP_RGB
@@ -413,10 +544,15 @@ void ZB_fillTriangleMappingPerspective(ZBuffer* zb, ZBufferPoint* p0, ZBufferPoi
 
 void ZB_fillTriangleMappingPerspectiveNOBLEND(ZBuffer* zb, ZBufferPoint* p0, ZBufferPoint* p1, ZBufferPoint* p2) {
 	PIXEL* texture;
-	
+
 	GLubyte zbdw = zb->depth_write;
 	GLubyte zbdt = zb->depth_test;
 	TGL_STIPPLEVARS
+#undef INTERP_Z
+#undef INTERP_RGB
+#undef INTERP_ST
+#undef INTERP_STZ
+#undef INTERP_NORMAL
 #define INTERP_Z
 #define INTERP_STZ
 #define INTERP_RGB

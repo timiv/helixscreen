@@ -334,6 +334,7 @@ void glInit(void* zbuffer1) {
 	c->specbuf_num_buffers = 0;
 #endif
 	c->zEnableSpecular = 0;
+	c->zEnablePhong = 0;  /* Phong shading disabled by default */
 	/* depth test */
 	c->zb->depth_test = 0;
 	c->zb->depth_write = 1;
