@@ -27,3 +27,10 @@ assets/*.gcode
 
 # Render output artifacts
 *.ppm
+
+# TinyGL test outputs
+tests/tinygl/output/
+tests/tinygl/reference/
+tests/tinygl/*.ppm
+tests/tinygl/*.png
+tests/tinygl/test_*
