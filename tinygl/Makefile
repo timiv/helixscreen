@@ -9,6 +9,7 @@ all: $(LIB) RDMOS
 	@echo Done!
 
 $(LIB):
+	mkdir -p lib
 	cd src && $(MAKE) && cd ..
 	cp src/*.a ./lib/
 
@@ -37,7 +38,7 @@ clean:
 	cd src && $(MAKE) clean && cd ..
 	cd SDL_Examples && $(MAKE) clean && cd ..
 	cd Raw_Demos && $(MAKE) clean && cd ..
-	cd lib && rm -f *.a && cd ..
+	rm -rf lib
 #clean:
 #	rm -f *~ *.o *.a
 #	cd SDL_Examples && $(MAKE) clean && cd ..

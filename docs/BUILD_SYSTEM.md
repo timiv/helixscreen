@@ -77,7 +77,7 @@ make -j ENABLE_TINYGL_3D=no
 ```
 
 When `ENABLE_TINYGL_3D=yes` (default):
-- TinyGL library is built from submodule
+- TinyGL library is built from integrated source (`tinygl/`)
 - 3D rendering code is compiled in
 - `ENABLE_TINYGL_3D` preprocessor define is set
 
