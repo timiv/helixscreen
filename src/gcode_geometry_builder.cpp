@@ -379,9 +379,13 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
     std::optional<TubeCap> prev_end_cap;
     glm::vec3 prev_end_pos{0.0f};
 
-    // DEBUG: Track segment Y range
+    // DEBUG: Track segment Y range and vertex sharing statistics
     float seg_y_min = FLT_MAX, seg_y_max = -FLT_MAX;
     size_t segments_skipped = 0;
+    size_t segments_processed = 0;
+    size_t segments_shared = 0;
+    size_t sharing_candidates = 0;  // Segments where prev_end_cap exists
+
     for (size_t i = 0; i < simplified.size(); ++i) {
         const auto& segment = simplified[i];
 
@@ -394,6 +398,8 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
             continue;
         }
 
+        segments_processed++;
+
         // Track Y range
         seg_y_min = std::min({seg_y_min, segment.start.y, segment.end.y});
         seg_y_max = std::max({seg_y_max, segment.start.y, segment.end.y});
@@ -403,6 +409,8 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
         float dist = 0.0f;
         float connection_tolerance = 0.0f;
         if (prev_end_cap.has_value()) {
+            sharing_candidates++;
+
             // Segments must connect spatially (within epsilon) and be same type
             dist = glm::distance(segment.start, prev_end_pos);
             // Use width-based tolerance: if gap is less than extrusion width, consider them
@@ -410,6 +418,10 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
             connection_tolerance = segment.width * 1.5f; //  50% overlap tolerance
             can_share = (dist < connection_tolerance) &&
                         (segment.is_extrusion == simplified[i - 1].is_extrusion);
+
+            if (can_share) {
+                segments_shared++;
+            }
 
             // Debug top layer connections
             float z = std::round(segment.start.z * 100.0f) / 100.0f;
@@ -487,6 +499,15 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
     stats_.vertices_generated = geometry.vertices.size();
     stats_.triangles_generated = geometry.indices.size();
     stats_.memory_bytes = geometry.memory_usage();
+
+    // Log vertex sharing statistics
+    float sharing_rate = sharing_candidates > 0 ? (100.0f * segments_shared / sharing_candidates) : 0.0f;
+    spdlog::info("[GCode::Builder] Vertex sharing: {}/{} segments ({:.1f}%)",
+                 segments_shared, sharing_candidates, sharing_rate);
+    if (sharing_rate < 40.0f) {
+        spdlog::warn("[GCode::Builder] Low vertex sharing rate ({:.1f}%) - expected ~50% for continuous toolpaths",
+                     sharing_rate);
+    }
 
     // Log palette statistics
     spdlog::info("[GCode::Builder] Palette stats: {} normals, {} colors (smooth_shading={})",
