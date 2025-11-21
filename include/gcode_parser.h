@@ -97,6 +97,7 @@ struct ToolpathSegment {
                                        ///< empty
     float extrusion_amount{0.0f};      ///< E-axis delta (mm of filament)
     float width{0.0f};                 ///< Calculated extrusion width (mm) - 0 means use default
+    int tool_index{0};                 ///< Which tool/extruder printed this (0-indexed)
 };
 
 /**
@@ -161,6 +162,9 @@ struct ParsedGCodeFile {
     float first_layer_extrusion_width_mm{0.0f}; ///< First layer width
     float filament_diameter_mm{1.75f};          ///< Filament diameter (default: 1.75mm)
     float layer_height_mm{0.2f};                ///< Layer height (default: 0.2mm)
+
+    // Multi-color support
+    std::vector<std::string> tool_color_palette; ///< Hex colors per tool (e.g., ["#ED1C24", ...])
 
     /**
      * @brief Get layer at specific index
@@ -252,6 +256,16 @@ class GCodeParser {
         return layers_.size() - 1;
     }
 
+    /**
+     * @brief Get tool color palette parsed from metadata
+     * @return Vector of hex color strings (e.g., ["#ED1C24", "#00C1AE"])
+     *
+     * Returns empty vector if no color metadata was found.
+     */
+    const std::vector<std::string>& get_tool_color_palette() const {
+        return tool_color_palette_;
+    }
+
   private:
     // Parsing helpers
 
@@ -280,6 +294,31 @@ class GCodeParser {
      * - "; printer_model = Flashforge Adventurer 5M Pro"
      */
     void parse_metadata_comment(const std::string& line);
+
+    /**
+     * @brief Parse extruder color palette from header metadata
+     * @param line Comment line containing extruder_colour or filament_colour
+     *
+     * Extracts semicolon-separated hex color values for multi-color prints.
+     * Format: "; extruder_colour = #ED1C24;#00C1AE;#F4E2C1;#000000"
+     */
+    void parse_extruder_color_metadata(const std::string& line);
+
+    /**
+     * @brief Parse tool change command (T0, T1, T2, etc.)
+     * @param line Trimmed G-code line
+     *
+     * Updates current_tool_index_ when tool change commands are encountered.
+     */
+    void parse_tool_change_command(const std::string& line);
+
+    /**
+     * @brief Parse wipe tower markers from comments
+     * @param comment Comment string
+     *
+     * Detects WIPE_TOWER_START/END markers for optional wipe tower filtering.
+     */
+    void parse_wipe_tower_marker(const std::string& comment);
 
     /**
      * @brief Extract parameter value from G-code line
@@ -329,6 +368,11 @@ class GCodeParser {
     std::string current_object_;         ///< Current object name (from EXCLUDE_OBJECT_START)
     bool is_absolute_positioning_{true}; ///< G90 (absolute) vs G91 (relative)
     bool is_absolute_extrusion_{true};   ///< M82 (absolute E) vs M83 (relative E)
+
+    // Multi-color tool tracking
+    int current_tool_index_{0};                   ///< Active extruder/tool (0-indexed)
+    std::vector<std::string> tool_color_palette_; ///< Hex colors per tool: ["#ED1C24", ...]
+    bool in_wipe_tower_{false};                   ///< True when inside wipe tower section
 
     // Accumulated data
     std::vector<Layer> layers_;                  ///< All parsed layers

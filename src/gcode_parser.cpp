@@ -88,11 +88,18 @@ void GCodeParser::parse_line(const std::string& line) {
     if (comment_pos != std::string::npos) {
         std::string comment = line.substr(comment_pos);
         parse_metadata_comment(comment);
+        parse_wipe_tower_marker(comment);
     }
 
     std::string trimmed = trim_line(line);
     if (trimmed.empty()) {
         return;
+    }
+
+    // Check for tool changes (T0, T1, T2, etc.)
+    if (!trimmed.empty() && trimmed[0] == 'T') {
+        parse_tool_change_command(trimmed);
+        // Continue processing - some G-code files have commands after tool changes
     }
 
     // Check for EXCLUDE_OBJECT commands first
@@ -302,9 +309,21 @@ void GCodeParser::parse_metadata_comment(const std::string& line) {
     };
 
     // Parse specific metadata fields with fuzzy matching
-    if (contains_all({"filament", "col"})) { // "color" or "colour"
-        metadata_filament_color_ = value;
-        spdlog::trace("Parsed filament color: {}", value);
+    // Multi-color: Check for extruder_colour first (priority over single filament_colour)
+    if (key_lower.find("extruder_colour") != std::string::npos ||
+        key_lower.find("extruder_color") != std::string::npos) {
+        parse_extruder_color_metadata(line);
+    }
+    // Fallback: Parse single filament_colour if extruder_colour not yet found
+    else if (contains_all({"filament", "col"}) && tool_color_palette_.empty()) {
+        // Check if it's a semicolon-separated list (multi-color)
+        if (value.find(';') != std::string::npos) {
+            parse_extruder_color_metadata(line);
+        } else {
+            // Single color metadata
+            metadata_filament_color_ = value;
+            spdlog::trace("Parsed single filament color: {}", value);
+        }
     } else if (contains_all({"filament", "type"})) {
         metadata_filament_type_ = value;
         spdlog::trace("Parsed filament type: {}", value);
@@ -446,6 +465,79 @@ void GCodeParser::parse_metadata_comment(const std::string& line) {
     }
 }
 
+void GCodeParser::parse_extruder_color_metadata(const std::string& line) {
+    // Format: "; extruder_colour = #ED1C24;#00C1AE;#F4E2C1;#000000"
+    //     OR: "; filament_colour = ..." (fallback)
+
+    size_t pos = line.find(" = ");
+    if (pos == std::string::npos) {
+        return;
+    }
+
+    std::string colors_str = line.substr(pos + 3);
+
+    // Split by semicolons
+    std::stringstream ss(colors_str);
+    std::string color;
+    while (std::getline(ss, color, ';')) {
+        // Trim whitespace
+        color.erase(0, color.find_first_not_of(" \t\r\n"));
+        color.erase(color.find_last_not_of(" \t\r\n") + 1);
+
+        if (!color.empty() && color[0] == '#') {
+            tool_color_palette_.push_back(color);
+        } else if (!color.empty()) {
+            // Non-empty but invalid format - use placeholder
+            tool_color_palette_.push_back("");
+        }
+    }
+
+    spdlog::debug("Parsed {} extruder colors from metadata", tool_color_palette_.size());
+}
+
+void GCodeParser::parse_tool_change_command(const std::string& line) {
+    // Format: "T0", "T1", "T2", etc. (standalone line)
+    if (line.empty() || line[0] != 'T') {
+        return;
+    }
+
+    // Check if it's JUST "T" + digits (no other commands on line)
+    if (line.length() < 2) {
+        return;
+    }
+
+    // Extract tool number
+    size_t i = 1;
+    while (i < line.length() && std::isdigit(line[i])) {
+        i++;
+    }
+
+    if (i == 1) {
+        return; // No digits after T
+    }
+    if (i < line.length() && !std::isspace(line[i])) {
+        return; // Not standalone
+    }
+
+    std::string tool_str = line.substr(1, i - 1);
+    int tool_num = std::stoi(tool_str);
+
+    current_tool_index_ = tool_num;
+    spdlog::debug("Tool change: T{}", tool_num);
+}
+
+void GCodeParser::parse_wipe_tower_marker(const std::string& comment) {
+    if (comment.find("WIPE_TOWER_START") != std::string::npos ||
+        comment.find("WIPE_TOWER_BRIM_START") != std::string::npos) {
+        in_wipe_tower_ = true;
+        spdlog::debug("Entering wipe tower section");
+    } else if (comment.find("WIPE_TOWER_END") != std::string::npos ||
+               comment.find("WIPE_TOWER_BRIM_END") != std::string::npos) {
+        in_wipe_tower_ = false;
+        spdlog::debug("Exiting wipe tower section");
+    }
+}
+
 bool GCodeParser::extract_param(const std::string& line, char param, float& out_value) {
     size_t pos = line.find(param);
     if (pos == std::string::npos) {
@@ -516,6 +608,14 @@ void GCodeParser::add_segment(const glm::vec3& start, const glm::vec3& end, bool
     segment.is_extrusion = is_extrusion;
     segment.object_name = current_object_;
     segment.extrusion_amount = e_delta;
+
+    // Multi-color support: Tag segment with current tool
+    segment.tool_index = current_tool_index_;
+
+    // Wipe tower support: Tag wipe tower segments with special object name
+    if (in_wipe_tower_) {
+        segment.object_name = "__WIPE_TOWER__";
+    }
 
     // Calculate actual extrusion width from E-delta and XY distance
     if (is_extrusion && e_delta > 0.00001f) {
@@ -662,6 +762,9 @@ ParsedGCodeFile GCodeParser::finalize() {
     result.first_layer_extrusion_width_mm = metadata_first_layer_extrusion_width_;
     result.estimated_print_time_minutes = metadata_print_time_;
     result.total_layer_count = metadata_layer_count_;
+
+    // Transfer multi-color tool palette
+    result.tool_color_palette = tool_color_palette_;
 
     spdlog::info("Parsed G-code: {} layers, {} segments, {} objects", result.layers.size(),
                  result.total_segments, result.objects.size());

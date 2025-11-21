@@ -491,9 +491,8 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
     // Second perpendicular: cross(direction, perp_horizontal) gives vertical component
     glm::vec3 perp_vertical = glm::normalize(glm::cross(direction, perp_horizontal));
 
-    // Compute colors based on Z-height (rainbow gradient)
-    float mid_z = (segment.start.z + segment.end.z) * 0.5f;
-    uint32_t rgb = compute_color_rgb(mid_z, quant.min_bounds.z, quant.max_bounds.z);
+    // Compute color (multi-color support: uses tool palette if available, else Z-gradient/solid)
+    uint32_t rgb = compute_segment_color(segment, quant.min_bounds.z, quant.max_bounds.z);
 
     // Brighten color if this segment belongs to any highlighted object
     if (!highlighted_objects_.empty() && !segment.object_name.empty() &&
@@ -872,6 +871,50 @@ void GeometryBuilder::set_filament_color(const std::string& hex_color) {
 
     spdlog::info("Filament color set to #{:02X}{:02X}{:02X} (R={}, G={}, B={})", filament_r_,
                  filament_g_, filament_b_, filament_r_, filament_g_, filament_b_);
+}
+
+uint32_t GeometryBuilder::parse_hex_color(const std::string& hex_color) const {
+    if (hex_color.length() < 6) {
+        return 0x808080; // Default gray for invalid input
+    }
+
+    // Skip '#' prefix if present
+    const char* hex_str = hex_color.c_str();
+    if (hex_str[0] == '#') {
+        hex_str++;
+    }
+
+    // Parse #RRGGBB format
+    unsigned long value = std::strtoul(hex_str, nullptr, 16);
+
+    uint8_t r = (value >> 16) & 0xFF;
+    uint8_t g = (value >> 8) & 0xFF;
+    uint8_t b = value & 0xFF;
+
+    return (static_cast<uint32_t>(r) << 16) | (static_cast<uint32_t>(g) << 8) |
+           static_cast<uint32_t>(b);
+}
+
+uint32_t GeometryBuilder::compute_segment_color(const ToolpathSegment& segment, float z_min,
+                                                float z_max) const {
+    // Priority 1: Tool-specific color from palette (multi-color prints)
+    if (!tool_color_palette_.empty() && segment.tool_index >= 0 &&
+        segment.tool_index < static_cast<int>(tool_color_palette_.size())) {
+        const std::string& hex_color = tool_color_palette_[segment.tool_index];
+        if (!hex_color.empty()) {
+            return parse_hex_color(hex_color);
+        }
+    }
+
+    // Priority 2: Z-height gradient (if enabled)
+    if (use_height_gradient_) {
+        float mid_z = (segment.start.z + segment.end.z) * 0.5f;
+        return compute_color_rgb(mid_z, z_min, z_max);
+    }
+
+    // Priority 3: Default filament color
+    return (static_cast<uint32_t>(filament_r_) << 16) |
+           (static_cast<uint32_t>(filament_g_) << 8) | static_cast<uint32_t>(filament_b_);
 }
 
 } // namespace gcode

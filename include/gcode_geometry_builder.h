@@ -294,6 +294,17 @@ class GeometryBuilder {
         debug_face_colors_ = enable;
     }
 
+    /**
+     * @brief Set tool color palette for multi-color prints
+     * @param palette Vector of hex color strings (e.g., ["#ED1C24", "#00C1AE"])
+     *
+     * When set, colors will be assigned based on segment tool_index instead of
+     * Z-height gradient. Empty palette disables multi-color mode.
+     */
+    void set_tool_color_palette(const std::vector<std::string>& palette) {
+        tool_color_palette_ = palette;
+    }
+
   private:
     // Palette management
     uint16_t add_to_normal_palette(RibbonGeometry& geometry, const glm::vec3& normal);
@@ -322,6 +333,27 @@ class GeometryBuilder {
     // Color assignment
     uint32_t compute_color_rgb(float z_height, float z_min, float z_max) const;
 
+    /**
+     * @brief Parse hex color string to RGB integer
+     * @param hex_color Hex color string (e.g., "#ED1C24" or "ED1C24")
+     * @return RGB color as 32-bit integer (0xRRGGBB), or 0x808080 (gray) if invalid
+     */
+    uint32_t parse_hex_color(const std::string& hex_color) const;
+
+    /**
+     * @brief Compute color for a segment with multi-color support
+     * @param segment Toolpath segment with tool_index
+     * @param z_min Minimum Z height of model
+     * @param z_max Maximum Z height of model
+     * @return RGB color as 32-bit integer (0xRRGGBB)
+     *
+     * Priority:
+     * 1. Tool-specific color from palette (if tool_index valid and palette not empty)
+     * 2. Z-height gradient (if use_height_gradient_ enabled)
+     * 3. Default filament color
+     */
+    uint32_t compute_segment_color(const ToolpathSegment& segment, float z_min, float z_max) const;
+
     // Configuration
     float extrusion_width_mm_ = 0.42f; ///< Default for 0.4mm nozzle
     float travel_width_mm_ = 0.1f;     ///< Thin for travels
@@ -332,8 +364,9 @@ class GeometryBuilder {
     uint8_t filament_g_ = 0xA6;        ///< Filament color green component
     uint8_t filament_b_ = 0x9A;        ///< Filament color blue component
     std::unordered_set<std::string>
-        highlighted_objects_;        ///< Object names to highlight (empty = none)
-    bool debug_face_colors_ = false; ///< Enable per-face debug coloring
+        highlighted_objects_;                     ///< Object names to highlight (empty = none)
+    bool debug_face_colors_ = false;              ///< Enable per-face debug coloring
+    std::vector<std::string> tool_color_palette_; ///< Hex colors per tool (multi-color prints)
 
     // Build statistics
     BuildStats stats_;

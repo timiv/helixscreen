@@ -417,6 +417,12 @@ void GCodeTinyGLRenderer::build_geometry(const ParsedGCodeFile& gcode) {
         spdlog::debug("Highlighting {} objects", highlighted_objects_.size());
     }
 
+    // Configure multi-color support: pass tool color palette from parsed G-code
+    if (!gcode.tool_color_palette.empty()) {
+        geometry_builder_->set_tool_color_palette(gcode.tool_color_palette);
+        spdlog::info("Multi-color print detected: {} tool colors", gcode.tool_color_palette.size());
+    }
+
     // Build optimized ribbon geometry
     geometry_ = geometry_builder_->build(filtered_gcode, simplification_);
     current_gcode_filename_ = gcode.filename;
