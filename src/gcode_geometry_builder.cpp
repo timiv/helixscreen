@@ -597,19 +597,11 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
             tube_sides = 16;
         }
 
-        spdlog::info("G-code tube geometry: N={} sides (elliptical cross-section) [NOTE: Only N=4 currently supported, N=8/16 coming soon]", tube_sides);
+        spdlog::info("G-code tube geometry: N={} sides (elliptical cross-section)", tube_sides);
     }
 
-    // Phase 2: Force N=4 until vertex generation is refactored (Phase 3)
-    // Config may request 8 or 16, but Phase 2 only supports 4
-    const int N = 4;  // Override tube_sides during Phase 2
-    if (tube_sides != 4) {
-        static bool warned_once = false;
-        if (!warned_once) {
-            spdlog::warn("Phase 2: Overriding tube_sides={} to N=4 (N=8/16 support coming in Phase 3)", tube_sides);
-            warned_once = true;
-        }
-    }
+    // All phases complete - use configured N value
+    const int N = tube_sides;
 
     // Determine tube dimensions
     float width;
