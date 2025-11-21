@@ -14,6 +14,7 @@
 
 #include "gcode_camera.h"
 #include "gcode_parser.h"
+#include "ui_async_callback.h"
 
 #ifdef ENABLE_TINYGL_3D
 #include "gcode_tinygl_renderer.h"
@@ -25,9 +26,11 @@
 #include <lvgl/src/xml/parsers/lv_xml_obj_parser.h>
 #include <spdlog/spdlog.h>
 
+#include <atomic>
 #include <cstring>
 #include <fstream>
 #include <memory>
+#include <thread>
 #include <unordered_set>
 
 // Widget state (stored in LVGL object user_data)
@@ -55,6 +58,14 @@ struct gcode_viewer_state_t {
     // Rendering settings
     bool use_filament_color{true}; // Auto-apply filament color from metadata
 
+    // Async loading state
+    std::atomic<bool> geometry_building_{false};
+    std::thread geometry_thread_;
+    lv_obj_t* loading_container_{nullptr};
+    lv_obj_t* loading_spinner_{nullptr};
+    lv_obj_t* loading_label_{nullptr};
+    bool first_render_{true}; // Show "Rendering..." message on first draw
+
     // Constructor
     gcode_viewer_state_t() {
         camera = std::make_unique<gcode::GCodeCamera>();
@@ -65,6 +76,13 @@ struct gcode_viewer_state_t {
         renderer = std::make_unique<gcode::GCodeRenderer>();
         spdlog::info("GCode viewer using LVGL 2D renderer");
 #endif
+    }
+
+    // Destructor - ensure thread is cleaned up
+    ~gcode_viewer_state_t() {
+        if (geometry_thread_.joinable()) {
+            geometry_thread_.detach(); // Let it finish in background
+        }
     }
 };
 
@@ -89,10 +107,20 @@ static void gcode_viewer_draw_cb(lv_event_t* e) {
         return;
     }
 
+    spdlog::debug("GCodeViewer: draw_cb called, state={}, gcode_file={}, first_render={}",
+                  (int)st->viewer_state, (void*)st->gcode_file.get(), st->first_render_);
+
     // If no G-code loaded, draw placeholder message
     if (st->viewer_state != GCODE_VIEWER_STATE_LOADED || !st->gcode_file) {
         // TODO: Draw "No G-code loaded" message
         return;
+    }
+
+    // On first render after async load, skip rendering to avoid blocking
+    // The "Rendering..." label was already created by the async callback
+    if (st->first_render_) {
+        spdlog::debug("GCodeViewer: First draw after async load - skipping render, will render on timer");
+        return; // Timer will trigger actual render
     }
 
     // Render G-code (viewport size is already set by SIZE_CHANGED event)
@@ -319,64 +347,189 @@ lv_obj_t* ui_gcode_viewer_create(lv_obj_t* parent) {
     return obj;
 }
 
-void ui_gcode_viewer_load_file(lv_obj_t* obj, const char* file_path) {
+// Result structure for async geometry building
+struct AsyncBuildResult {
+    std::unique_ptr<gcode::ParsedGCodeFile> gcode_file;
+    std::unique_ptr<gcode::RibbonGeometry> geometry;
+    std::string error_msg;
+    bool success{true};
+};
+
+/**
+ * @brief Asynchronously load and build G-code geometry in background thread
+ *
+ * Shows loading spinner while parsing and building geometry. Uses background
+ * thread to avoid blocking the UI thread. Geometry building is thread-safe
+ * (no OpenGL calls, pure CPU work).
+ */
+static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path) {
     gcode_viewer_state_t* st = get_state(obj);
-    if (!st || !file_path)
+    if (!st || !file_path) {
         return;
-
-    spdlog::info("GCodeViewer: Loading file: {}", file_path);
-    st->viewer_state = GCODE_VIEWER_STATE_LOADING;
-
-    // Parse file (synchronous in Phase 1)
-    try {
-        std::ifstream file(file_path);
-        if (!file.is_open()) {
-            spdlog::error("GCodeViewer: Failed to open file: {}", file_path);
-            st->viewer_state = GCODE_VIEWER_STATE_ERROR;
-            return;
-        }
-
-        gcode::GCodeParser parser;
-        std::string line;
-
-        while (std::getline(file, line)) {
-            parser.parse_line(line);
-        }
-
-        file.close();
-
-        // Finalize and store result
-        st->gcode_file = std::make_unique<gcode::ParsedGCodeFile>(parser.finalize());
-
-        // Set filename
-        st->gcode_file->filename = file_path;
-
-        // Fit camera to model bounds (uses current camera orientation from reset())
-        st->camera->fit_to_bounds(st->gcode_file->global_bounding_box);
-
-        st->viewer_state = GCODE_VIEWER_STATE_LOADED;
-
-        spdlog::info("GCodeViewer: Loaded {} layers, {} segments, {} objects",
-                     st->gcode_file->layers.size(), st->gcode_file->total_segments,
-                     st->gcode_file->objects.size());
-
-        // Auto-apply filament color if enabled and available
-        if (st->use_filament_color && st->gcode_file->filament_color_hex.length() >= 2) {
-            lv_color_t color = lv_color_hex(
-                std::strtol(st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16));
-            st->renderer->set_extrusion_color(color);
-            spdlog::info("GCodeViewer: Auto-applied filament color: {}",
-                         st->gcode_file->filament_color_hex);
-        }
-
-        // Trigger redraw
-        lv_obj_invalidate(obj);
-
-    } catch (const std::exception& ex) {
-        spdlog::error("GCodeViewer: Exception during parsing: {}", ex.what());
-        st->viewer_state = GCODE_VIEWER_STATE_ERROR;
-        st->gcode_file.reset();
     }
+
+    // Don't start new load if already loading
+    if (st->geometry_building_) {
+        spdlog::warn("GCodeViewer: Load already in progress, ignoring request");
+        return;
+    }
+
+    spdlog::info("GCodeViewer: Loading file async: {}", file_path);
+    st->viewer_state = GCODE_VIEWER_STATE_LOADING;
+    st->first_render_ = true; // Reset for new file
+
+    // Clean up previous loading UI if it exists
+    if (st->loading_container_) {
+        lv_obj_delete(st->loading_container_);
+        st->loading_container_ = nullptr;
+    }
+
+    // Create loading UI
+    st->loading_container_ = lv_obj_create(obj);
+    lv_obj_set_size(st->loading_container_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_center(st->loading_container_);
+    lv_obj_set_flex_flow(st->loading_container_, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(st->loading_container_, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER);
+
+    st->loading_spinner_ = lv_spinner_create(st->loading_container_);
+    lv_obj_set_size(st->loading_spinner_, 50, 50);
+
+    st->loading_label_ = lv_label_create(st->loading_container_);
+    lv_label_set_text(st->loading_label_, "Loading G-code...");
+
+    // Launch worker thread
+    st->geometry_building_ = true;
+
+    // Join previous thread if it exists
+    if (st->geometry_thread_.joinable()) {
+        st->geometry_thread_.join();
+    }
+
+    st->geometry_thread_ = std::thread([obj, path = std::string(file_path)]() {
+        auto result = std::make_unique<AsyncBuildResult>();
+
+        try {
+            // PHASE 1: Parse G-code file (fast, ~100ms)
+            std::ifstream file(path);
+            if (!file.is_open()) {
+                result->success = false;
+                result->error_msg = "Failed to open file: " + path;
+            } else {
+                gcode::GCodeParser parser;
+                std::string line;
+
+                while (std::getline(file, line)) {
+                    parser.parse_line(line);
+                }
+
+                file.close();
+
+                result->gcode_file = std::make_unique<gcode::ParsedGCodeFile>(parser.finalize());
+                result->gcode_file->filename = path;
+
+                spdlog::info("GCodeViewer: Parsed {} layers, {} segments",
+                             result->gcode_file->layers.size(),
+                             result->gcode_file->total_segments);
+
+                // PHASE 2: Build geometry (slow, 1-5s for large files)
+                // This is thread-safe - no OpenGL calls, just CPU work
+                gcode::GeometryBuilder builder;
+                gcode::SimplificationOptions opts{.tolerance_mm = 0.15f};
+
+                // Configure builder with metadata
+                if (!result->gcode_file->filament_color_hex.empty()) {
+                    builder.set_filament_color(result->gcode_file->filament_color_hex);
+                } else {
+                    builder.set_filament_color(gcode::GeometryBuilder::DEFAULT_FILAMENT_COLOR);
+                }
+
+                if (result->gcode_file->perimeter_extrusion_width_mm > 0.0f) {
+                    builder.set_extrusion_width(result->gcode_file->perimeter_extrusion_width_mm);
+                } else if (result->gcode_file->extrusion_width_mm > 0.0f) {
+                    builder.set_extrusion_width(result->gcode_file->extrusion_width_mm);
+                }
+
+                builder.set_layer_height(result->gcode_file->layer_height_mm);
+
+                result->geometry =
+                    std::make_unique<gcode::RibbonGeometry>(builder.build(*result->gcode_file, opts));
+
+                spdlog::info("GCodeViewer: Built geometry with {} vertices, {} triangles",
+                             result->geometry->vertices.size(),
+                             result->geometry->extrusion_triangle_count + result->geometry->travel_triangle_count);
+            }
+        } catch (const std::exception& ex) {
+            result->success = false;
+            result->error_msg = std::string("Exception: ") + ex.what();
+        }
+
+        // PHASE 3: Marshal result back to UI thread (SAFE)
+        ui_async_call_safe<AsyncBuildResult>(
+            std::move(result), [obj](AsyncBuildResult* r) {
+                gcode_viewer_state_t* st = get_state(obj);
+                if (!st) {
+                    return; // Widget was destroyed
+                }
+
+                st->geometry_building_ = false;
+
+                // Clean up loading UI
+                if (st->loading_container_) {
+                    lv_obj_delete(st->loading_container_);
+                    st->loading_container_ = nullptr;
+                    st->loading_spinner_ = nullptr;
+                    st->loading_label_ = nullptr;
+                }
+
+                if (r->success) {
+                    spdlog::debug("GCodeViewer: Async callback - setting up geometry");
+
+                    // Store G-code data
+                    st->gcode_file = std::move(r->gcode_file);
+
+                    // Set pre-built geometry on renderer
+#ifdef ENABLE_TINYGL_3D
+                    spdlog::debug("GCodeViewer: Calling set_prebuilt_geometry");
+                    st->renderer->set_prebuilt_geometry(std::move(r->geometry),
+                                                        st->gcode_file->filename);
+#endif
+
+                    // Fit camera to model bounds
+                    st->camera->fit_to_bounds(st->gcode_file->global_bounding_box);
+
+                    st->viewer_state = GCODE_VIEWER_STATE_LOADED;
+                    spdlog::debug("GCodeViewer: State set to LOADED");
+
+                    // Auto-apply filament color if enabled
+                    if (st->use_filament_color &&
+                        st->gcode_file->filament_color_hex.length() >= 2) {
+                        lv_color_t color = lv_color_hex(std::strtol(
+                            st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16));
+                        st->renderer->set_extrusion_color(color);
+                        spdlog::debug("GCodeViewer: Auto-applied filament color: {}",
+                                     st->gcode_file->filament_color_hex);
+                    }
+
+                    // Clear first_render flag to allow actual rendering on next draw
+                    st->first_render_ = false;
+
+                    // Trigger redraw (will render geometry now that first_render is false)
+                    lv_obj_invalidate(obj);
+
+                    spdlog::info("GCodeViewer: Async load completed successfully");
+                } else {
+                    spdlog::error("GCodeViewer: Async load failed: {}", r->error_msg);
+                    st->viewer_state = GCODE_VIEWER_STATE_ERROR;
+                    st->gcode_file.reset();
+                }
+            });
+    });
+}
+
+void ui_gcode_viewer_load_file(lv_obj_t* obj, const char* file_path) {
+    // Use async version by default
+    ui_gcode_viewer_load_file_async(obj, file_path);
 }
 
 void ui_gcode_viewer_set_gcode_data(lv_obj_t* obj, void* gcode_data) {

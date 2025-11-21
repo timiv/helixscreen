@@ -452,6 +452,22 @@ void GCodeTinyGLRenderer::build_geometry(const ParsedGCodeFile& gcode) {
                  stats.triangles_generated, stats.memory_bytes / 1024.0 / 1024.0);
 }
 
+void GCodeTinyGLRenderer::set_prebuilt_geometry(std::unique_ptr<RibbonGeometry> geometry,
+                                                const std::string& filename) {
+    if (!geometry) {
+        spdlog::warn("GCodeTinyGLRenderer::set_prebuilt_geometry called with null geometry");
+        return;
+    }
+
+    geometry_ = std::move(*geometry);  // Move the value from unique_ptr into optional
+    current_gcode_filename_ = filename;
+
+    spdlog::info("Pre-built geometry set: {} vertices, {} triangles (extrusion: {}, travel: {})",
+                 geometry_->vertices.size(),
+                 geometry_->extrusion_triangle_count + geometry_->travel_triangle_count,
+                 geometry_->extrusion_triangle_count, geometry_->travel_triangle_count);
+}
+
 void GCodeTinyGLRenderer::render_geometry(const GCodeCamera& camera) {
     if (!geometry_) {
         return; // No geometry to render

@@ -246,6 +246,20 @@ class GCodeTinyGLRenderer {
      */
     void build_geometry(const ParsedGCodeFile& gcode);
 
+  public:
+    /**
+     * @brief Set pre-built geometry (for async loading)
+     * @param geometry Pre-built ribbon geometry from background thread
+     * @param filename Filename to associate with this geometry
+     *
+     * Allows setting geometry that was built in a background thread,
+     * avoiding UI blocking during geometry construction.
+     */
+    void set_prebuilt_geometry(std::unique_ptr<RibbonGeometry> geometry,
+                               const std::string& filename);
+
+  private:
+
     /**
      * @brief Render geometry with TinyGL
      * @param camera Camera with view/projection
