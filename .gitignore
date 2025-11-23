@@ -1,7 +1,18 @@
-# Build artifacts
+# ============================================================================
+# Build Artifacts
+# ============================================================================
 build/
-sdl2/build/
+lib/sdl2/build/
+lib/tinygl/lib/
+lib/tinygl/Raw_Demos/gears
+lib/tinygl/Raw_Demos/t2i
+lib/tinygl/Raw_Demos/bigfont
+*.o
+*.a
 
+# ============================================================================
+# Dependencies
+# ============================================================================
 # Node.js
 node_modules/
 package-lock.json
@@ -9,31 +20,68 @@ package-lock.json
 # Python virtual environment
 .venv/
 
-# macOS
-.DS_Store
-
-# IDE/LSP
-compile_commands.json
-.fonts.stamp
-
+# ============================================================================
+# Configuration
+# ============================================================================
 # Local config (user-specific, use config/helixconfig.json.template)
 helixconfig.json
 
-# auto generated libhv log
+# ============================================================================
+# Generated Files & Logs
+# ============================================================================
+# Auto-generated libhv logs
+*.log
 libhv.*.log
 
-# Session notes (developer-specific)
-SESSION_SUMMARY.md
-
-# G-Code sample files (binary, bloats repo history)
-assets/gcode/*.gcode
+# Font generation timestamp
+.fonts.stamp
 
 # Render output artifacts
 *.ppm
 
+# ============================================================================
+# Development Tools
+# ============================================================================
+# IDE/LSP
+compile_commands.json
+.vscode/
+.idea/
+
+# Session notes (developer-specific)
+SESSION_SUMMARY.md
+IMPLEMENTATION_PLAN.md
+
+# ============================================================================
+# Platform-Specific
+# ============================================================================
+# macOS
+.DS_Store
+*.dSYM/
+
+# Linux
+*.swp
+*.swo
+*~
+
+# ============================================================================
+# Test Artifacts
+# ============================================================================
 # TinyGL test outputs
 tests/tinygl/output/
 tests/tinygl/reference/
 tests/tinygl/*.ppm
 tests/tinygl/*.png
 tests/tinygl/test_*
+tests/tinygl/tinygl_test_runner
+
+# Unit test binaries
+tests/unit/test_*
+!tests/unit/test_*.cpp
+!tests/unit/test_*.sh
+
+# ============================================================================
+# Asset Files (Large/Binary)
+# ============================================================================
+# G-Code sample files (binary, bloats repo history)
+assets/gcode/*.gcode
+assets/*.gcode
