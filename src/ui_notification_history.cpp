@@ -18,7 +18,7 @@
 
 #include "ui_notification_history.h"
 #include <spdlog/spdlog.h>
-#include <nlohmann/json.hpp>
+#include <hv/json.hpp>
 #include <fstream>
 #include <algorithm>
 
