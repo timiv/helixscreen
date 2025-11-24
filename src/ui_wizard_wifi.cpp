@@ -260,7 +260,7 @@ void ui_wizard_wifi_init_subjects() {
     UI_SUBJECT_INIT_AND_REGISTER_STRING(wifi_status, wifi_status_buffer, get_status_text("disabled"), "wifi_status");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(ethernet_status, ethernet_status_buffer, "Checking...", "ethernet_status");
 
-    spdlog::info("[WiFi Screen] Subjects initialized");
+    spdlog::debug("[0");
 }
 
 void ui_wizard_wifi_register_callbacks() {
@@ -271,7 +271,7 @@ void ui_wizard_wifi_register_callbacks() {
     lv_xml_register_event_cb(nullptr, "on_modal_cancel_clicked", on_modal_cancel_clicked);
     lv_xml_register_event_cb(nullptr, "on_modal_connect_clicked", on_modal_connect_clicked);
 
-    spdlog::info("[WiFi Screen] Callbacks registered");
+    spdlog::debug("[0");
 }
 
 void ui_wizard_wifi_register_responsive_constants() {
@@ -343,7 +343,7 @@ void ui_wizard_wifi_register_responsive_constants() {
     // 6. Initialize theme-aware colors now that wifi_network_item component is registered
     init_wifi_item_colors();
 
-    spdlog::info("[WiFi Screen] Registered 3 constants to wifi_network_item and wizard_wifi_setup "
+    spdlog::debug("[WiFi Screen] Registered 3 constants to wifi_network_item and wizard_wifi_setup "
                  "scopes ({})",
                  size_label);
     spdlog::debug(
@@ -391,7 +391,7 @@ lv_obj_t* ui_wizard_wifi_create(lv_obj_t* parent) {
     // Update layout to ensure SIZE_CONTENT calculates correctly
     lv_obj_update_layout(wifi_screen_root);
 
-    spdlog::info("[WiFi Screen] WiFi screen created successfully");
+    spdlog::debug("[WiFi Screen] WiFi screen created successfully");
     return wifi_screen_root;
 }
 
@@ -410,7 +410,7 @@ void ui_wizard_wifi_init_wifi_manager() {
     // Update ethernet status
     update_ethernet_status();
 
-    spdlog::info("[WiFi Screen] WiFi and Ethernet managers initialized");
+    spdlog::debug("[WiFi Screen] WiFi and Ethernet managers initialized");
 }
 
 void ui_wizard_wifi_cleanup() {
@@ -442,7 +442,7 @@ void ui_wizard_wifi_cleanup() {
     current_ssid[0] = '\0';
     current_secured = false;
 
-    spdlog::info("[WiFi Screen] Cleanup complete");
+    spdlog::debug("[0");
 }
 
 void ui_wizard_wifi_show_password_modal(const char* ssid) {
@@ -862,7 +862,7 @@ static void populate_network_list(const std::vector<WiFiNetwork>& networks) {
                       network.signal_strength, network.is_secured ? "secured" : "open");
     }
 
-    spdlog::info("[WiFi Screen] Populated {} network items", sorted_networks.size());
+    spdlog::debug("[WiFi Screen] Populated {} network items", sorted_networks.size());
 }
 
 static void clear_network_list() {

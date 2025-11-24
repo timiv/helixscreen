@@ -169,7 +169,7 @@ LVGL_SAFE_EVENT_CB(card_motors_clicked, {
 void ui_panel_controls_init_subjects() {
     // TODO: Initialize subjects for sub-screens
     // For now, no subjects needed at launcher level
-    spdlog::info("Controls panel subjects initialized");
+    spdlog::debug("Controls panel subjects initialized");
 }
 
 void ui_panel_controls_wire_events(lv_obj_t* panel_obj, lv_obj_t* screen) {
@@ -212,7 +212,7 @@ void ui_panel_controls_wire_events(lv_obj_t* panel_obj, lv_obj_t* screen) {
     // card_fan is disabled (Phase 2), don't make clickable
     lv_obj_add_flag(card_motors, LV_OBJ_FLAG_CLICKABLE);
 
-    spdlog::info("Controls panel events wired");
+    spdlog::debug("Controls panel events wired");
 }
 
 lv_obj_t* ui_panel_controls_get() {

@@ -122,7 +122,7 @@ void Config::init(const std::string& config_path) {
     std::ofstream o(config_path);
     o << std::setw(2) << data << std::endl;
 
-    spdlog::info("Config initialized: moonraker={}:{}", get<std::string>(df() + "moonraker_host"),
+    spdlog::debug("Config initialized: moonraker={}:{}", get<std::string>(df() + "moonraker_host"),
                  get<int>(df() + "moonraker_port"));
 }
 
@@ -139,7 +139,7 @@ json& Config::get_json(const std::string& json_path) {
 }
 
 bool Config::save() {
-    spdlog::info("Saving config to {}", path);
+    spdlog::debug("Saving config to {}", path);
 
     try {
         std::ofstream o(path);

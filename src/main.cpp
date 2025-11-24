@@ -631,11 +631,11 @@ static void register_fonts_and_images() {
 // Register XML components from ui_xml/ directory
 static void register_xml_components() {
     spdlog::debug("Registering remaining XML components...");
-    spdlog::info("[XML DEBUG] Starting XML registration function");
+    spdlog::debug("[XML DEBUG] Starting XML registration function");
 
     // Register responsive constants (AFTER globals, BEFORE components that use them)
     ui_switch_register_responsive_constants();
-    spdlog::info("[XML DEBUG] Past responsive constants");
+    spdlog::debug("[XML DEBUG] Past responsive constants");
 
     // Register semantic text widgets (AFTER theme init, BEFORE components that use them)
     ui_text_init();
@@ -651,12 +651,12 @@ static void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/toast_notification.xml");
     lv_xml_register_component_from_file("A:ui_xml/error_dialog.xml");
     lv_xml_register_component_from_file("A:ui_xml/warning_dialog.xml");
-    spdlog::info("[XML] Registering notification_history_panel.xml...");
+    spdlog::debug("[XML] Registering notification_history_panel.xml...");
     auto nh_panel_ret = lv_xml_register_component_from_file("A:ui_xml/notification_history_panel.xml");
-    spdlog::info("[XML] notification_history_panel.xml registration returned: {}", (int)nh_panel_ret);
-    spdlog::info("[XML] Registering notification_history_item.xml...");
+    spdlog::debug("[XML] notification_history_panel.xml registration returned: {}", (int)nh_panel_ret);
+    spdlog::debug("[XML] Registering notification_history_item.xml...");
     auto nh_item_ret = lv_xml_register_component_from_file("A:ui_xml/notification_history_item.xml");
-    spdlog::info("[XML] notification_history_item.xml registration returned: {}", (int)nh_item_ret);
+    spdlog::debug("[XML] notification_history_item.xml registration returned: {}", (int)nh_item_ret);
     lv_xml_register_component_from_file("A:ui_xml/confirmation_dialog.xml");
     lv_xml_register_component_from_file("A:ui_xml/tip_detail_dialog.xml");
     lv_xml_register_component_from_file("A:ui_xml/numeric_keypad_modal.xml");
@@ -673,9 +673,9 @@ static void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/print_status_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/filament_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/settings_panel.xml");
-    spdlog::info("[XML] Registering bed_mesh_panel.xml...");
+    spdlog::debug("[XML] Registering bed_mesh_panel.xml...");
     auto ret = lv_xml_register_component_from_file("A:ui_xml/bed_mesh_panel.xml");
-    spdlog::info("[XML] bed_mesh_panel.xml registration returned: {}", (int)ret);
+    spdlog::debug("[XML] bed_mesh_panel.xml registration returned: {}", (int)ret);
     lv_xml_register_component_from_file("A:ui_xml/advanced_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/test_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/print_select_panel.xml");
@@ -689,8 +689,7 @@ static void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/wizard_wifi_setup.xml");
     lv_xml_register_component_from_file("A:ui_xml/wizard_connection.xml");
     lv_xml_register_component_from_file("A:ui_xml/wizard_printer_identify.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_bed_select.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_hotend_select.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_heater_select.xml");
     lv_xml_register_component_from_file("A:ui_xml/wizard_fan_select.xml");
     lv_xml_register_component_from_file("A:ui_xml/wizard_led_select.xml");
     lv_xml_register_component_from_file("A:ui_xml/wizard_summary.xml");
@@ -740,7 +739,7 @@ static bool init_lvgl() {
     // Create keyboard input device (optional - enables physical keyboard input)
     lv_indev_t* indev_keyboard = lv_sdl_keyboard_create();
     if (indev_keyboard) {
-        spdlog::info("Physical keyboard input enabled");
+        spdlog::debug("Physical keyboard input enabled");
 
         // Create input group for keyboard navigation and text input
         lv_group_t* input_group = lv_group_create();
@@ -749,7 +748,7 @@ static bool init_lvgl() {
         spdlog::debug("Created default input group for keyboard");
     }
 
-    spdlog::info("LVGL initialized: {}x{}", SCREEN_WIDTH, SCREEN_HEIGHT);
+    spdlog::debug("LVGL initialized: {}x{}", SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // Initialize SVG decoder for loading .svg files
     lv_svg_decoder_init();
@@ -759,7 +758,7 @@ static bool init_lvgl() {
 
 // Show splash screen with HelixScreen logo
 static void show_splash_screen() {
-    spdlog::info("Showing splash screen");
+    spdlog::debug("Showing splash screen");
 
     // Get the active screen
     lv_obj_t* screen = lv_screen_active();
@@ -835,7 +834,7 @@ static void show_splash_screen() {
     // Clean up splash screen
     lv_obj_delete(container);
 
-    spdlog::info("Splash screen complete");
+    spdlog::debug("Splash screen complete");
 }
 
 // Save screenshot using SDL renderer
@@ -915,14 +914,14 @@ static void save_screenshot() {
 
 // Initialize Moonraker client and API instances
 static void initialize_moonraker_client(Config* config) {
-    spdlog::info("Initializing Moonraker client...");
+    spdlog::debug("Initializing Moonraker client...");
 
     // Create client instance (mock or real based on test mode)
     if (get_runtime_config().should_mock_moonraker()) {
-        spdlog::info("[Test Mode] Creating MOCK Moonraker client (Voron 2.4 profile)");
+        spdlog::debug("[Test Mode] Creating MOCK Moonraker client (Voron 2.4 profile)");
         moonraker_client = new MoonrakerClientMock(MoonrakerClientMock::PrinterType::VORON_24);
     } else {
-        spdlog::info("Creating REAL Moonraker client");
+        spdlog::debug("Creating REAL Moonraker client");
         moonraker_client = new MoonrakerClient();
     }
 
@@ -981,13 +980,13 @@ static void initialize_moonraker_client(Config* config) {
     });
 
     // Create MoonrakerAPI instance
-    spdlog::info("Creating MoonrakerAPI instance...");
+    spdlog::debug("Creating MoonrakerAPI instance...");
     moonraker_api = new MoonrakerAPI(*moonraker_client, get_printer_state());
 
     // Register with app_globals
     set_moonraker_api(moonraker_api);
 
-    spdlog::info("Moonraker client initialized (not connected yet)");
+    spdlog::debug("Moonraker client initialized (not connected yet)");
 }
 
 // Mock data generator (simulates printer state changes for testing)
@@ -1098,10 +1097,10 @@ int main(int argc, char** argv) {
 
     spdlog::info("HelixScreen UI Prototype");
     spdlog::info("========================");
-    spdlog::info("Target: {}x{}", SCREEN_WIDTH, SCREEN_HEIGHT);
-    spdlog::info("DPI: {}{}", (dpi > 0 ? dpi : LV_DPI_DEF), (dpi > 0 ? " (custom)" : " (default)"));
-    spdlog::info("Nav Width: {} pixels", UI_NAV_WIDTH(SCREEN_WIDTH));
-    spdlog::info("Initial Panel: {}", initial_panel);
+    spdlog::debug("Target: {}x{}", SCREEN_WIDTH, SCREEN_HEIGHT);
+    spdlog::debug("DPI: {}{}", (dpi > 0 ? dpi : LV_DPI_DEF), (dpi > 0 ? " (custom)" : " (default)"));
+    spdlog::debug("Nav Width: {} pixels", UI_NAV_WIDTH(SCREEN_WIDTH));
+    spdlog::debug("Initial Panel: {}", initial_panel);
 
     // Initialize config system
     Config* config = Config::get_instance();
@@ -1121,7 +1120,7 @@ int main(int argc, char** argv) {
             spdlog::error("Failed to set HELIX_SDL_DISPLAY environment variable");
             return 1;
         }
-        spdlog::info("Window will be centered on display {}", display_num);
+        spdlog::debug("Window will be centered on display {}", display_num);
     }
     if (x_pos >= 0 && y_pos >= 0) {
         char x_str[32], y_str[32];
@@ -1131,7 +1130,7 @@ int main(int argc, char** argv) {
             spdlog::error("Failed to set window position environment variables");
             return 1;
         }
-        spdlog::info("Window will be positioned at ({}, {})", x_pos, y_pos);
+        spdlog::debug("Window will be positioned at ({}, {})", x_pos, y_pos);
     } else if ((x_pos >= 0 && y_pos < 0) || (x_pos < 0 && y_pos >= 0)) {
         spdlog::warn("Both -x and -y must be specified for exact positioning. Ignoring.");
     }
@@ -1144,9 +1143,9 @@ int main(int argc, char** argv) {
     // Apply custom DPI if specified (before theme init)
     if (dpi > 0) {
         lv_display_set_dpi(display, dpi);
-        spdlog::info("Display DPI set to: {}", dpi);
+        spdlog::debug("Display DPI set to: {}", dpi);
     } else {
-        spdlog::info("Display DPI: {} (from LV_DPI_DEF)", lv_display_get_dpi(display));
+        spdlog::debug("Display DPI: {} (from LV_DPI_DEF)", lv_display_get_dpi(display));
     }
 
     // Create main screen
@@ -1163,8 +1162,7 @@ int main(int argc, char** argv) {
     if (!tips_mgr->init("config/printing_tips.json")) {
         spdlog::warn("Tips manager failed to initialize - tips will not be available");
     } else {
-        spdlog::info("Loaded {} tips (version: {})", tips_mgr->get_total_tips(),
-                     tips_mgr->get_version());
+        spdlog::debug("Loaded {} tips", tips_mgr->get_total_tips());
     }
 
     // Register fonts and images for XML (must be done BEFORE globals.xml for theme init)
@@ -1308,7 +1306,7 @@ int main(int argc, char** argv) {
         spdlog::error("Failed to create print status panel");
     }
 
-    spdlog::info("XML UI created successfully with reactive navigation");
+    spdlog::debug("XML UI created successfully with reactive navigation");
 
     // Test notification system (commented out - uncomment for testing)
     // NOTIFY_INFO("Notification system initialized successfully");
@@ -1358,7 +1356,7 @@ int main(int argc, char** argv) {
 
     // Navigate to initial panel (if not showing wizard and panel was requested)
     if (!wizard_active && initial_panel >= 0) {
-        spdlog::info("Navigating to initial panel: {}", initial_panel);
+        spdlog::debug("Navigating to initial panel: {}", initial_panel);
         ui_nav_set_active(static_cast<ui_panel_id_t>(initial_panel));
     }
 
@@ -1405,10 +1403,10 @@ int main(int argc, char** argv) {
             spdlog::debug("Opening bed mesh overlay as requested by command-line flag");
             lv_obj_t* bed_mesh = (lv_obj_t*)lv_xml_create(screen, "bed_mesh_panel", nullptr);
             if (bed_mesh) {
-                spdlog::info("Bed mesh overlay created successfully, calling setup");
+                spdlog::debug("Bed mesh overlay created successfully, calling setup");
                 ui_panel_bed_mesh_setup(bed_mesh, screen);
                 ui_nav_push_overlay(bed_mesh);
-                spdlog::info("Bed mesh overlay pushed to nav stack");
+                spdlog::debug("Bed mesh overlay pushed to nav stack");
             } else {
                 spdlog::error(
                     "Failed to create bed mesh overlay from XML component 'bed_mesh_panel'");
@@ -1455,7 +1453,7 @@ int main(int argc, char** argv) {
 
     // Create G-code test panel if requested (independent of wizard state)
     if (show_gcode_test) {
-        spdlog::info("Creating G-code test panel");
+        spdlog::debug("Creating G-code test panel");
         lv_obj_t* gcode_test = ui_panel_gcode_test_create(screen);
         if (gcode_test) {
             spdlog::debug("G-code test panel created successfully");
@@ -1466,7 +1464,7 @@ int main(int argc, char** argv) {
 
     // Create glyphs panel if requested (independent of wizard state)
     if (show_glyphs) {
-        spdlog::info("Creating glyphs reference panel");
+        spdlog::debug("Creating glyphs reference panel");
         lv_obj_t* glyphs_panel = ui_panel_glyphs_create(screen);
         if (glyphs_panel) {
             spdlog::debug("Glyphs panel created successfully");
@@ -1485,7 +1483,7 @@ int main(int argc, char** argv) {
             std::to_string(config->get<int>(config->df() + "moonraker_port")) + "/websocket";
 
         // Connect to Moonraker
-        spdlog::info("Connecting to Moonraker at {}", moonraker_url);
+        spdlog::debug("Connecting to Moonraker at {}", moonraker_url);
         int connect_result = moonraker_client->connect(
             moonraker_url.c_str(),
             []() {

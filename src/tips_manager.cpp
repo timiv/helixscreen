@@ -41,7 +41,7 @@ bool TipsManager::init(const std::string& tips_path) {
     }
 
     try {
-        spdlog::info("[TipsManager] Loading tips from {}", tips_path);
+        spdlog::debug("[TipsManager] Loading tips from {}", tips_path);
         std::ifstream file(tips_path);
         data = json::parse(file);
 
@@ -55,7 +55,7 @@ bool TipsManager::init(const std::string& tips_path) {
         // Build cache for fast access
         build_tips_cache();
 
-        spdlog::info("[TipsManager] Loaded {} tips from {} categories (version: {})",
+        spdlog::debug("[TipsManager] Loaded {} tips from {} categories (version: {})",
                      tips_cache.size(), data["categories"].size(),
                      data.value("version", "unknown"));
 

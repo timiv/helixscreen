@@ -403,7 +403,7 @@ static void update_tip_of_day() {
 
         snprintf(status_buffer, sizeof(status_buffer), "%s", tip.title.c_str());
         lv_subject_copy_string(&status_subject, status_buffer);
-        spdlog::info("[Home] Updated tip: {}", tip.title);
+        spdlog::debug("[Home] Updated tip: {}", tip.title);
     } else {
         spdlog::warn("[Home] Failed to get tip, keeping current");
     }

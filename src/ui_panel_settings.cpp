@@ -94,7 +94,7 @@ LVGL_SAFE_EVENT_CB(card_about_clicked, {
 void ui_panel_settings_init_subjects() {
     // Initialize bed mesh panel subjects
     ui_panel_bed_mesh_init_subjects();
-    spdlog::info("Settings panel subjects initialized");
+    spdlog::debug("Settings panel subjects initialized");
 }
 
 void ui_panel_settings_wire_events(lv_obj_t* panel_obj, lv_obj_t* screen) {
@@ -133,7 +133,7 @@ void ui_panel_settings_wire_events(lv_obj_t* panel_obj, lv_obj_t* screen) {
     lv_obj_add_flag(card_bed_mesh, LV_OBJ_FLAG_CLICKABLE);
     // Others are disabled placeholders - no clickable flag
 
-    spdlog::info("Settings panel events wired");
+    spdlog::debug("Settings panel events wired");
 }
 
 lv_obj_t* ui_panel_settings_get() {

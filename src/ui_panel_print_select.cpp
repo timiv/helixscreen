@@ -150,7 +150,7 @@ static CardDimensions calculate_card_dimensions(lv_obj_t* container) {
     lv_coord_t container_actual_height = lv_obj_get_height(container);
     lv_coord_t available_height = panel_height - top_bar_height - container_padding - panel_gap;
 
-    spdlog::info("Heights: panel={}, top_bar={}, container_actual={}, container_padding={}, "
+    spdlog::debug("Heights: panel={}, top_bar={}, container_actual={}, container_padding={}, "
                  "panel_gap={}, available={}",
                  panel_height, top_bar_height, container_actual_height, container_padding,
                  panel_gap, available_height);
@@ -177,7 +177,7 @@ static CardDimensions calculate_card_dimensions(lv_obj_t* container) {
             dims.num_columns = cols;
             dims.card_width = card_width;
 
-            spdlog::info("Calculated card layout: {} rows × {} columns, card={}x{}", dims.num_rows,
+            spdlog::debug("Calculated card layout: {} rows × {} columns, card={}x{}", dims.num_rows,
                          dims.num_columns, dims.card_width, dims.card_height);
             return dims;
         }
@@ -283,7 +283,7 @@ void ui_panel_print_select_init_subjects() {
     // Initialize detail view visibility subject (0 = hidden, 1 = visible)
     UI_SUBJECT_INIT_AND_REGISTER_INT(detail_view_visible_subject, 0, "detail_view_visible");
 
-    spdlog::info("Print select panel subjects initialized");
+    spdlog::debug("Print select panel subjects initialized");
 }
 
 // ============================================================================
@@ -362,7 +362,7 @@ void ui_panel_print_select_setup(lv_obj_t* panel_root, lv_obj_t* parent_screen) 
         ui_panel_print_select_populate_test_data(panel_root);
     }
 
-    spdlog::info("Print select panel setup complete");
+    spdlog::debug("Print select panel setup complete");
 }
 
 // ============================================================================
@@ -686,7 +686,7 @@ void ui_panel_print_select_populate_test_data(lv_obj_t* panel_root) {
     // Update empty state
     update_empty_state();
 
-    spdlog::info("Populated print select panel with {} test files", (int)file_list.size());
+    spdlog::debug("Populated print select panel with {} test files", (int)file_list.size());
 }
 
 static void populate_card_view() {

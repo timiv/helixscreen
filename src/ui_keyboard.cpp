@@ -803,7 +803,7 @@ void ui_keyboard_init(lv_obj_t* parent) {
         return;
     }
 
-    spdlog::info("[Keyboard] Initializing global keyboard");
+    spdlog::debug("[Keyboard] Initializing global keyboard");
 
     // Create keyboard at bottom of screen
     g_keyboard = lv_keyboard_create(parent);
@@ -819,7 +819,7 @@ void ui_keyboard_init(lv_obj_t* parent) {
                         kb_ctrl_num_improved);
 
     // Apply keyboard layouts
-    spdlog::info("[Keyboard] Using keyboard with long-press alternatives");
+    spdlog::debug("[Keyboard] Using keyboard with long-press alternatives");
     g_mode = MODE_ALPHA_LC;
     apply_keyboard_mode();
 
@@ -859,7 +859,7 @@ void ui_keyboard_init(lv_obj_t* parent) {
     // Add custom draw handler to display alternative characters on keys
     lv_obj_add_event_cb(g_keyboard, keyboard_draw_alternative_chars, LV_EVENT_DRAW_POST_END, NULL);
 
-    spdlog::info(
+    spdlog::debug(
         "[Keyboard] Initialization complete (with long-press alternatives and visual hints)");
 }
 

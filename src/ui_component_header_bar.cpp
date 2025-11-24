@@ -130,7 +130,7 @@ void ui_component_header_bar_init() {
     // Register global resize callback for all header_bar instances
     ui_resize_handler_register(on_app_resize);
 
-    spdlog::info("[HeaderBar] Component system initialized");
+    spdlog::debug("[HeaderBar] Component system initialized");
 }
 
 void ui_component_header_bar_setup(lv_obj_t* header, lv_obj_t* screen) {

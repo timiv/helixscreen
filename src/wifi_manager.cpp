@@ -40,7 +40,7 @@
 // ============================================================================
 
 WiFiManager::WiFiManager() : scan_timer_(nullptr) {
-    spdlog::info("[WiFiManager] Initializing with backend system");
+    spdlog::debug("[WiFiManager] Initializing with backend system");
 
     // Create platform-appropriate backend (already started by factory)
     backend_ = WifiBackend::create();
@@ -51,7 +51,7 @@ WiFiManager::WiFiManager() : scan_timer_(nullptr) {
 
     // Check backend status immediately after creation
     if (backend_->is_running()) {
-        spdlog::info("[WiFiManager] WiFi backend initialized and running");
+        spdlog::debug("[WiFiManager] WiFi backend initialized and running");
     } else {
         NOTIFY_WARNING("WiFi backend created but not running. Check system permissions.");
     }

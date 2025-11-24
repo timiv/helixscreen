@@ -75,7 +75,7 @@ void PrinterState::init_subjects(bool register_xml) {
         return;
     }
 
-    spdlog::info("Initializing printer state subjects (register_xml={})", register_xml);
+    spdlog::debug("Initializing printer state subjects (register_xml={})", register_xml);
 
     // Temperature subjects (integer, degrees Celsius)
     lv_subject_init_int(&extruder_temp_, 0);

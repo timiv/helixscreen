@@ -109,10 +109,6 @@ void print_server_info(const json& info) {
         print_kv("Moonraker Version", info["moonraker_version"].get<std::string>());
     }
 
-    if (info.contains("klippy_version")) {
-        print_kv("Klippy Version", info["klippy_version"].get<std::string>());
-    }
-
     if (info.contains("api_version")) {
         auto api = info["api_version"];
         std::string api_str = "[" + std::to_string(api[0].get<int>()) + "." +
@@ -187,10 +183,22 @@ void print_hardware_objects(const json& objects) {
     const auto& obj_array = objects["objects"];
 
     // Categorize objects
-    std::vector<std::string> heaters, sensors, fans, leds, other;
+    std::vector<std::string> heaters, sensors, fans, leds, steppers, probes, macros, accessories;
 
     for (const auto& obj : obj_array) {
         std::string name = obj.get<std::string>();
+
+        // Filter out core Klipper objects that aren't useful to expand
+        if (name == "gcode" || name == "webhooks" || name == "configfile" ||
+            name == "mcu" || name.find("mcu ") == 0 || name == "heaters" ||
+            name == "gcode_move" || name == "print_stats" || name == "virtual_sdcard" ||
+            name == "display_status" || name == "exclude_object" ||
+            name == "idle_timeout" || name == "pause_resume" ||
+            name == "motion_report" || name == "query_endstops" || name == "system_stats" ||
+            name == "manual_probe" || name == "toolhead") {
+            // Core Klipper objects - skip
+            continue;
+        }
 
         if (name.find("extruder") != std::string::npos ||
             name.find("heater_bed") != std::string::npos ||
@@ -205,8 +213,26 @@ void print_hardware_objects(const json& objects) {
                    name.find("neopixel") != std::string::npos ||
                    name.find("dotstar") != std::string::npos) {
             leds.push_back(name);
-        } else {
-            other.push_back(name);
+        } else if (name.find("tmc") != std::string::npos ||
+                   name.find("stepper_") != std::string::npos) {
+            steppers.push_back(name);
+        } else if (name.find("probe") != std::string::npos ||
+                   name.find("bltouch") != std::string::npos ||
+                   name.find("bed_mesh") != std::string::npos ||
+                   name.find("bed_tilt") != std::string::npos ||
+                   name.find("z_tilt") != std::string::npos ||
+                   name.find("quad_gantry_level") != std::string::npos) {
+            probes.push_back(name);
+        } else if (name.find("gcode_macro") != std::string::npos) {
+            macros.push_back(name);
+        } else if (name.find("servo") != std::string::npos ||
+                   name.find("filament_") != std::string::npos ||
+                   name.find("button") != std::string::npos ||
+                   name.find("output_pin") != std::string::npos ||
+                   name.find("gcode_button") != std::string::npos ||
+                   name.find("firmware_retraction") != std::string::npos ||
+                   name.find("mod_params") != std::string::npos) {
+            accessories.push_back(name);
         }
     }
 
@@ -239,15 +265,42 @@ void print_hardware_objects(const json& objects) {
         }
     }
 
-    if (!other.empty()) {
-        std::cout << "\n  Other Objects (" << other.size() << "):\n";
-        for (const auto& o : other) {
-            print_list_item(o, 1);
+    if (!steppers.empty()) {
+        std::cout << "\n  Steppers/Drivers (" << steppers.size() << "):\n";
+        for (const auto& s : steppers) {
+            print_list_item(s, 1);
         }
     }
 
-    std::cout << "\n  Total Objects: " << obj_array.size() << "\n";
+    if (!probes.empty()) {
+        std::cout << "\n  Probes/Leveling (" << probes.size() << "):\n";
+        for (const auto& p : probes) {
+            print_list_item(p, 1);
+        }
+    }
+
+    if (!macros.empty()) {
+        std::cout << "\n  G-code Macros (" << macros.size() << "):\n";
+        for (const auto& m : macros) {
+            print_list_item(m, 1);
+        }
+    }
+
+    if (!accessories.empty()) {
+        std::cout << "\n  Accessories (" << accessories.size() << "):\n";
+        for (const auto& a : accessories) {
+            print_list_item(a, 1);
+        }
+    }
+
+    // Count total (excluding filtered core objects)
+    int total = heaters.size() + sensors.size() + fans.size() + leds.size() +
+                steppers.size() + probes.size() + macros.size() + accessories.size();
+    std::cout << "\n  Total Hardware Objects: " << total << "\n";
 }
+
+// Forward declaration for interactive mode (defined in separate file)
+int run_interactive(const std::string& ip, int port);
 
 int main(int argc, char** argv) {
     // Auto-detect TTY for color support
@@ -255,24 +308,37 @@ int main(int argc, char** argv) {
 
     // Parse command line
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <ip_address> [port] [--no-color]\n";
+        std::cerr << "Usage: " << argv[0] << " <ip_address> [port] [options]\n";
         std::cerr << "Example: " << argv[0] << " 192.168.1.100 7125\n";
         std::cerr << "\nOptions:\n";
-        std::cerr << "  --no-color    Disable colored output\n";
+        std::cerr << "  -i, --interactive    Interactive TUI mode with collapsible sections\n";
+        std::cerr << "  --no-color           Disable colored output\n";
+        std::cerr << "\nInteractive Mode:\n";
+        std::cerr << "  Arrow keys / j/k     Navigate\n";
+        std::cerr << "  Enter / Space        Expand/collapse sections\n";
+        std::cerr << "  q                    Quit\n";
         return 1;
     }
 
     std::string ip = argv[1];
     int port = 7125;
+    bool interactive_mode = false;
 
     // Parse remaining arguments
     for (int i = 2; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--no-color" || arg == "--no-colour") {
             use_colors = false;
+        } else if (arg == "-i" || arg == "--interactive") {
+            interactive_mode = true;
         } else if (arg[0] >= '0' && arg[0] <= '9') {
             port = std::atoi(arg.c_str());
         }
+    }
+
+    // Launch interactive mode if requested
+    if (interactive_mode) {
+        return run_interactive(ip, port);
     }
 
     std::string url = "ws://" + ip + ":" + std::to_string(port) + "/websocket";

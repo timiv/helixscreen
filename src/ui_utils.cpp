@@ -180,7 +180,7 @@ void ui_resize_handler_init(lv_obj_t* screen) {
     // Add SIZE_CHANGED event listener to screen
     lv_obj_add_event_cb(screen, resize_event_cb, LV_EVENT_SIZE_CHANGED, nullptr);
 
-    spdlog::info("Resize handler initialized on screen");
+    spdlog::debug("Resize handler initialized on screen");
 }
 
 void ui_resize_handler_register(ui_resize_callback_t callback) {

@@ -174,7 +174,7 @@ void ui_nav_init() {
         return;
     }
 
-    spdlog::info("Initializing navigation reactive subjects...");
+    spdlog::debug("Initializing navigation reactive subjects...");
 
     // Initialize active panel subject (starts at home)
     lv_subject_init_int(&active_panel_subject, UI_PANEL_HOME);
@@ -214,7 +214,7 @@ void ui_nav_init() {
 
     subjects_initialized = true;
 
-    spdlog::info("Navigation subjects initialized successfully");
+    spdlog::debug("Navigation subjects initialized successfully");
 }
 
 void ui_nav_init_overlay_backdrop(lv_obj_t* screen) {
@@ -254,7 +254,7 @@ void ui_nav_init_overlay_backdrop(lv_obj_t* screen) {
     // Hidden by default - shown when overlays are pushed
     lv_obj_add_flag(overlay_backdrop, LV_OBJ_FLAG_HIDDEN);
 
-    spdlog::info("Overlay backdrop initialized successfully");
+    spdlog::debug("Overlay backdrop initialized successfully");
 }
 
 void ui_nav_set_app_layout(lv_obj_t* app_layout) {
@@ -431,7 +431,7 @@ void ui_nav_set_panels(lv_obj_t** panels) {
                       (void*)panel_widgets[active_panel]);
     }
 
-    spdlog::info("Panel widgets registered for show/hide management");
+    spdlog::debug("Panel widgets registered for show/hide management");
 }
 
 void ui_nav_push_overlay(lv_obj_t* overlay_panel) {

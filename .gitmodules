@@ -24,3 +24,6 @@
 [submodule "lib/ftxui"]
 	path = lib/ftxui
 	url = https://github.com/ArthurSonzogni/FTXUI.git
+[submodule "lib/cpp-terminal"]
+	path = lib/cpp-terminal
+	url = https://github.com/jupyter-xeus/cpp-terminal.git

@@ -25,10 +25,9 @@
 
 #include "ui_subject_registry.h"
 #include "ui_theme.h"
-#include "ui_wizard_bed_select.h"
 #include "ui_wizard_connection.h"
 #include "ui_wizard_fan_select.h"
-#include "ui_wizard_hotend_select.h"
+#include "ui_wizard_heater_select.h"
 #include "ui_wizard_led_select.h"
 #include "ui_wizard_printer_identify.h"
 #include "ui_wizard_summary.h"
@@ -77,17 +76,17 @@ void ui_wizard_init_subjects() {
 
     // Initialize subjects with defaults
     UI_SUBJECT_INIT_AND_REGISTER_INT(current_step, 1, "current_step");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(total_steps, 8, "total_steps"); // 8 steps: WiFi, Connection, Printer, Bed, Hotend, Fan, LED, Summary
+    UI_SUBJECT_INIT_AND_REGISTER_INT(total_steps, 7, "total_steps"); // 7 steps: WiFi, Connection, Printer, Heater, Fan, LED, Summary
 
     UI_SUBJECT_INIT_AND_REGISTER_STRING(wizard_title, wizard_title_buffer, "Welcome", "wizard_title");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(wizard_progress, wizard_progress_buffer, "Step 1 of 8", "wizard_progress");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(wizard_progress, wizard_progress_buffer, "Step 1 of 7", "wizard_progress");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(wizard_next_button_text, wizard_next_button_text_buffer, "Next", "wizard_next_button_text");
 
     // Initialize connection_test_passed to 1 (enabled by default for all steps)
     // Step 2 (connection) will set it to 0 until test passes
     UI_SUBJECT_INIT_AND_REGISTER_INT(connection_test_passed, 1, "connection_test_passed");
 
-    spdlog::info("[Wizard] Subjects initialized");
+    spdlog::debug("[0");
 }
 
 // Helper type for constant name/value pairs
@@ -162,7 +161,7 @@ void ui_wizard_container_register_responsive_constants() {
         size_label = "LARGE";
     }
 
-    spdlog::info("[Wizard] Screen size: {} (greater_res={}px)", size_label, greater_res);
+    spdlog::debug("[Wizard] Screen size: {} (greater_res={}px)", size_label, greater_res);
 
     // 3. Read padding/gap from globals (centralized responsive values)
     const char* padding_value = lv_xml_get_const(NULL, "padding_normal");
@@ -198,8 +197,7 @@ void ui_wizard_container_register_responsive_constants() {
         "wizard_wifi_setup",
         "wizard_connection",
         "wizard_printer_identify",
-        "wizard_bed_select",
-        "wizard_hotend_select",
+        "wizard_heater_select",
         "wizard_fan_select",
         "wizard_led_select",
         "wizard_summary",
@@ -216,8 +214,8 @@ void ui_wizard_container_register_responsive_constants() {
         }
     }
 
-    spdlog::info("[Wizard] Registered 11 constants to wizard_container and propagated to {} child "
-                 "components",
+    spdlog::debug("[Wizard] Registered 11 constants to wizard_container and propagated to {} child "
+                 "components (7 wizard screens)",
                  child_count);
     spdlog::debug("[Wizard] Values: padding={}, gap={}, header_h={}, footer_h={}, button_w={}",
                   padding_value, gap_value, header_height, footer_height, button_width);
@@ -246,7 +244,7 @@ lv_obj_t* ui_wizard_create(lv_obj_t* parent) {
     // Update layout to ensure SIZE_CONTENT calculates correctly
     lv_obj_update_layout(wizard_container);
 
-    spdlog::info("[Wizard] Wizard container created successfully");
+    spdlog::debug("[Wizard] Wizard container created successfully");
     return wizard_container;
 }
 
@@ -324,19 +322,16 @@ static void ui_wizard_cleanup_current_screen() {
     case 3: // Printer Identification
         ui_wizard_printer_identify_cleanup();
         break;
-    case 4: // Bed Select
-        ui_wizard_bed_select_cleanup();
+    case 4: // Heater Select (combined bed + hotend)
+        ui_wizard_heater_select_cleanup();
         break;
-    case 5: // Hotend Select
-        ui_wizard_hotend_select_cleanup();
-        break;
-    case 6: // Fan Select
+    case 5: // Fan Select
         ui_wizard_fan_select_cleanup();
         break;
-    case 7: // LED Select
+    case 6: // LED Select
         ui_wizard_led_select_cleanup();
         break;
-    case 8: // Summary
+    case 7: // Summary
         ui_wizard_summary_cleanup();
         break;
     default:
@@ -369,7 +364,7 @@ static void ui_wizard_load_screen(int step) {
     // Create appropriate screen based on step
     switch (step) {
     case 1: // WiFi Setup
-        spdlog::info("[Wizard] Creating WiFi setup screen");
+        spdlog::debug("[Wizard] Creating WiFi setup screen");
         ui_wizard_wifi_init_subjects();
         ui_wizard_wifi_register_callbacks();
         // Note: WiFi constants now registered by
@@ -381,7 +376,7 @@ static void ui_wizard_load_screen(int step) {
         break;
 
     case 2: // Moonraker Connection
-        spdlog::info("[Wizard] Creating Moonraker connection screen");
+        spdlog::debug("[Wizard] Creating Moonraker connection screen");
         ui_wizard_connection_init_subjects();
         ui_wizard_connection_register_callbacks();
         ui_wizard_connection_create(content);
@@ -390,7 +385,7 @@ static void ui_wizard_load_screen(int step) {
         break;
 
     case 3: // Printer Identification
-        spdlog::info("[Wizard] Creating printer identification screen");
+        spdlog::debug("[Wizard] Creating printer identification screen");
         ui_wizard_printer_identify_init_subjects();
         ui_wizard_printer_identify_register_callbacks();
         ui_wizard_printer_identify_create(content);
@@ -398,26 +393,17 @@ static void ui_wizard_load_screen(int step) {
         ui_wizard_set_title("Printer Identification");
         break;
 
-    case 4: // Bed Select
-        spdlog::info("[Wizard] Creating bed select screen");
-        ui_wizard_bed_select_init_subjects();
-        ui_wizard_bed_select_register_callbacks();
-        ui_wizard_bed_select_create(content);
+    case 4: // Heater Select (combined bed + hotend)
+        spdlog::debug("[Wizard] Creating heater select screen");
+        ui_wizard_heater_select_init_subjects();
+        ui_wizard_heater_select_register_callbacks();
+        ui_wizard_heater_select_create(content);
         lv_obj_update_layout(content);
-        ui_wizard_set_title("Bed Configuration");
+        ui_wizard_set_title("Heater Configuration");
         break;
 
-    case 5: // Hotend Select
-        spdlog::info("[Wizard] Creating hotend select screen");
-        ui_wizard_hotend_select_init_subjects();
-        ui_wizard_hotend_select_register_callbacks();
-        ui_wizard_hotend_select_create(content);
-        lv_obj_update_layout(content);
-        ui_wizard_set_title("Hotend Configuration");
-        break;
-
-    case 6: // Fan Select
-        spdlog::info("[Wizard] Creating fan select screen");
+    case 5: // Fan Select
+        spdlog::debug("[Wizard] Creating fan select screen");
         ui_wizard_fan_select_init_subjects();
         ui_wizard_fan_select_register_callbacks();
         ui_wizard_fan_select_create(content);
@@ -425,8 +411,8 @@ static void ui_wizard_load_screen(int step) {
         ui_wizard_set_title("Fan Configuration");
         break;
 
-    case 7: // LED Select
-        spdlog::info("[Wizard] Creating LED select screen");
+    case 6: // LED Select
+        spdlog::debug("[Wizard] Creating LED select screen");
         ui_wizard_led_select_init_subjects();
         ui_wizard_led_select_register_callbacks();
         ui_wizard_led_select_create(content);
@@ -434,8 +420,8 @@ static void ui_wizard_load_screen(int step) {
         ui_wizard_set_title("LED Configuration");
         break;
 
-    case 8: // Summary
-        spdlog::info("[Wizard] Creating summary screen");
+    case 7: // Summary
+        spdlog::debug("[Wizard] Creating summary screen");
         ui_wizard_summary_init_subjects();
         ui_wizard_summary_register_callbacks();
         ui_wizard_summary_create(content);
@@ -462,7 +448,7 @@ void ui_wizard_complete() {
     // 1. Mark wizard as completed in config
     Config* config = Config::get_instance();
     if (config) {
-        spdlog::info("[Wizard] Setting wizard_completed flag");
+        spdlog::debug("[Wizard] Setting wizard_completed flag");
         config->set<bool>("/wizard_completed", true);
         if (!config->save()) {
             spdlog::error("[Wizard] Failed to save wizard_completed flag!");
@@ -505,7 +491,7 @@ void ui_wizard_complete() {
         "ws://" + moonraker_host + ":" + std::to_string(moonraker_port) + "/websocket";
 
     // Connect to Moonraker
-    spdlog::info("[Wizard] Connecting to Moonraker at {}", moonraker_url);
+    spdlog::debug("[Wizard] Connecting to Moonraker at {}", moonraker_url);
     int connect_result = client->connect(
         moonraker_url.c_str(),
         []() {
