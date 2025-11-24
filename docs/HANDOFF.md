@@ -1,90 +1,129 @@
 # Session Handoff Document
 
-**Last Updated:** 2025-11-23
-**Current Focus:** Phase 2A Complete with Auto-Detecting Thread Safety, Ready for Phase 2B WiFi
+**Last Updated:** 2025-11-24
+**Current Focus:** Wizard Refactoring Complete, Notification System Phase 2 Paused
 
 ---
 
 ## 🔥 ACTIVE WORK
 
-### Phase 2A: Moonraker Error Migration - COMPLETED (2025-11-23)
+### Wizard Refactoring - COMPLETED (2025-11-24)
 
-**Goal:** Convert Moonraker connection error reporting to unified notification system with automatic thread safety.
+**Goal:** Simplify wizard UX by combining bed/hotend configuration and adding FlashForge support.
 
 **Status:** ✅ COMPLETE
 
 **What Was Done:**
 
-1. ✅ **Auto-Detecting Thread-Safe Notification API:**
-   - Refactored notification functions to automatically detect calling thread
-   - Main thread → calls LVGL directly (fast path)
-   - Background thread → automatically uses `lv_async_call()` (safe path)
-   - **No more `_async` variants needed** - single clean API
-   - Captured main thread ID in `ui_notification_init()`
-   - `is_main_thread()` check with `std::thread::id` comparison
+1. ✅ **Combined Heater Configuration Screens:**
+   - Merged `ui_wizard_bed_select` and `ui_wizard_hotend_select` into single `ui_wizard_heater_select`
+   - Reduced wizard from 8 steps to 7 steps
+   - Eliminated redundant temperature sensor selection (Klipper heaters provide temp readings)
+   - Heater selection automatically sets sensor path to same heater name
+   - Simplified user experience with single screen for all heating elements
 
-2. ✅ **Converted moonraker_client.cpp (38 error sites):**
-   - Max reconnect attempts → Modal "Connection Failed" with rate limiting
-   - Klipper disconnected → Modal "Printer Firmware Disconnected"
-   - Request failures → Error toasts with method names
-   - Message too large → Error toast about protocol error
-   - Subscription failures → Warning toasts
-   - Timeouts → Warning toasts with duration
-   - Callback exceptions → LOG_ERROR_INTERNAL (30 sites)
-   - Added rate limiting flags to prevent notification spam during reconnection loops
+2. ✅ **FlashForge Printer Support:**
+   - Added "FlashForge Adventurer 5M" and "FlashForge Adventurer 5M Pro" to printer type picker
+   - Updated `printer_types.h`: now 35 printer types (was 33)
+   - Updated `printer_database.json` with full "Adventurer 5M" name (cannot distinguish Pro without camera)
+   - Added TVOC sensor and weight sensor heuristics for auto-detection
 
-3. ✅ **Converted moonraker_api.cpp (25 error sites):**
-   - API validation failures → `NOTIFY_ERROR()` with specific details
-   - Safety limit violations → `NOTIFY_ERROR()` with current/max values
-   - File operation errors → `NOTIFY_ERROR()` with actionable messages
-   - JSON parsing errors → `LOG_ERROR_INTERNAL()`
-   - User-friendly messages: "Move distance 500mm is too large. Maximum: 100mm"
+3. ✅ **Config Storage Migration:**
+   - Migrated all paths from `/printer/*` to `/printers/default_printer/*` structure
+   - Updated `wizard_config_paths.h` with new path constants
+   - Paths now: `/printers/default_printer/name`, `/printers/default_printer/heater/bed`, etc.
+   - Fixed `ui_wizard_printer_identify.cpp` to use new path constants throughout
 
-4. ✅ **Converted ui_wizard_connection.cpp (6 error sites):**
-   - Config save failures → `NOTIFY_ERROR()` (user must know if credentials not saved)
-   - Widget creation errors → `LOG_ERROR_INTERNAL()`
-   - Validation errors already shown in wizard UI (kept as spdlog)
+4. ✅ **Printer Detection Display Improvements:**
+   - Changed `PrinterDetectionHint` struct field from `reason` to `type_name`
+   - Display shows clean printer name without "Detected: Detected" redundancy
+   - Removed technical detection details (sensor fingerprints) from UI
+   - Changed detection logging from info to debug level
 
-**Files Modified:**
+5. ✅ **UI Polish:**
+   - Fixed wizard Next button text color from `#app_bg_color` to `#text_primary` (fixes dark mode contrast)
+   - Fixed checkmark glyph in summary from `&#x2713;` (Unicode) to `&#xF00C;` (FontAwesome LV_SYMBOL_OK)
+
+**Files Changed:**
 ```
-include/ui_notification.h (added thread-safety docs)
-src/ui_notification.cpp (implemented auto-detection, +266 lines)
-src/moonraker_client.cpp (38 conversions + rate limiting)
-src/moonraker_api.cpp (25 conversions, user-friendly messages)
-src/ui_wizard_connection.cpp (6 conversions, selective)
+Deleted: ui_wizard_bed_select.{h,cpp,xml}, ui_wizard_hotend_select.{h,cpp,xml}
+Added: ui_wizard_heater_select.{h,cpp,xml}
+Modified: printer_types.h, wizard_config_paths.h, printer_database.json,
+          ui_wizard_printer_identify.cpp, wizard_container.xml,
+          wizard_summary.xml, main.cpp, ui_wizard.cpp
 ```
-
-**Conversion Breakdown:**
-- **User-Facing Error Modals (critical):** 2 sites
-- **User-Facing Error Toasts:** 28 sites
-- **User-Facing Warning Toasts:** 6 sites
-- **Internal Errors (LOG_ERROR_INTERNAL):** 33 sites
-- **Total:** 69 conversions
-
-**Key Improvements:**
-- ✅ **Single unified API** - just call `ui_notification_error()` from any thread
-- ✅ Automatic thread detection - no need to track which thread you're on
-- ✅ Rate limiting prevents notification spam during reconnections
-- ✅ User-friendly error messages ("Move distance too large" vs "Safety check failed")
-- ✅ Clear separation: user-facing errors notify, internal errors log
-- ✅ No more `_async` function clutter in codebase
 
 **Build Status:** ✅ Compiles successfully
-**Runtime Status:** ⚠️ Not tested yet (needs manual testing)
+**Runtime Status:** ⚠️ Not tested yet (needs manual testing with wizard flow)
 
 **Commits:**
-- `fb8f438` - refactor(notifications): auto-detect thread safety
-- `9fdd3b6` - feat(notifications): Phase 2A Moonraker error migration with auto-detection
+- `c978dad` - feat(tools): rewrite moonraker-inspector interactive mode with cpp-terminal
+  (Note: This commit bundled wizard refactoring with moonraker-inspector work)
+- `1dfa4db` - fix(logging): reduce more startup logs from info to debug level
 
 ---
 
 ## 🚀 NEXT PRIORITY
 
-### Phase 2B: WiFi Error Migration (NEXT - HIGH PRIORITY) ⭐
+### Testing & Validation (IMMEDIATE)
+
+**High Priority Tasks:**
+1. **Test Wizard Flow:**
+   - Run through wizard with FlashForge printer at 192.168.1.67
+   - Verify heater selection screen shows both bed and hotend dropdowns
+   - Verify auto-detection shows "FlashForge Adventurer 5M" cleanly
+   - Verify config summary screen displays saved values
+   - Verify Next button text is visible in both light and dark themes
+   - Verify checkmark glyph displays correctly
+
+2. **Resume Notification System Work (Phase 2):**
+   - Currently at Phase 2: IN PROGRESS (from NOTIFICATION_HISTORY_PLAN.md)
+   - Need to verify UI appearance (toasts, history panel)
+   - Continue with error site audits and conversions
+
+---
+
+## 📊 NOTIFICATION SYSTEM STATUS (Phase 2 - PAUSED)
+
+**See:** `docs/NOTIFICATION_HISTORY_PLAN.md` for complete plan
+
+**Overall Progress:**
+- ✅ Phase 1: Core Infrastructure COMPLETE (2025-11-23)
+- ⚠️ Phase 2: Error Reporting Migration IN PROGRESS (paused at step 3)
+- 🔜 Phase 3: Comprehensive Migration (future)
+- 🔜 Phase 4: Unit Testing (future)
+
+**Phase 2 Progress (from NOTIFICATION_HISTORY_PLAN.md lines 36-47):**
+- [x] Test notification system triggers (4 test messages working)
+- [x] Fix status bar initialization (network icon widget lookup fixed)
+- [x] Implement reactive network status icon (observer pattern, Font Awesome sitemap)
+- [ ] **NEXT:** Verify UI appearance (toasts, history panel) ⬅️ Resume here
+- [ ] Audit Moonraker error sites (~20 calls)
+- [ ] Convert Moonraker errors to use `NOTIFY_ERROR()` / `NOTIFY_WARNING()`
+- [ ] Audit WiFi error sites (~15 calls)
+- [ ] Convert WiFi errors to use new macros
+- [ ] Audit file I/O error sites (~25 calls)
+- [ ] Convert file I/O errors to use new macros
+- [ ] Test all conversions
+
+**Why Paused:**
+- Switched focus to wizard refactoring (higher priority user request)
+- Phase 1 infrastructure is complete and working
+- Phase 2 conversions can resume when ready
+
+**When Ready to Resume:**
+1. Verify UI appearance of existing notification system
+2. Begin auditing error sites (see Phase 2B section below for WiFi audit)
+3. Follow conversion patterns from NOTIFICATION_HISTORY_PLAN.md
+
+---
+
+## 🔄 DEFERRED: Phase 2B WiFi Error Migration
 
 **Goal:** Convert WiFi-related error sites to use unified notification system.
 
 **Scope:** ~75 error/warn sites across 4 files
+**Status:** NOT STARTED (waiting for Phase 2 verification)
 
 **Target Files:**
 1. `src/wifi_manager.cpp` (~21 error/warn sites)
@@ -136,21 +175,28 @@ ui_notification_error("Title", "message", true)   // modal
 
 ---
 
-## ✅ COMPLETED WORK (Earlier Sessions)
+## ✅ COMPLETED WORK (Recent Sessions)
 
-### Status Bar Network Icon - COMPLETED (2025-11-23 Session 4)
-- Fixed status bar widget lookup
-- Implemented reactive network status icon
-- Added missing Font Awesome glyphs
-- Fixed network status initialization
+### Wizard Refactoring (2025-11-24 - This Session)
+- See "ACTIVE WORK" section above for full details
+- Combined bed/hotend heater configuration screens (8 steps → 7 steps)
+- Added FlashForge Adventurer 5M support
+- Migrated config paths to `/printers/default_printer/*` structure
+- Fixed printer detection display and UI polish
 
-### Notification History System - Phase 1 Complete (2025-11-23 Sessions 1-3)
-- NotificationHistory class with circular buffer
-- XML components (status bar, toast, history panel/item)
-- Error reporting macros
-- Fixed XML symbol issues
-- Fixed observer tests
-- System fully functional
+### Logging Verbosity Reduction (2025-11-24)
+- Reduced ~100 technical initialization messages from info to debug level
+- Changed Ethernet backend, Moonraker client, UI widget registration to debug
+- Users now see ~5 info-level messages instead of ~40 during startup
+
+### Notification History System - Phase 1 (2025-11-23)
+- ✅ NotificationHistory class with circular buffer (100 entry capacity)
+- ✅ XML components (status bar bell icon with badge, history panel, history items)
+- ✅ Error reporting macros (`NOTIFY_ERROR`, `NOTIFY_WARNING`, `LOG_ERROR_INTERNAL`)
+- ✅ Status bar network icon (reactive, Font Awesome sitemap glyph)
+- ✅ Observer pattern for notification updates
+- ✅ Fixed XML symbol issues and observer tests
+- **Infrastructure complete** - ready for Phase 2 error site conversions
 
 ---
 
