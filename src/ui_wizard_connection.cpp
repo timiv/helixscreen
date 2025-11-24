@@ -27,6 +27,8 @@
 #include "ui_keyboard.h" // For keyboard support
 #include "ui_subject_registry.h"
 #include "ui_wizard.h"   // For ui_wizard_set_next_button_enabled()
+#include "ui_notification.h"
+#include "ui_error_reporting.h"
 
 #include "app_globals.h"
 #include "config.h"
@@ -184,7 +186,7 @@ static void on_test_connection_clicked(lv_event_t* e) {
         lv_subject_copy_string(&connection_status_icon, error_icon ? error_icon : "");
         lv_subject_copy_string(&connection_status_text, "Error: Moonraker client not initialized");
         lv_subject_set_int(&connection_testing, 0);
-        spdlog::error("[Wizard Connection] MoonrakerClient is nullptr");
+        LOG_ERROR_INTERNAL("[Wizard Connection] MoonrakerClient is nullptr - coding error");
         return;
     }
 
@@ -255,9 +257,11 @@ static void on_test_connection_clicked(lv_event_t* e) {
                                  saved_port);
                 } else {
                     spdlog::error("[Wizard Connection] Failed to save configuration to disk!");
+                    NOTIFY_ERROR("Failed to save printer configuration. You may need to re-enter connection settings.");
                 }
             } catch (const std::exception& e) {
                 spdlog::error("[Wizard Connection] Failed to save config: {}", e.what());
+                NOTIFY_ERROR("Error saving configuration: {}", e.what());
             }
 
             // Trigger hardware discovery now that connection is established
@@ -391,7 +395,7 @@ lv_obj_t* ui_wizard_connection_create(lv_obj_t* parent) {
     spdlog::debug("[Wizard Connection] Creating connection screen");
 
     if (!parent) {
-        spdlog::error("[Wizard Connection] Cannot create: null parent");
+        LOG_ERROR_INTERNAL("[Wizard Connection] Cannot create: null parent - coding error");
         return nullptr;
     }
 
@@ -399,7 +403,7 @@ lv_obj_t* ui_wizard_connection_create(lv_obj_t* parent) {
     connection_screen_root = (lv_obj_t*)lv_xml_create(parent, "wizard_connection", nullptr);
 
     if (!connection_screen_root) {
-        spdlog::error("[Wizard Connection] Failed to create from XML");
+        LOG_ERROR_INTERNAL("[Wizard Connection] Failed to create from XML - check wizard_connection.xml");
         return nullptr;
     }
 
@@ -409,7 +413,7 @@ lv_obj_t* ui_wizard_connection_create(lv_obj_t* parent) {
         lv_obj_add_event_cb(test_btn, on_test_connection_clicked, LV_EVENT_CLICKED, nullptr);
         spdlog::debug("[Wizard Connection] Test button callback attached");
     } else {
-        spdlog::warn("[Wizard Connection] Test button not found in XML");
+        LOG_ERROR_INTERNAL("[Wizard Connection] Test button 'btn_test_connection' not found in XML - check wizard_connection.xml");
     }
 
     // Find input fields and attach change handlers + keyboard support
