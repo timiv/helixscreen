@@ -1,3 +1,4 @@
+* Clean up NULL vs nullptr usage (use nullptr consistently in C++ code)
 * More test coverage
 * have libhv use spdlog for logging if possible
 * have tip of the day fade out and in over 1 second with animation

@@ -14,10 +14,6 @@
 
 #include <spdlog/spdlog.h>
 
-// LVGL default theme grey colors (from lv_theme_default.c)
-// These match what lv_button uses for its background
-#define LIGHT_COLOR_GREY lv_palette_lighten(LV_PALETTE_GREY, 2)
-#define DARK_COLOR_GREY lv_color_hex(0x2f3237)
 
 /**
  * XML create handler for ui_dialog
@@ -51,8 +47,8 @@ static void ui_dialog_xml_apply(lv_xml_parser_state_t* state, const char** attrs
         return;
     }
 
-    // Apply LVGL's built-in button grey as background (theme-aware)
-    lv_color_t bg_color = ui_theme_is_dark_mode() ? DARK_COLOR_GREY : LIGHT_COLOR_GREY;
+    // Apply theme grey as background (matches lv_button styling from helix_theme)
+    lv_color_t bg_color = ui_theme_get_color("theme_grey");
     lv_obj_set_style_bg_color(obj, bg_color, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
 
