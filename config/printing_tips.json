@@ -225,7 +225,7 @@
         {
           "id": "tip-023",
           "title": "Enable Dynamic Acceleration",
-          "content": "Use lower acceleration for outer perimeters (1000-2000mm/s²) and higher for infill (3000-5000mm/s²)",
+          "content": "Use lower acceleration for outer perimeters (1000-2000mm/s^2) and higher for infill (3000-5000mm/s^2)",
           "tags": ["speed", "quality", "motion"],
           "difficulty": "intermediate",
           "priority": "medium",
@@ -304,7 +304,7 @@
         {
           "id": "tip-031",
           "title": "Dry Your Filament",
-          "content": "Even 'new' filament absorbs moisture; dry PLA at 50°C for 4-6 hours, PETG at 65°C for 6-8 hours",
+          "content": "Even 'new' filament absorbs moisture; dry PLA at 50C for 4-6 hours, PETG at 65C for 6-8 hours",
           "tags": ["filament", "quality", "preparation"],
           "difficulty": "beginner",
           "priority": "high",
