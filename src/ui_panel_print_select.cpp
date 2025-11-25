@@ -103,7 +103,7 @@ struct PrintFileData {
 static const char* CARD_COMPONENT_NAME = "print_file_card";
 static const int CARD_GAP = 20;
 static const int CARD_MIN_WIDTH = 165; // Increased to prevent metadata wrapping
-static const int CARD_MAX_WIDTH = 220;
+static const int CARD_MAX_WIDTH = 230;
 static const int CARD_DEFAULT_HEIGHT = 245; // Default height (overridden by dynamic calculation)
 
 // Row count breakpoint: minimum container height for 3 rows vs 2 rows
@@ -736,49 +736,8 @@ static void populate_card_view() {
                 }
             }
 
-            // Scale gradient background to cover card
-            lv_obj_t* gradient_bg = lv_obj_find_by_name(card, "gradient_background");
-            if (gradient_bg) {
-                lv_image_header_t header;
-                lv_result_t res = lv_image_decoder_get_info(lv_image_get_src(gradient_bg), &header);
-
-                if (res == LV_RESULT_OK && header.w > 0 && header.h > 0) {
-                    // Calculate scale to cover the card
-                    float scale_w = (float)dims.card_width / header.w;
-                    float scale_h = (float)dims.card_height / header.h;
-                    float scale =
-                        (scale_w > scale_h) ? scale_w : scale_h; // Use larger scale to cover
-
-                    uint16_t zoom = (uint16_t)(scale * 256);
-                    lv_image_set_scale(gradient_bg, zoom);
-                    lv_image_set_inner_align(gradient_bg, LV_IMAGE_ALIGN_CENTER);
-                }
-            }
-
-            // Scale thumbnail to fill card (cover fit - may crop)
-            lv_obj_t* thumbnail = lv_obj_find_by_name(card, "thumbnail");
-            if (thumbnail) {
-                // Get the source image dimensions
-                lv_image_header_t header;
-                lv_result_t res = lv_image_decoder_get_info(lv_image_get_src(thumbnail), &header);
-
-                if (res == LV_RESULT_OK && header.w > 0 && header.h > 0) {
-                    // Calculate scale to cover the card (like CSS object-fit: cover)
-                    float scale_w = (float)dims.card_width / header.w;
-                    float scale_h = (float)dims.card_height / header.h;
-                    float scale =
-                        (scale_w > scale_h) ? scale_w : scale_h; // Use larger scale to cover
-
-                    uint16_t zoom = (uint16_t)(scale * 256);
-                    lv_image_set_scale(thumbnail, zoom);
-                    lv_image_set_inner_align(thumbnail, LV_IMAGE_ALIGN_CENTER);
-
-                    int img_w = header.w, img_h = header.h; // Copy bitfields for formatting
-                    spdlog::debug("Thumbnail scale: img={}x{}, card={}x{}, zoom={} ({:.1f}%)",
-                                  img_w, img_h, dims.card_width, dims.card_height, zoom,
-                                  scale * 100);
-                }
-            }
+            // Thumbnail scaling is handled by XML inner_align="contain"
+            // No manual C++ scaling needed - let LVGL handle it
 
             // Attach click handler
             attach_card_click_handler(card, file);

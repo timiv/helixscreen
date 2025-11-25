@@ -4,6 +4,7 @@
 
 <component>
   <!-- Print Select Panel - Dual view: Card grid or List view -->
+  
   <!-- Panel-specific constants -->
   <consts>
     <!-- List view dimensions -->
@@ -21,18 +22,22 @@
     <!-- Minimum widths to prevent text crushing -->
     <px name="metadata_label_min_width" value="30"/>
   </consts>
+
   <view extends="lv_obj" width="100%" height="100%" style_pad_all="0" style_pad_gap="0" style_border_width="0" flex_flow="column" name="print_select_panel_root">
-    <!-- Top bar with view toggle -->
-    <lv_obj width="100%" height="60" style_border_width="0" style_pad_left="#nav_padding" style_pad_right="#nav_padding" style_pad_top="#padding_small" style_pad_bottom="#padding_small" flex_flow="row" style_flex_main_place="end" style_flex_cross_place="center">
-      <!-- View toggle button (icon-only) -->
-      <lv_button name="view_toggle_btn" width="40" height="40" style_bg_opa="0" style_border_width="0" style_shadow_width="0" style_pad_all="0">
-        <icon name="view_toggle_icon" src="mat_list" size="md" variant="primary"/>
+    
+    <!-- Compact header with view toggle (32px vs old 60px) -->
+    <lv_obj width="100%" height="32" style_border_width="0" style_bg_opa="0" style_pad_left="8" style_pad_right="8" style_pad_top="4" style_pad_bottom="4" flex_flow="row" style_flex_main_place="end" style_flex_cross_place="center">
+      <!-- View toggle button (icon-only, compact) -->
+      <lv_button name="view_toggle_btn" width="24" height="24" style_bg_opa="0" style_border_width="0" style_shadow_width="0" style_pad_all="0">
+        <icon name="view_toggle_icon" src="mat_list" size="sm" variant="primary"/>
       </lv_button>
     </lv_obj>
+
     <!-- Card view container (default visible) -->
-    <lv_obj name="card_view_container" width="100%" height="100%" style_pad_all="#nav_padding" style_pad_gap="#padding_normal" style_border_width="0" flex_flow="row_wrap" scrollable="true" flex_grow="1">
+    <lv_obj name="card_view_container" width="100%" height="100%" style_pad_all="0" style_pad_left="#padding_small" style_pad_right="#padding_small" style_pad_gap="#padding_normal" style_border_width="0" flex_flow="row_wrap" scrollable="true" flex_grow="1">
       <!-- Cards will be dynamically added here via C++ -->
     </lv_obj>
+    
     <!-- List view container (initially hidden) -->
     <lv_obj name="list_view_container" width="100%" height="100%" style_pad_all="0" style_border_width="0" flex_flow="column" flex_grow="1" hidden="true">
       <!-- Column headers -->
