@@ -137,9 +137,13 @@ void ui_status_bar_init() {
     spdlog::debug("[StatusBar] Registering observer on printer_connection_state_subject at {}", (void*)conn_subject);
     lv_subject_add_observer(conn_subject, printer_connection_observer, nullptr);
 
-    // Set initial notification icon color (no observer, just set to default gray)
-    // Network and printer observers fire immediately, but notification has no observer
-    ui_status_bar_update_notification(NotificationStatus::NONE);
+    // Set bell icon to neutral color (stays this way - badge color indicates severity)
+    // Unlike network/printer icons which change color based on state, bell stays neutral
+    if (notification_icon) {
+        lv_color_t neutral = ui_theme_parse_color(lv_xml_get_const(NULL, "text_secondary"));
+        lv_obj_set_style_image_recolor(notification_icon, neutral, 0);
+        lv_obj_set_style_image_recolor_opa(notification_icon, LV_OPA_COVER, 0);
+    }
 
     spdlog::debug("[StatusBar] Initialization complete");
 }
@@ -218,32 +222,35 @@ void ui_status_bar_update_printer(PrinterStatus status) {
 }
 
 void ui_status_bar_update_notification(NotificationStatus status) {
-    if (!notification_icon) {
-        spdlog::warn("Status bar not initialized, cannot update notification icon");
+    if (!notification_badge) {
+        spdlog::warn("Status bar not initialized, cannot update notification badge");
         return;
     }
 
-    // Notification icon is a Material Design image (mat_notifications - bell)
-    // Color indicates highest severity: red = error, yellow = warning, gray = info/none
-    lv_color_t color;
+    // Badge background color indicates highest severity:
+    // red = error, yellow/orange = warning, blue = info
+    // Bell icon stays neutral - badge color alone communicates urgency
+    lv_color_t badge_color;
 
     switch (status) {
         case NotificationStatus::ERROR:
-            color = ui_theme_parse_color(lv_xml_get_const(NULL, "error_color"));
+            badge_color = ui_theme_parse_color(lv_xml_get_const(NULL, "error_color"));
             break;
         case NotificationStatus::WARNING:
-            color = ui_theme_parse_color(lv_xml_get_const(NULL, "warning_color"));
+            badge_color = ui_theme_parse_color(lv_xml_get_const(NULL, "warning_color"));
             break;
         case NotificationStatus::INFO:
+            badge_color = ui_theme_parse_color(lv_xml_get_const(NULL, "info_color"));
+            break;
         case NotificationStatus::NONE:
         default:
-            color = ui_theme_parse_color(lv_xml_get_const(NULL, "text_secondary"));
+            // Default to info color if somehow called with NONE but badge visible
+            badge_color = ui_theme_parse_color(lv_xml_get_const(NULL, "info_color"));
             break;
     }
 
-    // Update image recolor for Material Design icon
-    lv_obj_set_style_image_recolor(notification_icon, color, 0);
-    lv_obj_set_style_image_recolor_opa(notification_icon, LV_OPA_COVER, 0);
+    // Update badge background color (not the bell icon)
+    lv_obj_set_style_bg_color(notification_badge, badge_color, 0);
 }
 
 void ui_status_bar_update_notification_count(size_t count) {

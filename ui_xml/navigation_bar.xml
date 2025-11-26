@@ -54,8 +54,9 @@
         <lv_button name="status_btn_notification" width="100%" height="100%" style_bg_opa="0" style_shadow_width="0" style_border_width="0" style_radius="0" style_pad_all="0">
           <icon name="status_notification_icon" src="mat_notifications" align="center"/>
         </lv_button>
-        <!-- Notification Count Badge (hidden by default) -->
-        <lv_obj name="notification_badge" width="18" height="18" align="top_right" style_radius="9" style_bg_color="#error_color" style_border_width="0" style_pad_all="0" hidden="true">
+        <!-- Notification Count Badge - positioned to overlap top-right of centered icon -->
+        <!-- Icon is 32px centered in 70px container, so offset badge to overlap icon corner -->
+        <lv_obj name="notification_badge" width="18" height="18" align="center" x="6" y="-6" style_radius="9" style_bg_color="#error_color" style_border_width="0" style_pad_all="0" hidden="true">
           <lv_label name="notification_badge_count" text="0" align="center" style_text_font="#font_small" style_text_color="#ffffff"/>
         </lv_obj>
       </lv_obj>
