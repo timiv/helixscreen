@@ -137,6 +137,10 @@ void ui_status_bar_init() {
     spdlog::debug("[StatusBar] Registering observer on printer_connection_state_subject at {}", (void*)conn_subject);
     lv_subject_add_observer(conn_subject, printer_connection_observer, nullptr);
 
+    // Set initial notification icon color (no observer, just set to default gray)
+    // Network and printer observers fire immediately, but notification has no observer
+    ui_status_bar_update_notification(NotificationStatus::NONE);
+
     spdlog::debug("[StatusBar] Initialization complete");
 }
 
@@ -146,7 +150,7 @@ void ui_status_bar_update_network(NetworkStatus status) {
         return;
     }
 
-    // Network icon is a Font Awesome label showing link symbol (generic network indicator)
+    // Network icon is a Material Design image (mat_lan - LAN network indicator)
     lv_color_t color;
 
     switch (status) {
@@ -162,8 +166,9 @@ void ui_status_bar_update_network(NetworkStatus status) {
             break;
     }
 
-    // Update text color for the Font Awesome label
-    lv_obj_set_style_text_color(network_icon, color, 0);
+    // Update image recolor for Material Design icon
+    lv_obj_set_style_image_recolor(network_icon, color, 0);
+    lv_obj_set_style_image_recolor_opa(network_icon, LV_OPA_COVER, 0);
 }
 
 void ui_status_bar_update_printer(PrinterStatus status) {
@@ -174,45 +179,41 @@ void ui_status_bar_update_printer(PrinterStatus status) {
         return;
     }
 
-    const char* icon = nullptr;
+    // Printer icon is a Material Design image (mat_printer_3d)
+    // Color indicates state: green=ready, blue=printing, red=error, yellow=was connected, gray=never connected
     lv_color_t color;
 
     switch (status) {
         case PrinterStatus::READY:
-            icon = LV_SYMBOL_OK;
             color = ui_theme_parse_color(lv_xml_get_const(NULL, "success_color"));
-            spdlog::debug("[StatusBar] Setting icon to LV_SYMBOL_OK (green checkmark)");
+            spdlog::debug("[StatusBar] Setting printer icon to green (ready)");
             break;
         case PrinterStatus::PRINTING:
-            icon = LV_SYMBOL_PLAY;
             color = ui_theme_parse_color(lv_xml_get_const(NULL, "info_color"));
-            spdlog::debug("[StatusBar] Setting icon to LV_SYMBOL_PLAY (blue play)");
+            spdlog::debug("[StatusBar] Setting printer icon to blue (printing)");
             break;
         case PrinterStatus::ERROR:
-            icon = LV_SYMBOL_WARNING;
             color = ui_theme_parse_color(lv_xml_get_const(NULL, "error_color"));
-            spdlog::debug("[StatusBar] Setting icon to LV_SYMBOL_WARNING (red)");
+            spdlog::debug("[StatusBar] Setting printer icon to red (error)");
             break;
         case PrinterStatus::DISCONNECTED:
         default:
             // Distinguish "never connected" (neutral) from "lost connection" (warning)
             if (get_printer_state().was_ever_connected()) {
                 // Was connected before - show warning
-                icon = LV_SYMBOL_WARNING;
                 color = ui_theme_parse_color(lv_xml_get_const(NULL, "warning_color"));
-                spdlog::debug("[StatusBar] Setting icon to LV_SYMBOL_WARNING (yellow - was connected)");
+                spdlog::debug("[StatusBar] Setting printer icon to yellow (was connected)");
             } else {
-                // Never connected - show neutral gray checkmark
-                icon = LV_SYMBOL_OK;
+                // Never connected - show neutral gray
                 color = ui_theme_parse_color(lv_xml_get_const(NULL, "text_secondary"));
-                spdlog::debug("[StatusBar] Setting icon to LV_SYMBOL_OK (gray - never connected)");
+                spdlog::debug("[StatusBar] Setting printer icon to gray (never connected)");
             }
             break;
     }
 
-    spdlog::debug("[StatusBar] Setting text on printer_icon widget at {}", (void*)printer_icon);
-    lv_label_set_text(printer_icon, icon);
-    lv_obj_set_style_text_color(printer_icon, color, 0);
+    // Update image recolor for Material Design icon
+    lv_obj_set_style_image_recolor(printer_icon, color, 0);
+    lv_obj_set_style_image_recolor_opa(printer_icon, LV_OPA_COVER, 0);
     spdlog::debug("[StatusBar] Printer icon updated successfully");
 }
 
@@ -222,8 +223,8 @@ void ui_status_bar_update_notification(NotificationStatus status) {
         return;
     }
 
-    // Bell is always visible - just change color based on highest severity
-    // Red = error, Yellow = warning, Gray = info/none
+    // Notification icon is a Material Design image (mat_notifications - bell)
+    // Color indicates highest severity: red = error, yellow = warning, gray = info/none
     lv_color_t color;
 
     switch (status) {
@@ -240,7 +241,9 @@ void ui_status_bar_update_notification(NotificationStatus status) {
             break;
     }
 
-    lv_obj_set_style_text_color(notification_icon, color, 0);
+    // Update image recolor for Material Design icon
+    lv_obj_set_style_image_recolor(notification_icon, color, 0);
+    lv_obj_set_style_image_recolor_opa(notification_icon, LV_OPA_COVER, 0);
 }
 
 void ui_status_bar_update_notification_count(size_t count) {

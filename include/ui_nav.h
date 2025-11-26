@@ -133,3 +133,14 @@ void ui_nav_push_overlay(lv_obj_t* overlay_panel);
  * @return true if navigation occurred, false if history empty
  */
 bool ui_nav_go_back();
+
+/**
+ * @brief Wire up status icons in navbar
+ *
+ * Applies responsive scaling and theming to status icons
+ * (printer, network, notification) at the bottom of the navbar.
+ * Uses same scaling logic as navigation icons for consistency.
+ *
+ * @param navbar Navigation bar widget containing status icons
+ */
+void ui_nav_wire_status_icons(lv_obj_t* navbar);

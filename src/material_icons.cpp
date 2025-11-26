@@ -29,7 +29,7 @@
 #include <spdlog/spdlog.h>
 
 void material_icons_register() {
-    spdlog::trace("Registering Material Design icons (72 total)...");
+    spdlog::trace("Registering Material Design icons (74 total)...");
 
     // Navigation & Movement
     lv_xml_register_image(NULL, "mat_home", &home);
@@ -79,6 +79,9 @@ void material_icons_register() {
 
     // Network & Communication
     lv_xml_register_image(NULL, "mat_network", &network_img);
+    lv_xml_register_image(NULL, "mat_lan", &lan);
+    lv_xml_register_image(NULL, "mat_router", &router);
+    lv_xml_register_image(NULL, "mat_printer_3d", &printer_3d);
 
     // Tuning & Adjustments
     lv_xml_register_image(NULL, "mat_fine_tune", &fine_tune_img);
@@ -113,6 +116,7 @@ void material_icons_register() {
 
     // Misc
     lv_xml_register_image(NULL, "mat_spoolman", &spoolman_img);
+    lv_xml_register_image(NULL, "mat_printer_3d", &printer_3d);
 
     // WiFi & Network
     spdlog::debug("Registering WiFi icons...");
@@ -132,4 +136,5 @@ void material_icons_register() {
     spdlog::trace("WiFi icons registered (13 total)");
 
     spdlog::trace("Material Design icons registered successfully");
+    lv_xml_register_image(NULL, "mat_notifications", &notifications);
 }

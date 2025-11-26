@@ -582,3 +582,68 @@ bool ui_nav_go_back() {
 
     return true;
 }
+
+void ui_nav_wire_status_icons(lv_obj_t* navbar) {
+    if (!navbar) {
+        spdlog::error("NULL navbar provided to ui_nav_wire_status_icons");
+        return;
+    }
+
+    // Determine responsive sizing based on screen height (same logic as nav icons)
+    lv_display_t* display = lv_display_get_default();
+    int32_t screen_height = lv_display_get_vertical_resolution(display);
+    uint16_t nav_icon_scale;
+    lv_coord_t button_size;
+
+    if (screen_height <= UI_SCREEN_TINY_H) {
+        nav_icon_scale = 154;
+        button_size = UI_NAV_BUTTON_SIZE_TINY;
+    } else if (screen_height <= UI_SCREEN_SMALL_H) {
+        nav_icon_scale = 154;
+        button_size = UI_NAV_BUTTON_SIZE_SMALL;
+    } else if (screen_height <= UI_SCREEN_MEDIUM_H) {
+        nav_icon_scale = 192;
+        button_size = UI_NAV_BUTTON_SIZE_MEDIUM;
+    } else {
+        nav_icon_scale = 256;
+        button_size = UI_NAV_BUTTON_SIZE_LARGE;
+    }
+
+    // Status icons are 25% smaller than nav icons
+    uint16_t status_icon_scale = (nav_icon_scale * 3) / 4;
+
+    // Status icon button and icon names (must match XML and ui_status_bar_init() expectations)
+    const char* button_names[] = {"status_btn_printer", "status_btn_network", "status_btn_notification"};
+    const char* icon_names[] = {"status_printer_icon", "status_network_icon", "status_notification_icon"};
+    const int status_icon_count = 3;
+
+    for (int i = 0; i < status_icon_count; i++) {
+        lv_obj_t* btn = lv_obj_find_by_name(navbar, button_names[i]);
+        lv_obj_t* icon_widget = lv_obj_find_by_name(navbar, icon_names[i]);
+
+        if (!btn || !icon_widget) {
+            spdlog::warn("Status icon {}: btn={}, icon={} (may not exist yet)",
+                        button_names[i], (void*)btn, (void*)icon_widget);
+            continue;
+        }
+
+        // Apply responsive sizing to button
+        lv_obj_set_size(btn, button_size, button_size);
+
+        // Apply responsive scaling to icon image (25% smaller than nav icons)
+        if (lv_obj_check_type(icon_widget, &lv_image_class)) {
+            lv_image_set_scale(icon_widget, status_icon_scale);
+            // NOTE: Don't set colors here - ui_status_bar_init() handles reactive coloring
+        }
+
+        // Make icon non-clickable so clicks pass through to button
+        lv_obj_add_flag(icon_widget, LV_OBJ_FLAG_EVENT_BUBBLE);
+        lv_obj_remove_flag(icon_widget, LV_OBJ_FLAG_CLICKABLE);
+
+        // Make button clickable
+        lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
+
+        spdlog::debug("Status icon {} wired: scale={} (75% of nav), button_size={}",
+                     button_names[i], status_icon_scale, button_size);
+    }
+}

@@ -78,6 +78,10 @@ LV_IMG_DECLARE(light_off);
 LV_IMG_DECLARE(network_img);
 
 // WiFi & Network
+LV_IMG_DECLARE(notifications);
+LV_IMG_DECLARE(printer_3d);
+LV_IMG_DECLARE(lan);
+LV_IMG_DECLARE(router);
 LV_IMG_DECLARE(wifi);
 LV_IMG_DECLARE(wifi_off);
 LV_IMG_DECLARE(wifi_lock);
