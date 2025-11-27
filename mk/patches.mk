@@ -29,3 +29,14 @@ apply-patches:
 	else \
 		echo "$(GREEN)✓ LVGL theme breakpoints patch already applied$(RESET)"; \
 	fi
+	$(Q)if git -C $(LVGL_DIR) diff --quiet src/xml/parsers/lv_xml_image_parser.c 2>/dev/null; then \
+		echo "$(YELLOW)→ Applying LVGL image parser contain/cover patch...$(RESET)"; \
+		if git -C $(LVGL_DIR) apply --check ../../patches/lvgl_image_parser_contain.patch 2>/dev/null; then \
+			git -C $(LVGL_DIR) apply ../../patches/lvgl_image_parser_contain.patch && \
+			echo "$(GREEN)✓ Image parser contain/cover patch applied$(RESET)"; \
+		else \
+			echo "$(YELLOW)⚠ Cannot apply patch (already applied or conflicts)$(RESET)"; \
+		fi \
+	else \
+		echo "$(GREEN)✓ LVGL image parser contain/cover patch already applied$(RESET)"; \
+	fi

@@ -263,7 +263,6 @@ class PrintStatusPanel : public PanelBase {
     //
 
     void update_all_displays();
-    void scale_thumbnail_images();
 
     static void format_time(int seconds, char* buf, size_t buf_size);
 

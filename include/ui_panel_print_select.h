@@ -217,7 +217,7 @@ class PrintSelectPanel : public PanelBase {
 
     static constexpr const char* CARD_COMPONENT_NAME = "print_file_card";
     static constexpr int CARD_GAP = 20;
-    static constexpr int CARD_MIN_WIDTH = 165;
+    static constexpr int CARD_MIN_WIDTH = 155;  // Lowered from 165 to fit 4 columns on 800px screens
     static constexpr int CARD_MAX_WIDTH = 230;
     static constexpr int CARD_DEFAULT_HEIGHT = 245;
     static constexpr int ROW_COUNT_3_MIN_HEIGHT = 520;
@@ -303,11 +303,6 @@ class PrintSelectPanel : public PanelBase {
      * @brief Create detail view overlay (called once during setup)
      */
     void create_detail_view();
-
-    /**
-     * @brief Scale images in detail view after showing
-     */
-    void scale_detail_images();
 
     /**
      * @brief Hide delete confirmation dialog

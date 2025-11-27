@@ -103,11 +103,8 @@ void PrintStatusPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         return;
     }
 
-    // Force layout calculation before scaling images
+    // Force layout calculation
     lv_obj_update_layout(panel_);
-
-    // Perform initial image scaling
-    scale_thumbnail_images();
 
     // Register resize callback
     ui_resize_handler_register(on_resize_static);
@@ -239,32 +236,6 @@ void PrintStatusPanel::update_all_displays() {
     lv_subject_copy_string(&pause_button_subject_, pause_button_buf_);
 }
 
-void PrintStatusPanel::scale_thumbnail_images() {
-    if (!panel_) return;
-
-    // Find thumbnail section to get target dimensions
-    lv_obj_t* thumbnail_section = lv_obj_find_by_name(panel_, "thumbnail_section");
-    if (!thumbnail_section) {
-        spdlog::warn("[{}] Thumbnail section not found, cannot scale images", get_name());
-        return;
-    }
-
-    lv_coord_t section_width = lv_obj_get_width(thumbnail_section);
-    lv_coord_t section_height = lv_obj_get_height(thumbnail_section);
-
-    // Scale gradient background to cover the entire section
-    lv_obj_t* gradient_bg = lv_obj_find_by_name(panel_, "gradient_background");
-    if (gradient_bg) {
-        ui_image_scale_to_cover(gradient_bg, section_width, section_height);
-    }
-
-    // Scale thumbnail to contain within section (no cropping)
-    lv_obj_t* thumbnail = lv_obj_find_by_name(panel_, "print_thumbnail");
-    if (thumbnail) {
-        ui_image_scale_to_contain(thumbnail, section_width, section_height, LV_IMAGE_ALIGN_TOP_MID);
-    }
-}
-
 // ============================================================================
 // INSTANCE HANDLERS
 // ============================================================================
@@ -310,7 +281,6 @@ void PrintStatusPanel::handle_cancel_button() {
 
 void PrintStatusPanel::handle_resize() {
     spdlog::debug("[{}] Handling resize event", get_name());
-    scale_thumbnail_images();
 }
 
 // ============================================================================

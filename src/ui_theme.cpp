@@ -417,3 +417,14 @@ int32_t ui_theme_get_font_height(const lv_font_t* font) {
 
     return height;
 }
+
+void ui_set_overlay_width(lv_obj_t* obj, lv_obj_t* screen) {
+    if (!obj || !screen) {
+        spdlog::warn("[Theme] ui_set_overlay_width: NULL pointer");
+        return;
+    }
+
+    lv_coord_t screen_width = lv_obj_get_width(screen);
+    lv_coord_t nav_width = UI_NAV_WIDTH(screen_width);
+    lv_obj_set_width(obj, screen_width - nav_width);
+}

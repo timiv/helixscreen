@@ -13,26 +13,29 @@
       <!-- ================================================================== -->
       <!-- LEFT SECTION: Thumbnail (2/3 width via flex_grow)                 -->
       <!-- ================================================================== -->
-      <ui_card name="thumbnail_section" flex_grow="2" height="100%" style_pad_all="0" style_radius="#border_radius">
-        <!-- Gradient background (procedural canvas with dithering) -->
-        <ui_gradient_canvas name="gradient_background" width="100%" height="100%" dither="true" align="center"/>
-        <!-- Thumbnail image (object-fit:contain - scales to fit, centered, no clipping) -->
-        <lv_image name="print_thumbnail" src="A:assets/images/thumbnail-placeholder.png" width="100%" height="100%" style_bg_opa="0" align="center" inner_align="contain"/>
-        <!-- Metadata Overlay (bottom section) -->
-        <lv_obj name="metadata_overlay" width="100%" height="120" align="bottom_mid" style_bg_opa="180" style_border_width="0" style_pad_all="#padding_normal" style_pad_gap="8" flex_flow="column" scrollable="false">
-          <!-- Print Progress Bar -->
-          <lv_bar name="print_progress" width="100%" height="8" style_bg_opa="255" style_border_width="0" style_radius="4" bind_value="print_progress"/>
-          <!-- File Name -->
-          <lv_label name="file_name" text="benchy.gcode" bind_text="print_filename" width="100%" style_text_font="#font_heading" style_text_align="left"/>
-          <!-- Status Row: Time/Progress -->
-          <lv_obj width="100%" height="24" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row" style_flex_main_place="space_between" scrollable="false">
-            <!-- Time display: elapsed / remaining -->
-            <lv_obj style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center">
-              <lv_label name="print_elapsed" text="00:00:00" bind_text="print_elapsed" style_text_font="#font_body"/>
-              <lv_label text=" / " style_text_font="#font_body"/>
-              <lv_label name="print_remaining" text="00:00:00" bind_text="print_remaining" style_text_font="#font_body"/>
+      <ui_card name="thumbnail_section" flex_grow="2" height="100%" style_pad_all="0" style_radius="#border_radius" style_clip_corner="true">
+        <!-- Gradient background (procedural canvas with dithering, fills entire section) -->
+        <ui_gradient_canvas name="gradient_background" width="100%" height="100%" dither="true"/>
+        <!-- Thumbnail image (contain = scales to fit within bounds, centered) -->
+        <lv_image name="print_thumbnail" bind_src="print_thumbnail" width="100%" height="100%" style_bg_opa="0" inner_align="contain"/>
+        <!-- Metadata clip container - clips top rounded corners of inner overlay -->
+        <lv_obj width="100%" height="120" style_bg_opa="0" style_border_width="0" style_radius="0" style_pad_all="0" align="bottom_mid" scrollable="false" name="metadata_clip">
+          <!-- Inner overlay with rounded corners - taller to hide top radius -->
+          <lv_obj name="metadata_overlay" width="100%" height="128" align="bottom_mid" style_bg_opa="180" style_border_width="0" style_radius="#border_radius" style_pad_left="#padding_normal" style_pad_right="#padding_normal" style_pad_top="28" style_pad_bottom="#padding_normal" style_pad_gap="8" flex_flow="column" scrollable="false">
+            <!-- Print Progress Bar -->
+            <lv_bar name="print_progress" width="100%" height="8" style_bg_opa="255" style_border_width="0" style_radius="4" bind_value="print_progress"/>
+            <!-- File Name -->
+            <lv_label name="file_name" text="benchy.gcode" bind_text="print_filename" width="100%" style_text_font="#font_heading" style_text_align="left"/>
+            <!-- Status Row: Time/Progress -->
+            <lv_obj width="100%" height="24" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row" style_flex_main_place="space_between" scrollable="false">
+              <!-- Time display: elapsed / remaining -->
+              <lv_obj style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center">
+                <lv_label name="print_elapsed" text="00:00:00" bind_text="print_elapsed" style_text_font="#font_body"/>
+                <lv_label text=" / " style_text_font="#font_body"/>
+                <lv_label name="print_remaining" text="00:00:00" bind_text="print_remaining" style_text_font="#font_body"/>
+              </lv_obj>
+              <lv_label name="print_percent" text="46%" bind_text="print_progress_text" style_text_font="#font_body"/>
             </lv_obj>
-            <lv_label name="print_percent" text="46%" bind_text="print_progress_text" style_text_font="#font_body"/>
           </lv_obj>
         </lv_obj>
       </ui_card>

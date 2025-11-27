@@ -187,3 +187,14 @@ void ui_theme_apply_bg_color(lv_obj_t* obj, const char* base_name, lv_part_t par
  * @return Font height in pixels
  */
 int32_t ui_theme_get_font_height(const lv_font_t* font);
+
+/**
+ * @brief Set overlay widget width to fill space after nav bar
+ *
+ * Utility for overlay panels/widgets that use x="#nav_width" positioning.
+ * Sets width to (screen_width - nav_width).
+ *
+ * @param obj Widget to resize (typically an overlay panel or detail view)
+ * @param screen Parent screen to calculate width from
+ */
+void ui_set_overlay_width(lv_obj_t* obj, lv_obj_t* screen);

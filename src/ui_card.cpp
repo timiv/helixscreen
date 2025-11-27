@@ -70,7 +70,7 @@ static void* ui_card_xml_create(lv_xml_parser_state_t* state, const char** attrs
     // 6. Padding: 16px default
     lv_obj_set_style_pad_all(obj, 16, LV_PART_MAIN);
 
-    spdlog::trace("[Card] Created ui_card with defaults: bg=card_bg, pad=16, border=0, shadow=0");
+    spdlog::trace("[Card] Created ui_card with theme-aware defaults");
     return (void*)obj;
 }
 

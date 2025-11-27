@@ -30,6 +30,43 @@
 PrintStatusPanel& get_global_print_status_panel();
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+namespace {
+
+/**
+ * @brief Strip common G-code file extensions for display
+ *
+ * Removes extensions like .gcode, .g, .gco (case-insensitive) from filenames
+ * for cleaner display in the UI. The actual filename is preserved for file operations.
+ *
+ * @param filename The original filename
+ * @return Filename without the G-code extension, or original if no match
+ */
+std::string strip_gcode_extension(const std::string& filename) {
+    // Common G-code extensions (case-insensitive check)
+    static const std::vector<std::string> extensions = {
+        ".gcode", ".GCODE", ".Gcode",
+        ".gco", ".GCO", ".Gco",
+        ".g", ".G"
+    };
+
+    for (const auto& ext : extensions) {
+        if (filename.size() > ext.size()) {
+            size_t pos = filename.size() - ext.size();
+            if (filename.compare(pos, ext.size(), ext) == 0) {
+                return filename.substr(0, pos);
+            }
+        }
+    }
+
+    return filename;
+}
+
+}  // namespace
+
+// ============================================================================
 // Global Instance
 // ============================================================================
 
@@ -80,8 +117,12 @@ void PrintSelectPanel::init_subjects() {
     // Initialize selected file subjects
     UI_SUBJECT_INIT_AND_REGISTER_STRING(selected_filename_subject_, selected_filename_buffer_, "",
                                         "selected_filename");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(selected_thumbnail_subject_, selected_thumbnail_buffer_,
-                                        DEFAULT_PLACEHOLDER_THUMB, "selected_thumbnail");
+
+    // Thumbnail uses POINTER subject (required by lv_image_bind_src)
+    strncpy(selected_thumbnail_buffer_, DEFAULT_PLACEHOLDER_THUMB,
+            sizeof(selected_thumbnail_buffer_) - 1);
+    UI_SUBJECT_INIT_AND_REGISTER_POINTER(selected_thumbnail_subject_, selected_thumbnail_buffer_,
+                                         "selected_thumbnail");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(selected_print_time_subject_, selected_print_time_buffer_,
                                         "", "selected_print_time");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(selected_filament_weight_subject_,
@@ -410,7 +451,12 @@ void PrintSelectPanel::populate_test_data() {
 void PrintSelectPanel::set_selected_file(const char* filename, const char* thumbnail_src,
                                           const char* print_time, const char* filament_weight) {
     lv_subject_copy_string(&selected_filename_subject_, filename);
-    lv_subject_copy_string(&selected_thumbnail_subject_, thumbnail_src);
+
+    // Thumbnail uses POINTER subject - copy to buffer then update pointer
+    strncpy(selected_thumbnail_buffer_, thumbnail_src, sizeof(selected_thumbnail_buffer_) - 1);
+    selected_thumbnail_buffer_[sizeof(selected_thumbnail_buffer_) - 1] = '\0';
+    lv_subject_set_pointer(&selected_thumbnail_subject_, selected_thumbnail_buffer_);
+
     lv_subject_copy_string(&selected_print_time_subject_, print_time);
     lv_subject_copy_string(&selected_filament_weight_subject_, filament_weight);
 
@@ -419,18 +465,16 @@ void PrintSelectPanel::set_selected_file(const char* filename, const char* thumb
 
 void PrintSelectPanel::show_detail_view() {
     if (detail_view_widget_) {
-        lv_obj_remove_flag(detail_view_widget_, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_move_foreground(detail_view_widget_);
+        // Use nav system for consistent backdrop and z-order management
+        ui_nav_push_overlay(detail_view_widget_);
         lv_subject_set_int(&detail_view_visible_subject_, 1);
-
-        // Scale images after showing (layout must be calculated first)
-        scale_detail_images();
     }
 }
 
 void PrintSelectPanel::hide_detail_view() {
     if (detail_view_widget_) {
-        lv_obj_add_flag(detail_view_widget_, LV_OBJ_FLAG_HIDDEN);
+        // Use nav system to properly hide and manage backdrop
+        ui_nav_go_back();
         lv_subject_set_int(&detail_view_visible_subject_, 0);
     }
 }
@@ -578,8 +622,11 @@ void PrintSelectPanel::populate_card_view() {
     for (size_t i = 0; i < file_list_.size(); i++) {
         const auto& file = file_list_[i];
 
+        // Strip extension for display (cleaner UI)
+        std::string display_name = strip_gcode_extension(file.filename);
+
         const char* attrs[] = {"thumbnail_src",   file.thumbnail_path.c_str(),
-                               "filename",        file.filename.c_str(),
+                               "filename",        display_name.c_str(),
                                "print_time",      file.print_time_str.c_str(),
                                "filament_weight", file.filament_str.c_str(),
                                NULL};
@@ -617,7 +664,10 @@ void PrintSelectPanel::populate_list_view() {
     for (size_t i = 0; i < file_list_.size(); i++) {
         const auto& file = file_list_[i];
 
-        const char* attrs[] = {"filename",      file.filename.c_str(),
+        // Strip extension for display (cleaner UI)
+        std::string display_name = strip_gcode_extension(file.filename);
+
+        const char* attrs[] = {"filename",      display_name.c_str(),
                                "file_size",     file.size_str.c_str(),
                                "modified_date", file.modified_str.c_str(),
                                "print_time",    file.print_time_str.c_str(),
@@ -740,10 +790,8 @@ void PrintSelectPanel::create_detail_view() {
         return;
     }
 
-    // Calculate width to fill remaining space after navigation bar
-    lv_coord_t screen_width = lv_obj_get_width(parent_screen_);
-    lv_coord_t nav_width = UI_NAV_WIDTH(screen_width);
-    lv_obj_set_width(detail_view_widget_, screen_width - nav_width);
+    // Set width to fill space after nav bar
+    ui_set_overlay_width(detail_view_widget_, parent_screen_);
 
     // Set responsive padding for content area
     lv_obj_t* content_container = lv_obj_find_by_name(detail_view_widget_, "content_container");
@@ -777,35 +825,6 @@ void PrintSelectPanel::create_detail_view() {
                         this);
 
     spdlog::debug("[{}] Detail view created", get_name());
-}
-
-void PrintSelectPanel::scale_detail_images() {
-    if (!detail_view_widget_)
-        return;
-
-    lv_obj_t* thumbnail_section = lv_obj_find_by_name(detail_view_widget_, "thumbnail_section");
-    if (!thumbnail_section) {
-        spdlog::warn("[{}] Thumbnail section not found in detail view", get_name());
-        return;
-    }
-
-    lv_obj_update_layout(thumbnail_section);
-
-    lv_coord_t section_width = lv_obj_get_content_width(thumbnail_section);
-    lv_coord_t section_height = lv_obj_get_content_height(thumbnail_section);
-
-    spdlog::debug("[{}] Detail view thumbnail section: {}x{}", get_name(), section_width,
-                  section_height);
-
-    lv_obj_t* gradient_bg = lv_obj_find_by_name(detail_view_widget_, "gradient_background");
-    if (gradient_bg) {
-        ui_image_scale_to_cover(gradient_bg, section_width, section_height);
-    }
-
-    lv_obj_t* thumbnail = lv_obj_find_by_name(detail_view_widget_, "detail_thumbnail");
-    if (thumbnail) {
-        ui_image_scale_to_contain(thumbnail, section_width, section_height, LV_IMAGE_ALIGN_TOP_MID);
-    }
 }
 
 void PrintSelectPanel::hide_delete_confirmation() {
@@ -873,13 +892,6 @@ void PrintSelectPanel::start_print() {
                 if (self->print_status_panel_widget_) {
                     self->hide_detail_view();
                     ui_nav_push_overlay(self->print_status_panel_widget_);
-
-                    if (self->panel_) {
-                        lv_obj_add_flag(self->panel_, LV_OBJ_FLAG_HIDDEN);
-                    }
-
-                    lv_obj_remove_flag(self->print_status_panel_widget_, LV_OBJ_FLAG_HIDDEN);
-                    lv_obj_move_foreground(self->print_status_panel_widget_);
                 } else {
                     spdlog::error("[{}] Print status panel not set", self->get_name());
                 }
@@ -897,13 +909,6 @@ void PrintSelectPanel::start_print() {
         if (print_status_panel_widget_) {
             hide_detail_view();
             ui_nav_push_overlay(print_status_panel_widget_);
-
-            if (panel_) {
-                lv_obj_add_flag(panel_, LV_OBJ_FLAG_HIDDEN);
-            }
-
-            lv_obj_remove_flag(print_status_panel_widget_, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_move_foreground(print_status_panel_widget_);
 
             get_global_print_status_panel().start_mock_print(selected_filename_buffer_, 250, 10800);
 
