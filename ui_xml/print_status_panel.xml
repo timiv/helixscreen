@@ -21,7 +21,7 @@
         <!-- Metadata clip container - clips top rounded corners of inner overlay -->
         <lv_obj width="100%" height="120" style_bg_opa="0" style_border_width="0" style_radius="0" style_pad_all="0" align="bottom_mid" scrollable="false" name="metadata_clip">
           <!-- Inner overlay with rounded corners - taller to hide top radius -->
-          <lv_obj name="metadata_overlay" width="100%" height="128" align="bottom_mid" style_bg_opa="180" style_border_width="0" style_radius="#border_radius" style_pad_left="#padding_normal" style_pad_right="#padding_normal" style_pad_top="28" style_pad_bottom="#padding_normal" style_pad_gap="8" flex_flow="column" scrollable="false">
+          <lv_obj name="metadata_overlay" width="100%" height="128" align="bottom_mid" style_bg_opa="180" style_border_width="0" style_radius="#border_radius" style_pad_left="#padding_normal" style_pad_right="#padding_normal" style_pad_top="28" style_pad_bottom="#padding_normal" style_pad_gap="#gap_small" flex_flow="column" scrollable="false">
             <!-- Print Progress Bar -->
             <lv_bar name="print_progress" width="100%" height="8" style_bg_opa="255" style_border_width="0" style_radius="4" bind_value="print_progress"/>
             <!-- File Name -->
@@ -56,22 +56,22 @@
         <!-- Spacer (pushes buttons to bottom) -->
         <lv_obj flex_grow="1" style_bg_opa="0" style_border_width="0"/>
         <!-- Control Buttons (2x2 Grid) -->
-        <lv_obj name="button_grid" width="100%" height="140" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="8">
+        <lv_obj name="button_grid" width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_top="0" style_pad_bottom="0" style_pad_left="#gap_small" style_pad_right="#gap_small" scrollable="false" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#gap_small">
           <!-- Row 1: Light, Pause -->
-          <lv_obj width="100%" height="62" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="8">
-            <lv_button name="btn_light" width="120" height="54" style_radius="6" style_border_width="0">
+          <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#gap_small">
+            <lv_button name="btn_light" flex_grow="1" style_border_width="0">
               <text_small text="Light" align="center"/>
             </lv_button>
-            <lv_button name="btn_pause" width="120" height="54" style_radius="6" style_border_width="0">
+            <lv_button name="btn_pause" flex_grow="1" style_border_width="0">
               <text_small text="Pause" align="center"/>
             </lv_button>
           </lv_obj>
           <!-- Row 2: Tune, Cancel -->
-          <lv_obj width="100%" height="62" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="8">
-            <lv_button name="btn_tune" width="120" height="54" style_radius="6" style_border_width="0">
+          <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#gap_small">
+            <lv_button name="btn_tune" flex_grow="1" style_border_width="0">
               <text_small text="Tune" align="center"/>
             </lv_button>
-            <lv_button name="btn_cancel" width="120" height="54" style_radius="6" style_border_width="0">
+            <lv_button name="btn_cancel" flex_grow="1" style_border_width="0">
               <text_small text="Cancel" style_text_color="0xFFFFFF" align="center"/>
             </lv_button>
           </lv_obj>
