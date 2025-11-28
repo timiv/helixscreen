@@ -1,12 +1,10 @@
 <?xml version="1.0"?>
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-
 <component>
   <!-- Reusable Header Bar Component - Improved Design v2 -->
   <!-- Used in modal overlays, sub-screens, and detail views -->
   <!-- Provides consistent back button + centered title + optional right button -->
-
   <!-- Key improvements over v1:
        - Flat 3-element layout (no nested containers) for true centering
        - Symmetric padding (left + right) for visual balance
@@ -14,60 +12,23 @@
        - Uses text_heading/text_body components for theme consistency
        - XML-controlled right button visibility (no C++ API needed)
   -->
-
   <!-- API Properties -->
   <api>
     <prop type="string" name="title"/>
     <prop type="string" name="right_button_text" default=""/>
-    <prop type="bool" name="show_right_button" default="false"/>
+    <!-- Note: right_button is hidden="true" by default; show via C++ if needed -->
   </api>
-
-  <view extends="lv_obj"
-        width="100%"
-        height="#header_height"
-        style_bg_opa="0"
-        style_border_width="0"
-        style_pad_left="#padding_normal"
-        style_pad_right="#padding_normal"
-        style_pad_top="#padding_tiny"
-        style_pad_bottom="#padding_tiny"
-        flex_flow="row"
-        style_flex_main_place="space_between"
-        style_flex_cross_place="center"
-        scrollable="false">
-
+  <view extends="lv_obj" width="100%" height="#header_height" style_bg_opa="0" style_border_width="0" style_pad_left="#padding_normal" style_pad_right="#padding_normal" style_pad_top="#padding_tiny" style_pad_bottom="#padding_tiny" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
     <!-- Back button (fixed width, left-aligned) - LV_SYMBOL_LEFT -->
-    <lv_button name="back_button"
-               width="#header_back_button_size"
-               height="#header_back_button_size"
-               style_bg_opa="0"
-               style_border_width="0"
-               style_shadow_width="0"
-               scrollable="false">
-      <lv_label text="&#xF053;" align="center"
-                style_text_font="#font_heading"
-                style_text_color="#text_primary"/>
+    <lv_button name="back_button" width="#header_back_button_size" height="#header_back_button_size" style_bg_opa="0" style_border_width="0" style_shadow_width="0" scrollable="false">
+      <lv_label text="&#xF053;" align="center" style_text_font="#font_heading" style_text_color="#text_primary"/>
     </lv_button>
-
     <!-- Title (flexible width, centered) -->
-    <text_heading name="header_title"
-                  text="$title"
-                  flex_grow="1"
-                  style_text_align="center"
-                  scrollable="false"/>
-
+    <text_heading name="header_title" text="$title" flex_grow="1" style_text_align="center" scrollable="false"/>
     <!-- Right action button (fixed width, right-aligned, hidden by default) -->
-    <lv_button name="right_button"
-               width="#header_right_button_width"
-               height="#header_right_button_height"
-               style_radius="#border_radius"
-               style_border_width="0"
-               style_shadow_width="0"
-               scrollable="false"
-               hidden="$show_right_button == false">
-      <text_body name="right_button_label"
-                 text="$right_button_text"
-                 align="center"/>
+    <!-- Note: hidden="true" by default; show via C++ if needed -->
+    <lv_button name="right_button" width="#header_right_button_width" height="#header_right_button_height" style_radius="#border_radius" style_border_width="0" style_shadow_width="0" scrollable="false" hidden="true">
+      <text_body name="right_button_label" text="$right_button_text" align="center"/>
     </lv_button>
   </view>
 </component>

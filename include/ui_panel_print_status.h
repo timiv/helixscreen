@@ -5,6 +5,8 @@
 
 #include "ui_panel_base.h"
 
+#include <string>
+
 /**
  * @file ui_panel_print_status.h
  * @brief Print status panel - shows active print progress and controls
@@ -301,6 +303,55 @@ class PrintStatusPanel : public PanelBase {
 
     // Static resize callback (registered with ui_resize_handler)
     static void on_resize_static();
+
+    //
+    // === PrinterState Observer Callbacks ===
+    //
+
+    static void extruder_temp_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
+    static void extruder_target_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
+    static void bed_temp_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
+    static void bed_target_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
+    static void print_progress_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
+    static void print_state_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
+    static void print_filename_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
+    static void speed_factor_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
+    static void flow_factor_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
+    static void led_state_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
+
+    //
+    // === Observer Instance Methods ===
+    //
+
+    void on_temperature_changed();
+    void on_print_progress_changed(int progress);
+    void on_print_state_changed(const char* state);
+    void on_print_filename_changed(const char* filename);
+    void on_speed_factor_changed(int speed);
+    void on_flow_factor_changed(int flow);
+    void on_led_state_changed(int state);
+
+    //
+    // === PrinterState Observers (RAII managed) ===
+    //
+
+    lv_observer_t* extruder_temp_observer_ = nullptr;
+    lv_observer_t* extruder_target_observer_ = nullptr;
+    lv_observer_t* bed_temp_observer_ = nullptr;
+    lv_observer_t* bed_target_observer_ = nullptr;
+    lv_observer_t* print_progress_observer_ = nullptr;
+    lv_observer_t* print_state_observer_ = nullptr;
+    lv_observer_t* print_filename_observer_ = nullptr;
+    lv_observer_t* speed_factor_observer_ = nullptr;
+    lv_observer_t* flow_factor_observer_ = nullptr;
+    lv_observer_t* led_state_observer_ = nullptr;
+
+    //
+    // === LED State ===
+    //
+
+    bool led_on_ = false;
+    std::string configured_led_;
 };
 
 // Global instance accessor (needed by main.cpp)

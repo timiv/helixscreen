@@ -3,6 +3,7 @@
 
 #include "ui_panel_print_status.h"
 
+#include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_nav.h"
 #include "ui_panel_common.h"
@@ -10,7 +11,10 @@
 #include "ui_utils.h"
 
 #include "app_globals.h"
+#include "config.h"
+#include "moonraker_api.h"
 #include "printer_state.h"
+#include "wizard_config_paths.h"
 
 #include <spdlog/spdlog.h>
 
@@ -36,6 +40,45 @@ PrintStatusPanel& get_global_print_status_panel() {
 PrintStatusPanel::PrintStatusPanel(PrinterState& printer_state, MoonrakerAPI* api)
     : PanelBase(printer_state, api) {
     // Buffers are initialized with default values in header
+
+    // Subscribe to PrinterState temperature subjects
+    extruder_temp_observer_ = lv_subject_add_observer(printer_state_.get_extruder_temp_subject(),
+                                                      extruder_temp_observer_cb, this);
+    extruder_target_observer_ = lv_subject_add_observer(
+        printer_state_.get_extruder_target_subject(), extruder_target_observer_cb, this);
+    bed_temp_observer_ =
+        lv_subject_add_observer(printer_state_.get_bed_temp_subject(), bed_temp_observer_cb, this);
+    bed_target_observer_ = lv_subject_add_observer(printer_state_.get_bed_target_subject(),
+                                                   bed_target_observer_cb, this);
+
+    // Subscribe to print progress and state
+    print_progress_observer_ = lv_subject_add_observer(printer_state_.get_print_progress_subject(),
+                                                       print_progress_observer_cb, this);
+    print_state_observer_ = lv_subject_add_observer(printer_state_.get_print_state_subject(),
+                                                    print_state_observer_cb, this);
+    print_filename_observer_ = lv_subject_add_observer(printer_state_.get_print_filename_subject(),
+                                                       print_filename_observer_cb, this);
+
+    // Subscribe to speed/flow factors
+    speed_factor_observer_ = lv_subject_add_observer(printer_state_.get_speed_factor_subject(),
+                                                     speed_factor_observer_cb, this);
+    flow_factor_observer_ = lv_subject_add_observer(printer_state_.get_flow_factor_subject(),
+                                                    flow_factor_observer_cb, this);
+
+    spdlog::debug("[{}] Subscribed to PrinterState subjects (temps, progress, state, speeds)",
+                  get_name());
+
+    // Load configured LED from wizard settings
+    Config* config = Config::get_instance();
+    if (config) {
+        configured_led_ = config->get<std::string>(WizardConfigPaths::LED_STRIP, "");
+        if (!configured_led_.empty()) {
+            // Subscribe to LED state changes from PrinterState
+            led_state_observer_ = lv_subject_add_observer(printer_state_.get_led_state_subject(),
+                                                          led_state_observer_cb, this);
+            spdlog::debug("[{}] Configured LED: {} (observing state)", get_name(), configured_led_);
+        }
+    }
 }
 
 PrintStatusPanel::~PrintStatusPanel() {
@@ -44,6 +87,48 @@ PrintStatusPanel::~PrintStatusPanel() {
     // The resize handler uses a weak reference pattern - if the panel is gone,
     // it simply won't call the callback.
     resize_registered_ = false;
+
+    // RAII cleanup: remove PrinterState observers
+    if (extruder_temp_observer_) {
+        lv_observer_remove(extruder_temp_observer_);
+        extruder_temp_observer_ = nullptr;
+    }
+    if (extruder_target_observer_) {
+        lv_observer_remove(extruder_target_observer_);
+        extruder_target_observer_ = nullptr;
+    }
+    if (bed_temp_observer_) {
+        lv_observer_remove(bed_temp_observer_);
+        bed_temp_observer_ = nullptr;
+    }
+    if (bed_target_observer_) {
+        lv_observer_remove(bed_target_observer_);
+        bed_target_observer_ = nullptr;
+    }
+    if (print_progress_observer_) {
+        lv_observer_remove(print_progress_observer_);
+        print_progress_observer_ = nullptr;
+    }
+    if (print_state_observer_) {
+        lv_observer_remove(print_state_observer_);
+        print_state_observer_ = nullptr;
+    }
+    if (print_filename_observer_) {
+        lv_observer_remove(print_filename_observer_);
+        print_filename_observer_ = nullptr;
+    }
+    if (speed_factor_observer_) {
+        lv_observer_remove(speed_factor_observer_);
+        speed_factor_observer_ = nullptr;
+    }
+    if (flow_factor_observer_) {
+        lv_observer_remove(flow_factor_observer_);
+        flow_factor_observer_ = nullptr;
+    }
+    if (led_state_observer_) {
+        lv_observer_remove(led_state_observer_);
+        led_state_observer_ = nullptr;
+    }
 }
 
 // ============================================================================
@@ -252,19 +337,83 @@ void PrintStatusPanel::handle_bed_card_click() {
 }
 
 void PrintStatusPanel::handle_light_button() {
-    spdlog::debug("[{}] Light button clicked", get_name());
-    // TODO: Toggle printer LED/light on/off
+    spdlog::info("[{}] Light button clicked", get_name());
+
+    // Check if LED is configured
+    if (configured_led_.empty()) {
+        spdlog::warn("[{}] Light toggle called but no LED configured", get_name());
+        return;
+    }
+
+    // Toggle to opposite of current state
+    bool new_state = !led_on_;
+
+    // Send command to Moonraker
+    if (api_) {
+        if (new_state) {
+            api_->set_led_on(
+                configured_led_,
+                [this]() {
+                    spdlog::info("[{}] LED turned ON - waiting for state update", get_name());
+                },
+                [](const MoonrakerError& err) {
+                    spdlog::error("Failed to turn LED on: {}", err.message);
+                    NOTIFY_ERROR("Failed to turn light on: {}", err.user_message());
+                });
+        } else {
+            api_->set_led_off(
+                configured_led_,
+                [this]() {
+                    spdlog::info("[{}] LED turned OFF - waiting for state update", get_name());
+                },
+                [](const MoonrakerError& err) {
+                    spdlog::error("Failed to turn LED off: {}", err.message);
+                    NOTIFY_ERROR("Failed to turn light off: {}", err.user_message());
+                });
+        }
+    } else {
+        spdlog::warn("[{}] API not available - cannot control LED", get_name());
+        NOTIFY_ERROR("Cannot control light: printer not connected");
+    }
 }
 
 void PrintStatusPanel::handle_pause_button() {
     if (current_state_ == PrintState::Printing) {
         spdlog::info("[{}] Pausing print...", get_name());
-        set_state(PrintState::Paused);
-        // TODO: Send pause command to printer via api_
+
+        if (api_) {
+            api_->pause_print(
+                [this]() {
+                    spdlog::info("[{}] Pause command sent successfully", get_name());
+                    // State will update via PrinterState observer when Moonraker confirms
+                },
+                [](const MoonrakerError& err) {
+                    spdlog::error("Failed to pause print: {}", err.message);
+                    NOTIFY_ERROR("Failed to pause print: {}", err.user_message());
+                });
+        } else {
+            // Fall back to local state change for mock mode
+            spdlog::warn("[{}] API not available - using local state change", get_name());
+            set_state(PrintState::Paused);
+        }
     } else if (current_state_ == PrintState::Paused) {
         spdlog::info("[{}] Resuming print...", get_name());
-        set_state(PrintState::Printing);
-        // TODO: Send resume command to printer via api_
+
+        if (api_) {
+            api_->resume_print(
+                [this]() {
+                    spdlog::info("[{}] Resume command sent successfully", get_name());
+                    // State will update via PrinterState observer when Moonraker confirms
+                },
+                [](const MoonrakerError& err) {
+                    spdlog::error("Failed to resume print: {}", err.message);
+                    NOTIFY_ERROR("Failed to resume print: {}", err.user_message());
+                });
+        } else {
+            // Fall back to local state change for mock mode
+            spdlog::warn("[{}] API not available - using local state change", get_name());
+            set_state(PrintState::Printing);
+        }
     }
 }
 
@@ -275,9 +424,26 @@ void PrintStatusPanel::handle_tune_button() {
 
 void PrintStatusPanel::handle_cancel_button() {
     spdlog::info("[{}] Cancel button clicked", get_name());
-    // TODO: Show confirmation dialog, then cancel print
-    set_state(PrintState::Cancelled);
-    stop_mock_print();
+
+    // TODO: Add confirmation dialog before canceling
+
+    if (api_) {
+        api_->cancel_print(
+            [this]() {
+                spdlog::info("[{}] Cancel command sent successfully", get_name());
+                // State will update via PrinterState observer when Moonraker confirms
+                stop_mock_print(); // Stop any mock simulation
+            },
+            [](const MoonrakerError& err) {
+                spdlog::error("Failed to cancel print: {}", err.message);
+                NOTIFY_ERROR("Failed to cancel print: {}", err.user_message());
+            });
+    } else {
+        // Fall back to local state change for mock mode
+        spdlog::warn("[{}] API not available - using local state change", get_name());
+        set_state(PrintState::Cancelled);
+        stop_mock_print();
+    }
 }
 
 void PrintStatusPanel::handle_resize() {
@@ -347,6 +513,184 @@ void PrintStatusPanel::on_resize_static() {
     if (g_print_status_panel) {
         g_print_status_panel->handle_resize();
     }
+}
+
+// ============================================================================
+// PRINTERSTATE OBSERVER CALLBACKS
+// ============================================================================
+
+void PrintStatusPanel::extruder_temp_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    (void)subject;
+    auto* self = static_cast<PrintStatusPanel*>(lv_observer_get_user_data(observer));
+    if (self) {
+        self->on_temperature_changed();
+    }
+}
+
+void PrintStatusPanel::extruder_target_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    (void)subject;
+    auto* self = static_cast<PrintStatusPanel*>(lv_observer_get_user_data(observer));
+    if (self) {
+        self->on_temperature_changed();
+    }
+}
+
+void PrintStatusPanel::bed_temp_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    (void)subject;
+    auto* self = static_cast<PrintStatusPanel*>(lv_observer_get_user_data(observer));
+    if (self) {
+        self->on_temperature_changed();
+    }
+}
+
+void PrintStatusPanel::bed_target_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    (void)subject;
+    auto* self = static_cast<PrintStatusPanel*>(lv_observer_get_user_data(observer));
+    if (self) {
+        self->on_temperature_changed();
+    }
+}
+
+void PrintStatusPanel::print_progress_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    auto* self = static_cast<PrintStatusPanel*>(lv_observer_get_user_data(observer));
+    if (self) {
+        self->on_print_progress_changed(lv_subject_get_int(subject));
+    }
+}
+
+void PrintStatusPanel::print_state_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    auto* self = static_cast<PrintStatusPanel*>(lv_observer_get_user_data(observer));
+    if (self) {
+        self->on_print_state_changed(lv_subject_get_string(subject));
+    }
+}
+
+void PrintStatusPanel::print_filename_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    auto* self = static_cast<PrintStatusPanel*>(lv_observer_get_user_data(observer));
+    if (self) {
+        self->on_print_filename_changed(lv_subject_get_string(subject));
+    }
+}
+
+void PrintStatusPanel::speed_factor_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    auto* self = static_cast<PrintStatusPanel*>(lv_observer_get_user_data(observer));
+    if (self) {
+        self->on_speed_factor_changed(lv_subject_get_int(subject));
+    }
+}
+
+void PrintStatusPanel::flow_factor_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    auto* self = static_cast<PrintStatusPanel*>(lv_observer_get_user_data(observer));
+    if (self) {
+        self->on_flow_factor_changed(lv_subject_get_int(subject));
+    }
+}
+
+void PrintStatusPanel::led_state_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    auto* self = static_cast<PrintStatusPanel*>(lv_observer_get_user_data(observer));
+    if (self) {
+        self->on_led_state_changed(lv_subject_get_int(subject));
+    }
+}
+
+// ============================================================================
+// OBSERVER INSTANCE METHODS
+// ============================================================================
+
+void PrintStatusPanel::on_temperature_changed() {
+    // Read all temperature values from PrinterState subjects
+    int extruder_temp = lv_subject_get_int(printer_state_.get_extruder_temp_subject());
+    int extruder_target = lv_subject_get_int(printer_state_.get_extruder_target_subject());
+    int bed_temp = lv_subject_get_int(printer_state_.get_bed_temp_subject());
+    int bed_target = lv_subject_get_int(printer_state_.get_bed_target_subject());
+
+    // Update internal state and display
+    set_temperatures(extruder_temp, extruder_target, bed_temp, bed_target);
+
+    spdlog::trace("[{}] Temperatures updated: nozzle {}/{}°C, bed {}/{}°C", get_name(),
+                  extruder_temp, extruder_target, bed_temp, bed_target);
+}
+
+void PrintStatusPanel::on_print_progress_changed(int progress) {
+    // Update progress display without calling update_all_displays()
+    // to avoid redundant updates when multiple subjects change
+    current_progress_ = progress;
+    if (current_progress_ < 0)
+        current_progress_ = 0;
+    if (current_progress_ > 100)
+        current_progress_ = 100;
+
+    // Update progress text
+    std::snprintf(progress_text_buf_, sizeof(progress_text_buf_), "%d%%", current_progress_);
+    lv_subject_copy_string(&progress_text_subject_, progress_text_buf_);
+
+    // Update progress bar widget directly
+    if (progress_bar_) {
+        lv_bar_set_value(progress_bar_, current_progress_, LV_ANIM_OFF);
+    }
+
+    spdlog::trace("[{}] Progress updated: {}%", get_name(), current_progress_);
+}
+
+void PrintStatusPanel::on_print_state_changed(const char* state) {
+    if (!state) {
+        return;
+    }
+
+    // Map Moonraker state string to PrintState enum
+    PrintState new_state = PrintState::Idle;
+
+    if (std::strcmp(state, "standby") == 0) {
+        new_state = PrintState::Idle;
+    } else if (std::strcmp(state, "printing") == 0) {
+        new_state = PrintState::Printing;
+    } else if (std::strcmp(state, "paused") == 0) {
+        new_state = PrintState::Paused;
+    } else if (std::strcmp(state, "complete") == 0) {
+        new_state = PrintState::Complete;
+    } else if (std::strcmp(state, "error") == 0) {
+        new_state = PrintState::Error;
+    } else if (std::strcmp(state, "cancelled") == 0) {
+        new_state = PrintState::Cancelled;
+    } else {
+        spdlog::warn("[{}] Unknown print state: {}", get_name(), state);
+    }
+
+    // Only update if state actually changed
+    if (new_state != current_state_) {
+        set_state(new_state);
+        spdlog::info("[{}] Print state changed: {} -> {}", get_name(), state,
+                     static_cast<int>(new_state));
+    }
+}
+
+void PrintStatusPanel::on_print_filename_changed(const char* filename) {
+    if (filename && filename[0] != '\0') {
+        set_filename(filename);
+        spdlog::debug("[{}] Filename updated: {}", get_name(), filename);
+    }
+}
+
+void PrintStatusPanel::on_speed_factor_changed(int speed) {
+    speed_percent_ = speed;
+    std::snprintf(speed_buf_, sizeof(speed_buf_), "%d%%", speed_percent_);
+    lv_subject_copy_string(&speed_subject_, speed_buf_);
+
+    spdlog::trace("[{}] Speed factor updated: {}%", get_name(), speed);
+}
+
+void PrintStatusPanel::on_flow_factor_changed(int flow) {
+    flow_percent_ = flow;
+    std::snprintf(flow_buf_, sizeof(flow_buf_), "%d%%", flow_percent_);
+    lv_subject_copy_string(&flow_subject_, flow_buf_);
+
+    spdlog::trace("[{}] Flow factor updated: {}%", get_name(), flow);
+}
+
+void PrintStatusPanel::on_led_state_changed(int state) {
+    led_on_ = (state != 0);
+    spdlog::debug("[{}] LED state changed: {} (from PrinterState)", get_name(),
+                  led_on_ ? "ON" : "OFF");
 }
 
 // ============================================================================
