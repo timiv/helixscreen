@@ -69,6 +69,7 @@
 #include "moonraker_client_mock.h"
 #include "printer_state.h"
 #include "runtime_config.h"
+#include "gcode_file_modifier.h"
 #include "tips_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -1214,6 +1215,12 @@ int main(int argc, char** argv) {
                   (dpi > 0 ? " (custom)" : " (default)"));
     spdlog::debug("Nav Width: {} pixels", UI_NAV_WIDTH(SCREEN_WIDTH));
     spdlog::debug("Initial Panel: {}", initial_panel);
+
+    // Cleanup stale temp files from G-code modifications (older than 1 hour)
+    size_t cleaned = gcode::GCodeFileModifier::cleanup_temp_files();
+    if (cleaned > 0) {
+        spdlog::info("Cleaned up {} stale G-code temp file(s)", cleaned);
+    }
 
     // Initialize config system
     Config* config = Config::get_instance();

@@ -8,9 +8,21 @@
 #include <filesystem>
 #include <functional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace gcode {
+
+/**
+ * @brief Maximum file size (in bytes) to load entirely into memory
+ *
+ * Files larger than this threshold will be processed using streaming mode,
+ * which reads and writes line-by-line instead of loading the entire file.
+ * This is critical for embedded devices with limited RAM (256MB-512MB).
+ *
+ * Default: 5MB (safe for most embedded targets)
+ */
+constexpr size_t MAX_BUFFERED_FILE_SIZE = 5 * 1024 * 1024;
 
 /**
  * @brief Type of modification to apply to G-code
@@ -182,6 +194,29 @@ public:
      */
     [[nodiscard]] std::string apply_to_content(const std::string& content);
 
+    /**
+     * @brief Apply modifications using streaming (for large files)
+     *
+     * This method processes the file line-by-line without loading it entirely
+     * into memory. Critical for embedded devices with limited RAM where G-code
+     * files can be 100MB+.
+     *
+     * **Limitations of streaming mode:**
+     * - DELETE modifications skip lines (work correctly)
+     * - COMMENT_OUT modifications work on single lines
+     * - INJECT_BEFORE/AFTER work correctly
+     * - REPLACE works for single lines
+     * - Multi-line ranges (end_line_number > 0) are NOT supported and will
+     *   be handled as single-line operations with a warning
+     *
+     * @param filepath Path to the source G-code file
+     * @return ModificationResult with success status and modified file path
+     *
+     * @note This method is automatically called by apply() for files larger
+     *       than MAX_BUFFERED_FILE_SIZE.
+     */
+    [[nodiscard]] ModificationResult apply_streaming(const std::filesystem::path& filepath);
+
     // =========================================================================
     // Convenience methods for common operations
     // =========================================================================
@@ -258,6 +293,24 @@ private:
      * @brief Comment out a single line
      */
     static std::string comment_out_line(const std::string& line, const std::string& reason);
+
+    /**
+     * @brief Build line-number-indexed lookup map for streaming mode
+     *
+     * Creates a map where keys are line numbers (1-indexed) and values are
+     * the modifications to apply. For COMMENT_OUT/DELETE with ranges, creates
+     * entries for each line in the range.
+     *
+     * @return Map of line_number -> Modification for O(1) lookup during streaming
+     */
+    [[nodiscard]] std::unordered_map<size_t, Modification> build_streaming_lookup() const;
+
+    /**
+     * @brief Apply buffered mode (loads file into memory)
+     *
+     * The original implementation, now factored out for clarity.
+     */
+    [[nodiscard]] ModificationResult apply_buffered(const std::filesystem::path& filepath);
 
     std::vector<Modification> modifications_;
 };

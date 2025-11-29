@@ -10,6 +10,7 @@
 #include <random>
 #include <regex>
 #include <sstream>
+#include <unordered_map>
 
 #include <spdlog/spdlog.h>
 
@@ -193,6 +194,28 @@ std::string GCodeFileModifier::apply_to_content(const std::string& content) {
 }
 
 ModificationResult GCodeFileModifier::apply(const std::filesystem::path& filepath) {
+    // Check file size to decide between buffered and streaming modes
+    std::error_code ec;
+    auto file_size = std::filesystem::file_size(filepath, ec);
+    if (ec) {
+        ModificationResult result;
+        result.success = false;
+        result.error_message = "Failed to get file size: " + filepath.string();
+        spdlog::error("[GCodeFileModifier] {}", result.error_message);
+        return result;
+    }
+
+    // Use streaming for large files
+    if (file_size > MAX_BUFFERED_FILE_SIZE) {
+        spdlog::info("[GCodeFileModifier] File {} ({} MB) exceeds buffer threshold, using streaming",
+                     filepath.filename().string(), file_size / (1024 * 1024));
+        return apply_streaming(filepath);
+    }
+
+    return apply_buffered(filepath);
+}
+
+ModificationResult GCodeFileModifier::apply_buffered(const std::filesystem::path& filepath) {
     ModificationResult result;
 
     // Read original file
@@ -241,7 +264,8 @@ ModificationResult GCodeFileModifier::apply(const std::filesystem::path& filepat
     // Sort modifications by line number (descending)
     sort_modifications();
 
-    spdlog::info("[GCodeFileModifier] Applying {} modifications", modifications_.size());
+    spdlog::info("[GCodeFileModifier] Applying {} modifications (buffered mode)",
+                 modifications_.size());
 
     // Apply each modification
     for (const auto& mod : modifications_) {
@@ -273,6 +297,177 @@ ModificationResult GCodeFileModifier::apply(const std::filesystem::path& filepat
     result.success = true;
     spdlog::info(
         "[GCodeFileModifier] Created modified file: {} ({} bytes, +{} -{} lines changed)",
+        result.modified_path, result.modified_size, result.lines_added, result.lines_removed);
+
+    return result;
+}
+
+std::unordered_map<size_t, Modification> GCodeFileModifier::build_streaming_lookup() const {
+    std::unordered_map<size_t, Modification> lookup;
+
+    for (const auto& mod : modifications_) {
+        // For range modifications, we create entries for each line but note
+        // that streaming mode has limitations with multi-line operations
+        size_t end_line = (mod.end_line_number > 0) ? mod.end_line_number : mod.line_number;
+
+        if (mod.end_line_number > 0 && mod.type != ModificationType::COMMENT_OUT &&
+            mod.type != ModificationType::DELETE) {
+            spdlog::warn(
+                "[GCodeFileModifier] Streaming mode: multi-line {} not fully supported, "
+                "processing line {} only",
+                static_cast<int>(mod.type), mod.line_number);
+            end_line = mod.line_number;
+        }
+
+        for (size_t line = mod.line_number; line <= end_line; ++line) {
+            // Create a modified copy for each line in the range
+            Modification line_mod = mod;
+            line_mod.line_number = line;
+            line_mod.end_line_number = 0;  // Reset to single-line for streaming
+            lookup[line] = line_mod;
+        }
+    }
+
+    return lookup;
+}
+
+ModificationResult GCodeFileModifier::apply_streaming(const std::filesystem::path& filepath) {
+    ModificationResult result;
+
+    // Open input file
+    std::ifstream infile(filepath);
+    if (!infile.is_open()) {
+        result.success = false;
+        result.error_message = "Failed to open file: " + filepath.string();
+        spdlog::error("[GCodeFileModifier] {}", result.error_message);
+        return result;
+    }
+
+    // Generate output path
+    result.modified_path = generate_temp_path(filepath);
+
+    // Open output file
+    std::ofstream outfile(result.modified_path);
+    if (!outfile.is_open()) {
+        result.success = false;
+        result.error_message = "Failed to create temp file: " + result.modified_path;
+        spdlog::error("[GCodeFileModifier] {}", result.error_message);
+        return result;
+    }
+
+    // Build lookup map for O(1) per-line checks
+    auto lookup = build_streaming_lookup();
+
+    spdlog::info("[GCodeFileModifier] Processing file in streaming mode ({} modifications)",
+                 modifications_.size());
+
+    // Process line by line
+    std::string line;
+    size_t line_number = 0;
+    bool first_line = true;
+
+    while (std::getline(infile, line)) {
+        line_number++;
+        result.original_size += line.size() + 1;
+
+        // Check if this line has a modification
+        auto it = lookup.find(line_number);
+        if (it != lookup.end()) {
+            const auto& mod = it->second;
+
+            switch (mod.type) {
+                case ModificationType::COMMENT_OUT: {
+                    // Skip if already a comment
+                    if (!line.empty() && line[0] == ';') {
+                        if (!first_line) outfile << '\n';
+                        outfile << line;
+                    } else {
+                        std::string commented = comment_out_line(line, mod.comment);
+                        if (!first_line) outfile << '\n';
+                        outfile << commented;
+                        result.lines_modified++;
+                    }
+                    result.modified_size += line.size() + (first_line ? 0 : 1);
+                    first_line = false;
+                    break;
+                }
+
+                case ModificationType::DELETE: {
+                    // Simply skip the line (don't write it)
+                    result.lines_removed++;
+                    // Note: we don't add to modified_size for deleted lines
+                    break;
+                }
+
+                case ModificationType::INJECT_BEFORE: {
+                    // Write injected content first
+                    std::istringstream ss(mod.gcode);
+                    std::string inject_line;
+                    while (std::getline(ss, inject_line)) {
+                        if (!first_line) outfile << '\n';
+                        outfile << inject_line;
+                        result.modified_size += inject_line.size() + (first_line ? 0 : 1);
+                        result.lines_added++;
+                        first_line = false;
+                    }
+                    // Then write the original line
+                    if (!first_line) outfile << '\n';
+                    outfile << line;
+                    result.modified_size += line.size() + 1;
+                    first_line = false;
+                    break;
+                }
+
+                case ModificationType::INJECT_AFTER: {
+                    // Write original line first
+                    if (!first_line) outfile << '\n';
+                    outfile << line;
+                    result.modified_size += line.size() + (first_line ? 0 : 1);
+                    first_line = false;
+                    // Then write injected content
+                    std::istringstream ss(mod.gcode);
+                    std::string inject_line;
+                    while (std::getline(ss, inject_line)) {
+                        outfile << '\n';
+                        outfile << inject_line;
+                        result.modified_size += inject_line.size() + 1;
+                        result.lines_added++;
+                    }
+                    break;
+                }
+
+                case ModificationType::REPLACE: {
+                    // Write replacement content instead of original
+                    std::istringstream ss(mod.gcode);
+                    std::string replace_line;
+                    bool first_replace = true;
+                    while (std::getline(ss, replace_line)) {
+                        if (!first_line && !first_replace) outfile << '\n';
+                        if (!first_line && first_replace) outfile << '\n';
+                        outfile << replace_line;
+                        result.modified_size += replace_line.size() + (first_line ? 0 : 1);
+                        first_replace = false;
+                        first_line = false;
+                    }
+                    result.lines_modified++;
+                    break;
+                }
+            }
+        } else {
+            // No modification - write line as-is
+            if (!first_line) outfile << '\n';
+            outfile << line;
+            result.modified_size += line.size() + (first_line ? 0 : 1);
+            first_line = false;
+        }
+    }
+
+    infile.close();
+    outfile.close();
+
+    result.success = true;
+    spdlog::info(
+        "[GCodeFileModifier] Streaming complete: {} ({} bytes, +{} -{} lines)",
         result.modified_path, result.modified_size, result.lines_added, result.lines_removed);
 
     return result;

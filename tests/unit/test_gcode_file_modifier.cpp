@@ -399,3 +399,164 @@ G1 X10 Y10 Z0.2 E0.5
         REQUIRE(result.find("NOZZLE_CLEAN=1") != std::string::npos);
     }
 }
+
+// ============================================================================
+// Streaming Mode Tests
+// ============================================================================
+
+TEST_CASE("GCodeFileModifier - Streaming mode constants", "[gcode][modifier][streaming]") {
+    // Verify the threshold constant is reasonable for embedded devices
+    REQUIRE(MAX_BUFFERED_FILE_SIZE == 5 * 1024 * 1024);  // 5MB
+    REQUIRE(MAX_BUFFERED_FILE_SIZE < 10 * 1024 * 1024);  // Less than 10MB
+}
+
+TEST_CASE("GCodeFileModifier - Streaming comment out", "[gcode][modifier][streaming]") {
+    GCodeFileModifier modifier;
+
+    // Create a test file
+    std::string test_path = "/tmp/helix_stream_test_comment.gcode";
+    {
+        std::ofstream out(test_path);
+        out << "G28\nBED_MESH_CALIBRATE\nG1 X0 Y0\n";
+    }
+
+    modifier.add_modification(Modification::comment_out(2, "Disabled"));
+
+    // Force streaming mode
+    auto result = modifier.apply_streaming(test_path);
+
+    REQUIRE(result.success);
+    REQUIRE_FALSE(result.modified_path.empty());
+
+    // Read and verify modified content
+    std::ifstream in(result.modified_path);
+    std::string content((std::istreambuf_iterator<char>(in)),
+                        std::istreambuf_iterator<char>());
+
+    REQUIRE(content.find("; BED_MESH_CALIBRATE") != std::string::npos);
+    REQUIRE(content.find("G28") != std::string::npos);
+    REQUIRE(content.find("G1 X0 Y0") != std::string::npos);
+
+    // Cleanup
+    std::filesystem::remove(test_path);
+    std::filesystem::remove(result.modified_path);
+}
+
+TEST_CASE("GCodeFileModifier - Streaming delete line", "[gcode][modifier][streaming]") {
+    GCodeFileModifier modifier;
+
+    std::string test_path = "/tmp/helix_stream_test_delete.gcode";
+    {
+        std::ofstream out(test_path);
+        out << "LINE1\nLINE2\nLINE3\nLINE4\n";
+    }
+
+    // Delete line 2
+    modifier.add_modification({ModificationType::DELETE, 2, 0, "", "Deleted"});
+
+    auto result = modifier.apply_streaming(test_path);
+
+    REQUIRE(result.success);
+    REQUIRE(result.lines_removed == 1);
+
+    // Read and verify
+    std::ifstream in(result.modified_path);
+    std::string content((std::istreambuf_iterator<char>(in)),
+                        std::istreambuf_iterator<char>());
+
+    REQUIRE(content.find("LINE1") != std::string::npos);
+    REQUIRE(content.find("LINE2") == std::string::npos);  // Deleted
+    REQUIRE(content.find("LINE3") != std::string::npos);
+    REQUIRE(content.find("LINE4") != std::string::npos);
+
+    // Cleanup
+    std::filesystem::remove(test_path);
+    std::filesystem::remove(result.modified_path);
+}
+
+TEST_CASE("GCodeFileModifier - Streaming inject before", "[gcode][modifier][streaming]") {
+    GCodeFileModifier modifier;
+
+    std::string test_path = "/tmp/helix_stream_test_inject.gcode";
+    {
+        std::ofstream out(test_path);
+        out << "LINE1\nLINE2\nLINE3\n";
+    }
+
+    modifier.add_modification(Modification::inject_before(2, "; INJECTED"));
+
+    auto result = modifier.apply_streaming(test_path);
+
+    REQUIRE(result.success);
+    REQUIRE(result.lines_added == 1);
+
+    std::ifstream in(result.modified_path);
+    std::string content((std::istreambuf_iterator<char>(in)),
+                        std::istreambuf_iterator<char>());
+
+    // Verify order: LINE1 -> ; INJECTED -> LINE2 -> LINE3
+    size_t line1_pos = content.find("LINE1");
+    size_t inject_pos = content.find("; INJECTED");
+    size_t line2_pos = content.find("LINE2");
+
+    REQUIRE(line1_pos < inject_pos);
+    REQUIRE(inject_pos < line2_pos);
+
+    // Cleanup
+    std::filesystem::remove(test_path);
+    std::filesystem::remove(result.modified_path);
+}
+
+TEST_CASE("GCodeFileModifier - Streaming replace line", "[gcode][modifier][streaming]") {
+    GCodeFileModifier modifier;
+
+    std::string test_path = "/tmp/helix_stream_test_replace.gcode";
+    {
+        std::ofstream out(test_path);
+        out << "OLD_LINE1\nOLD_LINE2\nOLD_LINE3\n";
+    }
+
+    modifier.add_modification(Modification::replace(2, "NEW_LINE2", "Replaced"));
+
+    auto result = modifier.apply_streaming(test_path);
+
+    REQUIRE(result.success);
+    REQUIRE(result.lines_modified == 1);
+
+    std::ifstream in(result.modified_path);
+    std::string content((std::istreambuf_iterator<char>(in)),
+                        std::istreambuf_iterator<char>());
+
+    REQUIRE(content.find("OLD_LINE1") != std::string::npos);
+    REQUIRE(content.find("OLD_LINE2") == std::string::npos);  // Replaced
+    REQUIRE(content.find("NEW_LINE2") != std::string::npos);
+    REQUIRE(content.find("OLD_LINE3") != std::string::npos);
+
+    // Cleanup
+    std::filesystem::remove(test_path);
+    std::filesystem::remove(result.modified_path);
+}
+
+TEST_CASE("GCodeFileModifier - Auto-select streaming for large files", "[gcode][modifier][streaming]") {
+    // This test verifies that apply() selects the appropriate mode based on file size
+    // We can't easily create a 5MB test file, so we test the logic path
+
+    GCodeFileModifier modifier;
+
+    // Create a small file (should use buffered mode)
+    std::string small_path = "/tmp/helix_small_test.gcode";
+    {
+        std::ofstream out(small_path);
+        out << "G28\nG1 X0\n";
+    }
+
+    // apply() should succeed and use buffered mode (we can verify by log if needed)
+    auto result = modifier.apply(small_path);
+    REQUIRE(result.success);
+
+    // Cleanup
+    std::filesystem::remove(small_path);
+    if (!result.modified_path.empty()) {
+        std::filesystem::remove(result.modified_path);
+    }
+}

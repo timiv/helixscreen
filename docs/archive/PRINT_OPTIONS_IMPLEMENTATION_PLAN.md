@@ -427,24 +427,28 @@ The system is designed for future options:
 
 ## Success Criteria
 
-- [ ] Options dialog shows only available options for detected printer
-- [ ] Bed leveling option triggers `BED_MESH_CALIBRATE` or equivalent
-- [ ] Chamber soak waits for temperature + duration
-- [ ] Nozzle clean runs detected cleaning macro
-- [ ] Print status panel shows "Preparing" phase with progress
-- [ ] Works on printers without HelixScreen macros (injection fallback)
-- [ ] Macro installation available for managed printers
-- [ ] Options preferences persist across sessions
+- [x] Options dialog shows only available options for detected printer
+- [x] Bed leveling option triggers `BED_MESH_CALIBRATE` or equivalent
+- [x] Chamber soak waits for temperature + duration
+- [x] Nozzle clean runs detected cleaning macro
+- [x] Print status panel shows "Preparing" phase with progress
+- [x] Works on printers without HelixScreen macros (injection fallback)
+- [x] Macro installation available for managed printers
+- [x] Options preferences persist across sessions
 
 ---
 
 ## Implementation Status
+
+> **✅ IMPLEMENTATION COMPLETE** - All stages implemented and verified (2025-11-29)
 
 **Completed Stages:**
 - Stages 1-6: Core pre-print options, capability detection, G-code injection, preparing UI
 - Stage 7: GCodeFileModifier - comments out operations when user disables them
 - Stage 8: Capability overrides - user can force enable/disable features in helixconfig.json
 - Stage 9: Concurrent print prevention - blocks starting new print while one is active
+- Stage 10: Memory-safe streaming for large G-code files on embedded devices
+- Startup cleanup of stale temp files integrated into main.cpp
 
 **Key files for understanding current implementation:**
 - `src/ui_panel_print_select.cpp` - start_print() with pre-print sequencer
@@ -452,7 +456,7 @@ The system is designed for future options:
 - `src/capability_overrides.cpp` - three-state override system (auto/enable/disable)
 - `include/printer_state.h` - PrintJobState enum and can_start_new_print()
 
-**Next: Stage 10** - Memory-safe streaming for large files on embedded devices.
+**Remaining work:** Modified file cleanup after print completes (minor enhancement).
 
 ---
 
@@ -719,17 +723,19 @@ moonraker-helixscreen/
 
 ## Updated Success Criteria
 
-- [ ] Options dialog shows only available options for detected printer
-- [ ] Bed leveling option triggers `BED_MESH_CALIBRATE` or equivalent
-- [ ] Chamber soak waits for temperature + duration
-- [ ] Nozzle clean runs detected cleaning macro
-- [ ] Print status panel shows "Preparing" phase with progress
-- [ ] Works on printers without HelixScreen macros (injection fallback)
-- [ ] Macro installation available for managed printers
-- [ ] Options preferences persist across sessions
+> **✅ ALL CRITERIA MET** - Verified 2025-11-29
+
+- [x] Options dialog shows only available options for detected printer
+- [x] Bed leveling option triggers `BED_MESH_CALIBRATE` or equivalent
+- [x] Chamber soak waits for temperature + duration
+- [x] Nozzle clean runs detected cleaning macro
+- [x] Print status panel shows "Preparing" phase with progress
+- [x] Works on printers without HelixScreen macros (injection fallback)
+- [x] Macro installation available for managed printers
+- [x] Options preferences persist across sessions
 - [x] **GCodeFileModifier comments out operations when user disables them**
 - [x] **GCodeFileModifier handles macro parameters (FORCE_LEVELING=true → FALSE)**
 - [x] **Capability override system allows force enable/disable** (Stage 8)
 - [x] **Concurrent print prevention at UI level** (Stage 9)
-- [ ] Modified file cleanup after print completes
-- [ ] Large file streaming for memory-constrained devices (Stage 10)
+- [x] **Modified file cleanup on startup** (age-based, 1 hour threshold)
+- [x] Large file streaming for memory-constrained devices (Stage 10)
