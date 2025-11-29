@@ -27,79 +27,93 @@ bool is_valid_ip_or_hostname(const std::string& host) {
         return false;
     }
 
-    // First check if it looks like an IP address (contains only digits and dots)
-    bool looks_like_ip = true;
+    // Check for whitespace anywhere - always invalid
     for (char c : host) {
-        if (!std::isdigit(c) && c != '.') {
-            looks_like_ip = false;
-            break;
+        if (std::isspace(c)) {
+            return false;
         }
     }
 
-    // If it looks like an IP, validate as IPv4
-    if (looks_like_ip) {
-        int dot_count = 0;
-        size_t last_dot = 0;
-        bool valid_ip = true;
+    // Determine if this looks like an IP address pattern (digits, dots, and possibly
+    // invalid chars like '-' that would make it an invalid IP)
+    bool has_letter = false;
+    bool has_underscore = false;
+    int dot_count = 0;
+    for (char c : host) {
+        if (std::isalpha(c)) {
+            has_letter = true;
+        } else if (c == '_') {
+            has_underscore = true;
+        } else if (c == '.') {
+            dot_count++;
+        }
+    }
 
-        for (size_t i = 0; i < host.length(); i++) {
-            if (host[i] == '.') {
-                // Check segment between dots
-                if (i == last_dot) { // Empty segment (e.g., "192..1.1")
-                    valid_ip = false;
-                    break;
+    // If it has no letters and no underscores, treat it as an IP address attempt
+    // This prevents "192.168.-1.1" from being treated as a hostname
+    bool is_ip_attempt = !has_letter && !has_underscore;
+
+    // If it looks like an IP attempt, validate strictly as IPv4
+    if (is_ip_attempt) {
+        // Must have exactly 3 dots for valid IPv4
+        if (dot_count != 3) {
+            return false;
+        }
+
+        // Cannot start or end with dot
+        if (host[0] == '.' || host.back() == '.') {
+            return false;
+        }
+
+        // Parse and validate each octet
+        size_t segment_start = 0;
+        int octet_count = 0;
+        for (size_t i = 0; i <= host.length(); i++) {
+            if (i == host.length() || host[i] == '.') {
+                std::string segment = host.substr(segment_start, i - segment_start);
+
+                // Empty segment (e.g., "192..1.1")
+                if (segment.empty()) {
+                    return false;
                 }
-                std::string segment = host.substr(last_dot, i - last_dot);
-                if (segment.empty() || segment.length() > 3) {
-                    valid_ip = false;
-                    break;
+
+                // Check for invalid characters (only digits allowed in IP octets)
+                for (char c : segment) {
+                    if (!std::isdigit(c)) {
+                        return false;
+                    }
                 }
+
+                // Check octet range (0-255)
+                if (segment.length() > 3) {
+                    return false;
+                }
+
                 try {
                     int num = std::stoi(segment);
                     if (num < 0 || num > 255) {
-                        valid_ip = false;
-                        break;
+                        return false;
                     }
                 } catch (...) {
-                    valid_ip = false;
-                    break;
+                    return false;
                 }
-                dot_count++;
-                last_dot = i + 1;
+
+                octet_count++;
+                segment_start = i + 1;
             }
         }
 
-        if (valid_ip && dot_count == 3) {
-            // Check last segment
-            std::string last_segment = host.substr(last_dot);
-            if (!last_segment.empty() && last_segment.length() <= 3) {
-                try {
-                    int num = std::stoi(last_segment);
-                    if (num >= 0 && num <= 255) {
-                        return true;
-                    }
-                } catch (...) {
-                }
-            }
-        }
-        // If it looks like an IP but isn't valid, reject it
-        return false;
+        return octet_count == 4;
     }
 
-    // Otherwise, check if it's a valid hostname
-    // RFC 1035: Must start with alphanumeric, cannot end with hyphen
-    // Allowed: alphanumeric, hyphens, dots (no underscores per RFC)
-    if (!std::isalnum(host[0])) {
+    // Otherwise, validate as hostname
+    // RFC 1035: Must start with alphanumeric
+    if (!std::isalnum(static_cast<unsigned char>(host[0]))) {
         return false;
     }
 
     // Cannot end with hyphen or dot
     if (host.back() == '-' || host.back() == '.') {
-        return false;
-    }
-
-    // Cannot start with dot
-    if (host[0] == '.') {
         return false;
     }
 
@@ -109,13 +123,18 @@ bool is_valid_ip_or_hostname(const std::string& host) {
         if (i == host.length() || host[i] == '.') {
             size_t label_len = i - label_start;
 
-            // RFC 1035: Each label max 63 characters
+            // RFC 1035: Each label max 63 characters, min 1 character
             if (label_len > 63 || label_len == 0) {
                 return false;
             }
 
-            // Label cannot start or end with hyphen
-            if (host[label_start] == '-' || (i > 0 && host[i - 1] == '-')) {
+            // Label cannot start with hyphen
+            if (host[label_start] == '-') {
+                return false;
+            }
+
+            // Label cannot end with hyphen (check char before dot or end)
+            if (i > 0 && host[i - 1] == '-') {
                 return false;
             }
 
@@ -124,7 +143,7 @@ bool is_valid_ip_or_hostname(const std::string& host) {
             char c = host[i];
             // Alphanumeric, hyphen, and underscore allowed
             // (underscores not RFC-compliant but common in internal networks)
-            if (!std::isalnum(c) && c != '-' && c != '_') {
+            if (!std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '_') {
                 return false;
             }
         }
