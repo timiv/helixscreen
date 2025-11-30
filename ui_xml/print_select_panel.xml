@@ -24,12 +24,12 @@
     <!-- Compact header with source tabs and view toggle (32px) -->
     <lv_obj width="100%" height="32" style_border_width="0" style_bg_opa="0" style_pad_left="8" style_pad_right="8" style_pad_top="4" style_pad_bottom="4" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
       <!-- Source selector (left side) - Segmented tab control -->
-      <lv_obj name="source_selector" height="26" width="content" style_bg_opa="80" style_radius="6" style_border_width="1" style_pad_all="2" flex_flow="row" style_pad_gap="0">
-        <lv_button name="source_printer_btn" width="content" height="22" style_radius="4" style_border_width="0" style_shadow_width="0" style_pad_left="12" style_pad_right="12" style_pad_top="2" style_pad_bottom="2">
-          <lv_label text="Printer" style_text_font="#font_small"/>
+      <lv_obj name="source_selector" height="26" width="content" style_bg_opa="80" style_radius="6" style_border_width="1" style_pad_all="2" flex_flow="row" style_pad_gap="0" scrollable="false">
+        <lv_button name="source_printer_btn" width="content" height="22" style_radius="4" style_border_width="0" style_shadow_width="0" style_pad_left="12" style_pad_right="12" style_pad_top="2" style_pad_bottom="2" scrollable="false">
+          <lv_label text="Printer" style_text_font="#font_small" scrollable="false"/>
         </lv_button>
-        <lv_button name="source_usb_btn" width="content" height="22" style_radius="4" style_border_width="0" style_shadow_width="0" style_pad_left="12" style_pad_right="12" style_pad_top="2" style_pad_bottom="2">
-          <lv_label text="USB" style_text_font="#font_small"/>
+        <lv_button name="source_usb_btn" width="content" height="22" style_radius="4" style_border_width="0" style_shadow_width="0" style_pad_left="12" style_pad_right="12" style_pad_top="2" style_pad_bottom="2" scrollable="false">
+          <lv_label text="USB" style_text_font="#font_small" scrollable="false"/>
         </lv_button>
       </lv_obj>
       <!-- View toggle button (icon-only, compact) -->

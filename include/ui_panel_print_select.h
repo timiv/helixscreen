@@ -287,6 +287,21 @@ class PrintSelectPanel : public PanelBase {
      */
     void set_usb_manager(UsbManager* manager);
 
+    /**
+     * @brief Handle USB drive inserted event
+     *
+     * Called when a USB drive is inserted. Shows the USB tab in the source selector.
+     */
+    void on_usb_drive_inserted();
+
+    /**
+     * @brief Handle USB drive removal event
+     *
+     * Called when a USB drive is removed. Hides the USB tab in the source selector.
+     * If currently viewing USB source, switches to Printer source and clears file list.
+     */
+    void on_usb_drive_removed();
+
   private:
     //
     // === Constants ===

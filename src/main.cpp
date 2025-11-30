@@ -862,14 +862,6 @@ static void initialize_subjects() {
     if (usb_manager->start()) {
         spdlog::info("UsbManager started (mock={})", g_runtime_config.should_mock_usb());
         print_select_panel->set_usb_manager(usb_manager.get());
-
-        // In test mode, add demo drives with sample files
-        if (g_runtime_config.should_mock_usb()) {
-            if (auto* mock = dynamic_cast<UsbBackendMock*>(usb_manager->get_backend())) {
-                mock->add_demo_drives();
-                spdlog::debug("Added demo USB drives for test mode");
-            }
-        }
     } else {
         spdlog::warn("Failed to start UsbManager");
     }
@@ -891,6 +883,44 @@ static void initialize_subjects() {
 
     // Initialize notification system (after subjects are ready)
     ui_notification_init();
+
+    // Set up USB drive event notifications (after notification system is ready)
+    if (usb_manager) {
+        usb_manager->set_drive_callback([](UsbEvent event, const UsbDrive& drive) {
+            (void)drive; // Currently not using drive info in messages
+            if (event == UsbEvent::DRIVE_INSERTED) {
+                ui_notification_success("USB drive connected");
+
+                // Show USB tab in PrintSelectPanel
+                if (print_select_panel) {
+                    print_select_panel->on_usb_drive_inserted();
+                }
+            } else if (event == UsbEvent::DRIVE_REMOVED) {
+                ui_notification_info("USB drive removed");
+
+                // Hide USB tab and switch to Printer source if viewing USB
+                if (print_select_panel) {
+                    print_select_panel->on_usb_drive_removed();
+                }
+            }
+        });
+
+        // In test mode, schedule demo drive insertion after UI is fully ready
+        // This ensures the toast notification is visible to the user
+        if (g_runtime_config.should_mock_usb()) {
+            // Use LVGL timer to delay insertion - this runs on the main thread after UI init
+            lv_timer_create(
+                [](lv_timer_t* timer) {
+                    if (auto* mock = dynamic_cast<UsbBackendMock*>(usb_manager->get_backend())) {
+                        mock->add_demo_drives();
+                        spdlog::debug("Added demo USB drives for test mode (delayed)");
+                    }
+                    lv_timer_delete(timer);
+                },
+                3000, // 3 second delay for UI to fully initialize
+                nullptr);
+        }
+    }
 }
 
 // Initialize LVGL with SDL

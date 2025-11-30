@@ -1476,10 +1476,14 @@ void PrintSelectPanel::setup_source_buttons() {
                         this);
     lv_obj_add_event_cb(source_usb_btn_, on_source_button_clicked_static, LV_EVENT_CLICKED, this);
 
+    // Hide USB tab by default - will be shown when USB drive is inserted
+    lv_obj_add_flag(source_usb_btn_, LV_OBJ_FLAG_HIDDEN);
+
     // Set initial state - Printer is selected by default
     update_source_buttons();
 
-    spdlog::debug("[{}] Source selector buttons configured", get_name());
+    spdlog::debug("[{}] Source selector buttons configured (USB tab hidden until drive inserted)",
+                  get_name());
 }
 
 void PrintSelectPanel::update_source_buttons() {
@@ -1624,6 +1628,48 @@ void PrintSelectPanel::set_usb_manager(UsbManager* manager) {
     }
 
     spdlog::debug("[{}] UsbManager set", get_name());
+}
+
+void PrintSelectPanel::on_usb_drive_inserted() {
+    if (!source_usb_btn_) {
+        return;
+    }
+
+    spdlog::info("[{}] USB drive inserted - showing USB tab", get_name());
+    lv_obj_remove_flag(source_usb_btn_, LV_OBJ_FLAG_HIDDEN);
+}
+
+void PrintSelectPanel::on_usb_drive_removed() {
+    spdlog::info("[{}] USB drive removed - hiding USB tab", get_name());
+
+    // Hide the USB tab
+    if (source_usb_btn_) {
+        lv_obj_add_flag(source_usb_btn_, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    // If USB source is currently active, switch to Printer source
+    if (current_source_ == FileSource::USB) {
+        spdlog::debug("[{}] Was viewing USB source - switching to Printer", get_name());
+
+        // Clear USB files and the display file list
+        usb_files_.clear();
+        file_list_.clear();
+
+        // Clear card/list views
+        if (card_view_container_) {
+            lv_obj_clean(card_view_container_);
+        }
+        if (list_rows_container_) {
+            lv_obj_clean(list_rows_container_);
+        }
+
+        // Switch to Printer source
+        current_source_ = FileSource::PRINTER;
+        update_source_buttons();
+
+        // Refresh Moonraker files
+        refresh_files();
+    }
 }
 
 void PrintSelectPanel::on_source_button_clicked_static(lv_event_t* e) {
