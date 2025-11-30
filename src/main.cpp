@@ -1518,13 +1518,13 @@ int main(int argc, char** argv) {
 
     spdlog::debug("XML UI created successfully with reactive navigation");
 
-    // Test notifications - enabled in test mode to verify notification history
-    if (get_runtime_config().test_mode) {
-        NOTIFY_INFO("Info notification test");
-        NOTIFY_SUCCESS("Success notification test");
-        NOTIFY_WARNING("Warning notification test");
-        NOTIFY_ERROR("Error notification test");
-    }
+    // Test notifications - commented out, uncomment to debug notification history
+    // if (get_runtime_config().test_mode) {
+    //     NOTIFY_INFO("Info notification test");
+    //     NOTIFY_SUCCESS("Success notification test");
+    //     NOTIFY_WARNING("Warning notification test");
+    //     NOTIFY_ERROR("Error notification test");
+    // }
 
     // Initialize Moonraker client EARLY (before wizard, so it's available for connection test)
     // But don't connect yet - just create the instances
@@ -1880,7 +1880,18 @@ int main(int argc, char** argv) {
     delete moonraker_client;
     moonraker_client = nullptr;
 
+    // Clean up USB manager explicitly BEFORE spdlog shutdown.
+    // UsbBackendMock::stop() logs, and we need spdlog alive for that.
+    usb_manager.reset();
+
     lv_deinit(); // LVGL handles SDL cleanup internally
+
+    // Shutdown spdlog BEFORE static destruction begins.
+    // Many static unique_ptr<Panel> objects have destructors that may log.
+    // If spdlog is destroyed first during static destruction, logging crashes.
+    // By calling shutdown() here, we flush and drop all sinks, making any
+    // subsequent log calls safe no-ops.
+    spdlog::shutdown();
 
     return 0;
 }
