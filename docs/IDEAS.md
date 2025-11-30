@@ -9,6 +9,7 @@
 * WiFi connection flow with visual feedback (connecting state, success/error messages)
 * Fix wizard Step 3 printer type roller collapsed/invisible issue
 * easy calibration workflow
+* **Lazy panel initialization** - Currently all panels (including rarely-used ones like Bed Mesh, Calibration) are pre-initialized at startup. Could defer `init_subjects()` and `setup()` until first navigation. Main challenge: LVGL XML binding requires subjects to exist before XML parsing. Solution: register empty subjects at startup, populate on first use. Would reduce startup time and slightly reduce memory for users who never access certain features.
 * AFC control
 * belt tension: The printer uses controlled belt excitation combined with stroboscopic feedback from the LED to visualize belt resonance
 * LVGL slider knob clipping bug: When `lv_slider` is set to `width="100%"`, the knob extends beyond the widget bounds at min/max positions, getting clipped by parent containers. Currently worked around with extra padding + `flag_overflow_visible`. Root cause: slider doesn't account for knob radius in its size calculation. Should investigate `lv_slider.c` position_knob() and ext_draw_size logic to make the widget self-contained.

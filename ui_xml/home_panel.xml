@@ -27,7 +27,7 @@
       <lv_obj name="printer_container" width="#printer_container_width" height="100%" style_bg_opa="0%" style_border_width="0" style_pad_all="0" scrollable="false">
         <lv_image name="printer_image" src="A:assets/images/printer_400.png" width="100%" height="100%" inner_align="contain"/>
         <!-- Disconnected overlay - shown when NOT connected (state != 2) -->
-        <icon name="disconnected_overlay" src="mat_prohibited" size="xxl" align="center"
+        <icon name="disconnected_overlay" src="mat_prohibited" size="xl" align="center"
               style_image_recolor="#error_color" style_image_recolor_opa="255">
           <lv_obj-bind_flag_if_eq subject="printer_connection_state" flag="hidden" ref_value="2"/>
         </icon>
