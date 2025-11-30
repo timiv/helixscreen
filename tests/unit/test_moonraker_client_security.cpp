@@ -356,9 +356,12 @@ TEST_CASE("MoonrakerClient destructor clears callbacks (UAF prevention)",
 // Issue #6: Deadlock Risk - Two-Phase Timeout Pattern
 // ============================================================================
 
+// NOTE: This test requires an actual WebSocket connection to test timeout behavior.
+// Without a connection, send_jsonrpc immediately fails with CONNECTION_ERROR
+// before any timeout can occur. Marked as integration test.
 TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
                  "MoonrakerClient timeout callbacks invoked outside mutex",
-                 "[moonraker][security][deadlock][issue6]") {
+                 "[moonraker][security][deadlock][issue6][.integration]") {
 
     SECTION("Timeout callback can safely call send_jsonrpc (no deadlock)") {
         // This test verifies the two-phase timeout pattern:

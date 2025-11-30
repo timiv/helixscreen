@@ -99,6 +99,13 @@ public:
         captured_error = err;
     }
 
+    // Check that validation passed (no VALIDATION_ERROR occurred)
+    // Note: Disconnected client may cause network errors, but those are
+    // expected and don't indicate validation failure
+    bool validation_passed() const {
+        return !error_called || captured_error.type != MoonrakerErrorType::VALIDATION_ERROR;
+    }
+
     // Test objects
     std::unique_ptr<MoonrakerClient> client;
     PrinterState state;
@@ -318,7 +325,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_temperature validates temperature
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
         // Note: success_called depends on mock implementation
     }
 
@@ -328,7 +335,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_temperature validates temperature
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Maximum temperature accepted (400°C)") {
@@ -337,7 +344,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_temperature validates temperature
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Over maximum temperature rejected (500°C)") {
@@ -384,7 +391,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_fan_speed validates speed range",
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Normal speed accepted (50%)") {
@@ -393,7 +400,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_fan_speed validates speed range",
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Maximum speed accepted (100%)") {
@@ -402,7 +409,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_fan_speed validates speed range",
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Over maximum speed rejected (150%)") {
@@ -439,7 +446,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis validates feedrate range", 
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Normal feedrate accepted (3000 mm/min)") {
@@ -448,7 +455,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis validates feedrate range", 
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Maximum feedrate accepted (50000 mm/min)") {
@@ -457,7 +464,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis validates feedrate range", 
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Over maximum feedrate rejected (100000 mm/min)") {
@@ -494,7 +501,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis validates distance range", 
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Normal negative distance accepted (-10mm)") {
@@ -503,7 +510,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis validates distance range", 
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Normal positive distance accepted (10mm)") {
@@ -512,7 +519,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis validates distance range", 
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Maximum distance accepted (1000mm)") {
@@ -521,7 +528,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis validates distance range", 
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Over maximum distance rejected (2000mm)") {
@@ -558,7 +565,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_to_position validates position r
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Normal position accepted (100mm)") {
@@ -567,7 +574,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_to_position validates position r
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Maximum position accepted (1000mm)") {
@@ -576,7 +583,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_to_position validates position r
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Over maximum position rejected (2000mm)") {
@@ -601,7 +608,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_temperature accepts valid heater 
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Bed heater name") {
@@ -610,7 +617,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_temperature accepts valid heater 
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Generic heater with space in name") {
@@ -619,7 +626,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_temperature accepts valid heater 
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Heater with underscores and numbers") {
@@ -628,7 +635,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_temperature accepts valid heater 
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 }
 
@@ -638,7 +645,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_fan_speed accepts valid fan names
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Generic fan with space") {
@@ -647,7 +654,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_fan_speed accepts valid fan names
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Fan with numbers") {
@@ -656,7 +663,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_fan_speed accepts valid fan names
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 }
 
@@ -670,7 +677,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "home_axes accepts valid axis specific
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Single lowercase axis") {
@@ -679,7 +686,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "home_axes accepts valid axis specific
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Multiple axes uppercase") {
@@ -688,7 +695,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "home_axes accepts valid axis specific
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Multiple axes lowercase") {
@@ -697,7 +704,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "home_axes accepts valid axis specific
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Mixed case axes") {
@@ -706,7 +713,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "home_axes accepts valid axis specific
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Empty axes (home all)") {
@@ -715,7 +722,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "home_axes accepts valid axis specific
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 }
 
@@ -725,7 +732,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis accepts valid axis characte
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Y axis lowercase") {
@@ -734,7 +741,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis accepts valid axis characte
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Z axis") {
@@ -743,7 +750,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis accepts valid axis characte
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("E axis (extruder)") {
@@ -752,7 +759,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis accepts valid axis characte
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
 
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 }
 
@@ -893,13 +900,13 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "Validation handles edge cases", "[moo
         api->set_temperature("extruder", 0.0,
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
 
         reset_callbacks();
         api->set_temperature("extruder", 400.0,
             [this]() { this->success_callback(); },
             [this](const MoonrakerError& err) { this->error_callback(err); });
-        REQUIRE_FALSE(error_called);
+        REQUIRE(validation_passed());
     }
 
     SECTION("Floating point precision at boundaries") {
