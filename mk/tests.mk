@@ -46,6 +46,7 @@ TEST_WIZARD_DEPS := \
 # Note: ui_icon.o and ui_switch.o excluded - their tests include the .cpp directly
 # Note: ui_notification.o and ui_toast.o excluded - they require full UI init
 #       ui_notification_history.o is the pure C++ circular buffer that tests need
+#       ui_test_utils.o provides stub implementations for ui_toast_* functions
 TEST_UI_DEPS := \
     $(OBJ_DIR)/ui_nav.o \
     $(OBJ_DIR)/ui_temp_graph.o \
@@ -70,6 +71,7 @@ TEST_PANEL_DEPS := \
     $(OBJ_DIR)/ui_panel_base.o \
     $(OBJ_DIR)/ui_panel_home.o \
     $(OBJ_DIR)/ui_panel_controls.o \
+    $(OBJ_DIR)/ui_panel_fan.o \
     $(OBJ_DIR)/ui_panel_temp_control.o \
     $(OBJ_DIR)/ui_panel_extrusion.o \
     $(OBJ_DIR)/ui_panel_motion.o \
