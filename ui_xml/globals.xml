@@ -204,10 +204,10 @@
     <!-- Standard header bar height -->
     <px name="header_back_button_size" value="60"/>
     <!-- Back button touch target size -->
-    <px name="header_right_button_width" value="120"/>
-    <!-- Right action button width -->
-    <px name="header_right_button_height" value="40"/>
-    <!-- Right action button height -->
+    <px name="header_action_button_width" value="120"/>
+    <!-- Action button width -->
+    <px name="header_action_button_height" value="40"/>
+    <!-- Action button height -->
     <!-- Motion panel dimensions (Z-axis controls) -->
     <px name="z_button_width" value="140"/>
     <!-- Increased from 120 to fit icon + "10mm" text -->

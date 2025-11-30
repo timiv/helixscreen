@@ -139,11 +139,38 @@ static void update_printer_icon_combined() {
     lv_obj_set_style_text_color(printer_icon, color, 0);
 }
 
+// Track notification panel to prevent multiple instances
+static lv_obj_t* g_notification_panel_obj = nullptr;
+
 // Event callback for notification history button
 static void status_notification_history_clicked(lv_event_t* e) {
+    spdlog::info("[StatusBar] Notification history button CLICKED!");
+
+    // Prevent multiple panel instances - if panel already exists and is visible, ignore click
+    if (g_notification_panel_obj && lv_obj_is_valid(g_notification_panel_obj) &&
+        !lv_obj_has_flag(g_notification_panel_obj, LV_OBJ_FLAG_HIDDEN)) {
+        spdlog::debug("[StatusBar] Notification panel already visible, ignoring click");
+        return;
+    }
+
     lv_obj_t* parent = lv_screen_active();
 
-    // Use class-based API - create XML component and setup via panel instance
+    // Get panel instance and init subjects BEFORE creating XML
+    // (subjects must be registered for XML bindings to work)
+    auto& panel = get_global_notification_history_panel();
+    if (!panel.are_subjects_initialized()) {
+        panel.init_subjects();
+    }
+
+    // Clean up old panel if it exists but is hidden/invalid
+    if (g_notification_panel_obj) {
+        if (lv_obj_is_valid(g_notification_panel_obj)) {
+            lv_obj_delete(g_notification_panel_obj);
+        }
+        g_notification_panel_obj = nullptr;
+    }
+
+    // Now create XML component - bindings can find the registered subjects
     lv_obj_t* panel_obj =
         static_cast<lv_obj_t*>(lv_xml_create(parent, "notification_history_panel", nullptr));
     if (!panel_obj) {
@@ -151,11 +178,10 @@ static void status_notification_history_clicked(lv_event_t* e) {
         return;
     }
 
-    // Get panel instance and setup
-    auto& panel = get_global_notification_history_panel();
-    if (!panel.are_subjects_initialized()) {
-        panel.init_subjects();
-    }
+    // Store reference for duplicate prevention
+    g_notification_panel_obj = panel_obj;
+
+    // Setup panel (wires buttons, refreshes list)
     panel.setup(panel_obj, parent);
 
     ui_nav_push_overlay(panel_obj);

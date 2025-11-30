@@ -1423,6 +1423,10 @@ int main(int argc, char** argv) {
     // Create entire UI from XML (single component contains everything)
     lv_obj_t* app_layout = (lv_obj_t*)lv_xml_create(screen, "app_layout", NULL);
 
+    // Disable scrollbars on screen to prevent overflow issues with overlay panels
+    lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_scrollbar_mode(screen, LV_SCROLLBAR_MODE_OFF);
+
     // Force layout calculation for all LV_SIZE_CONTENT widgets
     lv_obj_update_layout(screen);
 
@@ -1514,10 +1518,13 @@ int main(int argc, char** argv) {
 
     spdlog::debug("XML UI created successfully with reactive navigation");
 
-    // Test notifications - uncomment to demonstrate notification badge in status bar
-    // NOTIFY_INFO("Notification system initialized successfully");
-    // NOTIFY_WARNING("This is a test warning notification");
-    // NOTIFY_ERROR("This is a test error notification");
+    // Test notifications - enabled in test mode to verify notification history
+    if (get_runtime_config().test_mode) {
+        NOTIFY_INFO("Info notification test");
+        NOTIFY_SUCCESS("Success notification test");
+        NOTIFY_WARNING("Warning notification test");
+        NOTIFY_ERROR("Error notification test");
+    }
 
     // Initialize Moonraker client EARLY (before wizard, so it's available for connection test)
     // But don't connect yet - just create the instances

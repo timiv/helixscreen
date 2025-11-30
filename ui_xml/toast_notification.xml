@@ -3,22 +3,19 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
 <!-- Toast Notification Component - Temporary non-blocking messages
-     Uses severity_card widget for icon color styling (border disabled for toasts).
-     Pass severity="error|warning|success|info" and it handles icon colors.
-     Call ui_severity_card_finalize() after creation to style icon.
+     All styling controlled via XML with conditional visibility based on toast_severity subject.
+     Severity levels: 0=info, 1=success, 2=warning, 3=error
+     Set toast_severity subject BEFORE creating this component.
 
      Optional action button: Set toast_action_visible subject to 1 and
-     toast_action_text subject to show an action button (e.g., "Undo").
-     Wire toast_action_btn click handler in C++ code. -->
+     toast_action_text subject to show an action button (e.g., "Undo"). -->
 <component>
   <api>
-    <prop type="string" name="severity"/>
     <prop type="string" name="message"/>
   </api>
 
   <!-- Toast container - floating appearance with shadow, positioned top-right -->
-  <view extends="severity_card" name="toast_root"
-        severity="$severity"
+  <view extends="lv_obj" name="toast_root"
         align="top_right"
         x="-16"
         y="16"
@@ -39,9 +36,29 @@
         style_flex_main_place="start"
         style_flex_cross_place="center">
 
-    <!-- Severity icon (left) -->
-    <lv_label name="severity_icon" text="&#xF071;"
-              style_text_font="fa_icons_24"/>
+    <!-- INFO icon (circle-info) - shown when toast_severity=0 -->
+    <lv_label name="icon_info" text="#icon_info_circle"
+              style_text_font="fa_icons_24" style_text_color="#info_color">
+      <lv_obj-bind_flag_if_not_eq subject="toast_severity" flag="hidden" ref_value="0"/>
+    </lv_label>
+
+    <!-- SUCCESS icon (check) - shown when toast_severity=1 -->
+    <lv_label name="icon_success" text="#icon_check"
+              style_text_font="fa_icons_24" style_text_color="#success_color" hidden="true">
+      <lv_obj-bind_flag_if_not_eq subject="toast_severity" flag="hidden" ref_value="1"/>
+    </lv_label>
+
+    <!-- WARNING icon (triangle-exclamation) - shown when toast_severity=2 -->
+    <lv_label name="icon_warning" text="#icon_triangle_exclamation"
+              style_text_font="fa_icons_24" style_text_color="#warning_color" hidden="true">
+      <lv_obj-bind_flag_if_not_eq subject="toast_severity" flag="hidden" ref_value="2"/>
+    </lv_label>
+
+    <!-- ERROR icon (triangle-exclamation) - shown when toast_severity=3 -->
+    <lv_label name="icon_error" text="#icon_triangle_exclamation"
+              style_text_font="fa_icons_24" style_text_color="#error_color" hidden="true">
+      <lv_obj-bind_flag_if_not_eq subject="toast_severity" flag="hidden" ref_value="3"/>
+    </lv_label>
 
     <!-- Message text (wraps to fit content) -->
     <lv_label name="toast_message" text="$message"
@@ -63,16 +80,14 @@
                style_pad_right="#padding_normal"
                hidden="true"
                clickable="true">
-      <!-- Bind visibility to toast_action_visible subject (hidden when 0) -->
       <lv_obj-bind_flag_if_eq subject="toast_action_visible" flag="hidden" ref_value="0"/>
       <lv_label name="toast_action_label" align="center"
                 style_text_font="#font_body"
-                style_text_color="#text_on_accent">
-        <lv_label-bind_text subject="toast_action_text"/>
-      </lv_label>
+                style_text_color="#text_on_accent"
+                bind_text="toast_action_text"/>
     </lv_button>
 
-    <!-- Close button (transparent background) -->
+    <!-- Close button -->
     <lv_button name="toast_close_btn"
                width="32"
                height="32"
@@ -81,9 +96,8 @@
                style_bg_opa="0"
                style_pad_all="0"
                clickable="true">
+      <lv_label text="#icon_xmark" style_text_font="fa_icons_16" style_text_color="#text_secondary" align="center"/>
       <event_cb trigger="clicked" callback="toast_close_btn_clicked"/>
-      <!-- LV_SYMBOL_CLOSE -->
-      <lv_label text="&#xF00D;" align="center" style_text_font="#font_body"/>
     </lv_button>
   </view>
 </component>

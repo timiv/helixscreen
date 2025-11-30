@@ -24,8 +24,8 @@
   <!-- API Properties -->
   <api>
     <prop type="string" name="title" default="Overlay"/>
-    <prop type="string" name="right_button_text" default=""/>
-    <prop type="bool" name="show_right_button" default="false"/>
+    <prop type="string" name="action_button_text" default=""/>
+    <prop type="string" name="hide_action_button" default="true"/>
     <prop type="string" name="width" default="#overlay_panel_width"/>
   </api>
 
@@ -36,8 +36,8 @@
     <!-- Header Bar (integrated, uses improved header_bar component) -->
     <header_bar name="overlay_header"
                 title="$title"
-                right_button_text="$right_button_text"
-                show_right_button="$show_right_button"/>
+                action_button_text="$action_button_text"
+                hide_action_button="$hide_action_button"/>
 
     <!-- Content Area (flexible height, fills remaining space) -->
     <!-- Panel-specific content goes here -->

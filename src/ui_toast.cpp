@@ -22,6 +22,10 @@ static void* action_user_data = nullptr;
 static lv_subject_t toast_action_visible_subject;
 static lv_subject_t toast_action_text_subject;
 static char toast_action_text_buf[64] = "";
+
+// Subject for severity level (0=info, 1=success, 2=warning, 3=error)
+static lv_subject_t toast_severity_subject;
+
 static bool subjects_initialized = false;
 
 // Forward declarations
@@ -30,13 +34,21 @@ static void toast_close_btn_clicked(lv_event_t* e);
 static void toast_action_btn_clicked(lv_event_t* e);
 
 void ui_toast_init() {
-    // Initialize action button subjects (only once)
+    // Initialize subjects (only once)
     if (!subjects_initialized) {
+        // Action button subjects
         lv_subject_init_int(&toast_action_visible_subject, 0);
         lv_xml_register_subject(NULL, "toast_action_visible", &toast_action_visible_subject);
 
         lv_subject_init_pointer(&toast_action_text_subject, toast_action_text_buf);
         lv_xml_register_subject(NULL, "toast_action_text", &toast_action_text_subject);
+
+        // Severity subject (0=info, 1=success, 2=warning, 3=error)
+        lv_subject_init_int(&toast_severity_subject, 0);
+        lv_xml_register_subject(NULL, "toast_severity", &toast_severity_subject);
+
+        // Register callback for XML event_cb to work
+        lv_xml_register_event_cb(nullptr, "toast_close_btn_clicked", toast_close_btn_clicked);
 
         subjects_initialized = true;
     }
@@ -44,7 +56,7 @@ void ui_toast_init() {
     spdlog::debug("Toast notification system initialized");
 }
 
-// Convert ToastSeverity enum to string for XML
+// Convert ToastSeverity enum to string for logging
 static const char* severity_to_string(ToastSeverity severity) {
     switch (severity) {
     case ToastSeverity::ERROR:
@@ -56,6 +68,22 @@ static const char* severity_to_string(ToastSeverity severity) {
     case ToastSeverity::INFO:
     default:
         return "info";
+    }
+}
+
+// Convert ToastSeverity enum to int for subject binding (0=info, 1=success, 2=warning, 3=error)
+static int severity_to_int(ToastSeverity severity) {
+    switch (severity) {
+    case ToastSeverity::INFO:
+        return 0;
+    case ToastSeverity::SUCCESS:
+        return 1;
+    case ToastSeverity::WARNING:
+        return 2;
+    case ToastSeverity::ERROR:
+        return 3;
+    default:
+        return 0;
     }
 }
 
@@ -94,29 +122,22 @@ static void create_toast_internal(ToastSeverity severity, const char* message, u
         lv_subject_set_int(&toast_action_visible_subject, 0);
     }
 
-    // Create toast via XML component - just pass semantic severity
-    const char* attrs[] = {"severity", severity_to_string(severity), "message", message, nullptr};
+    // Set severity subject BEFORE creating toast (XML bindings read it during creation)
+    lv_subject_set_int(&toast_severity_subject, severity_to_int(severity));
+
+    // Create toast via XML component
+    const char* attrs[] = {"message", message, nullptr};
 
     lv_obj_t* screen = lv_screen_active();
-    lv_xml_create(screen, "toast_notification", attrs);
-
-    // Find the created toast (should be last child of screen)
-    uint32_t child_cnt = lv_obj_get_child_count(screen);
-    active_toast = (child_cnt > 0) ? lv_obj_get_child(screen, child_cnt - 1) : nullptr;
+    active_toast = static_cast<lv_obj_t*>(lv_xml_create(screen, "toast_notification", attrs));
 
     if (!active_toast) {
         spdlog::error("Failed to create toast notification widget");
         return;
     }
 
-    // Finalize severity styling for children (icon text and color)
-    ui_severity_card_finalize(active_toast);
-
-    // Wire up close button callback
-    lv_obj_t* close_btn = lv_obj_find_by_name(active_toast, "toast_close_btn");
-    if (close_btn) {
-        lv_obj_add_event_cb(close_btn, toast_close_btn_clicked, LV_EVENT_CLICKED, nullptr);
-    }
+    // Icon visibility is controlled by XML binding to toast_severity subject
+    // Close button callback is registered via lv_xml_register_event_cb() in ui_toast_init()
 
     // Wire up action button callback (if showing action toast)
     if (with_action) {
@@ -133,7 +154,8 @@ static void create_toast_internal(ToastSeverity severity, const char* message, u
     // Update status bar notification icon
     ui_status_bar_update_notification(severity_to_notification_status(severity));
 
-    spdlog::debug("Toast shown: {} ({}ms, action={})", message, duration_ms, with_action);
+    spdlog::debug("Toast shown: [{}] {} ({}ms, action={})", severity_to_string(severity), message,
+                  duration_ms, with_action);
 }
 
 void ui_toast_show(ToastSeverity severity, const char* message, uint32_t duration_ms) {

@@ -206,17 +206,17 @@ lv_obj_t* ui_overlay_panel_wire_back_button(lv_obj_t* panel,
                                             const char* header_name = "overlay_header");
 
 /**
- * @brief Wire right action button in overlay panel header_bar
+ * @brief Wire action button in overlay panel header_bar
  *
- * Finds the right button within the header_bar and wires it to the provided
+ * Finds the action button within the header_bar and wires it to the provided
  * callback. Used for confirm/save/action buttons in overlay panels.
  *
  * @param panel Overlay panel root object
  * @param callback Event callback for button click
  * @param header_name Name of header_bar widget (default: "overlay_header")
  * @param user_data Optional user data to pass to callback (default: nullptr)
- * @return Pointer to right button if found, nullptr otherwise
+ * @return Pointer to action button if found, nullptr otherwise
  */
-lv_obj_t* ui_overlay_panel_wire_right_button(lv_obj_t* panel, lv_event_cb_t callback,
-                                             const char* header_name = "overlay_header",
-                                             void* user_data = nullptr);
+lv_obj_t* ui_overlay_panel_wire_action_button(lv_obj_t* panel, lv_event_cb_t callback,
+                                              const char* header_name = "overlay_header",
+                                              void* user_data = nullptr);

@@ -16,7 +16,7 @@
   <!-- Uses shared backdrop from navigation system -->
   <view extends="lv_obj" name="bed_temp_panel" width="#overlay_panel_width_large" height="100%" align="right_mid" style_bg_opa="255" style_bg_color="#card_bg" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="column">
     <!-- Header Bar (uses improved header_bar component) -->
-    <header_bar name="overlay_header" title="Heatbed Temperature" right_button_text="Confirm" show_right_button="true"/>
+    <header_bar name="overlay_header" title="Heatbed Temperature" action_button_text="Confirm" hide_action_button="false"/>
     <!-- Content Area: Two Columns -->
     <lv_obj name="overlay_content" flex_grow="1" width="100%" style_bg_opa="0" style_pad_all="#padding_normal" scrollable="false" style_border_width="0" style_border_opa="0" flex_flow="row" style_flex_main_place="space_between">
       <!-- Left Column (66%): Temperature Graph with Y-axis labels + X-axis time labels -->

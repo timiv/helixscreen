@@ -37,7 +37,7 @@ static const char* severity_to_color_const(const char* severity) {
  */
 static const char* severity_to_icon(const char* severity) {
     if (!severity || strcmp(severity, "info") == 0) {
-        return "\xEF\x81\x99"; // F059 - question-circle
+        return "\xEF\x81\x9A"; // F05A - circle-info (i in circle)
     } else if (strcmp(severity, "error") == 0) {
         return LV_SYMBOL_WARNING; // F071 - exclamation-triangle
     } else if (strcmp(severity, "warning") == 0) {
@@ -45,7 +45,7 @@ static const char* severity_to_icon(const char* severity) {
     } else if (strcmp(severity, "success") == 0) {
         return LV_SYMBOL_OK; // F00C - check
     }
-    return "\xEF\x81\x99"; // F059 - question-circle
+    return "\xEF\x81\x9A"; // F05A - circle-info (i in circle)
 }
 
 /**
@@ -110,23 +110,51 @@ void ui_severity_card_register(void) {
 
 void ui_severity_card_finalize(lv_obj_t* obj) {
     if (!obj) {
+        spdlog::warn("[SeverityCard] finalize called with NULL obj");
         return;
     }
 
     // Get stored severity from user data
     const char* severity = (const char*)lv_obj_get_user_data(obj);
     if (!severity) {
+        spdlog::debug("[SeverityCard] No severity in user_data, defaulting to 'info'");
         severity = "info";
     }
 
-    lv_color_t severity_color = ui_severity_get_color(severity);
+    // New pattern: XML defines 4 icons (icon_info, icon_success, icon_warning, icon_error)
+    // all hidden by default. We just unhide the correct one.
+    // This keeps all styling (text, color) in XML.
 
-    // Find severity_icon child and style it
-    lv_obj_t* icon = lv_obj_find_by_name(obj, "severity_icon");
+    // Map severity to icon name
+    const char* icon_name = nullptr;
+    if (strcmp(severity, "info") == 0) {
+        icon_name = "icon_info";
+    } else if (strcmp(severity, "success") == 0) {
+        icon_name = "icon_success";
+    } else if (strcmp(severity, "warning") == 0) {
+        icon_name = "icon_warning";
+    } else if (strcmp(severity, "error") == 0) {
+        icon_name = "icon_error";
+    } else {
+        icon_name = "icon_info"; // Default to info
+    }
+
+    // Find and unhide the correct icon
+    lv_obj_t* icon = lv_obj_find_by_name(obj, icon_name);
     if (icon) {
-        lv_label_set_text(icon, severity_to_icon(severity));
-        lv_obj_set_style_text_color(icon, severity_color, LV_PART_MAIN);
-        spdlog::trace("[SeverityCard] Finalized severity_icon: severity={}", severity);
+        lv_obj_remove_flag(icon, LV_OBJ_FLAG_HIDDEN);
+        spdlog::debug("[SeverityCard] Finalized: showing '{}' for severity='{}'", icon_name, severity);
+    } else {
+        // Fallback: try legacy severity_icon pattern for backward compatibility
+        lv_obj_t* legacy_icon = lv_obj_find_by_name(obj, "severity_icon");
+        if (legacy_icon) {
+            const char* icon_text = severity_to_icon(severity);
+            lv_label_set_text(legacy_icon, icon_text);
+            lv_obj_set_style_text_color(legacy_icon, ui_severity_get_color(severity), LV_PART_MAIN);
+            spdlog::debug("[SeverityCard] Finalized via legacy pattern for severity='{}'", severity);
+        } else {
+            spdlog::warn("[SeverityCard] Could not find icon for severity='{}'", severity);
+        }
     }
 }
 

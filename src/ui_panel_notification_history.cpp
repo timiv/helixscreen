@@ -57,8 +57,8 @@ void NotificationHistoryPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Use standard overlay panel setup (wires back button automatically)
     ui_overlay_panel_setup_standard(panel_, parent_screen_, "overlay_header", "overlay_content");
 
-    // Wire right button ("Clear All") to clear callback
-    ui_overlay_panel_wire_right_button(panel_, on_clear_clicked, "overlay_header", this);
+    // Wire action button ("Clear All") to clear callback
+    ui_overlay_panel_wire_action_button(panel_, on_clear_clicked, "overlay_header", this);
 
     // NOTE: Filter buttons removed from UI for cleaner look.
     // Filter logic retained for future use if needed.

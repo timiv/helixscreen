@@ -573,10 +573,10 @@ void TempControlPanel::setup_custom_button(lv_obj_t* panel, heater_type_t type) 
 }
 
 void TempControlPanel::setup_confirm_button(lv_obj_t* header, heater_type_t type) {
-    lv_obj_t* right_button = lv_obj_find_by_name(header, "right_button");
-    if (right_button) {
+    lv_obj_t* action_button = lv_obj_find_by_name(header, "action_button");
+    if (action_button) {
         lv_event_cb_t cb = (type == HEATER_NOZZLE) ? nozzle_confirm_cb : bed_confirm_cb;
-        lv_obj_add_event_cb(right_button, cb, LV_EVENT_CLICKED, this);
+        lv_obj_add_event_cb(action_button, cb, LV_EVENT_CLICKED, this);
         spdlog::debug("[TempPanel] {} confirm button wired",
                       type == HEATER_NOZZLE ? "Nozzle" : "Bed");
     }

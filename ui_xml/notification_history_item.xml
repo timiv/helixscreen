@@ -4,7 +4,7 @@
 <!-- Notification History Item Component
      Uses severity_card widget for automatic color styling.
      Pass severity="error|warning|success|info" and it handles colors.
-     Call ui_severity_card_finalize() after creation to style children. -->
+     Call ui_severity_card_finalize() after creation to show correct icon. -->
 <component>
   <api>
     <prop type="string" name="severity"/>      <!-- "error", "warning", "info", "success" -->
@@ -26,10 +26,26 @@
         style_radius="#border_radius"
         scrollable="false">
 
-    <!-- Severity icon (top-left) - styled by ui_severity_card_finalize() -->
-    <lv_label name="severity_icon" text="&#xF071;"
-              align="top_left"
-              style_text_font="fa_icons_24"/>
+    <!-- Severity icons - all hidden by default, finalize() shows the correct one -->
+    <!-- INFO icon (circle-info) -->
+    <lv_label name="icon_info" text="#icon_info_circle"
+              align="top_left" hidden="true"
+              style_text_font="fa_icons_24" style_text_color="#info_color"/>
+
+    <!-- SUCCESS icon (checkmark) -->
+    <lv_label name="icon_success" text="#icon_check"
+              align="top_left" hidden="true"
+              style_text_font="fa_icons_24" style_text_color="#success_color"/>
+
+    <!-- WARNING icon (triangle-exclamation) -->
+    <lv_label name="icon_warning" text="#icon_triangle_exclamation"
+              align="top_left" hidden="true"
+              style_text_font="fa_icons_24" style_text_color="#warning_color"/>
+
+    <!-- ERROR icon (triangle-exclamation, red) -->
+    <lv_label name="icon_error" text="#icon_triangle_exclamation"
+              align="top_left" hidden="true"
+              style_text_font="fa_icons_24" style_text_color="#error_color"/>
 
     <!-- Title (top-left, offset right of icon, vertically centered with 24px icon) -->
     <text_body name="item_title" text="$title"

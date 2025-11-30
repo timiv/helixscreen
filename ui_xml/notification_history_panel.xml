@@ -14,8 +14,8 @@
     <!-- Header Bar (uses improved header_bar component) -->
     <header_bar name="overlay_header"
                 title="Notifications"
-                right_button_text="Clear All"
-                show_right_button="true"/>
+                action_button_text="Clear All"
+                hide_action_button="false"/>
 
     <!-- NOTE: Filter buttons removed from UI for cleaner look.
          C++ filter logic retained in ui_panel_notification_history.cpp if needed later. -->

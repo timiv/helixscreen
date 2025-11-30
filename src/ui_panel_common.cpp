@@ -305,10 +305,10 @@ lv_obj_t* ui_overlay_panel_wire_back_button(lv_obj_t* panel, const char* header_
     return back_btn;
 }
 
-lv_obj_t* ui_overlay_panel_wire_right_button(lv_obj_t* panel, lv_event_cb_t callback,
-                                             const char* header_name, void* user_data) {
+lv_obj_t* ui_overlay_panel_wire_action_button(lv_obj_t* panel, lv_event_cb_t callback,
+                                              const char* header_name, void* user_data) {
     if (!panel || !callback || !header_name) {
-        spdlog::warn("[PanelCommon] Invalid parameters for overlay right button wiring");
+        spdlog::warn("[PanelCommon] Invalid parameters for overlay action button wiring");
         return nullptr;
     }
 
@@ -319,16 +319,17 @@ lv_obj_t* ui_overlay_panel_wire_right_button(lv_obj_t* panel, lv_event_cb_t call
         return nullptr;
     }
 
-    // Find right_button within header_bar
-    lv_obj_t* right_btn = lv_obj_find_by_name(header, "right_button");
-    if (!right_btn) {
-        spdlog::warn("[PanelCommon] Right button not found in header '{}'", header_name);
+    // Find action_button within header_bar
+    lv_obj_t* action_btn = lv_obj_find_by_name(header, "action_button");
+    if (!action_btn) {
+        spdlog::warn("[PanelCommon] Action button not found in header '{}'", header_name);
         return nullptr;
     }
 
     // Wire to provided callback with user_data
-    lv_obj_add_event_cb(right_btn, callback, LV_EVENT_CLICKED, user_data);
-    spdlog::debug("[PanelCommon] Right button wired in header '{}'", header_name);
+    // Note: visibility is controlled by XML hide_action_button prop
+    lv_obj_add_event_cb(action_btn, callback, LV_EVENT_CLICKED, user_data);
+    spdlog::debug("[PanelCommon] Action button wired in header '{}'", header_name);
 
-    return right_btn;
+    return action_btn;
 }
