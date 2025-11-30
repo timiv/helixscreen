@@ -8,7 +8,6 @@
 
 1. **Settings Panel:** Complete configuration UI
 2. **Phase 12:** Production readiness
-3. **Motors Disable:** Complete Phase 5.6 (Advanced Controls)
 
 **Completed Phases:** 1, 2, 3, 4, 5, 11, 13, 14
 **Mostly Complete:** 6, 7, 8, 15
@@ -20,6 +19,11 @@
 - Dynamic USB tab visibility (shown only when drive connected)
 - Toast notifications for USB insert/remove
 - Auto-switch to Printer source when USB removed
+
+### ✅ Motors Disable (Complete - 2025-11-30)
+- Confirmation dialog pattern for destructive actions
+- M84 G-code command via MoonrakerAPI
+- Toast notifications for success/failure/not-connected states
 
 ---
 

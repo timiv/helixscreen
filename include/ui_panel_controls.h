@@ -113,6 +113,12 @@ class ControlsPanel : public PanelBase {
     lv_obj_t* fan_panel_ = nullptr;
 
     //
+    // === Modal Dialog State ===
+    //
+
+    lv_obj_t* motors_confirmation_dialog_ = nullptr;
+
+    //
     // === Private Helpers ===
     //
 
@@ -131,6 +137,8 @@ class ControlsPanel : public PanelBase {
     void handle_extrusion_clicked();
     void handle_fan_clicked();
     void handle_motors_clicked();
+    void handle_motors_confirm();
+    void handle_motors_cancel();
 
     //
     // === Static Trampolines ===
@@ -145,6 +153,8 @@ class ControlsPanel : public PanelBase {
     static void on_extrusion_clicked(lv_event_t* e);
     static void on_fan_clicked(lv_event_t* e);
     static void on_motors_clicked(lv_event_t* e);
+    static void on_motors_confirm(lv_event_t* e);
+    static void on_motors_cancel(lv_event_t* e);
 };
 
 // Global instance accessor (needed by main.cpp)

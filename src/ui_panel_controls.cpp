@@ -5,13 +5,16 @@
 
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
+#include "ui_modal.h"
 #include "ui_nav.h"
+#include "ui_notification.h"
 #include "ui_panel_extrusion.h"
 #include "ui_panel_fan.h"
 #include "ui_panel_motion.h"
 #include "ui_panel_temp_control.h"
 
 #include "app_globals.h"
+#include "moonraker_api.h"
 #include "printer_state.h"
 
 #include <spdlog/spdlog.h>
@@ -290,8 +293,78 @@ void ControlsPanel::handle_fan_clicked() {
 }
 
 void ControlsPanel::handle_motors_clicked() {
-    spdlog::debug("[{}] Motors Disable card clicked", get_name());
-    // TODO: Show confirmation dialog, then send motors disable command
+    spdlog::debug("[{}] Motors Disable card clicked - showing confirmation", get_name());
+
+    // Create modal config
+    ui_modal_config_t config = {.position = {.use_alignment = true, .alignment = LV_ALIGN_CENTER},
+                                .backdrop_opa = 180,
+                                .keyboard = nullptr,
+                                .persistent = false,
+                                .on_close = nullptr};
+
+    // Create attributes for title and message
+    const char* attrs[] = {"title",   "Disable Motors?",
+                           "message", "Release all stepper motors. Position will be lost.",
+                           nullptr};
+
+    // Show modal
+    motors_confirmation_dialog_ = ui_modal_show("confirmation_dialog", &config, attrs);
+
+    if (!motors_confirmation_dialog_) {
+        LOG_ERROR_INTERNAL("Failed to create motors confirmation dialog");
+        ui_notification_error("Error", "Failed to show confirmation dialog");
+        return;
+    }
+
+    // Wire up cancel button
+    lv_obj_t* cancel_btn = lv_obj_find_by_name(motors_confirmation_dialog_, "dialog_cancel_btn");
+    if (cancel_btn) {
+        lv_obj_add_event_cb(cancel_btn, on_motors_cancel, LV_EVENT_CLICKED, this);
+    }
+
+    // Wire up confirm button
+    lv_obj_t* confirm_btn = lv_obj_find_by_name(motors_confirmation_dialog_, "dialog_confirm_btn");
+    if (confirm_btn) {
+        lv_obj_add_event_cb(confirm_btn, on_motors_confirm, LV_EVENT_CLICKED, this);
+    }
+
+    spdlog::info("[{}] Motors confirmation dialog shown", get_name());
+}
+
+void ControlsPanel::handle_motors_confirm() {
+    spdlog::debug("[{}] Motors disable confirmed", get_name());
+
+    // Hide dialog first
+    if (motors_confirmation_dialog_) {
+        ui_modal_hide(motors_confirmation_dialog_);
+        motors_confirmation_dialog_ = nullptr;
+    }
+
+    // Send M84 command to disable motors
+    if (api_) {
+        api_->execute_gcode(
+            "M84",  // Klipper command to disable steppers
+            []() {
+                spdlog::info("[ControlsPanel] Motors disabled successfully");
+                ui_notification_success("Motors disabled");
+            },
+            [](const MoonrakerError& err) {
+                spdlog::error("[ControlsPanel] Motors disable failed: {}", err.user_message());
+                ui_notification_error("Error", "Motors disable failed");
+            });
+    } else {
+        spdlog::warn("[{}] Not connected - motors command not sent", get_name());
+        ui_notification_warning("Not connected");
+    }
+}
+
+void ControlsPanel::handle_motors_cancel() {
+    spdlog::debug("[{}] Motors disable cancelled", get_name());
+
+    if (motors_confirmation_dialog_) {
+        ui_modal_hide(motors_confirmation_dialog_);
+        motors_confirmation_dialog_ = nullptr;
+    }
 }
 
 // ============================================================================
@@ -348,6 +421,24 @@ void ControlsPanel::on_motors_clicked(lv_event_t* e) {
     auto* self = static_cast<ControlsPanel*>(lv_event_get_user_data(e));
     if (self) {
         self->handle_motors_clicked();
+    }
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ControlsPanel::on_motors_confirm(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_motors_confirm");
+    auto* self = static_cast<ControlsPanel*>(lv_event_get_user_data(e));
+    if (self) {
+        self->handle_motors_confirm();
+    }
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ControlsPanel::on_motors_cancel(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_motors_cancel");
+    auto* self = static_cast<ControlsPanel*>(lv_event_get_user_data(e));
+    if (self) {
+        self->handle_motors_cancel();
     }
     LVGL_SAFE_EVENT_CB_END();
 }
