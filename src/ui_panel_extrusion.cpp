@@ -14,6 +14,7 @@
 
 #include "app_constants.h"
 #include "app_globals.h"
+#include "moonraker_api.h"
 #include "printer_state.h"
 
 #include <spdlog/spdlog.h>
@@ -238,10 +239,20 @@ void ExtrusionPanel::handle_extrude() {
 
     spdlog::info("[{}] Extruding {}mm of filament", get_name(), selected_amount_);
 
-    // TODO: Send command via MoonrakerAPI
-    // if (api_) {
-    //     api_->extrude(selected_amount_);
-    // }
+    if (api_) {
+        // M83 = relative extrusion mode, G1 E{amount} F300 = extrude at 300mm/min
+        std::string gcode = fmt::format("M83\nG1 E{} F300", selected_amount_);
+        api_->execute_gcode(
+            gcode,
+            [amount = selected_amount_]() {
+                NOTIFY_SUCCESS("Extruded {}mm", amount);
+            },
+            [](const MoonrakerError& error) {
+                NOTIFY_ERROR("Extrusion failed: {}", error.user_message());
+            });
+    } else {
+        NOTIFY_WARNING("Not connected to printer");
+    }
 }
 
 void ExtrusionPanel::handle_retract() {
@@ -253,10 +264,20 @@ void ExtrusionPanel::handle_retract() {
 
     spdlog::info("[{}] Retracting {}mm of filament", get_name(), selected_amount_);
 
-    // TODO: Send command via MoonrakerAPI
-    // if (api_) {
-    //     api_->retract(selected_amount_);
-    // }
+    if (api_) {
+        // M83 = relative extrusion mode, G1 E-{amount} F300 = retract at 300mm/min
+        std::string gcode = fmt::format("M83\nG1 E-{} F300", selected_amount_);
+        api_->execute_gcode(
+            gcode,
+            [amount = selected_amount_]() {
+                NOTIFY_SUCCESS("Retracted {}mm", amount);
+            },
+            [](const MoonrakerError& error) {
+                NOTIFY_ERROR("Retraction failed: {}", error.user_message());
+            });
+    } else {
+        NOTIFY_WARNING("Not connected to printer");
+    }
 }
 
 void ExtrusionPanel::on_amount_button_clicked(lv_event_t* e) {

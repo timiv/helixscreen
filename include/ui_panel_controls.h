@@ -33,7 +33,7 @@ class TempControlPanel;
  * - Bed Temp: Heatbed temperature control
  * - Extrusion: Filament extrusion/retraction controls
  * - Fan: Part cooling fan control with slider and presets
- * - Motors: Disable steppers (TODO)
+ * - Motors: Disable steppers
  *
  * ## Migration Notes:
  * Phase 3 migration - similar to SettingsPanel launcher pattern.

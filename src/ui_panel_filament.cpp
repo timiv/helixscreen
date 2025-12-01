@@ -14,6 +14,7 @@
 
 #include "app_constants.h"
 #include "app_globals.h"
+#include "moonraker_api.h"
 #include "printer_state.h"
 
 #include <spdlog/spdlog.h>
@@ -238,8 +239,19 @@ void FilamentPanel::handle_preset_button(int material_id) {
     spdlog::info("[{}] Material selected: {} (target={}°C)", get_name(), material_id,
                  nozzle_target_);
 
-    // TODO: Send command to printer to set temperature
-    // api_->send_gcode(fmt::format("M104 S{}", nozzle_target_));
+    // Send temperature command to printer
+    if (api_) {
+        api_->set_temperature(
+            "extruder", static_cast<double>(nozzle_target_),
+            [target = nozzle_target_]() {
+                NOTIFY_SUCCESS("Nozzle target set to {}°C", target);
+            },
+            [](const MoonrakerError& error) {
+                NOTIFY_ERROR("Failed to set nozzle temp: {}", error.user_message());
+            });
+    } else {
+        NOTIFY_WARNING("Not connected to printer");
+    }
 }
 
 void FilamentPanel::handle_custom_button() {
@@ -271,7 +283,19 @@ void FilamentPanel::handle_custom_temp_confirmed(float value) {
     update_temp_display();
     update_status();
 
-    // TODO: Send command to printer to set temperature
+    // Send temperature command to printer
+    if (api_) {
+        api_->set_temperature(
+            "extruder", static_cast<double>(nozzle_target_),
+            [target = nozzle_target_]() {
+                NOTIFY_SUCCESS("Nozzle target set to {}°C", target);
+            },
+            [](const MoonrakerError& error) {
+                NOTIFY_ERROR("Failed to set nozzle temp: {}", error.user_message());
+            });
+    } else {
+        NOTIFY_WARNING("Not connected to printer");
+    }
 }
 
 void FilamentPanel::handle_load_button() {
@@ -282,8 +306,17 @@ void FilamentPanel::handle_load_button() {
     }
 
     spdlog::info("[{}] Loading filament", get_name());
-    // TODO: Send LOAD_FILAMENT macro to printer
-    // api_->send_gcode("LOAD_FILAMENT");
+
+    if (api_) {
+        api_->execute_gcode(
+            "LOAD_FILAMENT",
+            []() { NOTIFY_SUCCESS("Filament load started"); },
+            [](const MoonrakerError& error) {
+                NOTIFY_ERROR("Filament load failed: {}", error.user_message());
+            });
+    } else {
+        NOTIFY_WARNING("Not connected to printer");
+    }
 }
 
 void FilamentPanel::handle_unload_button() {
@@ -294,8 +327,17 @@ void FilamentPanel::handle_unload_button() {
     }
 
     spdlog::info("[{}] Unloading filament", get_name());
-    // TODO: Send UNLOAD_FILAMENT macro to printer
-    // api_->send_gcode("UNLOAD_FILAMENT");
+
+    if (api_) {
+        api_->execute_gcode(
+            "UNLOAD_FILAMENT",
+            []() { NOTIFY_SUCCESS("Filament unload started"); },
+            [](const MoonrakerError& error) {
+                NOTIFY_ERROR("Filament unload failed: {}", error.user_message());
+            });
+    } else {
+        NOTIFY_WARNING("Not connected to printer");
+    }
 }
 
 void FilamentPanel::handle_purge_button() {
@@ -306,8 +348,18 @@ void FilamentPanel::handle_purge_button() {
     }
 
     spdlog::info("[{}] Purging 10mm", get_name());
-    // TODO: Send extrude command to printer
-    // api_->send_gcode("M83\nG1 E10 F300");
+
+    if (api_) {
+        // M83 = relative extrusion mode, G1 E10 F300 = extrude 10mm at 300mm/min
+        api_->execute_gcode(
+            "M83\nG1 E10 F300",
+            []() { NOTIFY_SUCCESS("Purging 10mm"); },
+            [](const MoonrakerError& error) {
+                NOTIFY_ERROR("Purge failed: {}", error.user_message());
+            });
+    } else {
+        NOTIFY_WARNING("Not connected to printer");
+    }
 }
 
 // ============================================================================

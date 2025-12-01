@@ -1183,10 +1183,16 @@ void PrintStatusPanel::exclude_undo_timer_cb(lv_timer_t* timer) {
                 // Move to confirmed excluded set
                 self->excluded_objects_.insert(object_name);
             },
-            [object_name](const MoonrakerError& err) {
+            [self, object_name](const MoonrakerError& err) {
                 spdlog::error("[PrintStatusPanel] Failed to exclude '{}': {}", object_name,
                               err.message);
-                // TODO: Show error toast and revert visual state
+                NOTIFY_ERROR("Failed to exclude '{}': {}", object_name, err.user_message());
+
+                // Revert visual state - refresh viewer with only confirmed exclusions
+                if (self->gcode_viewer_) {
+                    ui_gcode_viewer_set_excluded_objects(self->gcode_viewer_, self->excluded_objects_);
+                    spdlog::debug("[PrintStatusPanel] Reverted visual exclusion for '{}'", object_name);
+                }
             });
     } else {
         spdlog::warn("[PrintStatusPanel] No API available - simulating exclusion");
