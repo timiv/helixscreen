@@ -195,7 +195,7 @@
         <div class="page">
             <header>
                 <h1>LVGL 9 XML Attributes - Quick Reference (Page 1/2)</h1>
-                <div class="subtitle">Layout Systems & Widgets | LVGL 9.3</div>
+                <div class="subtitle">Layout Systems & Widgets | LVGL 9.4</div>
             </header>
 
             <div class="grid">
@@ -386,7 +386,7 @@
         <div class="page">
             <header>
                 <h1>LVGL 9 XML Attributes - Quick Reference (Page 2/2)</h1>
-                <div class="subtitle">Styles, Events, & Behavior | LVGL 9.3</div>
+                <div class="subtitle">Styles, Events, & Behavior | LVGL 9.4</div>
             </header>
 
             <div class="grid">
@@ -533,25 +533,24 @@
             <div class="section events">
                 <h2>Event Callbacks</h2>
                 <div class="attr-group">
-                    <h3>Setup in C++</h3>
-                    <pre style="font-size: 10px; background: #f5f5f5; padding: 4px; border-radius: 2px; margin: 4px 0;">lv_obj_add_event_cb(
-  widget,
-  my_callback,
-  LV_EVENT_CLICKED,
-  user_data);</pre>
+                    <h3>XML Syntax (9.4+)</h3>
+                    <pre style="font-size: 10px; background: #f5f5f5; padding: 4px; border-radius: 2px; margin: 4px 0;">&lt;lv_button&gt;
+  &lt;event_cb trigger="clicked"
+             callback="my_handler"/&gt;
+&lt;/lv_button&gt;</pre>
                 </div>
                 <div class="attr-group">
-                    <h3>Common Events</h3>
+                    <h3>Common Triggers</h3>
                     <div class="attr-list">
-                        <div class="attr"><code>LV_EVENT_CLICKED</code></div>
-                        <div class="attr"><code>LV_EVENT_VALUE_CHANGED</code></div>
-                        <div class="attr"><code>LV_EVENT_PRESSED</code></div>
-                        <div class="attr"><code>LV_EVENT_RELEASED</code></div>
-                        <div class="attr"><code>LV_EVENT_READY</code> <span class="hint">keyboard done</span></div>
-                        <div class="attr"><code>LV_EVENT_CANCEL</code> <span class="hint">keyboard cancel</span></div>
+                        <div class="attr"><code>clicked</code></div>
+                        <div class="attr"><code>value_changed</code></div>
+                        <div class="attr"><code>pressed</code></div>
+                        <div class="attr"><code>released</code></div>
+                        <div class="attr"><code>ready</code> <span class="hint">keyboard done</span></div>
+                        <div class="attr"><code>cancel</code> <span class="hint">keyboard cancel</span></div>
                     </div>
                 </div>
-                <div class="note">⚠️ XML doesn't support inline callbacks - set in C++ after creation</div>
+                <div class="note">Register handler: lv_xml_register_event_cb("my_handler", fn)</div>
             </div>
 
                 <!-- ========== ROW 4: BEHAVIORAL & STATE ========== -->
@@ -574,11 +573,11 @@
                     <h3>Scroll Flags</h3>
                     <div class="attr-list">
                         <div class="attr"><code>scrollable</code></div>
+                        <div class="attr"><code>scroll_dir</code> <span class="hint">hor/ver/all</span></div>
                         <div class="attr"><code>scroll_elastic</code> <span class="hint">bounce</span></div>
                         <div class="attr"><code>scroll_momentum</code></div>
                         <div class="attr"><code>scroll_chain</code> <span class="hint">to parent</span></div>
                         <div class="attr"><code>scroll_on_focus</code></div>
-                        <div class="attr"><code>scroll_with_arrow</code></div>
                         <div class="attr"><code>scroll_one</code> <span class="hint">snap</span></div>
                     </div>
                 </div>
@@ -633,7 +632,7 @@
             </div><!-- end grid -->
 
             <footer>
-                LVGL 9.3 XML Quick Reference | Updated: 2025-10-27 | Complete docs: LVGL9_XML_GUIDE.md, QUICK_REFERENCE.md | https://docs.lvgl.io/master/details/xml/
+                LVGL 9.4 XML Quick Reference | Updated: 2025-12-01 | Complete docs: LVGL9_XML_GUIDE.md, QUICK_REFERENCE.md | https://docs.lvgl.io/master/details/xml/
             </footer>
         </div><!-- end page 2 -->
     </div>

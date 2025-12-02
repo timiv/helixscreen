@@ -72,7 +72,7 @@ All LVGL widgets inherit these attributes from `lv_obj`. These attributes are pr
 **Size values:**
 - Pixel values: `"100"`, `"250"`
 - Percentages: `"50%"`, `"100%"`
-- Content-based: `"content"` (auto-size based on content) **⚠️ Often unreliable, use explicit sizes**
+- Content-based: `"content"` (auto-size based on content) - works great with flex layouts
 
 **Align values:** `top_left`, `top_mid`, `top_right`, `bottom_left`, `bottom_mid`, `bottom_right`, `left_mid`, `right_mid`, `center`
 
