@@ -458,7 +458,14 @@ install-deps:
 	if ! command -v python3 >/dev/null 2>&1; then \
 		echo "$(YELLOW)⚠ python3 not available - skipping venv setup$(RESET)"; \
 	else \
+		NEED_VENV_SETUP=0; \
 		if [ ! -f "$(VENV_PYTHON)" ]; then \
+			NEED_VENV_SETUP=1; \
+		elif ! $(VENV_PYTHON) -c "import png" >/dev/null 2>&1 || ! $(VENV_PYTHON) -c "import lz4" >/dev/null 2>&1; then \
+			echo "$(YELLOW)⚠ Python packages missing in venv$(RESET)"; \
+			NEED_VENV_SETUP=1; \
+		fi; \
+		if [ $$NEED_VENV_SETUP -eq 1 ]; then \
 			echo "$(CYAN)Setting up Python venv and installing packages...$(RESET)"; \
 			$(MAKE) venv-setup && echo "$(GREEN)✓ Python venv set up$(RESET)" || echo "$(RED)✗ venv setup failed$(RESET)"; \
 		else \

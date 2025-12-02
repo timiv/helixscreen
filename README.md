@@ -149,7 +149,7 @@ HelixScreen is a next-generation printer control interface built from the ground
 - **Network:** WiFi or Ethernet for Moonraker connection
 
 ### Development Requirements (SDL2 Simulator)
-- **macOS:** 10.13+ or **Linux:** Any modern distribution
+- **macOS:** 10.15+ (Catalina) or **Linux:** Any modern distribution
 - **RAM:** 512MB+ available
 - **Display:** Any resolution (will simulate target screen size)
 
@@ -172,7 +172,7 @@ npm install  # Install lv_font_conv and lv_img_conv
 
 **Manual setup (Debian/Ubuntu):**
 ```bash
-sudo apt install cmake python3 clang make npm
+sudo apt install cmake python3 python3-venv clang make npm
 npm install  # Install lv_font_conv and lv_img_conv
 # Optional (auto-built if missing): sudo apt install libsdl2-dev spdlog libhv-dev
 ```
