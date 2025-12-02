@@ -14,6 +14,7 @@
 #include "moonraker_client.h"
 #include "printer_state.h"
 #include "settings_manager.h"
+#include "ui_emergency_stop.h"
 
 #include <spdlog/spdlog.h>
 
@@ -140,6 +141,20 @@ void SettingsPanel::setup_toggle_handlers() {
             lv_obj_add_event_cb(completion_alert_switch_, on_completion_alert_changed,
                                 LV_EVENT_VALUE_CHANGED, this);
             spdlog::debug("[{}]   ✓ Completion alert toggle", get_name());
+        }
+    }
+
+    // === E-Stop Confirmation Toggle ===
+    lv_obj_t* estop_confirm_row = lv_obj_find_by_name(panel_, "row_estop_confirm");
+    if (estop_confirm_row) {
+        estop_confirm_switch_ = lv_obj_find_by_name(estop_confirm_row, "toggle");
+        if (estop_confirm_switch_) {
+            if (settings.get_estop_require_confirmation()) {
+                lv_obj_add_state(estop_confirm_switch_, LV_STATE_CHECKED);
+            }
+            lv_obj_add_event_cb(estop_confirm_switch_, on_estop_confirm_changed,
+                                LV_EVENT_VALUE_CHANGED, this);
+            spdlog::debug("[{}]   ✓ E-Stop confirmation toggle", get_name());
         }
     }
 }
@@ -344,6 +359,13 @@ void SettingsPanel::handle_sounds_changed(bool enabled) {
 void SettingsPanel::handle_completion_alert_changed(bool enabled) {
     spdlog::info("[{}] Completion alert toggled: {}", get_name(), enabled ? "ON" : "OFF");
     SettingsManager::instance().set_completion_alert(enabled);
+}
+
+void SettingsPanel::handle_estop_confirm_changed(bool enabled) {
+    spdlog::info("[{}] E-Stop confirmation toggled: {}", get_name(), enabled ? "ON" : "OFF");
+    SettingsManager::instance().set_estop_require_confirmation(enabled);
+    // Update EmergencyStopOverlay immediately
+    EmergencyStopOverlay::instance().set_require_confirmation(enabled);
 }
 
 void SettingsPanel::handle_scroll_throw_changed(int value) {
@@ -809,6 +831,16 @@ void SettingsPanel::on_completion_alert_changed(lv_event_t* e) {
     if (self && self->completion_alert_switch_) {
         bool enabled = lv_obj_has_state(self->completion_alert_switch_, LV_STATE_CHECKED);
         self->handle_completion_alert_changed(enabled);
+    }
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void SettingsPanel::on_estop_confirm_changed(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_estop_confirm_changed");
+    auto* self = static_cast<SettingsPanel*>(lv_event_get_user_data(e));
+    if (self && self->estop_confirm_switch_) {
+        bool enabled = lv_obj_has_state(self->estop_confirm_switch_, LV_STATE_CHECKED);
+        self->handle_estop_confirm_changed(enabled);
     }
     LVGL_SAFE_EVENT_CB_END();
 }

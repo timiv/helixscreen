@@ -61,6 +61,10 @@ void SettingsManager::init_subjects() {
     bool completion = config->get<bool>("/completion_alert", true);
     lv_subject_init_int(&completion_alert_subject_, completion ? 1 : 0);
 
+    // E-Stop confirmation (default: false = immediate action)
+    bool estop_confirm = config->get<bool>("/safety/estop_require_confirmation", false);
+    lv_subject_init_int(&estop_require_confirmation_subject_, estop_confirm ? 1 : 0);
+
     // Scroll throw (default: 25, range 5-50)
     int scroll_throw = config->get<int>("/input/scroll_throw", 25);
     scroll_throw = std::max(5, std::min(50, scroll_throw));
@@ -78,6 +82,7 @@ void SettingsManager::init_subjects() {
     lv_xml_register_subject(nullptr, "settings_led_enabled", &led_enabled_subject_);
     lv_xml_register_subject(nullptr, "settings_sounds_enabled", &sounds_enabled_subject_);
     lv_xml_register_subject(nullptr, "settings_completion_alert", &completion_alert_subject_);
+    lv_xml_register_subject(nullptr, "settings_estop_confirm", &estop_require_confirmation_subject_);
     lv_xml_register_subject(nullptr, "settings_scroll_throw", &scroll_throw_subject_);
     lv_xml_register_subject(nullptr, "settings_scroll_limit", &scroll_limit_subject_);
 
@@ -315,4 +320,27 @@ void SettingsManager::set_scroll_limit(int value) {
     // 3. Mark restart needed (this setting only takes effect on startup)
     restart_pending_ = true;
     spdlog::debug("[SettingsManager] Scroll limit set to {} (restart required)", clamped);
+}
+
+// =============================================================================
+// SAFETY SETTINGS
+// =============================================================================
+
+bool SettingsManager::get_estop_require_confirmation() const {
+    return lv_subject_get_int(const_cast<lv_subject_t*>(&estop_require_confirmation_subject_)) != 0;
+}
+
+void SettingsManager::set_estop_require_confirmation(bool require) {
+    spdlog::info("[SettingsManager] set_estop_require_confirmation({})", require);
+
+    // 1. Update subject (UI reacts)
+    lv_subject_set_int(&estop_require_confirmation_subject_, require ? 1 : 0);
+
+    // 2. Persist
+    Config* config = Config::get_instance();
+    config->set<bool>("/safety/estop_require_confirmation", require);
+    config->save();
+
+    spdlog::debug("[SettingsManager] E-Stop confirmation {} and saved",
+                  require ? "enabled" : "disabled");
 }

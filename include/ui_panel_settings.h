@@ -77,6 +77,7 @@ class SettingsPanel : public PanelBase {
     lv_obj_t* led_light_switch_ = nullptr;
     lv_obj_t* sounds_switch_ = nullptr;
     lv_obj_t* completion_alert_switch_ = nullptr;
+    lv_obj_t* estop_confirm_switch_ = nullptr;
 
     // Dropdown
     lv_obj_t* display_sleep_dropdown_ = nullptr;
@@ -132,6 +133,7 @@ class SettingsPanel : public PanelBase {
     void handle_led_light_changed(bool enabled);
     void handle_sounds_changed(bool enabled);
     void handle_completion_alert_changed(bool enabled);
+    void handle_estop_confirm_changed(bool enabled);
 
     void handle_scroll_throw_changed(int value);
     void handle_scroll_limit_changed(int value);
@@ -152,6 +154,7 @@ class SettingsPanel : public PanelBase {
     static void on_led_light_changed(lv_event_t* e);
     static void on_sounds_changed(lv_event_t* e);
     static void on_completion_alert_changed(lv_event_t* e);
+    static void on_estop_confirm_changed(lv_event_t* e);
 
     static void on_display_settings_clicked(lv_event_t* e);
     static void on_bed_mesh_clicked(lv_event_t* e);

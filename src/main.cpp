@@ -23,6 +23,7 @@
 
 #include "ui_bed_mesh.h"
 #include "ui_card.h"
+#include "ui_emergency_stop.h"
 #include "ui_component_header_bar.h"
 #include "ui_component_keypad.h"
 #include "ui_dialog.h"
@@ -76,6 +77,7 @@
 #include "moonraker_client_mock.h"
 #include "printer_state.h"
 #include "runtime_config.h"
+#include "settings_manager.h"
 #include "tips_manager.h"
 #include "usb_backend_mock.h"
 #include "usb_manager.h"
@@ -780,6 +782,9 @@ static void register_xml_components() {
         "A:ui_xml/overlay_panel.xml"); // Depends on header_bar + base
     lv_xml_register_component_from_file("A:ui_xml/status_bar.xml");
     lv_xml_register_component_from_file("A:ui_xml/toast_notification.xml");
+    lv_xml_register_component_from_file("A:ui_xml/emergency_stop_button.xml");
+    lv_xml_register_component_from_file("A:ui_xml/estop_confirmation_dialog.xml");
+    lv_xml_register_component_from_file("A:ui_xml/klipper_recovery_dialog.xml");
     lv_xml_register_component_from_file("A:ui_xml/error_dialog.xml");
     lv_xml_register_component_from_file("A:ui_xml/warning_dialog.xml");
     spdlog::debug("[XML] Registering notification_history_panel.xml...");
@@ -898,6 +903,9 @@ static void initialize_subjects() {
 
     // Initialize notification system (after subjects are ready)
     ui_notification_init();
+
+    // Initialize E-Stop overlay subjects (must be before XML creation)
+    EmergencyStopOverlay::instance().init_subjects();
 
     // Set up USB drive event notifications (after notification system is ready)
     if (usb_manager) {
@@ -1258,6 +1266,15 @@ static void initialize_moonraker_client(Config* config) {
     if (bed_mesh_panel) {
         bed_mesh_panel->set_api(moonraker_api.get());
     }
+
+    // Initialize E-Stop overlay with dependencies (creates the floating button)
+    EmergencyStopOverlay::instance().init(get_printer_state(), moonraker_api.get());
+    EmergencyStopOverlay::instance().create();
+    // Apply persisted E-Stop confirmation setting
+    EmergencyStopOverlay::instance().set_require_confirmation(
+        SettingsManager::instance().get_estop_require_confirmation());
+    // Set initial panel for visibility tracking (home_panel is default)
+    EmergencyStopOverlay::instance().on_panel_changed("home_panel");
 
     spdlog::debug("Moonraker client initialized (not connected yet)");
 }

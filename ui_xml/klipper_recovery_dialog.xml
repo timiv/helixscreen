@@ -1,0 +1,114 @@
+<?xml version="1.0"?>
+<!-- Copyright 2025 356C LLC -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
+<!--
+  Klipper Recovery Dialog
+
+  Modal dialog shown when Klipper enters SHUTDOWN state (after E-Stop or critical error).
+  Offers options to restart Klipper or perform firmware restart.
+
+  Features:
+  - Auto-popup when klippy_state changes to SHUTDOWN
+  - Clear explanation of shutdown state
+  - Restart Klipper button (soft restart)
+  - Firmware Restart button (full MCU restart)
+  - Orange warning theme to distinguish from E-Stop red
+-->
+<component>
+  <view extends="lv_obj" name="klipper_recovery_backdrop"
+        width="100%" height="100%"
+        style_bg_color="#000000" style_bg_opa="200"
+        style_border_width="0"
+        align="center"
+        clickable="true">
+
+    <!-- Dialog card -->
+    <lv_obj name="klipper_recovery_card"
+            width="440" height="320"
+            align="center"
+            style_radius="#border_radius"
+            style_bg_color="#card_bg_dark"
+            style_bg_opa="255"
+            style_border_width="3"
+            style_border_color="#warning_color"
+            style_pad_all="24"
+            flex_flow="column"
+            style_flex_main_place="space_between"
+            style_flex_cross_place="center">
+
+      <!-- Header with icon and title -->
+      <lv_obj width="100%" height="content"
+              style_bg_opa="0" style_border_width="0"
+              flex_flow="column"
+              style_flex_cross_place="center"
+              style_pad_gap="12">
+
+        <icon src="mat_emergency_img" size="xl" color="#warning_color"/>
+
+        <text_heading text="Printer Shutdown" style_text_align="center"/>
+
+        <text_body text="Klipper has entered shutdown state. This may be due to an emergency stop, thermal runaway, or configuration error. Choose an option below to recover."
+                   long_mode="wrap"
+                   style_text_align="center"
+                   width="100%"/>
+      </lv_obj>
+
+      <!-- Button column -->
+      <lv_obj width="100%" height="content"
+              style_bg_opa="0" style_border_width="0"
+              flex_flow="column"
+              style_pad_gap="12">
+
+        <!-- Restart Klipper (soft restart) -->
+        <lv_button name="restart_klipper_btn"
+                   width="100%" height="48"
+                   style_radius="8"
+                   style_border_width="0"
+                   style_bg_color="#warning_color">
+          <lv_obj width="100%" height="100%"
+                  style_bg_opa="0" style_border_width="0"
+                  flex_flow="row"
+                  style_flex_main_place="center"
+                  style_flex_cross_place="center"
+                  style_pad_gap="8"
+                  clickable="false">
+            <icon src="mat_refresh_img" size="sm" color="#text_primary"/>
+            <text_body text="Restart Klipper" style_text_color="#text_primary"/>
+          </lv_obj>
+          <event_cb trigger="clicked" callback="recovery_restart_klipper_clicked"/>
+        </lv_button>
+
+        <!-- Firmware Restart (full MCU restart) -->
+        <lv_button name="firmware_restart_btn"
+                   width="100%" height="48"
+                   style_radius="8"
+                   style_border_width="0"
+                   style_bg_color="#surface_bg_dark">
+          <lv_obj width="100%" height="100%"
+                  style_bg_opa="0" style_border_width="0"
+                  flex_flow="row"
+                  style_flex_main_place="center"
+                  style_flex_cross_place="center"
+                  style_pad_gap="8"
+                  clickable="false">
+            <icon src="mat_update_img" size="sm" color="#text_secondary"/>
+            <text_body text="Firmware Restart" style_text_color="#text_secondary"/>
+          </lv_obj>
+          <event_cb trigger="clicked" callback="recovery_firmware_restart_clicked"/>
+        </lv_button>
+
+        <!-- Dismiss (close without action) -->
+        <lv_button name="recovery_dismiss_btn"
+                   width="100%" height="40"
+                   style_radius="8"
+                   style_border_width="1"
+                   style_border_color="#text_muted"
+                   style_bg_opa="0">
+          <text_body text="Dismiss" style_text_color="#text_muted" align="center"/>
+          <event_cb trigger="clicked" callback="recovery_dismiss_clicked"/>
+        </lv_button>
+      </lv_obj>
+    </lv_obj>
+  </view>
+</component>

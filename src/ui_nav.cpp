@@ -23,6 +23,7 @@
 
 #include "ui_nav.h"
 
+#include "ui_emergency_stop.h"
 #include "ui_event_safety.h"
 #include "ui_fonts.h"
 #include "ui_theme.h"
@@ -370,6 +371,16 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
     }
 }
 
+// Panel ID to name mapping for E-Stop visibility
+static const char* panel_id_to_name(ui_panel_id_t id) {
+    static const char* names[] = {"home_panel",     "print_select_panel", "controls_panel",
+                                  "filament_panel", "settings_panel",     "advanced_panel"};
+    if (id < UI_PANEL_COUNT) {
+        return names[id];
+    }
+    return "unknown_panel";
+}
+
 void ui_nav_set_active(ui_panel_id_t panel_id) {
     if (panel_id >= UI_PANEL_COUNT) {
         spdlog::error("Invalid panel ID: {}", (int)panel_id);
@@ -391,6 +402,9 @@ void ui_nav_set_active(ui_panel_id_t panel_id) {
     // Update active panel subject - this triggers observer and icon color updates
     lv_subject_set_int(&active_panel_subject, panel_id);
     active_panel = panel_id;
+
+    // Notify E-Stop overlay of panel change for visibility update
+    EmergencyStopOverlay::instance().on_panel_changed(panel_id_to_name(panel_id));
 }
 
 ui_panel_id_t ui_nav_get_active() {
@@ -492,6 +506,12 @@ void ui_nav_push_overlay(lv_obj_t* overlay_panel) {
     if (!overlay_panel) {
         spdlog::error("Cannot push NULL overlay panel");
         return;
+    }
+
+    // Notify E-Stop overlay of panel change using lv_obj_find_by_name result
+    const char* panel_name = lv_obj_get_name(overlay_panel);
+    if (panel_name) {
+        EmergencyStopOverlay::instance().on_panel_changed(panel_name);
     }
 
     // Check if this is the first overlay (stack currently has only main panels)
@@ -645,6 +665,16 @@ bool ui_nav_go_back() {
     lv_obj_remove_flag(previous_panel, LV_OBJ_FLAG_HIDDEN);
     spdlog::debug("Showing previous panel {} (stack depth: {}, is_main={})", (void*)previous_panel,
                   panel_stack.size(), is_main_panel);
+
+    // Notify E-Stop overlay of panel change
+    if (is_main_panel) {
+        EmergencyStopOverlay::instance().on_panel_changed(panel_id_to_name(active_panel));
+    } else {
+        const char* panel_name = lv_obj_get_name(previous_panel);
+        if (panel_name) {
+            EmergencyStopOverlay::instance().on_panel_changed(panel_name);
+        }
+    }
 
     return true;
 }

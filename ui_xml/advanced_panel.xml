@@ -2,13 +2,75 @@
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 
-<!-- Advanced Panel - Hub for advanced printer tools and calibration features -->
-<!-- Organized in sections: Calibration, Motion, Filament, Automation -->
+<!-- Advanced Panel - Hub for advanced printer tools and emergency controls -->
+<!-- Organized in sections: Emergency, Calibration, Motion, Filament, Automation, Diagnostics -->
 <!-- Features are conditionally shown based on printer capabilities -->
 <component>
   <view extends="lv_obj" name="advanced_panel" width="100%" height="100%"
         style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_gap="0"
         flex_flow="column" scrollable="true" scroll_dir="ver">
+
+    <!-- ================================================================== -->
+    <!-- EMERGENCY CONTROLS SECTION (from emergency-stop branch) -->
+    <!-- ================================================================== -->
+    <setting_section_header title="EMERGENCY CONTROLS" icon="mat_emergency_img"/>
+
+    <!-- Emergency Stop Button (prominent red) -->
+    <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0"
+            style_pad_left="#padding_normal" style_pad_right="#padding_normal"
+            style_pad_top="#gap_small" style_pad_bottom="#gap_normal" scrollable="false">
+      <lv_button name="advanced_estop_btn"
+                 width="100%" height="#button_height_normal"
+                 style_radius="#border_radius_large"
+                 style_border_width="0"
+                 style_bg_color="#error_color"
+                 flex_flow="row"
+                 style_flex_main_place="center"
+                 style_flex_cross_place="center"
+                 style_pad_gap="#gap_normal">
+        <icon src="mat_emergency_img" size="md" color="#text_primary"/>
+        <text_body text="Emergency Stop (M112)" style_text_color="#text_primary"/>
+        <event_cb trigger="clicked" callback="advanced_estop_clicked"/>
+      </lv_button>
+    </lv_obj>
+
+    <!-- Restart Buttons Row -->
+    <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0"
+            style_pad_left="#padding_normal" style_pad_right="#padding_normal"
+            style_pad_bottom="#gap_normal" flex_flow="row" style_pad_gap="#gap_normal" scrollable="false">
+
+      <!-- Restart Klipper Button -->
+      <lv_button name="advanced_restart_klipper_btn"
+                 flex_grow="1" height="#button_height_small"
+                 style_radius="#border_radius"
+                 style_border_width="0"
+                 style_bg_color="#warning_color"
+                 style_pad_ver="#button_padding"
+                 flex_flow="row"
+                 style_flex_main_place="center"
+                 style_flex_cross_place="center"
+                 style_pad_gap="#gap_small">
+        <icon src="mat_refresh_img" size="sm" color="#text_primary"/>
+        <text_body text="Restart Klipper" style_text_color="#text_primary"/>
+        <event_cb trigger="clicked" callback="advanced_restart_klipper_clicked"/>
+      </lv_button>
+
+      <!-- Firmware Restart Button -->
+      <lv_button name="advanced_firmware_restart_btn"
+                 flex_grow="1" height="#button_height_small"
+                 style_radius="#border_radius"
+                 style_border_width="0"
+                 style_bg_color="#surface_bg_dark"
+                 style_pad_ver="#button_padding"
+                 flex_flow="row"
+                 style_flex_main_place="center"
+                 style_flex_cross_place="center"
+                 style_pad_gap="#gap_small">
+        <icon src="mat_update_img" size="sm" color="#text_secondary"/>
+        <text_body text="Firmware Restart" style_text_color="#text_secondary"/>
+        <event_cb trigger="clicked" callback="advanced_firmware_restart_clicked"/>
+      </lv_button>
+    </lv_obj>
 
     <!-- ================================================================== -->
     <!-- CALIBRATION SECTION -->
@@ -98,12 +160,6 @@
                         label="G-code Console"
                         icon="mat_terminal_img"
                         description="Send commands directly to printer"/>
-
-    <!-- System Restart Options -->
-    <setting_action_row name="row_restart"
-                        label="Restart Options"
-                        icon="mat_refresh_img"
-                        description="Restart Klipper or firmware"/>
 
     <!-- Bottom padding for scroll -->
     <lv_obj width="100%" height="#padding_large" style_bg_opa="0" style_border_width="0" scrollable="false"/>

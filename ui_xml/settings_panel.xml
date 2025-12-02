@@ -47,6 +47,14 @@
     <!-- Completion Alert Toggle -->
     <setting_toggle_row name="row_completion_alert" label="Print Completion Alert" icon="mat_notifications_img" description="Alert when print finishes"/>
     <!-- ================================================================== -->
+    <!-- SAFETY SECTION -->
+    <!-- ================================================================== -->
+    <setting_section_header title="SAFETY" icon="mat_emergency_img"/>
+
+    <!-- E-Stop Confirmation Toggle -->
+    <setting_toggle_row name="row_estop_confirm" label="E-Stop Confirmation" icon="mat_emergency_img" description="Require confirmation before emergency stop"/>
+
+    <!-- ================================================================== -->
     <!-- CALIBRATION SECTION -->
     <!-- ================================================================== -->
     <setting_section_header title="CALIBRATION" icon="mat_fine_tune_img"/>
