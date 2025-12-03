@@ -30,8 +30,8 @@ endif
 
 DISPLAY_OBJS := $(DISPLAY_SRCS:src/%.cpp=$(BUILD_DIR)/display/%.o)
 
-# Display library needs LVGL headers, project includes, and libhv (for config.h -> json.hpp)
-DISPLAY_CXXFLAGS := $(CXXFLAGS) -I$(INC_DIR) $(LVGL_INC) $(SPDLOG_INC) $(LIBHV_INC)
+# Display library needs LVGL headers, project includes, libhv (for config.h -> json.hpp), and SDL2
+DISPLAY_CXXFLAGS := $(CXXFLAGS) -I$(INC_DIR) $(LVGL_INC) $(SPDLOG_INC) $(LIBHV_INC) $(SDL2_INC)
 
 # Build object files
 $(BUILD_DIR)/display/%.o: src/%.cpp | $(BUILD_DIR)/display

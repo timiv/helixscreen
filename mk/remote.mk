@@ -213,12 +213,17 @@ remote-ssh:
 # Run native Linux build on remote with X11 forwarding
 # Requires: XQuartz running locally, X11Forwarding enabled on remote
 # Note: Clears SSH control socket to ensure X11 forwarding is established
+# Uses wmctrl to reposition window (XQuartz multi-monitor workaround)
 # Use REMOTE_RUN_ARGS to pass additional arguments (e.g., --test, -p motion)
 remote-linux-run:
 	@echo "$(CYAN)Running helix-screen on $(REMOTE_HOST) with X11 forwarding...$(RESET)"
 	@echo "$(YELLOW)Tip: Make sure XQuartz is running locally$(RESET)"
 	@rm -f ~/.ssh/ctl/*$(REMOTE_HOST)* 2>/dev/null || true
-	ssh -Y $(REMOTE_SSH_TARGET) "cd $(REMOTE_DIR) && ./build/bin/helix-screen $(REMOTE_RUN_ARGS)"
+	@ssh -Y $(REMOTE_SSH_TARGET) "cd $(REMOTE_DIR) && ./build/bin/helix-screen $(REMOTE_RUN_ARGS)" & \
+		SSH_PID=$$!; \
+		sleep 2; \
+		wmctrl -r "LVGL" -e 0,100,100,-1,-1 2>/dev/null || true; \
+		wait $$SSH_PID
 
 # =============================================================================
 # Help
