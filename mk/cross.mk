@@ -233,7 +233,7 @@ pi-docker: ensure-docker
 		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
 		$(MAKE) docker-toolchain-pi; \
 	fi
-	$(Q)docker run --rm -v "$(PWD)":/src -w /src helixscreen/toolchain-pi \
+	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src helixscreen/toolchain-pi \
 		make PLATFORM_TARGET=pi SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@$(MAKE) --no-print-directory maybe-stop-colima
 
@@ -243,7 +243,7 @@ ad5m-docker: ensure-docker
 		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
 		$(MAKE) docker-toolchain-ad5m; \
 	fi
-	$(Q)docker run --rm -v "$(PWD)":/src -w /src helixscreen/toolchain-ad5m \
+	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src helixscreen/toolchain-ad5m \
 		make PLATFORM_TARGET=ad5m SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@$(MAKE) --no-print-directory maybe-stop-colima
 

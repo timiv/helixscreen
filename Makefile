@@ -137,6 +137,9 @@ UNAME_S := $(shell uname -s)
 # Use TARGET=pi or TARGET=ad5m for cross-compilation
 include mk/cross.mk
 
+# Remote build support (build on fast Linux host, retrieve binaries)
+include mk/remote.mk
+
 # Directories
 SRC_DIR := src
 INC_DIR := include
@@ -251,13 +254,24 @@ else
 endif
 
 # fmt (formatting library required by header-only spdlog)
-FMT_PKG_CONFIG := $(shell pkg-config --exists fmt 2>/dev/null && echo "yes")
-ifeq ($(FMT_PKG_CONFIG),yes)
-    # System fmt found via pkg-config
-    FMT_LIBS := $(shell pkg-config --libs fmt)
+# For cross-compilation, we can't use host pkg-config - must detect target library directly
+ifneq ($(CROSS_COMPILE),)
+    # Cross-compiling: check if target fmt library exists (installed via libfmt-dev:arm64 etc.)
+    FMT_TARGET_LIB := $(shell ls /usr/lib/$(TARGET_TRIPLE)/libfmt.so 2>/dev/null || ls /usr/lib/$(TARGET_TRIPLE)/libfmt.a 2>/dev/null)
+    ifneq ($(FMT_TARGET_LIB),)
+        FMT_LIBS := -lfmt
+    else
+        # No target fmt - build will fail if spdlog requires it
+        FMT_LIBS :=
+    endif
 else
-    # No system fmt - will need to be installed or use bundled version
-    FMT_LIBS :=
+    # Native build: use pkg-config normally
+    FMT_PKG_CONFIG := $(shell pkg-config --exists fmt 2>/dev/null && echo "yes")
+    ifeq ($(FMT_PKG_CONFIG),yes)
+        FMT_LIBS := $(shell pkg-config --libs fmt)
+    else
+        FMT_LIBS :=
+    endif
 endif
 
 # TinyGL (software 3D rasterizer for G-code visualization)
@@ -453,7 +467,7 @@ help:
 
 # Show all help topics combined
 .PHONY: help-all
-help-all: help-build help-test help-cross
+help-all: help-build help-test help-cross help-remote
 	@echo ""
 	@if [ -t 1 ] && [ -n "$(TERM)" ] && [ "$(TERM)" != "dumb" ]; then \
 		echo "$(CYAN)Material Icons:$(RESET)"; \
