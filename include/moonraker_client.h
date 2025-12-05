@@ -112,9 +112,20 @@ class MoonrakerClient : public hv::WebSocketClient {
      * Virtual to allow mock override for testing without real network connection.
      *
      * Closes the WebSocket connection and resets internal state.
+     * Also clears cached discovery data (hostname, sensors, fans, etc.)
+     * to prevent stale data when reconnecting to a different printer.
      * Safe to call multiple times (idempotent).
      */
     virtual void disconnect();
+
+    /**
+     * @brief Clear all cached discovery data
+     *
+     * Resets hostname, heaters, sensors, fans, LEDs to empty/default values.
+     * Called automatically by disconnect() to prevent stale data when
+     * switching between printers.
+     */
+    void clear_discovery_cache();
 
     /**
      * @brief Force full reconnection with complete state reset
@@ -629,6 +640,8 @@ class MoonrakerClient : public hv::WebSocketClient {
     std::atomic_bool was_connected_;
     std::atomic<ConnectionState> connection_state_;
     std::atomic_bool is_destroying_{false}; // Prevent callbacks during destruction
+    std::atomic<uint64_t> connection_generation_{
+        0}; // Increments on each connect(), used to invalidate stale discovery callbacks
     std::function<void(ConnectionState, ConnectionState)> state_change_callback_;
     mutable std::mutex state_callback_mutex_; // Protect state_change_callback_ during destruction
     uint32_t connection_timeout_ms_;
