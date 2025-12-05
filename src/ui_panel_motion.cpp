@@ -31,6 +31,7 @@ MotionPanel::MotionPanel(PrinterState& printer_state, MoonrakerAPI* api)
     std::strcpy(pos_x_buf_, "X:    --  mm");
     std::strcpy(pos_y_buf_, "Y:    --  mm");
     std::strcpy(pos_z_buf_, "Z:    --  mm");
+    std::strcpy(z_axis_label_buf_, "Z Axis"); // Default before kinematics detected
 }
 
 void MotionPanel::init_subjects() {
@@ -44,11 +45,16 @@ void MotionPanel::init_subjects() {
     UI_SUBJECT_INIT_AND_REGISTER_STRING(pos_y_subject_, pos_y_buf_, "Y:    --  mm", "motion_pos_y");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(pos_z_subject_, pos_z_buf_, "Z:    --  mm", "motion_pos_z");
 
+    // Z-axis label: "Bed" (cartesian) or "Print Head" (corexy/delta)
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(z_axis_label_subject_, z_axis_label_buf_, "Z Axis",
+                                        "motion_z_axis_label");
+
     // Register PrinterState observers (RAII - auto-removed on destruction)
     register_position_observers();
 
     subjects_initialized_ = true;
-    spdlog::debug("[{}] Subjects initialized: X/Y/Z position displays + observers", get_name());
+    spdlog::debug("[{}] Subjects initialized: X/Y/Z position + Z-axis label + observers",
+                  get_name());
 }
 
 void MotionPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
@@ -198,7 +204,12 @@ void MotionPanel::register_position_observers() {
     position_z_observer_ =
         ObserverGuard(printer_state_.get_position_z_subject(), on_position_z_changed, this);
 
-    spdlog::debug("[{}] Position observers registered (X/Y/Z via RAII ObserverGuard)", get_name());
+    // Watch for kinematics changes to update Z-axis label ("Bed" vs "Print Head")
+    bed_moves_observer_ =
+        ObserverGuard(printer_state_.get_printer_bed_moves_subject(), on_bed_moves_changed, this);
+
+    spdlog::debug("[{}] Position + kinematics observers registered (RAII ObserverGuard)",
+                  get_name());
 }
 
 void MotionPanel::update_distance_buttons() {
@@ -253,6 +264,24 @@ void MotionPanel::on_position_z_changed(lv_observer_t* observer, lv_subject_t* s
     lv_subject_copy_string(&self->pos_z_subject_, self->pos_z_buf_);
 }
 
+void MotionPanel::on_bed_moves_changed(lv_observer_t* observer, lv_subject_t* subject) {
+    auto* self = static_cast<MotionPanel*>(lv_observer_get_user_data(observer));
+    if (!self || !self->subjects_initialized_)
+        return;
+
+    bool bed_moves = lv_subject_get_int(subject) != 0;
+    self->update_z_axis_label(bed_moves);
+}
+
+void MotionPanel::update_z_axis_label(bool bed_moves) {
+    bed_moves_ = bed_moves; // Store for Z button direction inversion
+    const char* label = bed_moves ? "Bed" : "Print Head";
+    std::strncpy(z_axis_label_buf_, label, sizeof(z_axis_label_buf_) - 1);
+    z_axis_label_buf_[sizeof(z_axis_label_buf_) - 1] = '\0';
+    lv_subject_copy_string(&z_axis_label_subject_, z_axis_label_buf_);
+    spdlog::debug("[{}] Z-axis label updated: {} (bed_moves={})", get_name(), label, bed_moves);
+}
+
 void MotionPanel::handle_distance_button(lv_obj_t* btn) {
     // Find which button was clicked
     for (int i = 0; i < 4; i++) {
@@ -275,6 +304,7 @@ void MotionPanel::handle_z_button(const char* name) {
     }
 
     // Determine Z distance from button name
+    // Up arrow = positive visual direction, Down arrow = negative visual direction
     double distance = 0.0;
     if (strcmp(name, "z_up_10") == 0) {
         distance = 10.0;
@@ -289,7 +319,15 @@ void MotionPanel::handle_z_button(const char* name) {
         return;
     }
 
-    spdlog::debug("[{}] Z jog: {:+.0f}mm", get_name(), distance);
+    // For cartesian printers (bed moves on Z), invert direction so arrows match physical motion:
+    // - Up arrow = bed moves UP toward nozzle = G-code Z- (bed rises, gap decreases)
+    // - Down arrow = bed moves DOWN away from nozzle = G-code Z+ (bed lowers, gap increases)
+    if (bed_moves_) {
+        distance = -distance;
+        spdlog::debug("[{}] Cartesian printer: inverted Z direction for bed movement", get_name());
+    }
+
+    spdlog::debug("[{}] Z jog: {:+.0f}mm (bed_moves={})", get_name(), distance, bed_moves_);
 
     if (api_) {
         // Z feedrate: 600 mm/min (10 mm/s) - slower for safety

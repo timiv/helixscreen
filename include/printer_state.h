@@ -463,6 +463,27 @@ class PrinterState {
         return capability_overrides_;
     }
 
+    /**
+     * @brief Set printer kinematics type and update bed_moves subject
+     *
+     * Updates printer_bed_moves_ subject based on kinematics type.
+     * Cartesian printers have moving beds (Z moves bed down during print).
+     * CoreXY/Delta printers have moving gantries (Z moves print head up).
+     *
+     * @param kinematics Kinematics type string from toolhead config
+     */
+    void set_kinematics(const std::string& kinematics);
+
+    /**
+     * @brief Get bed_moves subject for XML binding
+     *
+     * Returns 1 if the printer has a moving bed (cartesian),
+     * 0 if the printer has a moving gantry (corexy, delta, etc.).
+     */
+    lv_subject_t* get_printer_bed_moves_subject() {
+        return &printer_bed_moves_;
+    }
+
   private:
     // Temperature subjects
     lv_subject_t extruder_temp_;
@@ -518,6 +539,7 @@ class PrinterState {
     lv_subject_t printer_has_led_;           // Integer: 0=no, 1=yes (for LED light control)
     lv_subject_t printer_has_accelerometer_; // Integer: 0=no, 1=yes (for input shaping)
     lv_subject_t printer_has_spoolman_;      // Integer: 0=no, 1=yes (for filament tracking)
+    lv_subject_t printer_bed_moves_;         // Integer: 0=no (gantry moves), 1=yes (bed moves on Z)
 
     // Version subjects (for About section)
     lv_subject_t klipper_version_;

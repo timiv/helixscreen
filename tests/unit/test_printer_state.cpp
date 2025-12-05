@@ -1,20 +1,12 @@
-/*
- * Copyright (C) 2025 356C LLC
- * Author: Preston Brown <pbrown@brown-house.net>
- *
- * This file is part of HelixScreen.
- *
- * HelixScreen is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- */
+// Copyright 2025 356C LLC
+// SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "../catch_amalgamated.hpp"
+#include "../ui_test_utils.h"
 #include "app_globals.h"
 #include "moonraker_client.h"
 #include "printer_state.h"
-#include "../ui_test_utils.h"
+
+#include "../catch_amalgamated.hpp"
 
 using Catch::Approx;
 
@@ -43,10 +35,12 @@ TEST_CASE("PrinterState: Singleton persists modifications", "[printer_state][sin
 
     // Read it back through another reference
     PrinterState& state2 = get_printer_state();
-    REQUIRE(lv_subject_get_int(state2.get_printer_connection_state_subject()) == static_cast<int>(ConnectionState::CONNECTED));
+    REQUIRE(lv_subject_get_int(state2.get_printer_connection_state_subject()) ==
+            static_cast<int>(ConnectionState::CONNECTED));
 }
 
-TEST_CASE("PrinterState: Singleton subjects have consistent addresses", "[printer_state][singleton]") {
+TEST_CASE("PrinterState: Singleton subjects have consistent addresses",
+          "[printer_state][singleton]") {
     lv_init();
 
     PrinterState& state1 = get_printer_state();
@@ -65,12 +59,13 @@ TEST_CASE("PrinterState: Singleton subjects have consistent addresses", "[printe
 // Observer Pattern Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: Observer fires when printer connection state changes", "[printer_state][observer]") {
+TEST_CASE("PrinterState: Observer fires when printer connection state changes",
+          "[printer_state][observer]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
     state.reset_for_testing();  // Allow re-initialization after lv_init()
-    state.init_subjects(false);  // Skip XML registration
+    state.init_subjects(false); // Skip XML registration
 
     // Register observer
     auto observer_cb = [](lv_observer_t* observer, lv_subject_t* subject) {
@@ -83,15 +78,15 @@ TEST_CASE("PrinterState: Observer fires when printer connection state changes", 
 
     int user_data[2] = {0, -1}; // [callback_count, last_value]
 
-    lv_subject_add_observer(state.get_printer_connection_state_subject(),
-                           observer_cb, user_data);
+    lv_subject_add_observer(state.get_printer_connection_state_subject(), observer_cb, user_data);
 
     // LVGL auto-notifies observers when first added (fires immediately with current value)
     REQUIRE(user_data[0] == 1); // Callback fired immediately with initial value (0)
     REQUIRE(user_data[1] == 0); // Initial value is DISCONNECTED (0)
 
     // Change state - should trigger observer again
-    state.set_printer_connection_state(static_cast<int>(ConnectionState::CONNECTING), "Connecting...");
+    state.set_printer_connection_state(static_cast<int>(ConnectionState::CONNECTING),
+                                       "Connecting...");
 
     REQUIRE(user_data[0] == 2); // Callback fired again with new value
     REQUIRE(user_data[1] == static_cast<int>(ConnectionState::CONNECTING));
@@ -103,12 +98,13 @@ TEST_CASE("PrinterState: Observer fires when printer connection state changes", 
     REQUIRE(user_data[1] == static_cast<int>(ConnectionState::CONNECTED));
 }
 
-TEST_CASE("PrinterState: Observer fires when network status changes", "[printer_state][observer][network]") {
+TEST_CASE("PrinterState: Observer fires when network status changes",
+          "[printer_state][observer][network]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
     state.reset_for_testing();  // Allow re-initialization after lv_init()
-    state.init_subjects(false);  // Skip XML registration
+    state.init_subjects(false); // Skip XML registration
 
     int callback_count = 0;
 
@@ -117,8 +113,7 @@ TEST_CASE("PrinterState: Observer fires when network status changes", "[printer_
         (*count_ptr)++;
     };
 
-    lv_subject_add_observer(state.get_network_status_subject(),
-                           observer_cb, &callback_count);
+    lv_subject_add_observer(state.get_network_status_subject(), observer_cb, &callback_count);
 
     // LVGL auto-notifies observers when first added (fires immediately with current value)
     // Note: init_subjects() initializes network_status to CONNECTED (2) as mock mode default
@@ -128,15 +123,17 @@ TEST_CASE("PrinterState: Observer fires when network status changes", "[printer_
     state.set_network_status(static_cast<int>(NetworkStatus::DISCONNECTED));
 
     REQUIRE(callback_count == 2); // Callback fired again with new value
-    REQUIRE(lv_subject_get_int(state.get_network_status_subject()) == static_cast<int>(NetworkStatus::DISCONNECTED));
+    REQUIRE(lv_subject_get_int(state.get_network_status_subject()) ==
+            static_cast<int>(NetworkStatus::DISCONNECTED));
 }
 
-TEST_CASE("PrinterState: Multiple observers on same subject all fire", "[printer_state][observer]") {
+TEST_CASE("PrinterState: Multiple observers on same subject all fire",
+          "[printer_state][observer]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
     state.reset_for_testing();  // Allow re-initialization after lv_init()
-    state.init_subjects(false);  // Skip XML registration
+    state.init_subjects(false); // Skip XML registration
 
     int count1 = 0, count2 = 0, count3 = 0;
 
@@ -170,7 +167,7 @@ TEST_CASE("PrinterState: Multiple observers on same subject all fire", "[printer
 TEST_CASE("PrinterState: Initialization sets default values", "[printer_state][init]") {
     lv_init();
     PrinterState& state = get_printer_state();
-    state.reset_for_testing();  // Reset singleton state from previous tests
+    state.reset_for_testing(); // Reset singleton state from previous tests
     state.init_subjects();
 
     // Temperature subjects should be initialized to 0
@@ -199,11 +196,13 @@ TEST_CASE("PrinterState: Initialization sets default values", "[printer_state][i
     REQUIRE(lv_subject_get_int(state.get_fan_speed_subject()) == 0);
 
     // Printer connection state should be DISCONNECTED
-    REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) == static_cast<int>(ConnectionState::DISCONNECTED));
+    REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) ==
+            static_cast<int>(ConnectionState::DISCONNECTED));
 
     // Network status is initialized to CONNECTED (mock mode default)
     // In production, actual network status comes from EthernetManager/WiFiManager
-    REQUIRE(lv_subject_get_int(state.get_network_status_subject()) == static_cast<int>(NetworkStatus::CONNECTED));
+    REQUIRE(lv_subject_get_int(state.get_network_status_subject()) ==
+            static_cast<int>(NetworkStatus::CONNECTED));
 }
 
 // ============================================================================
@@ -215,18 +214,12 @@ TEST_CASE("PrinterState: Update extruder temperature from notification", "[print
     PrinterState& state = get_printer_state();
     state.init_subjects();
 
-    json notification = {
-        {"method", "notify_status_update"},
-        {"params", {
-            {
-                {"extruder", {
-                    {"temperature", 205.3},
-                    {"target", 210.0}
-                }}
-            },
-            1234567890.0 // eventtime
-        }}
-    };
+    json notification = {{"method", "notify_status_update"},
+                         {"params",
+                          {
+                              {{"extruder", {{"temperature", 205.3}, {"target", 210.0}}}},
+                              1234567890.0 // eventtime
+                          }}};
 
     state.update_from_notification(notification);
 
@@ -241,16 +234,7 @@ TEST_CASE("PrinterState: Update bed temperature from notification", "[printer_st
 
     json notification = {
         {"method", "notify_status_update"},
-        {"params", {
-            {
-                {"heater_bed", {
-                    {"temperature", 60.5},
-                    {"target", 60.0}
-                }}
-            },
-            1234567890.0
-        }}
-    };
+        {"params", {{{"heater_bed", {{"temperature", 60.5}, {"target", 60.0}}}}, 1234567890.0}}};
 
     state.update_from_notification(notification);
 
@@ -264,28 +248,22 @@ TEST_CASE("PrinterState: Temperature rounding edge cases", "[printer_state][temp
     state.init_subjects();
 
     SECTION("Round down: 205.4 -> 205") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"extruder", {{"temperature", 205.4}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"extruder", {{"temperature", 205.4}}}}, 0.0}}};
         state.update_from_notification(notification);
         REQUIRE(lv_subject_get_int(state.get_extruder_temp_subject()) == 205);
     }
 
     SECTION("Round up: 205.6 -> 205") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"extruder", {{"temperature", 205.6}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"extruder", {{"temperature", 205.6}}}}, 0.0}}};
         state.update_from_notification(notification);
         REQUIRE(lv_subject_get_int(state.get_extruder_temp_subject()) == 205);
     }
 
     SECTION("Exact integer: 210.0 -> 210") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"extruder", {{"temperature", 210.0}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"extruder", {{"temperature", 210.0}}}}, 0.0}}};
         state.update_from_notification(notification);
         REQUIRE(lv_subject_get_int(state.get_extruder_temp_subject()) == 210);
     }
@@ -300,17 +278,8 @@ TEST_CASE("PrinterState: Update print progress from notification", "[printer_sta
     PrinterState& state = get_printer_state();
     state.init_subjects();
 
-    json notification = {
-        {"method", "notify_status_update"},
-        {"params", {
-            {
-                {"virtual_sdcard", {
-                    {"progress", 0.45}
-                }}
-            },
-            1234567890.0
-        }}
-    };
+    json notification = {{"method", "notify_status_update"},
+                         {"params", {{{"virtual_sdcard", {{"progress", 0.45}}}}, 1234567890.0}}};
 
     state.update_from_notification(notification);
 
@@ -324,16 +293,8 @@ TEST_CASE("PrinterState: Update print state and filename", "[printer_state][prog
 
     json notification = {
         {"method", "notify_status_update"},
-        {"params", {
-            {
-                {"print_stats", {
-                    {"state", "printing"},
-                    {"filename", "benchy.gcode"}
-                }}
-            },
-            1234567890.0
-        }}
-    };
+        {"params",
+         {{{"print_stats", {{"state", "printing"}, {"filename", "benchy.gcode"}}}}, 1234567890.0}}};
 
     state.update_from_notification(notification);
 
@@ -350,28 +311,22 @@ TEST_CASE("PrinterState: Progress percentage edge cases", "[printer_state][progr
     state.init_subjects();
 
     SECTION("0% progress") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"virtual_sdcard", {{"progress", 0.0}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"virtual_sdcard", {{"progress", 0.0}}}}, 0.0}}};
         state.update_from_notification(notification);
         REQUIRE(lv_subject_get_int(state.get_print_progress_subject()) == 0);
     }
 
     SECTION("100% progress") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"virtual_sdcard", {{"progress", 1.0}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"virtual_sdcard", {{"progress", 1.0}}}}, 0.0}}};
         state.update_from_notification(notification);
         REQUIRE(lv_subject_get_int(state.get_print_progress_subject()) == 100);
     }
 
     SECTION("67.3% progress -> 67%") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"virtual_sdcard", {{"progress", 0.673}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"virtual_sdcard", {{"progress", 0.673}}}}, 0.0}}};
         state.update_from_notification(notification);
         REQUIRE(lv_subject_get_int(state.get_print_progress_subject()) == 67);
     }
@@ -388,16 +343,9 @@ TEST_CASE("PrinterState: Update toolhead position", "[printer_state][motion]") {
 
     json notification = {
         {"method", "notify_status_update"},
-        {"params", {
-            {
-                {"toolhead", {
-                    {"position", {125.5, 87.3, 45.2, 1234.5}},
-                    {"homed_axes", "xyz"}
-                }}
-            },
-            1234567890.0
-        }}
-    };
+        {"params",
+         {{{"toolhead", {{"position", {125.5, 87.3, 45.2, 1234.5}}, {"homed_axes", "xyz"}}}},
+          1234567890.0}}};
 
     state.update_from_notification(notification);
 
@@ -415,20 +363,16 @@ TEST_CASE("PrinterState: Homed axes variations", "[printer_state][motion]") {
     state.init_subjects();
 
     SECTION("Only X and Y homed") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"toolhead", {{"homed_axes", "xy"}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"toolhead", {{"homed_axes", "xy"}}}}, 0.0}}};
         state.update_from_notification(notification);
         const char* homed = lv_subject_get_string(state.get_homed_axes_subject());
         REQUIRE(std::string(homed) == "xy");
     }
 
     SECTION("No axes homed") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"toolhead", {{"homed_axes", ""}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"toolhead", {{"homed_axes", ""}}}}, 0.0}}};
         state.update_from_notification(notification);
         const char* homed = lv_subject_get_string(state.get_homed_axes_subject());
         REQUIRE(std::string(homed) == "");
@@ -446,16 +390,8 @@ TEST_CASE("PrinterState: Update speed and flow factors", "[printer_state][speed]
 
     json notification = {
         {"method", "notify_status_update"},
-        {"params", {
-            {
-                {"gcode_move", {
-                    {"speed_factor", 1.25},
-                    {"extrude_factor", 0.95}
-                }}
-            },
-            1234567890.0
-        }}
-    };
+        {"params",
+         {{{"gcode_move", {{"speed_factor", 1.25}, {"extrude_factor", 0.95}}}}, 1234567890.0}}};
 
     state.update_from_notification(notification);
 
@@ -468,17 +404,8 @@ TEST_CASE("PrinterState: Update fan speed", "[printer_state][fan]") {
     PrinterState& state = get_printer_state();
     state.init_subjects();
 
-    json notification = {
-        {"method", "notify_status_update"},
-        {"params", {
-            {
-                {"fan", {
-                    {"speed", 0.75}
-                }}
-            },
-            1234567890.0
-        }}
-    };
+    json notification = {{"method", "notify_status_update"},
+                         {"params", {{{"fan", {{"speed", 0.75}}}}, 1234567890.0}}};
 
     state.update_from_notification(notification);
 
@@ -496,7 +423,8 @@ TEST_CASE("PrinterState: Set printer connection state", "[printer_state][connect
 
     state.set_printer_connection_state(static_cast<int>(ConnectionState::CONNECTED), "Connected");
 
-    REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) == static_cast<int>(ConnectionState::CONNECTED));
+    REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) ==
+            static_cast<int>(ConnectionState::CONNECTED));
 
     const char* message = lv_subject_get_string(state.get_printer_connection_message_subject());
     REQUIRE(std::string(message) == "Connected");
@@ -508,26 +436,35 @@ TEST_CASE("PrinterState: Connection state transitions", "[printer_state][connect
     state.init_subjects();
 
     SECTION("Disconnected -> Connecting") {
-        state.set_printer_connection_state(static_cast<int>(ConnectionState::DISCONNECTED), "Disconnected");
-        state.set_printer_connection_state(static_cast<int>(ConnectionState::CONNECTING), "Connecting...");
-        REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) == static_cast<int>(ConnectionState::CONNECTING));
+        state.set_printer_connection_state(static_cast<int>(ConnectionState::DISCONNECTED),
+                                           "Disconnected");
+        state.set_printer_connection_state(static_cast<int>(ConnectionState::CONNECTING),
+                                           "Connecting...");
+        REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) ==
+                static_cast<int>(ConnectionState::CONNECTING));
     }
 
     SECTION("Connecting -> Connected") {
-        state.set_printer_connection_state(static_cast<int>(ConnectionState::CONNECTING), "Connecting...");
+        state.set_printer_connection_state(static_cast<int>(ConnectionState::CONNECTING),
+                                           "Connecting...");
         state.set_printer_connection_state(static_cast<int>(ConnectionState::CONNECTED), "Ready");
-        REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) == static_cast<int>(ConnectionState::CONNECTED));
+        REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) ==
+                static_cast<int>(ConnectionState::CONNECTED));
     }
 
     SECTION("Connected -> Reconnecting") {
         state.set_printer_connection_state(static_cast<int>(ConnectionState::CONNECTED), "Ready");
-        state.set_printer_connection_state(static_cast<int>(ConnectionState::RECONNECTING), "Reconnecting...");
-        REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) == static_cast<int>(ConnectionState::RECONNECTING));
+        state.set_printer_connection_state(static_cast<int>(ConnectionState::RECONNECTING),
+                                           "Reconnecting...");
+        REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) ==
+                static_cast<int>(ConnectionState::RECONNECTING));
     }
 
     SECTION("Failed connection") {
-        state.set_printer_connection_state(static_cast<int>(ConnectionState::FAILED), "Connection failed");
-        REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) == static_cast<int>(ConnectionState::FAILED));
+        state.set_printer_connection_state(static_cast<int>(ConnectionState::FAILED),
+                                           "Connection failed");
+        REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) ==
+                static_cast<int>(ConnectionState::FAILED));
     }
 }
 
@@ -539,12 +476,13 @@ TEST_CASE("PrinterState: Network status initialization", "[printer_state][networ
     lv_init();
 
     PrinterState& state = get_printer_state();
-    state.reset_for_testing();  // Reset singleton state from previous tests
+    state.reset_for_testing(); // Reset singleton state from previous tests
     state.init_subjects();
 
     // Network status is initialized to CONNECTED (mock mode default)
     // In production, actual network status comes from EthernetManager/WiFiManager
-    REQUIRE(lv_subject_get_int(state.get_network_status_subject()) == static_cast<int>(NetworkStatus::CONNECTED));
+    REQUIRE(lv_subject_get_int(state.get_network_status_subject()) ==
+            static_cast<int>(NetworkStatus::CONNECTED));
 }
 
 TEST_CASE("PrinterState: Set network status updates subject", "[printer_state][network]") {
@@ -555,7 +493,8 @@ TEST_CASE("PrinterState: Set network status updates subject", "[printer_state][n
 
     state.set_network_status(static_cast<int>(NetworkStatus::CONNECTED));
 
-    REQUIRE(lv_subject_get_int(state.get_network_status_subject()) == static_cast<int>(NetworkStatus::CONNECTED));
+    REQUIRE(lv_subject_get_int(state.get_network_status_subject()) ==
+            static_cast<int>(NetworkStatus::CONNECTED));
 }
 
 TEST_CASE("PrinterState: Network status enum values", "[printer_state][network]") {
@@ -566,21 +505,25 @@ TEST_CASE("PrinterState: Network status enum values", "[printer_state][network]"
 
     SECTION("DISCONNECTED") {
         state.set_network_status(static_cast<int>(NetworkStatus::DISCONNECTED));
-        REQUIRE(lv_subject_get_int(state.get_network_status_subject()) == static_cast<int>(NetworkStatus::DISCONNECTED));
+        REQUIRE(lv_subject_get_int(state.get_network_status_subject()) ==
+                static_cast<int>(NetworkStatus::DISCONNECTED));
     }
 
     SECTION("CONNECTING") {
         state.set_network_status(static_cast<int>(NetworkStatus::CONNECTING));
-        REQUIRE(lv_subject_get_int(state.get_network_status_subject()) == static_cast<int>(NetworkStatus::CONNECTING));
+        REQUIRE(lv_subject_get_int(state.get_network_status_subject()) ==
+                static_cast<int>(NetworkStatus::CONNECTING));
     }
 
     SECTION("CONNECTED") {
         state.set_network_status(static_cast<int>(NetworkStatus::CONNECTED));
-        REQUIRE(lv_subject_get_int(state.get_network_status_subject()) == static_cast<int>(NetworkStatus::CONNECTED));
+        REQUIRE(lv_subject_get_int(state.get_network_status_subject()) ==
+                static_cast<int>(NetworkStatus::CONNECTED));
     }
 }
 
-TEST_CASE("PrinterState: Printer and network status are independent", "[printer_state][integration]") {
+TEST_CASE("PrinterState: Printer and network status are independent",
+          "[printer_state][integration]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -590,15 +533,20 @@ TEST_CASE("PrinterState: Printer and network status are independent", "[printer_
     state.set_printer_connection_state(static_cast<int>(ConnectionState::CONNECTED), "Connected");
     state.set_network_status(static_cast<int>(NetworkStatus::DISCONNECTED));
 
-    REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) == static_cast<int>(ConnectionState::CONNECTED));
-    REQUIRE(lv_subject_get_int(state.get_network_status_subject()) == static_cast<int>(NetworkStatus::DISCONNECTED));
+    REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) ==
+            static_cast<int>(ConnectionState::CONNECTED));
+    REQUIRE(lv_subject_get_int(state.get_network_status_subject()) ==
+            static_cast<int>(NetworkStatus::DISCONNECTED));
 
     // Set network connected but printer disconnected
-    state.set_printer_connection_state(static_cast<int>(ConnectionState::DISCONNECTED), "Disconnected");
+    state.set_printer_connection_state(static_cast<int>(ConnectionState::DISCONNECTED),
+                                       "Disconnected");
     state.set_network_status(static_cast<int>(NetworkStatus::CONNECTED));
 
-    REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) == static_cast<int>(ConnectionState::DISCONNECTED));
-    REQUIRE(lv_subject_get_int(state.get_network_status_subject()) == static_cast<int>(NetworkStatus::CONNECTED));
+    REQUIRE(lv_subject_get_int(state.get_printer_connection_state_subject()) ==
+            static_cast<int>(ConnectionState::DISCONNECTED));
+    REQUIRE(lv_subject_get_int(state.get_network_status_subject()) ==
+            static_cast<int>(NetworkStatus::CONNECTED));
 }
 
 // ============================================================================
@@ -608,15 +556,11 @@ TEST_CASE("PrinterState: Printer and network status are independent", "[printer_
 TEST_CASE("PrinterState: Ignore invalid notification methods", "[printer_state][error]") {
     lv_init();
     PrinterState& state = get_printer_state();
-    state.reset_for_testing();  // Reset singleton state from previous tests
+    state.reset_for_testing(); // Reset singleton state from previous tests
     state.init_subjects();
 
-    json notification = {
-        {"method", "some_other_method"},
-        {"params", {
-            {{"extruder", {{"temperature", 999.9}}}}
-        }}
-    };
+    json notification = {{"method", "some_other_method"},
+                         {"params", {{{"extruder", {{"temperature", 999.9}}}}}}};
 
     state.update_from_notification(notification);
 
@@ -627,32 +571,23 @@ TEST_CASE("PrinterState: Ignore invalid notification methods", "[printer_state][
 TEST_CASE("PrinterState: Handle missing fields gracefully", "[printer_state][error]") {
     lv_init();
     PrinterState& state = get_printer_state();
-    state.reset_for_testing();  // Reset singleton state from previous tests
+    state.reset_for_testing(); // Reset singleton state from previous tests
     state.init_subjects();
 
     SECTION("Missing 'method' field") {
-        json notification = {
-            {"params", {
-                {{"extruder", {{"temperature", 999.9}}}}
-            }}
-        };
+        json notification = {{"params", {{{"extruder", {{"temperature", 999.9}}}}}}};
         state.update_from_notification(notification);
         REQUIRE(lv_subject_get_int(state.get_extruder_temp_subject()) == 0);
     }
 
     SECTION("Missing 'params' field") {
-        json notification = {
-            {"method", "notify_status_update"}
-        };
+        json notification = {{"method", "notify_status_update"}};
         state.update_from_notification(notification);
         REQUIRE(lv_subject_get_int(state.get_extruder_temp_subject()) == 0);
     }
 
     SECTION("Empty params array") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", json::array()}
-        };
+        json notification = {{"method", "notify_status_update"}, {"params", json::array()}};
         state.update_from_notification(notification);
         REQUIRE(lv_subject_get_int(state.get_extruder_temp_subject()) == 0);
     }
@@ -669,19 +604,15 @@ TEST_CASE("PrinterState: Complete printing state update", "[printer_state][integ
 
     json notification = {
         {"method", "notify_status_update"},
-        {"params", {
-            {
-                {"extruder", {{"temperature", 210.5}, {"target", 210.0}}},
-                {"heater_bed", {{"temperature", 60.2}, {"target", 60.0}}},
-                {"virtual_sdcard", {{"progress", 0.67}}},
-                {"print_stats", {{"state", "printing"}, {"filename", "model.gcode"}}},
-                {"toolhead", {{"position", {125.0, 87.0, 45.0, 1234.0}}, {"homed_axes", "xyz"}}},
-                {"gcode_move", {{"speed_factor", 1.0}, {"extrude_factor", 1.0}}},
-                {"fan", {{"speed", 0.5}}}
-            },
-            1234567890.0
-        }}
-    };
+        {"params",
+         {{{"extruder", {{"temperature", 210.5}, {"target", 210.0}}},
+           {"heater_bed", {{"temperature", 60.2}, {"target", 60.0}}},
+           {"virtual_sdcard", {{"progress", 0.67}}},
+           {"print_stats", {{"state", "printing"}, {"filename", "model.gcode"}}},
+           {"toolhead", {{"position", {125.0, 87.0, 45.0, 1234.0}}, {"homed_axes", "xyz"}}},
+           {"gcode_move", {{"speed_factor", 1.0}, {"extrude_factor", 1.0}}},
+           {"fan", {{"speed", 0.5}}}},
+          1234567890.0}}};
 
     state.update_from_notification(notification);
 
@@ -692,7 +623,8 @@ TEST_CASE("PrinterState: Complete printing state update", "[printer_state][integ
     REQUIRE(lv_subject_get_int(state.get_bed_target_subject()) == 60);
     REQUIRE(lv_subject_get_int(state.get_print_progress_subject()) == 67);
     REQUIRE(std::string(lv_subject_get_string(state.get_print_state_subject())) == "printing");
-    REQUIRE(std::string(lv_subject_get_string(state.get_print_filename_subject())) == "model.gcode");
+    REQUIRE(std::string(lv_subject_get_string(state.get_print_filename_subject())) ==
+            "model.gcode");
     REQUIRE(lv_subject_get_int(state.get_position_x_subject()) == 125);
     REQUIRE(lv_subject_get_int(state.get_position_y_subject()) == 87);
     REQUIRE(lv_subject_get_int(state.get_position_z_subject()) == 45);
@@ -706,7 +638,8 @@ TEST_CASE("PrinterState: Complete printing state update", "[printer_state][integ
 // PrintJobState Enum Tests
 // ============================================================================
 
-TEST_CASE("PrintJobState: parse_print_job_state parses Moonraker strings", "[printer_state][enum]") {
+TEST_CASE("PrintJobState: parse_print_job_state parses Moonraker strings",
+          "[printer_state][enum]") {
     SECTION("Parses all standard Moonraker states") {
         REQUIRE(parse_print_job_state("standby") == PrintJobState::STANDBY);
         REQUIRE(parse_print_job_state("printing") == PrintJobState::PRINTING);
@@ -727,7 +660,8 @@ TEST_CASE("PrintJobState: parse_print_job_state parses Moonraker strings", "[pri
     }
 }
 
-TEST_CASE("PrintJobState: print_job_state_to_string converts to display strings", "[printer_state][enum]") {
+TEST_CASE("PrintJobState: print_job_state_to_string converts to display strings",
+          "[printer_state][enum]") {
     REQUIRE(std::string(print_job_state_to_string(PrintJobState::STANDBY)) == "Standby");
     REQUIRE(std::string(print_job_state_to_string(PrintJobState::PRINTING)) == "Printing");
     REQUIRE(std::string(print_job_state_to_string(PrintJobState::PAUSED)) == "Paused");
@@ -746,23 +680,20 @@ TEST_CASE("PrintJobState: Enum values match expected integers", "[printer_state]
     REQUIRE(static_cast<int>(PrintJobState::ERROR) == 5);
 }
 
-TEST_CASE("PrinterState: Print state enum subject updates from notification", "[printer_state][enum]") {
+TEST_CASE("PrinterState: Print state enum subject updates from notification",
+          "[printer_state][enum]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
 
     // Reset to known state first
-    json standby_notification = {
-        {"method", "notify_status_update"},
-        {"params", {{{"print_stats", {{"state", "standby"}}}}, 0.0}}
-    };
+    json standby_notification = {{"method", "notify_status_update"},
+                                 {"params", {{{"print_stats", {{"state", "standby"}}}}, 0.0}}};
     state.update_from_notification(standby_notification);
 
     SECTION("Updates to PRINTING from notification") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"print_stats", {{"state", "printing"}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"print_stats", {{"state", "printing"}}}}, 0.0}}};
         state.update_from_notification(notification);
 
         REQUIRE(state.get_print_job_state() == PrintJobState::PRINTING);
@@ -771,20 +702,16 @@ TEST_CASE("PrinterState: Print state enum subject updates from notification", "[
     }
 
     SECTION("Updates to PAUSED from notification") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"print_stats", {{"state", "paused"}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"print_stats", {{"state", "paused"}}}}, 0.0}}};
         state.update_from_notification(notification);
 
         REQUIRE(state.get_print_job_state() == PrintJobState::PAUSED);
     }
 
     SECTION("Both string and enum subjects update together") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"print_stats", {{"state", "complete"}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"print_stats", {{"state", "complete"}}}}, 0.0}}};
         state.update_from_notification(notification);
 
         // String subject should have the raw string
@@ -800,61 +727,50 @@ TEST_CASE("PrinterState: can_start_new_print logic", "[printer_state][enum]") {
     state.init_subjects();
 
     SECTION("Can start from STANDBY") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"print_stats", {{"state", "standby"}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"print_stats", {{"state", "standby"}}}}, 0.0}}};
         state.update_from_notification(notification);
         REQUIRE(state.can_start_new_print() == true);
     }
 
     SECTION("Can start from COMPLETE") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"print_stats", {{"state", "complete"}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"print_stats", {{"state", "complete"}}}}, 0.0}}};
         state.update_from_notification(notification);
         REQUIRE(state.can_start_new_print() == true);
     }
 
     SECTION("Can start from CANCELLED") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"print_stats", {{"state", "cancelled"}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"print_stats", {{"state", "cancelled"}}}}, 0.0}}};
         state.update_from_notification(notification);
         REQUIRE(state.can_start_new_print() == true);
     }
 
     SECTION("Can start from ERROR") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"print_stats", {{"state", "error"}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"print_stats", {{"state", "error"}}}}, 0.0}}};
         state.update_from_notification(notification);
         REQUIRE(state.can_start_new_print() == true);
     }
 
     SECTION("Cannot start from PRINTING") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"print_stats", {{"state", "printing"}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"print_stats", {{"state", "printing"}}}}, 0.0}}};
         state.update_from_notification(notification);
         REQUIRE(state.can_start_new_print() == false);
     }
 
     SECTION("Cannot start from PAUSED") {
-        json notification = {
-            {"method", "notify_status_update"},
-            {"params", {{{"print_stats", {{"state", "paused"}}}}, 0.0}}
-        };
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"print_stats", {{"state", "paused"}}}}, 0.0}}};
         state.update_from_notification(notification);
         REQUIRE(state.can_start_new_print() == false);
     }
 }
 
-TEST_CASE("PrinterState: Enum subject value reflects all state transitions", "[printer_state][enum]") {
+TEST_CASE("PrinterState: Enum subject value reflects all state transitions",
+          "[printer_state][enum]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -862,55 +778,43 @@ TEST_CASE("PrinterState: Enum subject value reflects all state transitions", "[p
     // Test all state transitions are reflected in the enum subject
 
     // STANDBY
-    json notification = {
-        {"method", "notify_status_update"},
-        {"params", {{{"print_stats", {{"state", "standby"}}}}, 0.0}}
-    };
+    json notification = {{"method", "notify_status_update"},
+                         {"params", {{{"print_stats", {{"state", "standby"}}}}, 0.0}}};
     state.update_from_notification(notification);
     REQUIRE(lv_subject_get_int(state.get_print_state_enum_subject()) ==
             static_cast<int>(PrintJobState::STANDBY));
 
     // PRINTING
-    notification = {
-        {"method", "notify_status_update"},
-        {"params", {{{"print_stats", {{"state", "printing"}}}}, 0.0}}
-    };
+    notification = {{"method", "notify_status_update"},
+                    {"params", {{{"print_stats", {{"state", "printing"}}}}, 0.0}}};
     state.update_from_notification(notification);
     REQUIRE(lv_subject_get_int(state.get_print_state_enum_subject()) ==
             static_cast<int>(PrintJobState::PRINTING));
 
     // PAUSED
-    notification = {
-        {"method", "notify_status_update"},
-        {"params", {{{"print_stats", {{"state", "paused"}}}}, 0.0}}
-    };
+    notification = {{"method", "notify_status_update"},
+                    {"params", {{{"print_stats", {{"state", "paused"}}}}, 0.0}}};
     state.update_from_notification(notification);
     REQUIRE(lv_subject_get_int(state.get_print_state_enum_subject()) ==
             static_cast<int>(PrintJobState::PAUSED));
 
     // COMPLETE
-    notification = {
-        {"method", "notify_status_update"},
-        {"params", {{{"print_stats", {{"state", "complete"}}}}, 0.0}}
-    };
+    notification = {{"method", "notify_status_update"},
+                    {"params", {{{"print_stats", {{"state", "complete"}}}}, 0.0}}};
     state.update_from_notification(notification);
     REQUIRE(lv_subject_get_int(state.get_print_state_enum_subject()) ==
             static_cast<int>(PrintJobState::COMPLETE));
 
     // CANCELLED
-    notification = {
-        {"method", "notify_status_update"},
-        {"params", {{{"print_stats", {{"state", "cancelled"}}}}, 0.0}}
-    };
+    notification = {{"method", "notify_status_update"},
+                    {"params", {{{"print_stats", {{"state", "cancelled"}}}}, 0.0}}};
     state.update_from_notification(notification);
     REQUIRE(lv_subject_get_int(state.get_print_state_enum_subject()) ==
             static_cast<int>(PrintJobState::CANCELLED));
 
     // ERROR
-    notification = {
-        {"method", "notify_status_update"},
-        {"params", {{{"print_stats", {{"state", "error"}}}}, 0.0}}
-    };
+    notification = {{"method", "notify_status_update"},
+                    {"params", {{{"print_stats", {{"state", "error"}}}}, 0.0}}};
     state.update_from_notification(notification);
     REQUIRE(lv_subject_get_int(state.get_print_state_enum_subject()) ==
             static_cast<int>(PrintJobState::ERROR));
@@ -920,7 +824,8 @@ TEST_CASE("PrinterState: Enum subject value reflects all state transitions", "[p
 // KlippyState Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: Klippy state initialization defaults to READY", "[printer_state][klippy]") {
+TEST_CASE("PrinterState: Klippy state initialization defaults to READY",
+          "[printer_state][klippy]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -964,7 +869,8 @@ TEST_CASE("PrinterState: set_klippy_state changes subject value", "[printer_stat
             static_cast<int>(KlippyState::READY));
 }
 
-TEST_CASE("PrinterState: Observer fires when klippy state changes", "[printer_state][klippy][observer]") {
+TEST_CASE("PrinterState: Observer fires when klippy state changes",
+          "[printer_state][klippy][observer]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -999,7 +905,8 @@ TEST_CASE("PrinterState: Observer fires when klippy state changes", "[printer_st
     REQUIRE(user_data[1] == static_cast<int>(KlippyState::READY));
 }
 
-TEST_CASE("PrinterState: Update klippy state from webhooks notification", "[printer_state][klippy][webhooks]") {
+TEST_CASE("PrinterState: Update klippy state from webhooks notification",
+          "[printer_state][klippy][webhooks]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -1009,8 +916,8 @@ TEST_CASE("PrinterState: Update klippy state from webhooks notification", "[prin
     // Test "startup" state (RESTART in progress)
     nlohmann::json notification = {
         {"method", "notify_status_update"},
-        {"params", {{{"webhooks", {{"state", "startup"}, {"state_message", "Klipper restart"}}}}, 0.0}}
-    };
+        {"params",
+         {{{"webhooks", {{"state", "startup"}, {"state_message", "Klipper restart"}}}}, 0.0}}};
     state.update_from_notification(notification);
     REQUIRE(lv_subject_get_int(state.get_klippy_state_subject()) ==
             static_cast<int>(KlippyState::STARTUP));
@@ -1018,8 +925,8 @@ TEST_CASE("PrinterState: Update klippy state from webhooks notification", "[prin
     // Test "ready" state (restart complete)
     notification = {
         {"method", "notify_status_update"},
-        {"params", {{{"webhooks", {{"state", "ready"}, {"state_message", "Printer is ready"}}}}, 0.0}}
-    };
+        {"params",
+         {{{"webhooks", {{"state", "ready"}, {"state_message", "Printer is ready"}}}}, 0.0}}};
     state.update_from_notification(notification);
     REQUIRE(lv_subject_get_int(state.get_klippy_state_subject()) ==
             static_cast<int>(KlippyState::READY));
@@ -1027,8 +934,8 @@ TEST_CASE("PrinterState: Update klippy state from webhooks notification", "[prin
     // Test "shutdown" state (M112 emergency stop)
     notification = {
         {"method", "notify_status_update"},
-        {"params", {{{"webhooks", {{"state", "shutdown"}, {"state_message", "Emergency stop"}}}}, 0.0}}
-    };
+        {"params",
+         {{{"webhooks", {{"state", "shutdown"}, {"state_message", "Emergency stop"}}}}, 0.0}}};
     state.update_from_notification(notification);
     REQUIRE(lv_subject_get_int(state.get_klippy_state_subject()) ==
             static_cast<int>(KlippyState::SHUTDOWN));
@@ -1036,14 +943,15 @@ TEST_CASE("PrinterState: Update klippy state from webhooks notification", "[prin
     // Test "error" state (Klipper error)
     notification = {
         {"method", "notify_status_update"},
-        {"params", {{{"webhooks", {{"state", "error"}, {"state_message", "Check klippy.log"}}}}, 0.0}}
-    };
+        {"params",
+         {{{"webhooks", {{"state", "error"}, {"state_message", "Check klippy.log"}}}}, 0.0}}};
     state.update_from_notification(notification);
     REQUIRE(lv_subject_get_int(state.get_klippy_state_subject()) ==
             static_cast<int>(KlippyState::ERROR));
 }
 
-TEST_CASE("PrinterState: Unknown webhooks state defaults to READY", "[printer_state][klippy][webhooks]") {
+TEST_CASE("PrinterState: Unknown webhooks state defaults to READY",
+          "[printer_state][klippy][webhooks]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -1056,11 +964,163 @@ TEST_CASE("PrinterState: Unknown webhooks state defaults to READY", "[printer_st
             static_cast<int>(KlippyState::STARTUP));
 
     // Unknown state should default to READY
-    nlohmann::json notification = {
-        {"method", "notify_status_update"},
-        {"params", {{{"webhooks", {{"state", "unknown_state"}}}}, 0.0}}
-    };
+    nlohmann::json notification = {{"method", "notify_status_update"},
+                                   {"params", {{{"webhooks", {{"state", "unknown_state"}}}}, 0.0}}};
     state.update_from_notification(notification);
     REQUIRE(lv_subject_get_int(state.get_klippy_state_subject()) ==
             static_cast<int>(KlippyState::READY));
+}
+
+// ============================================================================
+// Kinematics / Bed Moves Tests
+// ============================================================================
+
+TEST_CASE("PrinterState: set_kinematics detects cartesian as bed-moves",
+          "[printer_state][kinematics]") {
+    lv_init();
+
+    PrinterState& state = get_printer_state();
+    state.reset_for_testing();
+    state.init_subjects(false);
+
+    // Default should be 0 (gantry moves)
+    REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
+
+    // Cartesian printers have moving beds on Z
+    state.set_kinematics("cartesian");
+    REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
+}
+
+TEST_CASE("PrinterState: set_kinematics detects corexy as gantry-moves",
+          "[printer_state][kinematics]") {
+    lv_init();
+
+    PrinterState& state = get_printer_state();
+    state.reset_for_testing();
+    state.init_subjects(false);
+
+    // First set to cartesian (bed moves)
+    state.set_kinematics("cartesian");
+    REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
+
+    // CoreXY printers have moving gantry
+    state.set_kinematics("corexy");
+    REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
+}
+
+TEST_CASE("PrinterState: set_kinematics detects delta as gantry-moves",
+          "[printer_state][kinematics]") {
+    lv_init();
+
+    PrinterState& state = get_printer_state();
+    state.reset_for_testing();
+    state.init_subjects(false);
+
+    // Delta printers have moving effector, not bed
+    state.set_kinematics("delta");
+    REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
+}
+
+TEST_CASE("PrinterState: set_kinematics handles variations of cartesian",
+          "[printer_state][kinematics]") {
+    lv_init();
+
+    PrinterState& state = get_printer_state();
+    state.reset_for_testing();
+    state.init_subjects(false);
+
+    SECTION("corexz with bed") {
+        // CoreXZ is like cartesian for Z (bed moves down)
+        state.set_kinematics("corexz");
+        // CoreXZ doesn't contain "cartesian", so default to gantry moves
+        REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
+    }
+
+    SECTION("hybrid_corexy") {
+        state.set_kinematics("hybrid_corexy");
+        REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
+    }
+
+    SECTION("limited_cartesian") {
+        // Some firmware uses "limited_cartesian" - contains "cartesian"
+        state.set_kinematics("limited_cartesian");
+        REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
+    }
+}
+
+TEST_CASE("PrinterState: Update kinematics from toolhead notification",
+          "[printer_state][kinematics][notification]") {
+    lv_init();
+
+    PrinterState& state = get_printer_state();
+    state.reset_for_testing();
+    state.init_subjects(false);
+
+    // Send notification with toolhead kinematics
+    nlohmann::json notification = {
+        {"method", "notify_status_update"},
+        {"params", {{{"toolhead", {{"kinematics", "cartesian"}, {"homed_axes", "xyz"}}}}, 0.0}}};
+    state.update_from_notification(notification);
+
+    // Should detect cartesian as bed-moves
+    REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
+}
+
+TEST_CASE("PrinterState: Kinematics update from corexy notification",
+          "[printer_state][kinematics][notification]") {
+    lv_init();
+
+    PrinterState& state = get_printer_state();
+    state.reset_for_testing();
+    state.init_subjects(false);
+
+    // First set to cartesian
+    state.set_kinematics("cartesian");
+    REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
+
+    // Update to corexy via notification
+    nlohmann::json notification = {
+        {"method", "notify_status_update"},
+        {"params",
+         {{{"toolhead", {{"kinematics", "corexy"}, {"position", {0.0, 0.0, 0.0, 0.0}}}}}, 0.0}}};
+    state.update_from_notification(notification);
+
+    // Should now be gantry-moves
+    REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
+}
+
+TEST_CASE("PrinterState: Observer fires when bed_moves changes",
+          "[printer_state][kinematics][observer]") {
+    lv_init();
+
+    PrinterState& state = get_printer_state();
+    state.reset_for_testing();
+    state.init_subjects(false);
+
+    // Register observer
+    auto observer_cb = [](lv_observer_t* observer, lv_subject_t* subject) {
+        int* count_ptr = static_cast<int*>(lv_observer_get_user_data(observer));
+        int* value_ptr = count_ptr + 1;
+
+        (*count_ptr)++;
+        *value_ptr = lv_subject_get_int(subject);
+    };
+
+    int user_data[2] = {0, -1}; // [callback_count, last_value]
+
+    lv_subject_add_observer(state.get_printer_bed_moves_subject(), observer_cb, user_data);
+
+    // LVGL auto-notifies observers when first added
+    REQUIRE(user_data[0] == 1);
+    REQUIRE(user_data[1] == 0); // Default: gantry moves
+
+    // Change to cartesian (bed moves)
+    state.set_kinematics("cartesian");
+    REQUIRE(user_data[0] == 2);
+    REQUIRE(user_data[1] == 1); // Now bed moves
+
+    // Change to corexy (gantry moves)
+    state.set_kinematics("corexy");
+    REQUIRE(user_data[0] == 3);
+    REQUIRE(user_data[1] == 0); // Back to gantry moves
 }

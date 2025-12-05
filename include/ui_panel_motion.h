@@ -60,9 +60,12 @@ class MotionPanel : public PanelBase {
     lv_subject_t pos_x_subject_;
     lv_subject_t pos_y_subject_;
     lv_subject_t pos_z_subject_;
+    lv_subject_t z_axis_label_subject_; // "Bed" or "Print Head"
     char pos_x_buf_[32];
     char pos_y_buf_[32];
     char pos_z_buf_[32];
+    char z_axis_label_buf_[16];
+    bool bed_moves_ = false; // If true, invert Z direction (arrows match bed movement)
 
     jog_distance_t current_distance_ = JOG_DIST_1MM;
     float current_x_ = 0.0f;
@@ -75,6 +78,7 @@ class MotionPanel : public PanelBase {
     ObserverGuard position_x_observer_;
     ObserverGuard position_y_observer_;
     ObserverGuard position_z_observer_;
+    ObserverGuard bed_moves_observer_;
 
     void setup_distance_buttons();
     void setup_jog_pad();
@@ -95,6 +99,9 @@ class MotionPanel : public PanelBase {
     static void on_position_x_changed(lv_observer_t* observer, lv_subject_t* subject);
     static void on_position_y_changed(lv_observer_t* observer, lv_subject_t* subject);
     static void on_position_z_changed(lv_observer_t* observer, lv_subject_t* subject);
+    static void on_bed_moves_changed(lv_observer_t* observer, lv_subject_t* subject);
+
+    void update_z_axis_label(bool bed_moves);
 };
 
 MotionPanel& get_global_motion_panel();

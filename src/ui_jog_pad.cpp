@@ -35,6 +35,39 @@
 // Distance values in mm (indexed by jog_distance_t enum)
 static const float distance_values[] = {0.1f, 1.0f, 10.0f, 100.0f};
 
+// Zone boundary ratios (as fraction of total radius)
+// Home button: 0% - 25%
+// Inner zone (1mm): 25% - 60%
+// Outer zone (10mm): 60% - 100%
+static constexpr float HOME_ZONE_RATIO = 0.25f;
+static constexpr float INNER_ZONE_BOUNDARY_RATIO = 0.60f; // Inner/outer zone boundary
+
+// Responsive font selection based on jog pad radius
+// Threshold values tuned for common screen sizes (480px small, 800px medium, 1024px+ large)
+static const lv_font_t* get_icon_font(lv_coord_t radius) {
+    if (radius >= 120)
+        return &mdi_icons_32;
+    if (radius >= 80)
+        return &mdi_icons_24;
+    return &mdi_icons_24; // Minimum readable size
+}
+
+static const lv_font_t* get_label_font(lv_coord_t radius) {
+    if (radius >= 150)
+        return &noto_sans_18;
+    if (radius >= 100)
+        return &noto_sans_16;
+    return &noto_sans_14; // Minimum readable size
+}
+
+static const lv_font_t* get_distance_font(lv_coord_t radius) {
+    if (radius >= 150)
+        return &noto_sans_16;
+    if (radius >= 100)
+        return &noto_sans_14;
+    return &noto_sans_12; // Minimum readable size
+}
+
 // Widget state (stored in LVGL object user_data)
 typedef struct {
     // Callbacks
@@ -236,13 +269,13 @@ static void jog_pad_draw_cb(lv_event_t* e) {
     lv_coord_t center_y = obj_coords.y1 + height / 2;
     lv_coord_t radius = width / 2;
 
-    // Zone boundary: Inner circle is 50% of total radius
-    lv_coord_t inner_boundary = (lv_coord_t)(radius * 0.50f);
+    // Zone boundary: Inner circle at INNER_ZONE_BOUNDARY_RATIO of total radius
+    lv_coord_t inner_boundary = (lv_coord_t)(radius * INNER_ZONE_BOUNDARY_RATIO);
 
     // LAYERED APPROACH: Draw from back to front
     // Layer 1: Full light gray background circle (0% to 100% radius)
-    // Layer 2: Dark gray inner circle overlay (0% to 50% radius)
-    // Result: Outer ring (50-100%) shows as light gray, extends all the way to edge
+    // Layer 2: Dark gray inner circle overlay (0% to 60% radius)
+    // Result: Outer ring (60-100%) shows as light gray, extends all the way to edge
 
     // Layer 1: Full background circle (light gray)
     lv_draw_arc_dsc_t bg_arc_dsc;
@@ -291,7 +324,7 @@ static void jog_pad_draw_cb(lv_event_t* e) {
     lv_draw_line(layer, &line_dsc);
 
     // Draw center home button area
-    lv_coord_t home_radius = (lv_coord_t)(radius * 0.25f); // 25% of total radius
+    lv_coord_t home_radius = (lv_coord_t)(radius * HOME_ZONE_RATIO);
 
     // Draw filled background circle for home area
     lv_draw_arc_dsc_t home_bg_dsc;
@@ -317,19 +350,22 @@ static void jog_pad_draw_cb(lv_event_t* e) {
     home_ring_dsc.end_angle = 360;
     lv_draw_arc(layer, &home_ring_dsc);
 
-    // Draw center home icon
+    // Draw center home icon (scaled to jog pad size)
     lv_draw_label_dsc_t home_label_dsc;
     lv_draw_label_dsc_init(&home_label_dsc);
     home_label_dsc.color = state->jog_color_home_text;
     home_label_dsc.text = ICON_HOME;
-    home_label_dsc.font = &mdi_icons_32;
+    home_label_dsc.font = get_icon_font(radius);
     home_label_dsc.align = LV_TEXT_ALIGN_CENTER;
 
+    // Scale icon area proportionally to home button size
+    lv_coord_t icon_half_w = (lv_coord_t)(home_radius * 0.6f);
+    lv_coord_t icon_half_h = (lv_coord_t)(home_radius * 0.4f);
     lv_area_t home_label_area;
-    home_label_area.x1 = center_x - 20;
-    home_label_area.y1 = center_y - 14;
-    home_label_area.x2 = center_x + 20;
-    home_label_area.y2 = center_y + 14;
+    home_label_area.x1 = center_x - icon_half_w;
+    home_label_area.y1 = center_y - icon_half_h;
+    home_label_area.x2 = center_x + icon_half_w;
+    home_label_area.y2 = center_y + icon_half_h;
     lv_draw_label(layer, &home_label_dsc, &home_label_area);
 
     // Draw zone boundary lines to show the edges of each directional click zone
@@ -354,67 +390,77 @@ static void jog_pad_draw_cb(lv_event_t* e) {
         lv_draw_line(layer, &boundary_line_dsc);
     }
 
-    // Draw distance labels showing movement amounts for each ring
+    // Draw distance labels showing movement amounts for each ring (scaled fonts)
     lv_draw_label_dsc_t label_dsc;
     lv_draw_label_dsc_init(&label_dsc);
     label_dsc.color = state->jog_color_distance_labels;
-    label_dsc.font = &noto_sans_14;
+    label_dsc.font = get_distance_font(radius);
     label_dsc.align = LV_TEXT_ALIGN_CENTER;
 
     lv_area_t label_area;
+
+    // Scale label box sizes proportionally (approx 0.25 * radius for width)
+    lv_coord_t dist_label_w = (lv_coord_t)(radius * 0.30f);
+    lv_coord_t dist_label_h = (lv_coord_t)(radius * 0.12f);
+    lv_coord_t dist_offset_y = (lv_coord_t)(radius * 0.05f);
 
     // "1mm" label in inner ring (offset down and right from diagonal)
     label_dsc.text = "1mm";
     lv_coord_t inner_label_radius = (lv_coord_t)((home_radius + inner_boundary) * 0.5f);
     label_area.x1 = center_x + (lv_coord_t)(inner_label_radius * 0.707f);
-    label_area.y1 = center_y - (lv_coord_t)(inner_label_radius * 0.707f) + 8;
-    label_area.x2 = label_area.x1 + 50;
-    label_area.y2 = label_area.y1 + 18;
+    label_area.y1 = center_y - (lv_coord_t)(inner_label_radius * 0.707f) + dist_offset_y;
+    label_area.x2 = label_area.x1 + dist_label_w;
+    label_area.y2 = label_area.y1 + dist_label_h;
     lv_draw_label(layer, &label_dsc, &label_area);
 
     // "10mm" label in outer ring (offset down and right from diagonal)
     label_dsc.text = "10mm";
     lv_coord_t outer_label_radius = (lv_coord_t)((radius + inner_boundary) * 0.5f);
     label_area.x1 = center_x + (lv_coord_t)(outer_label_radius * 0.707f);
-    label_area.y1 = center_y - (lv_coord_t)(outer_label_radius * 0.707f) + 8;
-    label_area.x2 = label_area.x1 + 60;
-    label_area.y2 = label_area.y1 + 18;
+    label_area.y1 = center_y - (lv_coord_t)(outer_label_radius * 0.707f) + dist_offset_y;
+    label_area.x2 = label_area.x1 + dist_label_w + 10; // Slightly wider for "10mm"
+    label_area.y2 = label_area.y1 + dist_label_h;
     lv_draw_label(layer, &label_dsc, &label_area);
 
-    // Draw axis labels (cardinal directions)
+    // Draw axis labels (cardinal directions) with scaled font
     label_dsc.color = state->jog_color_axis_labels;
-    label_dsc.font = &noto_sans_16;
+    label_dsc.font = get_label_font(radius);
+
+    // Scale axis label positions and sizes proportionally
+    lv_coord_t axis_label_w = (lv_coord_t)(radius * 0.18f);
+    lv_coord_t axis_label_h = (lv_coord_t)(radius * 0.14f);
+    lv_coord_t axis_offset = (lv_coord_t)(radius * 0.08f);
 
     // Y+ (North)
     label_dsc.text = "Y+";
-    label_area.x1 = center_x - 12;
-    label_area.y1 = (int32_t)(center_y - radius * 0.80f) - 10;
-    label_area.x2 = label_area.x1 + 25;
-    label_area.y2 = label_area.y1 + 20;
+    label_area.x1 = center_x - axis_label_w / 2;
+    label_area.y1 = (int32_t)(center_y - radius * 0.80f) - axis_offset;
+    label_area.x2 = label_area.x1 + axis_label_w;
+    label_area.y2 = label_area.y1 + axis_label_h;
     lv_draw_label(layer, &label_dsc, &label_area);
 
     // X+ (East)
     label_dsc.text = "X+";
-    label_area.x1 = (int32_t)(center_x + radius * 0.80f) - 12;
-    label_area.y1 = center_y - 10;
-    label_area.x2 = label_area.x1 + 25;
-    label_area.y2 = label_area.y1 + 20;
+    label_area.x1 = (int32_t)(center_x + radius * 0.80f) - axis_label_w / 2;
+    label_area.y1 = center_y - axis_offset;
+    label_area.x2 = label_area.x1 + axis_label_w;
+    label_area.y2 = label_area.y1 + axis_label_h;
     lv_draw_label(layer, &label_dsc, &label_area);
 
     // Y- (South)
     label_dsc.text = "Y-";
-    label_area.x1 = center_x - 12;
-    label_area.y1 = (int32_t)(center_y + radius * 0.80f) - 10;
-    label_area.x2 = label_area.x1 + 25;
-    label_area.y2 = label_area.y1 + 20;
+    label_area.x1 = center_x - axis_label_w / 2;
+    label_area.y1 = (int32_t)(center_y + radius * 0.80f) - axis_offset;
+    label_area.x2 = label_area.x1 + axis_label_w;
+    label_area.y2 = label_area.y1 + axis_label_h;
     lv_draw_label(layer, &label_dsc, &label_area);
 
     // X- (West)
     label_dsc.text = "X-";
-    label_area.x1 = (int32_t)(center_x - radius * 0.80f) - 12;
-    label_area.y1 = center_y - 10;
-    label_area.x2 = label_area.x1 + 25;
-    label_area.y2 = label_area.y1 + 20;
+    label_area.x1 = (int32_t)(center_x - radius * 0.80f) - axis_label_w / 2;
+    label_area.y1 = center_y - axis_offset;
+    label_area.x2 = label_area.x1 + axis_label_w;
+    label_area.y2 = label_area.y1 + axis_label_h;
     lv_draw_label(layer, &label_dsc, &label_area);
 
     // Draw press highlight overlay if a zone is pressed
@@ -425,7 +471,7 @@ static void jog_pad_draw_cb(lv_event_t* e) {
             lv_draw_arc_dsc_init(&highlight_dsc);
             highlight_dsc.color = state->jog_color_highlight;
             highlight_dsc.opa = LV_OPA_60; // ~23% opacity
-            lv_coord_t highlight_home_radius = (lv_coord_t)(radius * 0.25f);
+            lv_coord_t highlight_home_radius = (lv_coord_t)(radius * HOME_ZONE_RATIO);
             highlight_dsc.width = static_cast<uint16_t>(highlight_home_radius * 2);
             highlight_dsc.center.x = center_x;
             highlight_dsc.center.y = center_y;
@@ -453,25 +499,27 @@ static void jog_pad_draw_cb(lv_event_t* e) {
             highlight_dsc.opa = LV_OPA_60;
 
             if (state->pressed_is_inner) {
-                // Inner zone: Draw arc ring from 25% to 50%
-                lv_coord_t highlight_inner_boundary = (lv_coord_t)(radius * 0.50f);
-                lv_coord_t home_edge = (lv_coord_t)(radius * 0.25f);
+                // Inner zone: Draw arc ring from 25% to 60%
+                lv_coord_t highlight_inner_boundary =
+                    (lv_coord_t)(radius * INNER_ZONE_BOUNDARY_RATIO);
+                lv_coord_t home_edge = (lv_coord_t)(radius * HOME_ZONE_RATIO);
 
                 highlight_dsc.width =
-                    static_cast<uint16_t>(highlight_inner_boundary - home_edge); // 25% thickness
+                    static_cast<uint16_t>(highlight_inner_boundary - home_edge); // 35% thickness
                 highlight_dsc.center.x = center_x;
                 highlight_dsc.center.y = center_y;
                 highlight_dsc.radius =
-                    static_cast<uint16_t>(highlight_inner_boundary); // 50% outer edge
+                    static_cast<uint16_t>(highlight_inner_boundary); // 60% outer edge
                 highlight_dsc.start_angle = lvgl_start;
                 highlight_dsc.end_angle = lvgl_end;
                 lv_draw_arc(layer, &highlight_dsc);
             } else {
-                // Outer zone: Draw arc ring from 50% to 100%
-                lv_coord_t highlight_outer_inner_boundary = (lv_coord_t)(radius * 0.50f);
+                // Outer zone: Draw arc ring from 60% to 100%
+                lv_coord_t highlight_outer_inner_boundary =
+                    (lv_coord_t)(radius * INNER_ZONE_BOUNDARY_RATIO);
 
                 highlight_dsc.width =
-                    static_cast<uint16_t>(radius - highlight_outer_inner_boundary); // 50% thickness
+                    static_cast<uint16_t>(radius - highlight_outer_inner_boundary); // 40% thickness
                 highlight_dsc.center.x = center_x;
                 highlight_dsc.center.y = center_y;
                 highlight_dsc.radius = static_cast<uint16_t>(radius); // 100% outer edge
@@ -515,8 +563,8 @@ static void jog_pad_press_cb(lv_event_t* e) {
 
     state->is_pressed = true;
 
-    // Home button: center 25% radius
-    if (distance < radius * 0.25f) {
+    // Home button: center at HOME_ZONE_RATIO
+    if (distance < radius * HOME_ZONE_RATIO) {
         state->pressed_is_home = true;
         state->pressed_is_inner = false;
         lv_obj_invalidate(obj); // Trigger redraw
@@ -530,7 +578,7 @@ static void jog_pad_press_cb(lv_event_t* e) {
     state->pressed_direction = angle_to_direction(angle);
 
     // Determine if inner or outer zone
-    float inner_boundary = radius * 0.50f;
+    float inner_boundary = radius * INNER_ZONE_BOUNDARY_RATIO;
     state->pressed_is_inner = (distance < inner_boundary);
 
     // Trigger redraw to show highlight
@@ -579,8 +627,8 @@ static void jog_pad_click_cb(lv_event_t* e) {
     if (distance > radius)
         return;
 
-    // Home button: center 25% radius
-    if (distance < radius * 0.25f) {
+    // Home button: center at HOME_ZONE_RATIO
+    if (distance < radius * HOME_ZONE_RATIO) {
         if (state->home_callback) {
             state->home_callback(state->home_user_data);
         }
@@ -592,8 +640,8 @@ static void jog_pad_click_cb(lv_event_t* e) {
     float angle = calculate_angle(dx, dy);
     jog_direction_t direction = angle_to_direction(angle);
 
-    // Zone boundary: inner ring (25-50%) = 1mm, outer ring (50-100%) = 10mm
-    float inner_boundary = radius * 0.50f;
+    // Zone boundary: inner ring (25-60%) = 1mm, outer ring (60-100%) = 10mm
+    float inner_boundary = radius * INNER_ZONE_BOUNDARY_RATIO;
     float jog_dist;
 
     if (distance < inner_boundary) {

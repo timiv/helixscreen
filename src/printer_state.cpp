@@ -143,6 +143,7 @@ void PrinterState::reset_for_testing() {
     lv_subject_deinit(&printer_has_led_);
     lv_subject_deinit(&printer_has_accelerometer_);
     lv_subject_deinit(&printer_has_spoolman_);
+    lv_subject_deinit(&printer_bed_moves_);
     lv_subject_deinit(&klipper_version_);
     lv_subject_deinit(&moonraker_version_);
 
@@ -215,6 +216,7 @@ void PrinterState::init_subjects(bool register_xml) {
     lv_subject_init_int(&printer_has_led_, 0);
     lv_subject_init_int(&printer_has_accelerometer_, 0);
     lv_subject_init_int(&printer_has_spoolman_, 0);
+    lv_subject_init_int(&printer_bed_moves_, 0); // 0=gantry moves, 1=bed moves (cartesian)
 
     // Version subjects (for About section)
     lv_subject_init_string(&klipper_version_, klipper_version_buf_, nullptr,
@@ -257,6 +259,7 @@ void PrinterState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "printer_has_led", &printer_has_led_);
         lv_xml_register_subject(NULL, "printer_has_accelerometer", &printer_has_accelerometer_);
         lv_xml_register_subject(NULL, "printer_has_spoolman", &printer_has_spoolman_);
+        lv_xml_register_subject(NULL, "printer_bed_moves", &printer_bed_moves_);
         lv_xml_register_subject(NULL, "klipper_version", &klipper_version_);
         lv_xml_register_subject(NULL, "moonraker_version", &moonraker_version_);
     } else {
@@ -384,6 +387,12 @@ void PrinterState::update_from_status(const json& state) {
         if (toolhead.contains("homed_axes")) {
             std::string axes = toolhead["homed_axes"].get<std::string>();
             lv_subject_copy_string(&homed_axes_, axes.c_str());
+        }
+
+        // Extract kinematics type (determines if bed moves on Z or gantry moves)
+        if (toolhead.contains("kinematics") && toolhead["kinematics"].is_string()) {
+            std::string kin = toolhead["kinematics"].get<std::string>();
+            set_kinematics(kin);
         }
     }
 
@@ -611,4 +620,14 @@ bool PrinterState::can_start_new_print() const {
         // Unknown state - be conservative
         return false;
     }
+}
+
+void PrinterState::set_kinematics(const std::string& kinematics) {
+    // Determine if the bed moves based on kinematics type:
+    // - Cartesian: bed moves down on Z axis during print
+    // - CoreXY, Delta, etc.: gantry/print head moves up on Z axis
+    bool bed_moves = (kinematics.find("cartesian") != std::string::npos);
+
+    lv_subject_set_int(&printer_bed_moves_, bed_moves ? 1 : 0);
+    spdlog::info("[PrinterState] Kinematics set: {} (bed_moves={})", kinematics, bed_moves);
 }

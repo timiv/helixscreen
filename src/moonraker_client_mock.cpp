@@ -1811,7 +1811,8 @@ void MoonrakerClientMock::dispatch_initial_state() {
     json initial_status = {
         {"extruder", {{"temperature", ext_temp}, {"target", ext_target}}},
         {"heater_bed", {{"temperature", bed_temp_val}, {"target", bed_target_val}}},
-        {"toolhead", {{"position", {x, y, z, 0.0}}, {"homed_axes", homed}}},
+        {"toolhead",
+         {{"position", {x, y, z, 0.0}}, {"homed_axes", homed}, {"kinematics", "cartesian"}}},
         {"gcode_move",
          {{"speed_factor", speed / 100.0},
           {"extrude_factor", flow / 100.0},
@@ -2059,7 +2060,8 @@ void MoonrakerClientMock::temperature_simulation_loop() {
         json status_obj = {
             {"extruder", {{"temperature", ext_temp}, {"target", ext_target}}},
             {"heater_bed", {{"temperature", bed_temp_val}, {"target", bed_target_val}}},
-            {"toolhead", {{"position", {x, y, z, 0.0}}, {"homed_axes", homed}}},
+            {"toolhead",
+             {{"position", {x, y, z, 0.0}}, {"homed_axes", homed}, {"kinematics", "cartesian"}}},
             {"gcode_move",
              {{"speed_factor", speed / 100.0},
               {"extrude_factor", flow / 100.0},
