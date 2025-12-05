@@ -170,6 +170,11 @@
     <string name="font_small_medium" value="noto_sans_16"/>
     <string name="font_small_large" value="noto_sans_18"/>
     <!-- NO BASE font_small - registered at runtime -->
+    <!-- font_xs variants (compact metadata, card overlays, badges) -->
+    <string name="font_xs_small" value="noto_sans_10"/>
+    <string name="font_xs_medium" value="noto_sans_12"/>
+    <string name="font_xs_large" value="noto_sans_14"/>
+    <!-- NO BASE font_xs - registered at runtime -->
     <!-- ===================================================================== -->
     <!-- Icon Typography - Responsive Material Design Icon Fonts               -->
     <!-- ===================================================================== -->
