@@ -34,11 +34,10 @@
         <icon name="disconnected_overlay" src="prohibited" size="xl" align="center" color="#error_color">
           <lv_obj-bind_flag_if_eq subject="printer_connection_state" flag="hidden" ref_value="2"/>
         </icon>
-        <!-- Printer info - subtle text at bottom, two lines -->
+        <!-- Printer info - subtle text at bottom -->
         <lv_obj name="printer_info_bar" width="100%" height="content" align="bottom_mid" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
           <lv_obj-bind_flag_if_eq subject="printer_info_visible" flag="hidden" ref_value="0"/>
-          <text_small bind_text="printer_type_text" style_text_color="#text_secondary"/>
-          <text_small bind_text="printer_host_text" style_text_color="#text_secondary"/>
+          <text_small bind_text="printer_type_text" style_text_color="#text_primary" style_text_align="center" width="100%"/>
         </lv_obj>
       </lv_obj>
       <!-- Status Message with accent bar (flex-grows to fill remaining horizontal space) -->
