@@ -64,6 +64,7 @@ TEST_UI_DEPS := \
     $(OBJ_DIR)/ui_component_header_bar.o \
     $(OBJ_DIR)/ui_bed_mesh.o \
     $(OBJ_DIR)/ui_notification_history.o \
+    $(OBJ_DIR)/ui_heating_animator.o \
     $(FONT_OBJS)
 
 # UI panel components (all panels for smoke tests)
@@ -87,6 +88,9 @@ TEST_WIFI_DEPS := \
     $(OBJ_DIR)/wifi_manager.o \
     $(OBJ_DIR)/wifi_backend.o \
     $(OBJ_DIR)/wifi_backend_mock.o \
+    $(OBJ_DIR)/wifi_settings_overlay.o \
+    $(OBJ_DIR)/wifi_ui_utils.o \
+    $(OBJ_DIR)/network_tester.o \
     $(OBJ_DIR)/ethernet_manager.o \
     $(OBJ_DIR)/ethernet_backend.o \
     $(OBJ_DIR)/ethernet_backend_mock.o \
@@ -101,6 +105,7 @@ TEST_USB_DEPS := \
 # Settings components (required by ui_panel_settings.o)
 TEST_SETTINGS_DEPS := \
     $(OBJ_DIR)/settings_manager.o \
+    $(OBJ_DIR)/sound_manager.o \
     $(OBJ_DIR)/ui_panel_calibration_zoffset.o \
     $(OBJ_DIR)/ui_panel_calibration_pid.o
 
