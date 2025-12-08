@@ -2323,8 +2323,9 @@ TEST_CASE("MoonrakerClientMock - file metadata with success/error callbacks",
 // ============================================================================
 
 TEST_CASE("MoonrakerClientMock fan control", "[mock][fan]") {
-    MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
+    // fixture must be declared BEFORE mock for correct destruction order
     MockBehaviorTestFixture fixture;
+    MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
 
     mock.connect("ws://test", []() {}, []() {});
     auto sub_id = mock.register_notify_update(fixture.create_capture_callback());
@@ -2421,8 +2422,9 @@ TEST_CASE("MoonrakerClientMock fan control", "[mock][fan]") {
 // ============================================================================
 
 TEST_CASE("MoonrakerClientMock Z offset tracking", "[mock][offset]") {
-    MoonrakerClientMock mock;
+    // fixture must be declared BEFORE mock for correct destruction order
     MockBehaviorTestFixture fixture;
+    MoonrakerClientMock mock;
 
     mock.connect("ws://test", []() {}, []() {});
     auto sub_id = mock.register_notify_update(fixture.create_capture_callback());
@@ -2501,8 +2503,10 @@ TEST_CASE("MoonrakerClientMock Z offset tracking", "[mock][offset]") {
 
 TEST_CASE("MoonrakerClientMock restart simulation", "[mock][restart]") {
     // Use 100x speedup so restart delay is 20-30ms instead of 2-3 seconds
-    MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24, 100.0);
+    // IMPORTANT: fixture must be declared BEFORE mock so it's destroyed AFTER mock.
+    // This prevents use-after-free when restart thread dispatches to callbacks.
     MockBehaviorTestFixture fixture;
+    MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24, 100.0);
 
     mock.connect("ws://test", []() {}, []() {});
     auto sub_id = mock.register_notify_update(fixture.create_capture_callback());
