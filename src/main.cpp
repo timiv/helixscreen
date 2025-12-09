@@ -97,7 +97,11 @@
 #endif
 #include "cli_args.h"
 #include "helix_timing.h"
+#include "lvgl_init.h"
+#include "print_completion.h"
 #include "screenshot.h"
+#include "splash_screen.h"
+#include "xml_registration.h"
 
 #include <cerrno>
 #include <cmath>
@@ -194,10 +198,7 @@ static void ensure_project_root_cwd() {
     }
 }
 
-// Display backend and LVGL display/input
-static std::unique_ptr<DisplayBackend> g_display_backend;
-static lv_display_t* display = nullptr;
-static lv_indev_t* indev_mouse = nullptr;
+// LVGL context is local to main() - see helix::LvglContext
 
 // Screen dimensions (configurable via command line, default to small = 800x480)
 static int SCREEN_WIDTH = UI_SCREEN_SMALL_W;
@@ -256,108 +257,9 @@ struct PendingNavigation {
     bool show_file_detail = false;
 } static g_pending_nav;
 
-// Print completion notification observer
+// Print completion notification observer - stored here, initialized from
+// helix::init_print_completion_observer()
 static ObserverGuard print_completion_observer;
-static PrintJobState prev_print_state = PrintJobState::STANDBY;
-
-// Callback for print state changes - triggers completion notifications
-static void on_print_state_changed_for_notification(lv_observer_t* observer,
-                                                    lv_subject_t* subject) {
-    (void)observer;
-    auto current = static_cast<PrintJobState>(lv_subject_get_int(subject));
-
-    // Check for transitions to terminal states (from active print states)
-    bool was_active =
-        (prev_print_state == PrintJobState::PRINTING || prev_print_state == PrintJobState::PAUSED);
-    bool is_terminal = (current == PrintJobState::COMPLETE || current == PrintJobState::CANCELLED ||
-                        current == PrintJobState::ERROR);
-
-    if (was_active && is_terminal) {
-        auto mode = SettingsManager::instance().get_completion_alert_mode();
-        if (mode == CompletionAlertMode::OFF) {
-            spdlog::debug("[PrintComplete] Notification disabled");
-            prev_print_state = current;
-            return;
-        }
-
-        // Get filename from PrinterState
-        const char* filename =
-            lv_subject_get_string(get_printer_state().get_print_filename_subject());
-        const char* display_name = (filename && filename[0]) ? filename : "Unknown";
-
-        // Determine message and severity based on state
-        char message[128];
-        ToastSeverity severity = ToastSeverity::SUCCESS;
-        ui_modal_severity modal_severity = UI_MODAL_SEVERITY_INFO;
-
-        switch (current) {
-        case PrintJobState::COMPLETE:
-            snprintf(message, sizeof(message), "Print complete: %s", display_name);
-            severity = ToastSeverity::SUCCESS;
-            modal_severity = UI_MODAL_SEVERITY_INFO;
-            break;
-        case PrintJobState::CANCELLED:
-            snprintf(message, sizeof(message), "Print cancelled: %s", display_name);
-            severity = ToastSeverity::WARNING;
-            modal_severity = UI_MODAL_SEVERITY_WARNING;
-            break;
-        case PrintJobState::ERROR:
-            snprintf(message, sizeof(message), "Print failed: %s", display_name);
-            severity = ToastSeverity::ERROR;
-            modal_severity = UI_MODAL_SEVERITY_ERROR;
-            break;
-        default:
-            break;
-        }
-
-        spdlog::info("[PrintComplete] Showing notification: {} (mode={})", message,
-                     static_cast<int>(mode));
-
-        // Wake display if sleeping
-        SettingsManager::instance().wake_display();
-
-        if (mode == CompletionAlertMode::NOTIFICATION) {
-            // Brief toast (5 seconds)
-            ui_toast_show(severity, message, 5000);
-        } else if (mode == CompletionAlertMode::ALERT) {
-            // Modal dialog requiring user acknowledgment
-            ui_modal_config_t config = {
-                .position = {.use_alignment = true, .alignment = LV_ALIGN_CENTER},
-                .backdrop_opa = 180,
-                .keyboard = nullptr,
-                .persistent = false,
-                .on_close = nullptr};
-
-            const char* title =
-                (current == PrintJobState::COMPLETE)
-                    ? "Print Complete"
-                    : (current == PrintJobState::CANCELLED ? "Print Cancelled" : "Print Failed");
-            const char* attrs[] = {"title", title, "message", message, nullptr};
-
-            ui_modal_configure(modal_severity, false, "OK", nullptr);
-            lv_obj_t* modal = ui_modal_show("modal_dialog", &config, attrs);
-            if (modal) {
-                // Wire up OK button to dismiss
-                lv_obj_t* ok_btn = lv_obj_find_by_name(modal, "btn_primary");
-                if (ok_btn) {
-                    lv_obj_set_user_data(ok_btn, modal);
-                    lv_obj_add_event_cb(
-                        ok_btn,
-                        [](lv_event_t* e) {
-                            auto* btn = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-                            auto* dlg = static_cast<lv_obj_t*>(lv_obj_get_user_data(btn));
-                            if (dlg) {
-                                ui_modal_hide(dlg);
-                            }
-                        },
-                        LV_EVENT_CLICKED, nullptr);
-                }
-            }
-        }
-    }
-
-    prev_print_state = current;
-}
 
 const RuntimeConfig& get_runtime_config() {
     return g_runtime_config;
@@ -476,184 +378,6 @@ static void execute_pending_navigation() {
     spdlog::info("[Navigation] Deferred navigation complete");
 }
 
-/**
- * Register fonts and images for XML component system
- *
- * IMPORTANT: Fonts require TWO steps to work:
- *   1. Enable in lv_conf.h: #define LV_FONT_MONTSERRAT_XX 1
- *   2. Register here with lv_xml_register_font()
- *
- * If either step is missing, LVGL will silently fall back to a different font,
- * causing visual bugs. The semantic text components (text_heading, text_body,
- * text_small) in ui_text.cpp will crash with a clear error if a font is not
- * properly registered - this is intentional to catch configuration errors early.
- *
- * See docs/LVGL9_XML_GUIDE.md "Typography - Semantic Text Components" for details.
- */
-static void register_fonts_and_images() {
-    spdlog::debug("Registering fonts and images...");
-
-    // Material Design Icons (various sizes for different UI elements)
-    // Source: https://pictogrammers.com/library/mdi/
-    lv_xml_register_font(NULL, "mdi_icons_64", &mdi_icons_64);
-    lv_xml_register_font(NULL, "mdi_icons_48", &mdi_icons_48);
-    lv_xml_register_font(NULL, "mdi_icons_32", &mdi_icons_32);
-    lv_xml_register_font(NULL, "mdi_icons_24", &mdi_icons_24);
-    lv_xml_register_font(NULL, "mdi_icons_16", &mdi_icons_16);
-
-    // Montserrat text fonts - used by semantic text components:
-    // - text_heading uses font_heading (20/26/28 for small/medium/large breakpoints)
-    // - text_body uses font_body (14/18/20 for small/medium/large breakpoints)
-    // - text_small uses font_small (12/16/18 for small/medium/large breakpoints)
-    // ALL sizes used by the responsive typography system MUST be registered here!
-    // NOTE: Registering as "montserrat_*" for XML compatibility but using noto_sans_* fonts
-    lv_xml_register_font(NULL, "montserrat_10", &noto_sans_10);
-    lv_xml_register_font(NULL, "montserrat_12", &noto_sans_12); // text_small (small)
-    lv_xml_register_font(NULL, "montserrat_14", &noto_sans_14); // text_body (small)
-    lv_xml_register_font(NULL, "montserrat_16", &noto_sans_16); // text_small (medium)
-    lv_xml_register_font(NULL, "montserrat_18",
-                         &noto_sans_18); // text_body (medium), text_small (large)
-    lv_xml_register_font(NULL, "montserrat_20",
-                         &noto_sans_20); // text_heading (small), text_body (large)
-    lv_xml_register_font(NULL, "montserrat_24", &noto_sans_24);
-    lv_xml_register_font(NULL, "montserrat_26", &noto_sans_26); // text_heading (medium)
-    lv_xml_register_font(NULL, "montserrat_28",
-                         &noto_sans_28); // text_heading (large), numeric displays
-
-    // Noto Sans fonts - same sizes as Montserrat, with extended Unicode support
-    // (includes ©®™€£¥°±•… and other symbols)
-    lv_xml_register_font(NULL, "noto_sans_10", &noto_sans_10);
-    lv_xml_register_font(NULL, "noto_sans_12", &noto_sans_12);
-    lv_xml_register_font(NULL, "noto_sans_14", &noto_sans_14);
-    lv_xml_register_font(NULL, "noto_sans_16", &noto_sans_16);
-    lv_xml_register_font(NULL, "noto_sans_18", &noto_sans_18);
-    lv_xml_register_font(NULL, "noto_sans_20", &noto_sans_20);
-    lv_xml_register_font(NULL, "noto_sans_24", &noto_sans_24);
-    lv_xml_register_font(NULL, "noto_sans_26", &noto_sans_26);
-    lv_xml_register_font(NULL, "noto_sans_28", &noto_sans_28);
-
-    // Noto Sans Bold fonts (for future use)
-    lv_xml_register_font(NULL, "noto_sans_bold_14", &noto_sans_bold_14);
-    lv_xml_register_font(NULL, "noto_sans_bold_16", &noto_sans_bold_16);
-    lv_xml_register_font(NULL, "noto_sans_bold_18", &noto_sans_bold_18);
-    lv_xml_register_font(NULL, "noto_sans_bold_20", &noto_sans_bold_20);
-    lv_xml_register_font(NULL, "noto_sans_bold_24", &noto_sans_bold_24);
-    lv_xml_register_font(NULL, "noto_sans_bold_28", &noto_sans_bold_28);
-
-    lv_xml_register_image(NULL, "A:assets/images/printer_400.png",
-                          "A:assets/images/printer_400.png");
-    lv_xml_register_image(NULL, "filament_spool", "A:assets/images/filament_spool.png");
-    lv_xml_register_image(NULL, "A:assets/images/placeholder_thumb_centered.png",
-                          "A:assets/images/placeholder_thumb_centered.png");
-    lv_xml_register_image(NULL, "A:assets/images/thumbnail-gradient-bg.png",
-                          "A:assets/images/thumbnail-gradient-bg.png");
-    lv_xml_register_image(NULL, "A:assets/images/thumbnail-placeholder.png",
-                          "A:assets/images/thumbnail-placeholder.png");
-    lv_xml_register_image(NULL, "A:assets/images/large-extruder-icon.svg",
-                          "A:assets/images/large-extruder-icon.svg");
-    lv_xml_register_image(NULL, "A:assets/images/benchy_thumbnail_white.png",
-                          "A:assets/images/benchy_thumbnail_white.png");
-}
-
-// Register XML components from ui_xml/ directory
-static void register_xml_components() {
-    spdlog::debug("Registering remaining XML components...");
-    spdlog::debug("[XML DEBUG] Starting XML registration function");
-
-    // Register responsive constants (AFTER globals, BEFORE components that use them)
-    ui_switch_register_responsive_constants();
-    spdlog::debug("[XML DEBUG] Past responsive constants");
-
-    // Register semantic text widgets (AFTER theme init, BEFORE components that use them)
-    ui_text_init();
-    ui_text_input_init(); // <text_input> with bind_text support
-    ui_spinner_init();    // <spinner> with responsive sizing
-
-    // Register custom widgets (BEFORE components that use them)
-    ui_gcode_viewer_register();
-
-    lv_xml_register_component_from_file("A:ui_xml/icon.xml");
-    lv_xml_register_component_from_file("A:ui_xml/header_bar.xml");
-    lv_xml_register_component_from_file("A:ui_xml/overlay_backdrop.xml");   // Modal dimming layer
-    lv_xml_register_component_from_file("A:ui_xml/overlay_panel_base.xml"); // Base styling only
-    lv_xml_register_component_from_file(
-        "A:ui_xml/overlay_panel.xml"); // Depends on header_bar + base
-    lv_xml_register_component_from_file("A:ui_xml/status_bar.xml");
-    lv_xml_register_component_from_file("A:ui_xml/toast_notification.xml");
-    lv_xml_register_component_from_file("A:ui_xml/emergency_stop_button.xml");
-    lv_xml_register_component_from_file("A:ui_xml/estop_confirmation_dialog.xml");
-    lv_xml_register_component_from_file("A:ui_xml/klipper_recovery_dialog.xml");
-    // Note: error_dialog.xml and warning_dialog.xml removed - use modal_dialog instead
-    spdlog::debug("[XML] Registering notification_history_panel.xml...");
-    auto nh_panel_ret =
-        lv_xml_register_component_from_file("A:ui_xml/notification_history_panel.xml");
-    spdlog::debug("[XML] notification_history_panel.xml registration returned: {}",
-                  (int)nh_panel_ret);
-    spdlog::debug("[XML] Registering notification_history_item.xml...");
-    auto nh_item_ret =
-        lv_xml_register_component_from_file("A:ui_xml/notification_history_item.xml");
-    spdlog::debug("[XML] notification_history_item.xml registration returned: {}",
-                  (int)nh_item_ret);
-    // Note: confirmation_dialog.xml, tip_detail_dialog.xml removed - use modal_dialog instead
-    lv_xml_register_component_from_file("A:ui_xml/modal_dialog.xml");
-    lv_xml_register_component_from_file("A:ui_xml/numeric_keypad_modal.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_file_card.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_file_list_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_file_detail.xml");
-    lv_xml_register_component_from_file("A:ui_xml/navigation_bar.xml");
-    lv_xml_register_component_from_file("A:ui_xml/home_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/controls_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/motion_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/nozzle_temp_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/bed_temp_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/extrusion_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/fan_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_status_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/filament_panel.xml");
-    // Settings row components (must be registered before settings_panel)
-    lv_xml_register_component_from_file("A:ui_xml/setting_section_header.xml");
-    lv_xml_register_component_from_file("A:ui_xml/setting_toggle_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/setting_dropdown_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/setting_action_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/setting_info_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/setting_slider_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/settings_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/restart_prompt_dialog.xml");
-    // Calibration panels (overlays launched from settings)
-    lv_xml_register_component_from_file("A:ui_xml/calibration_zoffset_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/calibration_pid_panel.xml");
-    spdlog::debug("[XML] Registering bed_mesh_panel.xml...");
-    auto ret = lv_xml_register_component_from_file("A:ui_xml/bed_mesh_panel.xml");
-    spdlog::debug("[XML] bed_mesh_panel.xml registration returned: {}", (int)ret);
-    // Settings overlay panels (launched from settings rows)
-    lv_xml_register_component_from_file("A:ui_xml/display_settings_overlay.xml");
-    // WiFi settings components (wifi_settings_overlay replaces network_settings_overlay)
-    lv_xml_register_component_from_file("A:ui_xml/wifi_settings_overlay.xml");
-    lv_xml_register_component_from_file("A:ui_xml/hidden_network_modal.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wifi_network_item.xml");
-    // Note: factory_reset_dialog.xml removed - use modal_dialog instead
-    lv_xml_register_component_from_file("A:ui_xml/advanced_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/test_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_select_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/step_progress_test.xml");
-    lv_xml_register_component_from_file("A:ui_xml/gcode_test_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/glyphs_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/gradient_test_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/app_layout.xml");
-    lv_xml_register_component_from_file(
-        "A:ui_xml/wizard_header_bar.xml"); // Must come before wizard_container
-    lv_xml_register_component_from_file("A:ui_xml/wizard_container.xml");
-    lv_xml_register_component_from_file("A:ui_xml/network_list_item.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wifi_password_modal.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_wifi_setup.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_connection.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_printer_identify.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_heater_select.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_fan_select.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_led_select.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_summary.xml");
-}
-
 // Initialize all reactive subjects for data binding
 static void initialize_subjects() {
     spdlog::debug("Initializing reactive subjects...");
@@ -668,9 +392,7 @@ static void initialize_subjects() {
 
     // Register print completion notification observer (watches print_state_enum for terminal
     // states)
-    print_completion_observer = ObserverGuard(get_printer_state().get_print_state_enum_subject(),
-                                              on_print_state_changed_for_notification, nullptr);
-    spdlog::debug("Print completion observer registered");
+    print_completion_observer = helix::init_print_completion_observer();
 
     get_global_home_panel().init_subjects();                  // Home panel data bindings
     get_global_controls_panel().init_subjects();              // Controls panel launcher
@@ -755,171 +477,6 @@ static void initialize_subjects() {
                 nullptr);
         }
     }
-}
-
-// Initialize LVGL with auto-detected display backend
-static bool init_lvgl() {
-    lv_init();
-
-    // Create display backend (auto-detects: DRM → framebuffer → SDL)
-    g_display_backend = DisplayBackend::create_auto();
-    if (!g_display_backend) {
-        spdlog::error("No display backend available");
-        lv_deinit();
-        return false;
-    }
-
-    spdlog::info("Using display backend: {}", g_display_backend->name());
-
-    // Create display
-    display = g_display_backend->create_display(SCREEN_WIDTH, SCREEN_HEIGHT);
-    if (!display) {
-        spdlog::error("Failed to create display");
-        g_display_backend.reset();
-        lv_deinit();
-        return false;
-    }
-
-    // Create pointer input device (mouse/touch)
-    indev_mouse = g_display_backend->create_input_pointer();
-    if (!indev_mouse) {
-#if defined(HELIX_DISPLAY_DRM) || defined(HELIX_DISPLAY_FBDEV)
-        // On embedded platforms (DRM/fbdev), no input device is fatal - show error screen
-        spdlog::error("No input device found - cannot operate touchscreen UI");
-
-        static const char* suggestions[] = {
-            "Check /dev/input/event* devices exist",
-            "Ensure user is in 'input' group: sudo usermod -aG input $USER",
-            "Check touchscreen driver is loaded: dmesg | grep -i touch",
-            "Set HELIX_TOUCH_DEVICE=/dev/input/eventX to override",
-            "Add \"touch_device\": \"/dev/input/event1\" to helixconfig.json",
-            nullptr};
-
-        ui_show_fatal_error("No Input Device",
-                            "Could not find or open a touch/pointer input device.\n"
-                            "The UI requires an input device to function.",
-                            suggestions,
-                            30000 // Show for 30 seconds then exit
-        );
-
-        return false;
-#else
-        // On desktop (SDL), continue without pointer - mouse is optional
-        spdlog::warn("No pointer input device created - touch/mouse disabled");
-#endif
-    }
-
-    // Configure scroll behavior from config (improves touchpad/touchscreen scrolling feel)
-    // scroll_throw: momentum decay rate (1-99), higher = faster decay, default LVGL is 10
-    // scroll_limit: pixels before scrolling starts, lower = more responsive, default LVGL is 10
-    if (indev_mouse) {
-        Config* cfg = Config::get_instance();
-        int scroll_throw = cfg->get<int>("/input/scroll_throw", 25);
-        int scroll_limit = cfg->get<int>("/input/scroll_limit", 5);
-        lv_indev_set_scroll_throw(indev_mouse, static_cast<uint8_t>(scroll_throw));
-        lv_indev_set_scroll_limit(indev_mouse, static_cast<uint8_t>(scroll_limit));
-        spdlog::debug("Scroll config: throw={}, limit={}", scroll_throw, scroll_limit);
-    }
-
-    // Create keyboard input device (optional - enables physical keyboard input)
-    lv_indev_t* indev_keyboard = g_display_backend->create_input_keyboard();
-    if (indev_keyboard) {
-        spdlog::debug("Physical keyboard input enabled");
-
-        // Create input group for keyboard navigation and text input
-        lv_group_t* input_group = lv_group_create();
-        lv_group_set_default(input_group);
-        lv_indev_set_group(indev_keyboard, input_group);
-        spdlog::debug("Created default input group for keyboard");
-    }
-
-    spdlog::debug("LVGL initialized: {}x{}", SCREEN_WIDTH, SCREEN_HEIGHT);
-
-    // Initialize SVG decoder for loading .svg files
-    lv_svg_decoder_init();
-
-    return true;
-}
-
-// Show splash screen with HelixScreen logo
-static void show_splash_screen() {
-    spdlog::debug("Showing splash screen");
-
-    // Get the active screen
-    lv_obj_t* screen = lv_screen_active();
-
-    // Apply theme background color (app_bg_color runtime constant set by ui_theme_init)
-    ui_theme_apply_bg_color(screen, "app_bg_color", LV_PART_MAIN);
-
-    // Disable scrollbars on screen
-    lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
-
-    // Create centered container for logo (disable scrolling)
-    lv_obj_t* container = lv_obj_create(screen);
-    lv_obj_set_size(container, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-    lv_obj_set_style_bg_opa(container, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_set_style_border_width(container, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(container, 0, LV_PART_MAIN);
-    lv_obj_clear_flag(container, LV_OBJ_FLAG_SCROLLABLE);         // Disable scrollbars
-    lv_obj_set_style_opa(container, LV_OPA_TRANSP, LV_PART_MAIN); // Start invisible for fade-in
-    lv_obj_center(container);
-
-    // Create image widget for logo
-    lv_obj_t* logo = lv_image_create(container);
-    const char* logo_path = "A:assets/images/helixscreen-logo.png";
-    lv_image_set_src(logo, logo_path);
-
-    // Get actual image dimensions
-    lv_image_header_t header;
-    lv_result_t res = lv_image_decoder_get_info(logo_path, &header);
-
-    if (res == LV_RESULT_OK) {
-        // Scale logo to fill more of the screen (60% of screen width)
-        lv_coord_t target_size = (SCREEN_WIDTH * 3) / 5; // 60% of screen width
-        if (SCREEN_HEIGHT < 500) {                       // Tiny screen
-            target_size = SCREEN_WIDTH / 2;              // 50% on tiny screens
-        }
-
-        // Calculate scale: (target_size * 256) / actual_width
-        // LVGL uses 1/256 scale units (256 = 100%, 128 = 50%, etc.)
-        uint32_t width = header.w;  // Copy bit-field to local var for logging
-        uint32_t height = header.h; // Copy bit-field to local var for logging
-        uint32_t scale = (static_cast<uint32_t>(target_size) * 256U) / width;
-        lv_image_set_scale(logo, scale);
-
-        spdlog::debug("Logo: {}x{} scaled to {} (scale factor: {})", width, height, target_size,
-                      scale);
-    } else {
-        spdlog::warn("Could not get logo dimensions, using default scale");
-        lv_image_set_scale(logo, 128); // 50% scale as fallback
-    }
-
-    // Create fade-in animation (0.5 seconds)
-    lv_anim_t anim;
-    lv_anim_init(&anim);
-    lv_anim_set_var(&anim, container);
-    lv_anim_set_values(&anim, LV_OPA_TRANSP, LV_OPA_COVER);
-    lv_anim_set_duration(&anim, 500); // 500ms = 0.5 seconds
-    lv_anim_set_path_cb(&anim, lv_anim_path_ease_in);
-    lv_anim_set_exec_cb(&anim, [](void* obj, int32_t value) {
-        lv_obj_set_style_opa((lv_obj_t*)obj, static_cast<lv_opa_t>(value), LV_PART_MAIN);
-    });
-    lv_anim_start(&anim);
-
-    // Run LVGL timer to process fade-in animation and keep splash visible
-    // Total display time: 2 seconds (including 0.5s fade-in)
-    uint32_t splash_start = helix_get_ticks();
-    uint32_t splash_duration = 2000; // 2 seconds total
-
-    while (helix_get_ticks() - splash_start < splash_duration) {
-        lv_timer_handler(); // Process animations and rendering
-        helix_delay(5);
-    }
-
-    // Clean up splash screen
-    lv_obj_delete(container);
-
-    spdlog::debug("Splash screen complete");
 }
 
 // Initialize Moonraker client and API instances
@@ -1222,23 +779,24 @@ int main(int argc, char** argv) {
     }
 
     // Initialize LVGL with display backend
-    if (!init_lvgl()) {
+    helix::LvglContext lvgl_ctx;
+    if (!helix::init_lvgl(SCREEN_WIDTH, SCREEN_HEIGHT, lvgl_ctx)) {
         return 1;
     }
 
     // Apply custom DPI if specified (before theme init)
     if (args.dpi > 0) {
-        lv_display_set_dpi(display, args.dpi);
+        lv_display_set_dpi(lvgl_ctx.display, args.dpi);
         spdlog::debug("Display DPI set to: {}", args.dpi);
     } else {
-        spdlog::debug("Display DPI: {} (from LV_DPI_DEF)", lv_display_get_dpi(display));
+        spdlog::debug("Display DPI: {} (from LV_DPI_DEF)", lv_display_get_dpi(lvgl_ctx.display));
     }
 
     // Create main screen
     lv_obj_t* screen = lv_screen_active();
 
     // Set window icon (after screen is created)
-    ui_set_window_icon(display);
+    ui_set_window_icon(lvgl_ctx.display);
 
     // Initialize app-level resize handler for responsive layouts
     ui_resize_handler_init(screen);
@@ -1252,14 +810,14 @@ int main(int argc, char** argv) {
     }
 
     // Register fonts and images for XML (must be done BEFORE globals.xml for theme init)
-    register_fonts_and_images();
+    helix::register_fonts_and_images();
 
     // Register XML components (globals first to make constants available)
     spdlog::debug("Registering XML components...");
     lv_xml_register_component_from_file("A:ui_xml/globals.xml");
 
     // Initialize LVGL theme from globals.xml constants (after fonts and globals are registered)
-    ui_theme_init(display,
+    ui_theme_init(lvgl_ctx.display,
                   dark_mode); // dark_mode from command-line args (--dark/--light) or config
 
     // Theme preference is saved by the settings panel when user toggles dark mode
@@ -1270,7 +828,7 @@ int main(int argc, char** argv) {
     // Show splash screen AFTER theme init (skip if requested via --skip-splash or --test)
     // Theme must be initialized first so app_bg_color runtime constant is available
     if (!g_runtime_config.should_skip_splash()) {
-        show_splash_screen();
+        helix::show_splash_screen(SCREEN_WIDTH, SCREEN_HEIGHT);
     }
 
     // Register custom widgets (must be before XML component registration)
@@ -1293,7 +851,7 @@ int main(int argc, char** argv) {
     helix_delay(100);
 
     // Register remaining XML components (globals already registered for theme init)
-    register_xml_components();
+    helix::register_xml_components();
 
     // Initialize reactive subjects BEFORE creating XML
     initialize_subjects();
@@ -1329,7 +887,7 @@ int main(int argc, char** argv) {
 
     if (!navbar || !content_area) {
         spdlog::error("Failed to find navbar/content_area in app_layout");
-        lv_deinit();
+        helix::deinit_lvgl(lvgl_ctx);
         return 1;
     }
 
@@ -1343,7 +901,7 @@ int main(int argc, char** argv) {
     lv_obj_t* panel_container = lv_obj_find_by_name(content_area, "panel_container");
     if (!panel_container) {
         spdlog::error("Failed to find panel_container in content_area");
-        lv_deinit();
+        helix::deinit_lvgl(lvgl_ctx);
         return 1;
     }
 
@@ -1357,7 +915,7 @@ int main(int argc, char** argv) {
         panels[i] = lv_obj_find_by_name(panel_container, panel_names[i]);
         if (!panels[i]) {
             spdlog::error("Missing panel '{}' in panel_container", panel_names[i]);
-            lv_deinit();
+            helix::deinit_lvgl(lvgl_ctx);
             return 1;
         }
     }
@@ -1720,12 +1278,12 @@ int main(int argc, char** argv) {
     // UsbBackendMock::stop() logs, and we need spdlog alive for that.
     usb_manager.reset();
 
-    // Clean up wizard WiFi step explicitly BEFORE lv_deinit and spdlog shutdown.
+    // Clean up wizard WiFi step explicitly BEFORE LVGL deinit and spdlog shutdown.
     // This owns WiFiManager and EthernetManager which have background threads.
     // If destroyed during static destruction, those threads may access destroyed mutexes.
     destroy_wizard_wifi_step();
 
-    lv_deinit(); // LVGL handles SDL cleanup internally
+    helix::deinit_lvgl(lvgl_ctx); // Releases display backend and LVGL
 
     // Shutdown spdlog BEFORE static destruction begins.
     // Many static unique_ptr<Panel> objects have destructors that may log.
