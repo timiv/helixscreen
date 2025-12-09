@@ -259,8 +259,8 @@
     <!-- App background colors (theme-specific variants) -->
     <color name="app_bg_color_light" value="#FFFFFF"/>
     <!-- Light mode: white -->
-    <color name="app_bg_color_dark" value="#292A2D"/>
-    <!-- Dark mode: dark gray -->
+    <color name="app_bg_color_dark" value="#1F1F1F"/>
+    <!-- Dark mode: darker background -->
     <!-- Primary text colors (theme-specific variants) -->
     <color name="text_primary_light" value="#565656"/>
     <!-- Light mode: dark gray -->
@@ -275,7 +275,7 @@
     <color name="text_secondary" value="#ADAEB8"/>
     <!-- Card background colors (theme-aware: light/dark modes) -->
     <color name="card_bg_light" value="#F0F3F9"/>
-    <color name="card_bg_dark" value="#1F1F1F"/>
+    <color name="card_bg_dark" value="#292A2D"/>
     <!-- Image caption overlay (semi-transparent, same for both themes) -->
     <color name="image_caption_bg" value="#000000"/>
     <!-- Dark mode: very dark gray -->
