@@ -27,7 +27,8 @@ NetworkTester::NetworkTester() {
 }
 
 NetworkTester::~NetworkTester() {
-    spdlog::debug("[NetworkTester] Destructor called");
+    // NOTE: Don't use spdlog here - during exit(), spdlog may already be destroyed
+    // which causes a crash. Just silently clean up.
 
     // Cancel any running test
     if (running_) {
