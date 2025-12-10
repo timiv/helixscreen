@@ -28,6 +28,7 @@
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
+#include <dirent.h>
 #include <fstream>
 
 EthernetBackendLinux::EthernetBackendLinux() {
@@ -98,22 +99,43 @@ std::string EthernetBackendLinux::read_operstate(const std::string& interface) {
     return state;
 }
 
-bool EthernetBackendLinux::has_interface() {
-    std::vector<ifconfig_t> interfaces;
-    int result = ifconfig(interfaces);
+std::vector<std::string> EthernetBackendLinux::scan_sysfs_interfaces() {
+    std::vector<std::string> ethernet_interfaces;
 
-    if (result != 0) {
-        spdlog::warn("[EthernetLinux] ifconfig() failed with code: {}", result);
-        return false;
+    // Scan /sys/class/net/ directly - this finds interfaces regardless of IP assignment
+    const char* sysfs_net = "/sys/class/net";
+    DIR* dir = opendir(sysfs_net);
+    if (!dir) {
+        spdlog::warn("[EthernetLinux] Cannot open {}", sysfs_net);
+        return ethernet_interfaces;
     }
 
-    // Look for any physical Ethernet interface
-    for (const auto& iface : interfaces) {
-        std::string name = iface.name;
-        if (is_ethernet_interface(name)) {
-            spdlog::debug("[EthernetLinux] Found Ethernet interface: {}", name);
-            return true;
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        // Skip . and ..
+        if (entry->d_name[0] == '.') {
+            continue;
         }
+
+        std::string name = entry->d_name;
+        if (is_ethernet_interface(name)) {
+            spdlog::debug("[EthernetLinux] Found Ethernet interface via sysfs: {}", name);
+            ethernet_interfaces.push_back(name);
+        }
+    }
+
+    closedir(dir);
+    return ethernet_interfaces;
+}
+
+bool EthernetBackendLinux::has_interface() {
+    // Use sysfs scan which finds interfaces regardless of IP assignment
+    // This is more reliable than ifconfig() which may not return interfaces without IPs
+    auto interfaces = scan_sysfs_interfaces();
+
+    if (!interfaces.empty()) {
+        spdlog::debug("[EthernetLinux] has_interface() = true ({} found)", interfaces[0]);
+        return true;
     }
 
     spdlog::debug("[EthernetLinux] No Ethernet interface found");
@@ -173,9 +195,30 @@ EthernetInfo EthernetBackendLinux::get_info() {
     ifconfig_t* selected = up_ethernet ? up_ethernet : ip_ethernet ? ip_ethernet : first_ethernet;
 
     if (!selected) {
-        // No Ethernet interface found
-        info.status = "No Ethernet interface";
-        spdlog::debug("[EthernetLinux] No Ethernet interface found");
+        // Fall back to sysfs scan for interfaces without IPs
+        auto sysfs_interfaces = scan_sysfs_interfaces();
+        if (sysfs_interfaces.empty()) {
+            info.status = "No Ethernet interface";
+            spdlog::debug("[EthernetLinux] No Ethernet interface found");
+            return info;
+        }
+
+        // Found interface via sysfs - populate basic info
+        info.interface = sysfs_interfaces[0];
+        std::string operstate = read_operstate(info.interface);
+
+        if (operstate == "down") {
+            info.connected = false;
+            info.status = "No cable";
+            spdlog::debug("[EthernetLinux] Ethernet cable disconnected: {} (operstate: {})",
+                          info.interface, operstate);
+        } else {
+            info.connected = false;
+            info.status = "No connection";
+            spdlog::debug("[EthernetLinux] Ethernet interface {} has no IP (operstate: {})",
+                          info.interface, operstate);
+        }
+
         return info;
     }
 
