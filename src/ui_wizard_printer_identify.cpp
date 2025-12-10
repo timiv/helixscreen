@@ -203,7 +203,7 @@ void WizardPrinterIdentifyStep::init_subjects() {
     if (printer_changed) {
         spdlog::info("[{}] Printer URL changed from '{}' to '{}' - forcing re-detection",
                      get_name(), last_detected_url_, current_url);
-        subjects_initialized_ = false;  // Force re-initialization
+        subjects_initialized_ = false; // Force re-initialization
 
         // Clear saved printer type so detection runs fresh for new printer
         Config* config = Config::get_instance();

@@ -335,6 +335,12 @@ class PrintSelectPanel : public PanelBase {
     static constexpr const char* FOLDER_ICON = "A:assets/images/folder.png";
     static constexpr const char* FOLDER_UP_ICON = "A:assets/images/folder-up.png";
 
+    // Virtualization constants - fixed pool sizes to minimize RAM usage
+    static constexpr int CARD_POOL_SIZE = 24;  ///< Fixed pool of card widgets (recycles)
+    static constexpr int CARD_BUFFER_ROWS = 1; ///< Extra rows above/below viewport
+    static constexpr int LIST_POOL_SIZE = 40;  ///< Fixed pool of list row widgets
+    static constexpr int LIST_ROW_HEIGHT = 48; ///< Height of each list row in pixels
+
     //
     // === Widget References ===
     //
@@ -398,6 +404,25 @@ class PrintSelectPanel : public PanelBase {
     lv_timer_t* refresh_timer_ = nullptr;
     static constexpr uint32_t REFRESH_DEBOUNCE_MS = 50; ///< Debounce delay for view refresh
 
+    // Virtualization state for card view (fixed pool, recycled on scroll)
+    std::vector<lv_obj_t*> card_pool_; ///< Fixed pool of reusable card widgets
+    std::vector<ssize_t>
+        card_pool_indices_; ///< Which file index each pool card shows (-1 = unused)
+    lv_obj_t* card_leading_spacer_ = nullptr; ///< Spacer before visible cards (pushes them down)
+    lv_obj_t* card_trailing_spacer_ =
+        nullptr;                 ///< Spacer after visible cards (enables scroll range)
+    int cards_per_row_ = 3;      ///< Cards per row (calculated from container width)
+    int visible_start_row_ = -1; ///< First visible row index (-1 = uninitialized)
+    int visible_end_row_ = -1;   ///< Last visible row index (exclusive)
+
+    // Virtualization state for list view
+    std::vector<lv_obj_t*> list_pool_;       ///< Fixed pool of reusable list row widgets
+    std::vector<ssize_t> list_pool_indices_; ///< Which file index each pool row shows (-1 = unused)
+    lv_obj_t* list_leading_spacer_ = nullptr;  ///< Spacer before visible rows
+    lv_obj_t* list_trailing_spacer_ = nullptr; ///< Spacer after visible rows
+    int visible_list_start_ = -1;              ///< First visible list index (-1 = uninitialized)
+    int visible_list_end_ = -1;                ///< Last visible list index (exclusive)
+
     // USB file source state
     FileSource current_source_ = FileSource::PRINTER; ///< Current file source (Printer or USB)
     std::vector<UsbGcodeFile> usb_files_;             ///< USB G-code files (when USB source active)
@@ -423,14 +448,77 @@ class PrintSelectPanel : public PanelBase {
     CardDimensions calculate_card_dimensions();
 
     /**
-     * @brief Repopulate card view with current file_list_
+     * @brief Initialize virtualized card view
+     *
+     * Creates the fixed card pool and spacer element.
+     * Pool cards are reused as user scrolls - we never create more than CARD_POOL_SIZE.
+     */
+    void init_card_pool();
+
+    /**
+     * @brief Update card view based on current scroll position
+     *
+     * Determines which file indices are visible, recycles pool cards
+     * to show the correct content at the correct positions.
      */
     void populate_card_view();
 
     /**
-     * @brief Repopulate list view with current file_list_
+     * @brief Update visible range and recycle cards as needed
+     *
+     * Called on scroll events. Calculates new visible rows,
+     * recycles cards that scrolled out of view to show new content.
+     */
+    void update_visible_cards();
+
+    /**
+     * @brief Configure a pool card to display a specific file
+     *
+     * @param card Pool card widget to configure
+     * @param index Index into file_list_
+     * @param dims Pre-calculated card dimensions
+     */
+    void configure_card(lv_obj_t* card, size_t index, const CardDimensions& dims);
+
+    /**
+     * @brief Initialize virtualized list view
+     *
+     * Creates the fixed list row pool and spacer element.
+     */
+    void init_list_pool();
+
+    /**
+     * @brief Update list view based on current scroll position
      */
     void populate_list_view();
+
+    /**
+     * @brief Update visible range and recycle list rows as needed
+     */
+    void update_visible_list_rows();
+
+    /**
+     * @brief Configure a pool list row to display a specific file
+     *
+     * @param row Pool row widget to configure
+     * @param index Index into file_list_
+     */
+    void configure_list_row(lv_obj_t* row, size_t index);
+
+    /**
+     * @brief Handle scroll event for virtualization
+     *
+     * @param container The scrolled container (card or list view)
+     */
+    void handle_scroll(lv_obj_t* container);
+
+    /**
+     * @brief Refresh content of currently visible cards without repositioning
+     *
+     * Called when metadata/thumbnails update. Only reconfigures visible pool
+     * cards with new data - does not reset spacer positions or visible range.
+     */
+    void refresh_visible_content();
 
     /**
      * @brief Schedule a debounced view refresh
@@ -588,6 +676,7 @@ class PrintSelectPanel : public PanelBase {
     //
 
     static void on_resize_static(void* user_data);
+    static void on_scroll_static(lv_event_t* e);
     static void on_view_toggle_clicked_static(lv_event_t* e);
     static void on_header_clicked_static(lv_event_t* e);
     static void on_file_clicked_static(lv_event_t* e);

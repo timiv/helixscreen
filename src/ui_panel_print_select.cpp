@@ -89,16 +89,33 @@ PrintSelectPanel::PrintSelectPanel(PrinterState& printer_state, MoonrakerAPI* ap
 }
 
 PrintSelectPanel::~PrintSelectPanel() {
-    // CRITICAL: Cancel pending refresh timer to prevent use-after-free!
-    // The timer callback captures 'this' pointer, so if the timer fires after
-    // destruction, it would call methods on a dangling pointer causing crashes.
-    // This is safe during normal panel navigation when LVGL is running.
-    // During static destruction (app exit), LVGL may be gone but the timer
-    // would have been cleaned up already by lv_deinit().
-    if (refresh_timer_) {
-        lv_timer_delete(refresh_timer_);
-        refresh_timer_ = nullptr;
+    // CRITICAL: During static destruction (app exit), LVGL may already be gone.
+    // We check if LVGL is still initialized before calling any LVGL functions.
+    // lv_is_initialized() returns false after lv_deinit() is called.
+    if (lv_is_initialized()) {
+        // Remove scroll event callbacks to prevent use-after-free
+        // These were registered with 'this' pointer as user_data
+        if (card_view_container_) {
+            lv_obj_remove_event_cb(card_view_container_, on_scroll_static);
+        }
+        if (list_rows_container_) {
+            lv_obj_remove_event_cb(list_rows_container_, on_scroll_static);
+        }
+
+        // Delete pending timer
+        if (refresh_timer_) {
+            lv_timer_delete(refresh_timer_);
+            refresh_timer_ = nullptr;
+        }
     }
+
+    // Clear pool vectors - they hold raw pointers to LVGL widgets which
+    // are owned by LVGL's widget tree and cleaned up by lv_deinit().
+    // We just clear our references to avoid dangling pointers.
+    card_pool_.clear();
+    card_pool_indices_.clear();
+    list_pool_.clear();
+    list_pool_indices_.clear();
 
     // Reset our pointers - the LVGL widget tree handles widget cleanup.
     card_view_container_ = nullptr;
@@ -112,6 +129,10 @@ PrintSelectPanel::~PrintSelectPanel() {
     print_status_panel_widget_ = nullptr;
     source_printer_btn_ = nullptr;
     source_usb_btn_ = nullptr;
+    card_leading_spacer_ = nullptr;
+    card_trailing_spacer_ = nullptr;
+    list_leading_spacer_ = nullptr;
+    list_trailing_spacer_ = nullptr;
 
     // NOTE: Do NOT log here - spdlog may be destroyed first
 }
@@ -171,6 +192,10 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         spdlog::error("[{}] Failed to find required widgets", get_name());
         return;
     }
+
+    // Register scroll event handlers for progressive loading
+    lv_obj_add_event_cb(card_view_container_, on_scroll_static, LV_EVENT_SCROLL, this);
+    lv_obj_add_event_cb(list_rows_container_, on_scroll_static, LV_EVENT_SCROLL, this);
 
     // Wire up view toggle button
     lv_obj_add_event_cb(view_toggle_btn_, on_view_toggle_clicked_static, LV_EVENT_CLICKED, this);
@@ -880,18 +905,17 @@ void PrintSelectPanel::schedule_view_refresh() {
                     panel->refresh_timer_ = nullptr; // Clear before callback (timer auto-deletes)
 
                     // Safety check: if containers are null, panel is likely being/been destroyed.
-                    // The destructor should have deleted this timer, but this is a safety belt.
                     if (!panel->card_view_container_ && !panel->list_rows_container_) {
                         return;
                     }
 
-                    spdlog::debug("[{}] Debounced view refresh triggered - refreshing cards with "
-                                  "updated metadata",
+                    spdlog::debug("[{}] Debounced metadata refresh - updating visible cards only",
                                   panel->get_name());
 
-                    // Now actually refresh the views
-                    panel->populate_card_view();
-                    panel->populate_list_view();
+                    // Only refresh CONTENT of currently visible cards - don't reset
+                    // spacers/positions This prevents flashing when metadata/thumbnails arrive
+                    // asynchronously
+                    panel->refresh_visible_content();
                 },
                 REFRESH_DEBOUNCE_MS, self);
 
@@ -901,129 +925,457 @@ void PrintSelectPanel::schedule_view_refresh() {
         this);
 }
 
-void PrintSelectPanel::populate_card_view() {
-    if (!card_view_container_)
+void PrintSelectPanel::refresh_visible_content() {
+    // Refresh content of currently visible cards without resetting positions
+    if (card_view_container_ && !card_pool_.empty() && visible_start_row_ >= 0) {
+        CardDimensions dims = calculate_card_dimensions();
+
+        // Re-configure each visible pool card with latest data
+        for (size_t i = 0; i < card_pool_.size(); i++) {
+            ssize_t file_idx = card_pool_indices_[i];
+            if (file_idx >= 0 && static_cast<size_t>(file_idx) < file_list_.size()) {
+                configure_card(card_pool_[i], static_cast<size_t>(file_idx), dims);
+            }
+        }
+    }
+
+    // Same for list view
+    if (list_rows_container_ && !list_pool_.empty() && visible_list_start_ >= 0) {
+        for (size_t i = 0; i < list_pool_.size(); i++) {
+            ssize_t file_idx = list_pool_indices_[i];
+            if (file_idx >= 0 && static_cast<size_t>(file_idx) < file_list_.size()) {
+                configure_list_row(list_pool_[i], static_cast<size_t>(file_idx));
+            }
+        }
+    }
+}
+
+void PrintSelectPanel::init_card_pool() {
+    if (!card_view_container_ || !card_pool_.empty())
         return;
 
-    spdlog::debug("[{}] populate_card_view() starting with {} files", get_name(),
-                  file_list_.size());
+    spdlog::debug("[{}] init_card_pool() creating {} card widgets", get_name(), CARD_POOL_SIZE);
 
-    // Clear existing cards
-    lv_obj_clean(card_view_container_);
-
-    // Force layout calculation
+    // Calculate initial dimensions
     lv_obj_update_layout(card_view_container_);
-
-    // Calculate optimal card dimensions
     CardDimensions dims = calculate_card_dimensions();
+    cards_per_row_ = dims.num_columns;
 
-    // Update container gap
-    lv_obj_set_style_pad_gap(card_view_container_, CARD_GAP, LV_PART_MAIN);
+    // Reserve pool storage
+    card_pool_.reserve(CARD_POOL_SIZE);
+    card_pool_indices_.resize(CARD_POOL_SIZE, -1);
 
-    for (size_t i = 0; i < file_list_.size(); i++) {
-        const auto& file = file_list_[i];
-
-        spdlog::debug("[{}] Creating card {}/{}: '{}' thumb='{}' is_dir={}", get_name(), i + 1,
-                      file_list_.size(), file.filename, file.thumbnail_path, file.is_dir);
-
-        // For directories, append "/" to indicate navigable folder
-        // For files, strip extension for cleaner display
-        std::string display_name =
-            file.is_dir ? file.filename + "/" : strip_gcode_extension(file.filename);
-
+    // Create pool cards (initially hidden)
+    for (int i = 0; i < CARD_POOL_SIZE; i++) {
         const char* attrs[] = {"thumbnail_src",
-                               file.thumbnail_path.c_str(),
+                               DEFAULT_PLACEHOLDER_THUMB,
                                "filename",
-                               display_name.c_str(),
+                               "",
                                "print_time",
-                               file.print_time_str.c_str(),
+                               "",
                                "filament_weight",
-                               file.filament_str.c_str(),
+                               "",
                                NULL};
 
         lv_obj_t* card =
             static_cast<lv_obj_t*>(lv_xml_create(card_view_container_, CARD_COMPONENT_NAME, attrs));
 
-        spdlog::debug("[{}] Card {} created: {}", get_name(), i + 1, card ? "success" : "FAILED");
-
         if (card) {
-            // Manually set thumbnail src - XML can only resolve pre-registered images,
-            // not dynamic file paths like cached thumbnails
-            lv_obj_t* thumb_img = lv_obj_find_by_name(card, "thumbnail");
-            spdlog::debug("[{}] Card {} thumb_img lookup: {}", get_name(), i + 1,
-                          thumb_img ? "found" : "not found");
-            if (thumb_img && !file.thumbnail_path.empty()) {
-                spdlog::debug("[{}] Card {} setting thumbnail src: '{}'", get_name(), i + 1,
-                              file.thumbnail_path);
-                lv_image_set_src(thumb_img, file.thumbnail_path.c_str());
-            }
-
             lv_obj_set_width(card, dims.card_width);
             lv_obj_set_height(card, dims.card_height);
             lv_obj_set_style_flex_grow(card, 0, LV_PART_MAIN);
-            spdlog::debug("[{}] Card {} sized: {}x{}", get_name(), i + 1, dims.card_width,
-                          dims.card_height);
-
-            // For directories: recolor icon, hide metadata, reduce overlay height
-            if (file.is_dir) {
-                // Recolor the folder icon to amber/yellow (classic folder color)
-                if (thumb_img) {
-                    lv_obj_set_style_image_recolor(thumb_img, lv_color_hex(0xFFB74D), 0);
-                    lv_obj_set_style_image_recolor_opa(thumb_img, LV_OPA_COVER, 0);
-                }
-
-                lv_obj_t* metadata_row = lv_obj_find_by_name(card, "metadata_row");
-                if (metadata_row) {
-                    lv_obj_add_flag(metadata_row, LV_OBJ_FLAG_HIDDEN);
-                }
-
-                // Reduce overlay heights for cleaner folder appearance
-                lv_obj_t* metadata_clip = lv_obj_find_by_name(card, "metadata_clip");
-                lv_obj_t* metadata_overlay = lv_obj_find_by_name(card, "metadata_overlay");
-                if (metadata_clip && metadata_overlay) {
-                    lv_obj_set_height(metadata_clip, 40);
-                    lv_obj_set_height(metadata_overlay, 48);
-                }
-            }
-
-            // Attach click handler
-            attach_card_click_handler(card, i);
+            lv_obj_add_flag(card, LV_OBJ_FLAG_HIDDEN);
+            card_pool_.push_back(card);
         }
     }
+
+    spdlog::debug("[{}] Card pool initialized with {} cards", get_name(), card_pool_.size());
+}
+
+void PrintSelectPanel::configure_card(lv_obj_t* card, size_t index, const CardDimensions& dims) {
+    if (!card || index >= file_list_.size())
+        return;
+
+    const auto& file = file_list_[index];
+
+    // Update display name
+    std::string display_name =
+        file.is_dir ? file.filename + "/" : strip_gcode_extension(file.filename);
+
+    // Update labels
+    lv_obj_t* filename_label = lv_obj_find_by_name(card, "filename_label");
+    if (filename_label) {
+        lv_label_set_text(filename_label, display_name.c_str());
+    }
+
+    lv_obj_t* time_label = lv_obj_find_by_name(card, "time_label");
+    if (time_label) {
+        lv_label_set_text(time_label, file.print_time_str.c_str());
+    }
+
+    lv_obj_t* filament_label = lv_obj_find_by_name(card, "filament_label");
+    if (filament_label) {
+        lv_label_set_text(filament_label, file.filament_str.c_str());
+    }
+
+    // Update thumbnail
+    lv_obj_t* thumb_img = lv_obj_find_by_name(card, "thumbnail");
+    if (thumb_img && !file.thumbnail_path.empty()) {
+        lv_image_set_src(thumb_img, file.thumbnail_path.c_str());
+
+        // Directory styling
+        if (file.is_dir) {
+            lv_obj_set_style_image_recolor(thumb_img, lv_color_hex(0xFFB74D), 0);
+            lv_obj_set_style_image_recolor_opa(thumb_img, LV_OPA_COVER, 0);
+        } else {
+            lv_obj_set_style_image_recolor_opa(thumb_img, LV_OPA_TRANSP, 0);
+        }
+    }
+
+    // Hide/show metadata row for directories
+    lv_obj_t* metadata_row = lv_obj_find_by_name(card, "metadata_row");
+    if (metadata_row) {
+        if (file.is_dir) {
+            lv_obj_add_flag(metadata_row, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_remove_flag(metadata_row, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
+    // Adjust overlay heights for directories
+    if (file.is_dir) {
+        lv_obj_t* metadata_clip = lv_obj_find_by_name(card, "metadata_clip");
+        lv_obj_t* metadata_overlay = lv_obj_find_by_name(card, "metadata_overlay");
+        if (metadata_clip && metadata_overlay) {
+            lv_obj_set_height(metadata_clip, 40);
+            lv_obj_set_height(metadata_overlay, 48);
+        }
+    }
+
+    // Update card sizing
+    lv_obj_set_width(card, dims.card_width);
+    lv_obj_set_height(card, dims.card_height);
+
+    // Store file index for click handler
+    lv_obj_set_user_data(card, reinterpret_cast<void*>(index));
+
+    // Show the card
+    lv_obj_remove_flag(card, LV_OBJ_FLAG_HIDDEN);
+}
+
+void PrintSelectPanel::update_visible_cards() {
+    if (!card_view_container_ || card_pool_.empty() || file_list_.empty())
+        return;
+
+    // Get scroll position and container dimensions
+    int32_t scroll_y = lv_obj_get_scroll_y(card_view_container_);
+    int32_t viewport_height = lv_obj_get_height(card_view_container_);
+
+    CardDimensions dims = calculate_card_dimensions();
+    cards_per_row_ = dims.num_columns;
+
+    int row_height = dims.card_height + CARD_GAP;
+    int total_rows = (static_cast<int>(file_list_.size()) + cards_per_row_ - 1) / cards_per_row_;
+
+    // Calculate visible row range (with buffer)
+    int first_visible_row = std::max(0, static_cast<int>(scroll_y / row_height) - CARD_BUFFER_ROWS);
+    int last_visible_row =
+        std::min(total_rows, static_cast<int>((scroll_y + viewport_height) / row_height) + 1 +
+                                 CARD_BUFFER_ROWS);
+
+    // Skip update if visible range hasn't changed
+    if (first_visible_row == visible_start_row_ && last_visible_row == visible_end_row_) {
+        return;
+    }
+
+    // Calculate file index range
+    int first_visible_idx = first_visible_row * cards_per_row_;
+    int last_visible_idx =
+        std::min(static_cast<int>(file_list_.size()), last_visible_row * cards_per_row_);
+
+    spdlog::debug("[{}] Scroll: {} viewport: {} rows: {}-{} indices: {}-{}", get_name(), scroll_y,
+                  viewport_height, first_visible_row, last_visible_row, first_visible_idx,
+                  last_visible_idx);
+
+    // Update leading spacer height to push cards to correct scroll position
+    int leading_height = first_visible_row * row_height;
+    if (card_leading_spacer_) {
+        lv_obj_set_height(card_leading_spacer_, leading_height);
+        lv_obj_move_to_index(card_leading_spacer_, 0);
+    }
+
+    // Update trailing spacer to create scroll range for remaining rows
+    int trailing_height = (total_rows - last_visible_row) * row_height;
+    if (card_trailing_spacer_) {
+        lv_obj_set_height(card_trailing_spacer_, std::max(0, trailing_height));
+    }
+
+    // Mark all pool cards as available
+    std::fill(card_pool_indices_.begin(), card_pool_indices_.end(), static_cast<ssize_t>(-1));
+
+    // Assign pool cards to visible indices
+    size_t pool_idx = 0;
+    for (int file_idx = first_visible_idx;
+         file_idx < last_visible_idx && pool_idx < card_pool_.size(); file_idx++, pool_idx++) {
+        lv_obj_t* card = card_pool_[pool_idx];
+        configure_card(card, static_cast<size_t>(file_idx), dims);
+        card_pool_indices_[pool_idx] = file_idx;
+
+        // Ensure click handler is attached
+        // Remove any existing to avoid duplicates, then add fresh
+        lv_obj_remove_event_cb(card, on_file_clicked_static);
+        lv_obj_add_event_cb(card, on_file_clicked_static, LV_EVENT_CLICKED, this);
+
+        // Move card after spacer in container order
+        lv_obj_move_to_index(card, static_cast<int>(pool_idx) + 1);
+    }
+
+    // Hide unused pool cards
+    for (; pool_idx < card_pool_.size(); pool_idx++) {
+        lv_obj_add_flag(card_pool_[pool_idx], LV_OBJ_FLAG_HIDDEN);
+        card_pool_indices_[pool_idx] = -1;
+    }
+
+    visible_start_row_ = first_visible_row;
+    visible_end_row_ = last_visible_row;
+}
+
+void PrintSelectPanel::handle_scroll(lv_obj_t* container) {
+    if (container == card_view_container_) {
+        update_visible_cards();
+    } else if (container == list_rows_container_) {
+        update_visible_list_rows();
+    }
+}
+
+void PrintSelectPanel::populate_card_view() {
+    if (!card_view_container_)
+        return;
+
+    spdlog::debug("[{}] populate_card_view() with {} files (virtualized)", get_name(),
+                  file_list_.size());
+
+    // Initialize pool on first call
+    if (card_pool_.empty()) {
+        init_card_pool();
+    }
+
+    // Calculate optimal card dimensions
+    CardDimensions dims = calculate_card_dimensions();
+    cards_per_row_ = dims.num_columns;
+
+    // Update container gap
+    lv_obj_set_style_pad_gap(card_view_container_, CARD_GAP, LV_PART_MAIN);
+
+    // Calculate total rows for debug logging
+    int total_rows = (static_cast<int>(file_list_.size()) + cards_per_row_ - 1) / cards_per_row_;
+
+    // Create leading spacer if needed - this spacer fills the space before visible cards
+    if (!card_leading_spacer_) {
+        card_leading_spacer_ = lv_obj_create(card_view_container_);
+        lv_obj_remove_style_all(card_leading_spacer_);
+        lv_obj_remove_flag(card_leading_spacer_, LV_OBJ_FLAG_CLICKABLE);
+        // Spacer participates in flex layout - takes full row width to force wrap
+        lv_obj_set_width(card_leading_spacer_, lv_pct(100));
+        lv_obj_set_height(card_leading_spacer_, 0);
+    }
+
+    // Create trailing spacer if needed - enables scrolling to end of file list
+    if (!card_trailing_spacer_) {
+        card_trailing_spacer_ = lv_obj_create(card_view_container_);
+        lv_obj_remove_style_all(card_trailing_spacer_);
+        lv_obj_remove_flag(card_trailing_spacer_, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_width(card_trailing_spacer_, lv_pct(100));
+        lv_obj_set_height(card_trailing_spacer_, 0);
+    }
+
+    // Reset visible range tracking to force full update
+    visible_start_row_ = -1;
+    visible_end_row_ = -1;
+
+    // Reset scroll position when file list changes
+    lv_obj_scroll_to_y(card_view_container_, 0, LV_ANIM_OFF);
+
+    // Update which cards are visible
+    update_visible_cards();
+
+    spdlog::debug("[{}] Card view virtualized: {} files, {} rows, pool size {}", get_name(),
+                  file_list_.size(), total_rows, card_pool_.size());
+}
+
+void PrintSelectPanel::init_list_pool() {
+    if (!list_rows_container_ || !list_pool_.empty())
+        return;
+
+    spdlog::debug("[{}] init_list_pool() creating {} row widgets", get_name(), LIST_POOL_SIZE);
+
+    // Reserve pool storage
+    list_pool_.reserve(LIST_POOL_SIZE);
+    list_pool_indices_.resize(LIST_POOL_SIZE, -1);
+
+    // Create pool rows (initially hidden)
+    for (int i = 0; i < LIST_POOL_SIZE; i++) {
+        const char* attrs[] = {"filename", "",           "file_size", "",  "modified_date",
+                               "",         "print_time", "",          NULL};
+
+        lv_obj_t* row = static_cast<lv_obj_t*>(
+            lv_xml_create(list_rows_container_, "print_file_list_row", attrs));
+
+        if (row) {
+            lv_obj_add_flag(row, LV_OBJ_FLAG_HIDDEN);
+            list_pool_.push_back(row);
+        }
+    }
+
+    spdlog::debug("[{}] List pool initialized with {} rows", get_name(), list_pool_.size());
+}
+
+void PrintSelectPanel::configure_list_row(lv_obj_t* row, size_t index) {
+    if (!row || index >= file_list_.size())
+        return;
+
+    const auto& file = file_list_[index];
+
+    // Update display name
+    std::string display_name =
+        file.is_dir ? file.filename + "/" : strip_gcode_extension(file.filename);
+
+    // Update labels by finding them in the row
+    // The list row component has labels for each column
+    lv_obj_t* filename_label = lv_obj_find_by_name(row, "filename_col");
+    if (filename_label) {
+        lv_label_set_text(filename_label, display_name.c_str());
+    }
+
+    lv_obj_t* size_label = lv_obj_find_by_name(row, "size_col");
+    if (size_label) {
+        lv_label_set_text(size_label, file.size_str.c_str());
+    }
+
+    lv_obj_t* modified_label = lv_obj_find_by_name(row, "modified_col");
+    if (modified_label) {
+        lv_label_set_text(modified_label, file.modified_str.c_str());
+    }
+
+    lv_obj_t* time_label = lv_obj_find_by_name(row, "time_col");
+    if (time_label) {
+        lv_label_set_text(time_label, file.print_time_str.c_str());
+    }
+
+    // Store file index for click handler
+    lv_obj_set_user_data(row, reinterpret_cast<void*>(index));
+
+    // Show the row
+    lv_obj_remove_flag(row, LV_OBJ_FLAG_HIDDEN);
+}
+
+void PrintSelectPanel::update_visible_list_rows() {
+    if (!list_rows_container_ || list_pool_.empty() || file_list_.empty())
+        return;
+
+    // Get scroll position and container dimensions
+    int32_t scroll_y = lv_obj_get_scroll_y(list_rows_container_);
+    int32_t viewport_height = lv_obj_get_height(list_rows_container_);
+
+    int total_rows = static_cast<int>(file_list_.size());
+
+    // Calculate visible row range (with buffer)
+    int first_visible = std::max(0, static_cast<int>(scroll_y / LIST_ROW_HEIGHT) - 2);
+    int last_visible =
+        std::min(total_rows, static_cast<int>((scroll_y + viewport_height) / LIST_ROW_HEIGHT) + 3);
+
+    // Skip update if visible range hasn't changed
+    if (first_visible == visible_list_start_ && last_visible == visible_list_end_) {
+        return;
+    }
+
+    spdlog::debug("[{}] List scroll: {} viewport: {} visible: {}-{}", get_name(), scroll_y,
+                  viewport_height, first_visible, last_visible);
+
+    // Update leading spacer height
+    int leading_height = first_visible * LIST_ROW_HEIGHT;
+    if (list_leading_spacer_) {
+        lv_obj_set_height(list_leading_spacer_, leading_height);
+        lv_obj_move_to_index(list_leading_spacer_, 0);
+    }
+
+    // Update trailing spacer height
+    int trailing_height = (total_rows - last_visible) * LIST_ROW_HEIGHT;
+    if (list_trailing_spacer_) {
+        lv_obj_set_height(list_trailing_spacer_, std::max(0, trailing_height));
+    }
+
+    // Mark all pool rows as available
+    std::fill(list_pool_indices_.begin(), list_pool_indices_.end(), static_cast<ssize_t>(-1));
+
+    // Assign pool rows to visible indices
+    size_t pool_idx = 0;
+    for (int file_idx = first_visible; file_idx < last_visible && pool_idx < list_pool_.size();
+         file_idx++, pool_idx++) {
+        lv_obj_t* row = list_pool_[pool_idx];
+        configure_list_row(row, static_cast<size_t>(file_idx));
+        list_pool_indices_[pool_idx] = file_idx;
+
+        // Ensure click handler is attached
+        lv_obj_remove_event_cb(row, on_file_clicked_static);
+        lv_obj_add_event_cb(row, on_file_clicked_static, LV_EVENT_CLICKED, this);
+
+        // Position row after leading spacer
+        lv_obj_move_to_index(row, static_cast<int>(pool_idx) + 1);
+    }
+
+    // Hide unused pool rows
+    for (; pool_idx < list_pool_.size(); pool_idx++) {
+        lv_obj_add_flag(list_pool_[pool_idx], LV_OBJ_FLAG_HIDDEN);
+        list_pool_indices_[pool_idx] = -1;
+    }
+
+    visible_list_start_ = first_visible;
+    visible_list_end_ = last_visible;
 }
 
 void PrintSelectPanel::populate_list_view() {
     if (!list_rows_container_)
         return;
 
-    // Clear existing rows
-    lv_obj_clean(list_rows_container_);
+    spdlog::debug("[{}] populate_list_view() with {} files (virtualized)", get_name(),
+                  file_list_.size());
 
-    for (size_t i = 0; i < file_list_.size(); i++) {
-        const auto& file = file_list_[i];
-
-        // For directories, append "/" to indicate navigable folder
-        // For files, strip extension for cleaner display
-        std::string display_name =
-            file.is_dir ? file.filename + "/" : strip_gcode_extension(file.filename);
-
-        const char* attrs[] = {"filename",
-                               display_name.c_str(),
-                               "file_size",
-                               file.size_str.c_str(),
-                               "modified_date",
-                               file.modified_str.c_str(),
-                               "print_time",
-                               file.print_time_str.c_str(),
-                               NULL};
-
-        lv_obj_t* row = static_cast<lv_obj_t*>(
-            lv_xml_create(list_rows_container_, "print_file_list_row", attrs));
-
-        if (row) {
-            attach_row_click_handler(row, i);
-        }
+    // Initialize pool on first call
+    if (list_pool_.empty()) {
+        init_list_pool();
     }
+
+    // Create leading spacer if needed
+    if (!list_leading_spacer_) {
+        list_leading_spacer_ = lv_obj_create(list_rows_container_);
+        lv_obj_remove_style_all(list_leading_spacer_);
+        lv_obj_remove_flag(list_leading_spacer_, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_width(list_leading_spacer_, lv_pct(100));
+        lv_obj_set_height(list_leading_spacer_, 0);
+    }
+
+    // Create trailing spacer if needed
+    if (!list_trailing_spacer_) {
+        list_trailing_spacer_ = lv_obj_create(list_rows_container_);
+        lv_obj_remove_style_all(list_trailing_spacer_);
+        lv_obj_remove_flag(list_trailing_spacer_, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_width(list_trailing_spacer_, lv_pct(100));
+        lv_obj_set_height(list_trailing_spacer_, 0);
+    }
+
+    // Reset visible range tracking to force full update
+    visible_list_start_ = -1;
+    visible_list_end_ = -1;
+
+    // Reset scroll position when file list changes
+    lv_obj_scroll_to_y(list_rows_container_, 0, LV_ANIM_OFF);
+
+    // Update which rows are visible
+    update_visible_list_rows();
+
+    spdlog::debug("[{}] List view virtualized: {} files, pool size {}", get_name(),
+                  file_list_.size(), list_pool_.size());
 }
 
 void PrintSelectPanel::apply_sort() {
@@ -1424,6 +1776,14 @@ void PrintSelectPanel::delete_file() {
 // ============================================================================
 // Static Callbacks (trampolines)
 // ============================================================================
+
+void PrintSelectPanel::on_scroll_static(lv_event_t* e) {
+    auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
+    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    if (self && target) {
+        self->handle_scroll(target);
+    }
+}
 
 void PrintSelectPanel::on_view_toggle_clicked_static(lv_event_t* e) {
     auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
