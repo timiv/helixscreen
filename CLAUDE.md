@@ -122,9 +122,13 @@ make -j                              # Incremental build (native/SDL)
 ./build/bin/helix-screen -p motion -s large
 ./build/bin/helix-screen --test    # Mock printer (REQUIRED without real printer!)
 
-# Cross-compilation (Docker-based, no toolchain needed)
-make pi-docker                       # Build for Raspberry Pi (aarch64)
-make ad5m-docker                     # Build for Adventurer 5M (armv7-a)
+# Cross-compilation - PREFER remote build (faster, uses thelio.local)
+make remote-pi                       # Build Pi on remote Linux server (PREFERRED)
+make remote-ad5m                     # Build AD5M on remote Linux server
+
+# Cross-compilation - local Docker (slow, use only if no remote available)
+make pi-docker                       # Build for Raspberry Pi (aarch64) locally
+make ad5m-docker                     # Build for Adventurer 5M (armv7-a) locally
 ```
 
 **⚠️ IMPORTANT:** Always use `--test` when testing without a real printer. Without it, panels expecting printer data show nothing.
