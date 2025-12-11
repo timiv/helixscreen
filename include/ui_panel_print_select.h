@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "ui_observer_guard.h"
 #include "ui_panel_base.h"
 
 #include "command_sequencer.h"
@@ -437,6 +438,10 @@ class PrintSelectPanel : public PanelBase {
 
     /// Filename corresponding to cached_scan_result_ (to detect stale cache)
     std::string cached_scan_filename_;
+
+    // Observers for reactive updates (ObserverGuard handles cleanup)
+    ObserverGuard active_panel_observer_;
+    ObserverGuard connection_observer_;
 
     //
     // === Internal Methods ===

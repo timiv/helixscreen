@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "ui_observer_guard.h"
 #include "ui_panel_base.h"
 
 #include "print_history_data.h"
@@ -204,8 +205,8 @@ class HistoryListPanel : public PanelBase {
     bool jobs_received_ = false;                 ///< True if jobs were set externally
     bool is_active_ = false;                     ///< True if panel is currently visible
 
-    // Connection state observer to auto-refresh when connected
-    lv_observer_t* connection_observer_ = nullptr;
+    // Connection state observer to auto-refresh when connected (ObserverGuard handles cleanup)
+    ObserverGuard connection_observer_;
 
     // Pagination state for infinite scroll
     static constexpr int PAGE_SIZE = 100; ///< Jobs per API request

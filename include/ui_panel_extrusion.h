@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "ui_observer_guard.h"
 #include "ui_panel_base.h"
 
 /**
@@ -102,6 +103,9 @@ class ExtrusionPanel : public PanelBase {
     static void on_purge_clicked(lv_event_t* e);
     static void on_speed_changed(lv_event_t* e);
     static void on_nozzle_temp_changed(lv_observer_t* observer, lv_subject_t* subject);
+
+    // Observer for nozzle temperature (ObserverGuard handles cleanup)
+    ObserverGuard nozzle_temp_observer_;
 };
 
 // Global instance accessor (needed by main.cpp)

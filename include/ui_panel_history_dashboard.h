@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "ui_observer_guard.h"
 #include "ui_panel_base.h"
 
 #include "print_history_data.h"
@@ -174,8 +175,8 @@ class HistoryDashboardPanel : public PanelBase {
     std::vector<PrintHistoryJob> cached_jobs_;
     bool is_active_ = false; // Track if panel is currently visible
 
-    // Connection state observer to auto-refresh when connected
-    lv_observer_t* connection_observer_ = nullptr;
+    // Connection state observer to auto-refresh when connected (ObserverGuard handles cleanup)
+    ObserverGuard connection_observer_;
 
     // Subject for empty state binding (must persist for LVGL binding lifetime)
     lv_subject_t history_has_jobs_subject_;

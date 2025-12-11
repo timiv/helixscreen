@@ -147,9 +147,8 @@ void ExtrusionPanel::setup_temperature_observer() {
     lv_subject_t* nozzle_temp = lv_xml_get_subject(NULL, "nozzle_temp_current");
 
     if (nozzle_temp) {
-        // Add observer and register for RAII cleanup
-        auto* obs = lv_subject_add_observer(nozzle_temp, on_nozzle_temp_changed, this);
-        register_observer(obs);
+        // ObserverGuard handles cleanup automatically in destructor
+        nozzle_temp_observer_ = ObserverGuard(nozzle_temp, on_nozzle_temp_changed, this);
         spdlog::debug("[{}] Subscribed to nozzle_temp_current subject", get_name());
     } else {
         spdlog::warn("[{}] nozzle_temp_current subject not found - temperature updates unavailable",

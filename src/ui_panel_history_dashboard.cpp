@@ -129,8 +129,9 @@ void HistoryDashboardPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     // Register connection state observer to auto-refresh when connected
     // This handles the case where the panel is opened before connection is established
+    // ObserverGuard handles cleanup automatically in destructor
     lv_subject_t* conn_subject = printer_state_.get_printer_connection_state_subject();
-    connection_observer_ = lv_subject_add_observer(
+    connection_observer_ = ObserverGuard(
         conn_subject,
         [](lv_observer_t* observer, lv_subject_t* subject) {
             auto* self = static_cast<HistoryDashboardPanel*>(lv_observer_get_user_data(observer));

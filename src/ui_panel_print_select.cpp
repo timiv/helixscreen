@@ -225,43 +225,42 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     // Register observer on active_panel subject to trigger on_activate() when panel becomes visible
     // This is needed because ui_nav doesn't call lifecycle hooks on C++ panel classes
+    // ObserverGuard handles cleanup automatically in destructor
     lv_subject_t* active_panel_subject = lv_xml_get_subject(NULL, "active_panel");
     if (active_panel_subject) {
-        // Use static trampoline pattern (same as resize handler)
-        static PrintSelectPanel* activate_self = nullptr;
-        activate_self = this;
-        lv_subject_add_observer(
+        active_panel_observer_ = ObserverGuard(
             active_panel_subject,
-            [](lv_observer_t* /*observer*/, lv_subject_t* subject) {
+            [](lv_observer_t* observer, lv_subject_t* subject) {
+                auto* self = static_cast<PrintSelectPanel*>(lv_observer_get_user_data(observer));
                 int32_t panel_id = lv_subject_get_int(subject);
-                if (panel_id == UI_PANEL_PRINT_SELECT && activate_self) {
-                    activate_self->on_activate();
+                if (panel_id == UI_PANEL_PRINT_SELECT && self) {
+                    self->on_activate();
                 }
             },
-            NULL);
+            this);
         spdlog::debug("[{}] Registered observer on active_panel subject for lazy file loading",
                       get_name());
     }
 
     // Register observer on connection state to refresh files when printer connects
     // This handles the race condition where panel activates before WebSocket connection
+    // ObserverGuard handles cleanup automatically in destructor
     lv_subject_t* connection_subject = printer_state_.get_printer_connection_state_subject();
     if (connection_subject) {
-        static PrintSelectPanel* connect_self = nullptr;
-        connect_self = this;
-        lv_subject_add_observer(
+        connection_observer_ = ObserverGuard(
             connection_subject,
-            [](lv_observer_t* /*observer*/, lv_subject_t* subject) {
+            [](lv_observer_t* observer, lv_subject_t* subject) {
+                auto* self = static_cast<PrintSelectPanel*>(lv_observer_get_user_data(observer));
                 int32_t state = lv_subject_get_int(subject);
                 // PrinterStatus::CONNECTED = 2
-                if (state == 2 && connect_self && connect_self->file_list_.empty() &&
-                    connect_self->current_source_ == FileSource::PRINTER) {
+                if (state == 2 && self && self->file_list_.empty() &&
+                    self->current_source_ == FileSource::PRINTER) {
                     spdlog::info("[{}] Connection established, refreshing file list",
-                                 connect_self->get_name());
-                    connect_self->refresh_files();
+                                 self->get_name());
+                    self->refresh_files();
                 }
             },
-            NULL);
+            this);
         spdlog::debug("[{}] Registered observer on connection state for auto-refresh", get_name());
     }
 
