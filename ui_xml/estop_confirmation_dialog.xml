@@ -1,81 +1,73 @@
 <?xml version="1.0"?>
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-
-<!--
-  Emergency Stop Confirmation Dialog
-
-  Modal dialog shown when E-Stop confirmation is required (optional setting).
-  Full-screen backdrop with centered dialog card.
-
-  Features:
-  - Clear warning icon and message
-  - Cancel button to abort
-  - Confirm button to execute E-Stop
-  - Red error color theme for danger
+<!-- Emergency Stop Confirmation Modal
+     Shown when E-Stop confirmation is enabled in settings.
+     Uses error styling to emphasize the dangerous nature of the action.
 -->
 <component>
-  <view extends="lv_obj" name="estop_dialog_backdrop"
+  <!-- Full-screen backdrop overlay -->
+  <view extends="lv_obj" name="estop_modal_root"
         width="100%" height="100%"
-        style_bg_color="#000000" style_bg_opa="180"
-        style_border_width="0"
-        align="center"
-        clickable="true">
+        style_bg_opa="200" style_border_width="0" style_radius="0" style_pad_all="0"
+        align="center" clickable="true">
 
     <!-- Dialog card -->
-    <lv_obj name="estop_dialog_card"
-            width="420" height="260"
-            align="center"
-            style_radius="#border_radius"
-            style_bg_color="#card_bg_dark"
-            style_bg_opa="255"
-            style_border_width="3"
-            style_border_color="#error_color"
-            style_pad_all="24"
-            flex_flow="column"
-            style_flex_main_place="space_between"
-            style_flex_cross_place="center">
+    <ui_dialog name="dialog_card" width="70%" height="content" align="center"
+               flex_flow="column" style_flex_main_place="start" style_pad_gap="0">
 
-      <!-- Header with icon and title -->
+      <!-- Content area -->
       <lv_obj width="100%" height="content"
+              style_min_height="140"
               style_bg_opa="0" style_border_width="0"
-              flex_flow="column"
-              style_flex_cross_place="center"
-              style_pad_gap="#space_md">
+              style_pad_left="#space_lg" style_pad_right="#space_lg"
+              style_pad_top="#space_lg" style_pad_bottom="#space_lg"
+              flex_flow="column" style_flex_cross_place="center" style_pad_gap="#space_md">
 
-        <icon src="alert_octagon" size="xl" color="#error_color"/>
+        <!-- Warning icon -->
+        <icon src="alert_octagon" size="lg" color="#error_color"/>
 
-        <text_heading text="Emergency Stop?" style_text_align="center"/>
+        <!-- Title -->
+        <text_heading text="Emergency Stop?" width="100%" style_text_align="center"/>
 
+        <!-- Warning message -->
         <text_body text="This will immediately halt all printer operations. The printer will require a restart to resume."
-                   long_mode="wrap"
-                   style_text_align="center"
-                   width="100%"/>
+                   width="100%" long_mode="wrap"
+                   style_text_align="center" style_text_color="#text_secondary"/>
       </lv_obj>
 
-      <!-- Button row -->
-      <lv_obj width="100%" height="56"
-              style_bg_opa="0" style_border_width="0"
-              flex_flow="row"
-              style_pad_gap="#space_lg">
+      <!-- Horizontal divider above buttons -->
+      <lv_obj width="100%" height="1"
+              style_bg_color="#text_secondary" style_bg_opa="64"
+              style_border_width="0" style_pad_all="0"/>
 
-        <lv_button name="estop_cancel_btn"
-                   flex_grow="1" height="100%"
-                   style_radius="8"
-                   style_border_width="0">
+      <!-- Button row -->
+      <lv_obj width="100%" height="#button_height"
+              style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_gap="0"
+              flex_flow="row">
+
+        <!-- Cancel button -->
+        <lv_button name="btn_cancel" flex_grow="1" height="100%"
+                   style_radius="0" style_border_width="0" style_shadow_width="0"
+                   clickable="true">
           <text_body text="Cancel" align="center"/>
           <event_cb trigger="clicked" callback="estop_dialog_cancel_clicked"/>
         </lv_button>
 
-        <lv_button name="estop_confirm_btn"
-                   flex_grow="1" height="100%"
-                   style_radius="8"
-                   style_border_width="0"
-                   style_bg_color="#error_color">
-          <text_body text="STOP" style_text_color="#text_primary" align="center"/>
+        <!-- Vertical divider -->
+        <lv_obj width="1" height="100%"
+                style_bg_color="#text_secondary" style_bg_opa="64"
+                style_border_width="0" style_pad_all="0"/>
+
+        <!-- STOP button (danger styling) -->
+        <lv_button name="btn_stop" flex_grow="1" height="100%"
+                   style_radius="0" style_border_width="0" style_shadow_width="0"
+                   style_bg_color="#error_color"
+                   clickable="true">
+          <text_body text="STOP" align="center" style_text_color="#text_primary"/>
           <event_cb trigger="clicked" callback="estop_dialog_confirm_clicked"/>
         </lv_button>
       </lv_obj>
-    </lv_obj>
+    </ui_dialog>
   </view>
 </component>

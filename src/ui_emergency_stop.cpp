@@ -69,17 +69,18 @@ void EmergencyStopOverlay::create() {
         return;
     }
 
-    // Create the floating button on the active screen
-    lv_obj_t* screen = lv_screen_active();
-    button_ = static_cast<lv_obj_t*>(lv_xml_create(screen, "emergency_stop_button", nullptr));
+    // Create the floating button on the TOP LAYER (always above all screen content)
+    // Using lv_layer_top() ensures the button stays visible regardless of panel z-order
+    lv_obj_t* top_layer = lv_layer_top();
+    button_ = static_cast<lv_obj_t*>(lv_xml_create(top_layer, "emergency_stop_button", nullptr));
 
     if (!button_) {
         spdlog::error("[EmergencyStop] Failed to create emergency_stop_button widget");
         return;
     }
 
-    // Ensure button is on top of all other content
-    lv_obj_move_foreground(button_);
+    // Force layout update - top layer may not auto-layout XML children
+    lv_obj_update_layout(button_);
 
     // Subscribe to print state changes for automatic visibility updates
     print_state_observer_ = ObserverGuard(printer_state_->get_print_state_enum_subject(),
@@ -107,7 +108,14 @@ void EmergencyStopOverlay::update_visibility() {
     }
 
     // Check if current panel should show E-Stop
-    bool on_relevant_panel = VISIBLE_PANELS.count(current_panel_) > 0;
+    // Use prefix matching since LVGL adds suffixes like "_#" to widget names
+    bool on_relevant_panel = false;
+    for (const auto& panel : VISIBLE_PANELS) {
+        if (current_panel_.rfind(panel, 0) == 0) { // starts_with
+            on_relevant_panel = true;
+            break;
+        }
+    }
 
     // Check if print is active (PRINTING or PAUSED)
     PrintJobState state = printer_state_->get_print_job_state();
@@ -121,6 +129,16 @@ void EmergencyStopOverlay::update_visibility() {
 
     if (new_value != current_value) {
         lv_subject_set_int(&estop_visible_, new_value);
+
+        // Directly control visibility since XML binding may not work on top layer
+        if (button_) {
+            if (new_value == 1) {
+                lv_obj_clear_flag(button_, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_add_flag(button_, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+
         spdlog::debug("[EmergencyStop] Visibility changed: {} (panel={}, state={})", should_show,
                       current_panel_, static_cast<int>(state));
     }
