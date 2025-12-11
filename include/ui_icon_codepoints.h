@@ -135,8 +135,11 @@ static const IconMapping ICON_MAP[] = {
 
     // Radiator/Heating
     {"radiator",           "\xF3\xB0\x90\xB8"},  // F0438 radiator
+    {"redo",               "\xF3\xB0\x91\x8E"},  // F044E redo (clockwise arrow - tighten)
     {"refresh",            "\xF3\xB0\x91\x90"},  // F0450 refresh
     {"resume",             "\xF3\xB0\x90\x8C"},  // F040C play-circle (resume)
+    {"rotate_left",        "\xF3\xB0\x91\xA5"},  // F0465 rotate-left (CCW)
+    {"rotate_right",       "\xF3\xB0\x91\xA7"},  // F0467 rotate-right (CW)
     {"router",             "\xF3\xB0\x91\xA9"},  // F0469 router-wireless
 
     // SD card
@@ -156,6 +159,7 @@ static const IconMapping ICON_MAP[] = {
     {"thermometer_plus",   "\xF3\xB0\xB8\x85"},  // F0E05 thermometer-plus
     {"train_flatbed",      "\xF3\xB1\xAC\xB5"},  // F1B35 train-car-flatbed (print bed base)
     {"tune",               "\xF3\xB0\x98\xAE"},  // F062E tune
+    {"undo",               "\xF3\xB0\x95\x8C"},  // F054C undo (counter-clockwise arrow - loosen)
     {"tune_variant",       "\xF3\xB0\xA3\xA9"},  // F08E9 tune-variant
 
     // Update

@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<!-- Copyright 2025 356C LLC -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<component>
+  <!-- Print Tuning Panel: Speed and Flow adjustment during active print -->
+  <view extends="lv_obj" name="print_tune_panel" width="#overlay_panel_width" height="100%" align="right_mid" style_border_width="0" style_pad_all="0" style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column">
+    <!-- Header Bar -->
+    <header_bar name="overlay_header" title="Print Tuning"/>
+
+    <!-- Content Area -->
+    <lv_obj name="overlay_content" flex_grow="1" width="100%" style_bg_opa="0" style_pad_all="#space_lg" scrollable="false" style_border_width="0" flex_flow="column" style_flex_main_place="start" style_pad_gap="#space_lg">
+
+      <!-- Speed Control Section -->
+      <ui_card name="speed_card" width="100%" height="content" style_radius="#border_radius" flex_flow="column" style_pad_all="#space_md" style_pad_gap="#space_sm">
+        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
+          <text_body text="Print Speed"/>
+          <text_heading name="speed_display" bind_text="tune_speed_display"/>
+        </lv_obj>
+        <lv_obj name="speed_slider_container" width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_left="#space_xs" style_pad_right="#space_sm" scrollable="false" flex_flow="row" style_flex_cross_place="center" flag_overflow_visible="true">
+          <lv_slider name="speed_slider" flex_grow="1" min_value="50" max_value="200" value="100"/>
+        </lv_obj>
+        <text_small text="Controls print head movement speed (M220)" style_text_color="#text_secondary"/>
+      </ui_card>
+
+      <!-- Flow Control Section -->
+      <ui_card name="flow_card" width="100%" height="content" style_radius="#border_radius" flex_flow="column" style_pad_all="#space_md" style_pad_gap="#space_sm">
+        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
+          <text_body text="Flow Rate"/>
+          <text_heading name="flow_display" bind_text="tune_flow_display"/>
+        </lv_obj>
+        <lv_obj name="flow_slider_container" width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_left="#space_xs" style_pad_right="#space_sm" scrollable="false" flex_flow="row" style_flex_cross_place="center" flag_overflow_visible="true">
+          <lv_slider name="flow_slider" flex_grow="1" min_value="75" max_value="125" value="100"/>
+        </lv_obj>
+        <text_small text="Controls extrusion multiplier (M221)" style_text_color="#text_secondary"/>
+      </ui_card>
+
+      <!-- Spacer -->
+      <lv_obj flex_grow="1" style_bg_opa="0" style_border_width="0" scrollable="false"/>
+
+      <!-- Reset Button -->
+      <lv_button name="btn_reset" width="100%" height="#button_height" style_radius="#border_radius" style_border_width="0">
+        <text_body text="Reset to 100%" align="center"/>
+      </lv_button>
+
+    </lv_obj>
+  </view>
+</component>

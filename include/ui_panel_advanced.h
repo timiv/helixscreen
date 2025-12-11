@@ -106,8 +106,9 @@ class AdvancedPanel : public PanelBase {
     // === Lazily-Created Overlay Panels ===
     //
 
-    lv_obj_t* zoffset_cal_panel_ = nullptr; // Reuses existing panel
-    lv_obj_t* history_dashboard_panel_ = nullptr;
+    lv_obj_t* zoffset_cal_panel_ = nullptr;       // Reuses existing panel
+    lv_obj_t* history_dashboard_panel_ = nullptr; // Print history dashboard
+    lv_obj_t* screws_tilt_panel_ = nullptr;       // Screws tilt adjust panel
 
     //
     // === Setup Helpers ===

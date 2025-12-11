@@ -121,6 +121,21 @@
     <px name="keypad_display_height_medium" value="72"/>
     <px name="keypad_display_height_large" value="88"/>
 
+    <!-- ===================================================================== -->
+    <!-- Responsive Screws Tilt Panel Sizes (bed_diagram_*, screw_indicator_*) -->
+    <!-- ===================================================================== -->
+    <!-- Bed diagram container height -->
+    <px name="bed_diagram_height_small" value="130"/>
+    <px name="bed_diagram_height_medium" value="160"/>
+    <px name="bed_diagram_height_large" value="200"/>
+    <!-- Screw indicator compound widget size (direction + adjustment text) -->
+    <px name="screw_indicator_width_small" value="54"/>
+    <px name="screw_indicator_width_medium" value="64"/>
+    <px name="screw_indicator_width_large" value="80"/>
+    <px name="screw_indicator_height_small" value="48"/>
+    <px name="screw_indicator_height_medium" value="56"/>
+    <px name="screw_indicator_height_large" value="68"/>
+
     <!-- printer_img_size moved to home_panel.xml -->
     <!-- accent_bar_width moved to home_panel.xml -->
     <px name="accent_bar_height" value="28"/>
@@ -418,6 +433,14 @@
     <!-- U+F03E4 pause -->
     <str name="icon_play" value="&#xF040A;"/>
     <!-- U+F040A play (start/resume) -->
+    <str name="icon_redo" value="&#xF044E;"/>
+    <!-- U+F044E redo (clockwise arrow - tighten) -->
+    <str name="icon_undo" value="&#xF054C;"/>
+    <!-- U+F054C undo (counter-clockwise arrow - loosen) -->
+    <str name="icon_rotate_right" value="&#xF0467;"/>
+    <!-- U+F0467 rotate-right (clockwise - tighten) -->
+    <str name="icon_rotate_left" value="&#xF0465;"/>
+    <!-- U+F0465 rotate-left (counter-clockwise - loosen) -->
     <str name="icon_power_off" value="&#xF0425;"/>
     <!-- U+F0425 power -->
     <str name="icon_question_circle" value="&#xF02D7;"/>

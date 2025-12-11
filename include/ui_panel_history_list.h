@@ -194,6 +194,10 @@ class HistoryListPanel : public PanelBase {
     std::vector<PrintHistoryJob> jobs_;          ///< Source of truth - all jobs
     std::vector<PrintHistoryJob> filtered_jobs_; ///< Filtered/sorted for display
     bool jobs_received_ = false;                 ///< True if jobs were set externally
+    bool is_active_ = false;                     ///< True if panel is currently visible
+
+    // Connection state observer to auto-refresh when connected
+    lv_observer_t* connection_observer_ = nullptr;
 
     // Filter/sort state
     std::string search_query_;                                         ///< Current search text

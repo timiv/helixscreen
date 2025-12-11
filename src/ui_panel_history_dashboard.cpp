@@ -10,6 +10,7 @@
 #include "ui_toast.h"
 
 #include "moonraker_api.h"
+#include "moonraker_client.h"
 #include "printer_state.h"
 
 #include <spdlog/spdlog.h>
@@ -126,13 +127,36 @@ void HistoryDashboardPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     create_trend_chart();
     create_filament_chart();
 
+    // Register connection state observer to auto-refresh when connected
+    // This handles the case where the panel is opened before connection is established
+    lv_subject_t* conn_subject = printer_state_.get_printer_connection_state_subject();
+    connection_observer_ = lv_subject_add_observer(
+        conn_subject,
+        [](lv_observer_t* observer, lv_subject_t* subject) {
+            auto* self = static_cast<HistoryDashboardPanel*>(lv_observer_get_user_data(observer));
+            int32_t state = lv_subject_get_int(subject);
+
+            // state 2 = CONNECTED
+            if (state == 2 && self->is_active_) {
+                spdlog::debug("[{}] Connection established - refreshing data", self->get_name());
+                self->refresh_data();
+            }
+        },
+        this);
+
     spdlog::info("[{}] Setup complete", get_name());
 }
 
 void HistoryDashboardPanel::on_activate() {
+    is_active_ = true;
     spdlog::debug("[{}] Activated - refreshing data with filter {}", get_name(),
                   static_cast<int>(current_filter_));
     refresh_data();
+}
+
+void HistoryDashboardPanel::on_deactivate() {
+    is_active_ = false;
+    spdlog::debug("[{}] Deactivated", get_name());
 }
 
 // ============================================================================
@@ -160,6 +184,15 @@ void HistoryDashboardPanel::set_time_filter(HistoryTimeFilter filter) {
 void HistoryDashboardPanel::refresh_data() {
     if (!api_) {
         spdlog::warn("[{}] No API available", get_name());
+        return;
+    }
+
+    // Check if WebSocket is actually connected before attempting to send requests
+    // This prevents the race condition where the panel is opened before connection is established
+    ConnectionState state = api_->get_client().get_connection_state();
+    if (state != ConnectionState::CONNECTED) {
+        spdlog::debug("[{}] Cannot fetch history: not connected (state={})", get_name(),
+                      static_cast<int>(state));
         return;
     }
 

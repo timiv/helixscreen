@@ -165,13 +165,17 @@ MDI_ICONS+=",0xF042A"    # printer
 MDI_ICONS+=",0xF042B"    # printer-3d
 MDI_ICONS+=",0xF0436"    # leaf
 MDI_ICONS+=",0xF0438"    # radiator (heater alternative)
+MDI_ICONS+=",0xF044E"    # redo (clockwise arrow - for tighten)
 MDI_ICONS+=",0xF0450"    # refresh
+MDI_ICONS+=",0xF0465"    # rotate-left (CCW rotation)
+MDI_ICONS+=",0xF0467"    # rotate-right (CW rotation)
 MDI_ICONS+=",0xF0469"    # router-wireless
 MDI_ICONS+=",0xF0479"    # sd (SD card)
 MDI_ICONS+=",0xF0493"    # cog (settings)
 MDI_ICONS+=",0xF04C5"    # speedometer
 MDI_ICONS+=",0xF04DB"    # stop
 MDI_ICONS+=",0xF050F"    # thermometer
+MDI_ICONS+=",0xF054C"    # undo (counter-clockwise arrow - for loosen)
 MDI_ICONS+=",0xF0E04"    # thermometer-minus
 MDI_ICONS+=",0xF0E05"    # thermometer-plus
 

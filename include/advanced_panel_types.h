@@ -28,6 +28,8 @@
  */
 struct ScrewTiltResult {
     std::string screw_name; ///< Screw identifier (e.g., "front_left", "rear_right")
+    float x_pos = 0.0f;     ///< Bed X coordinate of screw position (mm)
+    float y_pos = 0.0f;     ///< Bed Y coordinate of screw position (mm)
     float z_height = 0.0f;  ///< Probed Z height at screw position
     std::string
         adjustment; ///< Adjustment string (e.g., "CW 0:15" for clockwise 0 turns 15 minutes)
@@ -39,6 +41,90 @@ struct ScrewTiltResult {
      */
     [[nodiscard]] bool needs_adjustment() const {
         return !is_reference && !adjustment.empty() && adjustment != "00:00";
+    }
+
+    /**
+     * @brief Get prettified screw name for display
+     *
+     * Converts snake_case to Title Case (e.g., "front_left" -> "Front Left")
+     * @return Human-readable screw name
+     */
+    [[nodiscard]] std::string display_name() const {
+        std::string result;
+        bool capitalize_next = true;
+        for (char c : screw_name) {
+            if (c == '_') {
+                result += ' ';
+                capitalize_next = true;
+            } else if (capitalize_next) {
+                result += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+                capitalize_next = false;
+            } else {
+                result += c;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * @brief Get user-friendly adjustment description
+     *
+     * Converts "CW 00:18" to "Tighten ¼" or "Loosen ½" etc.
+     * Uses intuitive terms: tighten (CW) = raise that corner, loosen (CCW) = lower it
+     * @return Human-friendly adjustment string
+     */
+    [[nodiscard]] std::string friendly_adjustment() const {
+        if (is_reference) {
+            return "Reference";  // This screw is the baseline - no adjustment needed
+        }
+        if (adjustment.empty() || adjustment == "00:00") {
+            return "Level";
+        }
+
+        // Parse "CW 00:18" or "CCW 01:30" format
+        bool is_clockwise = adjustment.find("CW") == 0 && adjustment.find("CCW") != 0;
+        bool is_counter = adjustment.find("CCW") == 0;
+
+        // Extract minutes from format "XX:MM" (after the space)
+        int total_minutes = 0;
+        size_t space_pos = adjustment.find(' ');
+        if (space_pos != std::string::npos) {
+            std::string time_part = adjustment.substr(space_pos + 1);
+            size_t colon_pos = time_part.find(':');
+            if (colon_pos != std::string::npos) {
+                int turns = std::atoi(time_part.substr(0, colon_pos).c_str());
+                int mins = std::atoi(time_part.substr(colon_pos + 1).c_str());
+                total_minutes = turns * 60 + mins;
+            }
+        }
+
+        // Determine specific magnitude description
+        std::string amount;
+        if (total_minutes <= 5) {
+            return "Level";  // Within tolerance
+        } else if (total_minutes <= 10) {
+            amount = "1/8 turn";
+        } else if (total_minutes <= 20) {
+            amount = "1/4 turn";
+        } else if (total_minutes <= 35) {
+            amount = "1/2 turn";
+        } else if (total_minutes <= 50) {
+            amount = "3/4 turn";
+        } else if (total_minutes <= 70) {
+            amount = "1 turn";
+        } else {
+            // Multiple turns - show approximate count
+            int approx_turns = (total_minutes + 30) / 60;
+            amount = std::to_string(approx_turns) + " turn" + (approx_turns > 1 ? "s" : "");
+        }
+
+        // Use intuitive direction: tighten raises corner, loosen lowers it
+        if (is_clockwise) {
+            return "Tighten " + amount;
+        } else if (is_counter) {
+            return "Loosen " + amount;
+        }
+        return adjustment;  // Fallback to raw format
     }
 };
 

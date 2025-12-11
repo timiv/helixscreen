@@ -6,6 +6,7 @@
 #include "ui_nav.h"
 #include "ui_panel_calibration_zoffset.h"
 #include "ui_panel_history_dashboard.h"
+#include "ui_panel_screws_tilt.h"
 #include "ui_toast.h"
 
 #include "moonraker_api.h"
@@ -18,6 +19,7 @@
 // Forward declarations
 MoonrakerClient* get_moonraker_client();
 ZOffsetCalibrationPanel& get_global_zoffset_cal_panel();
+ScrewsTiltPanel& get_global_screws_tilt_panel();
 
 // Global instance (singleton pattern matching SettingsPanel)
 static std::unique_ptr<AdvancedPanel> g_advanced_panel;
@@ -145,8 +147,33 @@ void AdvancedPanel::setup_action_handlers() {
 // ============================================================================
 
 void AdvancedPanel::handle_bed_leveling_clicked() {
-    spdlog::debug("[{}] Bed Leveling clicked", get_name());
-    ui_toast_show(ToastSeverity::INFO, "Bed Leveling: Coming soon", 2000);
+    spdlog::debug("[{}] Bed Leveling clicked - opening screws tilt panel", get_name());
+
+    // Lazy-create the screws tilt panel
+    if (!screws_tilt_panel_ && parent_screen_) {
+        spdlog::debug("[{}] Creating screws tilt panel...", get_name());
+
+        // Create from XML
+        screws_tilt_panel_ =
+            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "screws_tilt_panel", nullptr));
+        if (screws_tilt_panel_) {
+            // Setup the panel class
+            MoonrakerClient* client = get_moonraker_client();
+            get_global_screws_tilt_panel().setup(screws_tilt_panel_, parent_screen_, client, api_);
+
+            // Initially hidden
+            lv_obj_add_flag(screws_tilt_panel_, LV_OBJ_FLAG_HIDDEN);
+            spdlog::info("[{}] Screws tilt panel created", get_name());
+        } else {
+            spdlog::error("[{}] Failed to create screws tilt panel from XML", get_name());
+            return;
+        }
+    }
+
+    // Push screws tilt panel onto navigation and show it
+    if (screws_tilt_panel_) {
+        ui_nav_push_overlay(screws_tilt_panel_);
+    }
 }
 
 void AdvancedPanel::handle_input_shaping_clicked() {
