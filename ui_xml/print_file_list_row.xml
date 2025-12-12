@@ -3,20 +3,29 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <component>
   <api>
-    <prop type="string" name="filename"/>
-    <prop type="string" name="file_size"/>
-    <prop type="string" name="modified_date"/>
-    <prop type="string" name="print_time"/>
+    <prop name="filename" type="string"/>
+    <prop name="file_size" type="string"/>
+    <prop name="modified_date" type="string"/>
+    <prop name="print_time" type="string"/>
   </api>
   <!-- List row container (children pass clicks through to parent) -->
-  <view extends="lv_obj" name="list_row" width="100%" height="content" style_bg_color="#card_bg" style_bg_opa="255" style_radius="4" style_border_width="0" style_pad_top="8" style_pad_bottom="8" style_pad_left="8" style_pad_right="8" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center" clickable="true">
+  <view name="list_row"
+        extends="lv_obj" width="100%" height="content" style_bg_color="#card_bg" style_bg_opa="255" style_radius="4"
+        style_border_width="0" style_pad_top="8" style_pad_bottom="8" style_pad_left="8" style_pad_right="8"
+        flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center" clickable="true">
     <!-- Filename (flex-grow, left-aligned) -->
-    <text_small name="row_filename" text="$filename" width="510" style_text_align="left" long_mode="dots" flex_grow="1" style_pad_all="0" clickable="false"/>
+    <text_small name="row_filename"
+                width="510" text="$filename" style_text_align="left" long_mode="dots" flex_grow="1" style_pad_all="0"
+                clickable="false"/>
     <!-- Size (80px, right-aligned) -->
-    <text_small name="row_size" text="$file_size" width="80" style_text_align="right" flex_grow="0" style_pad_all="0" clickable="false"/>
+    <text_small name="row_size"
+                width="80" text="$file_size" style_text_align="right" flex_grow="0" style_pad_all="0" clickable="false"/>
     <!-- Modified date (130px, right-aligned) -->
-    <text_small name="row_modified" text="$modified_date" width="130" style_text_align="right" flex_grow="0" style_pad_all="0" clickable="false"/>
+    <text_small name="row_modified"
+                width="130" text="$modified_date" style_text_align="right" flex_grow="0" style_pad_all="0"
+                clickable="false"/>
     <!-- Print time (90px, right-aligned) -->
-    <text_small name="row_print_time" text="$print_time" width="90" style_text_align="right" flex_grow="0" style_pad_all="0" clickable="false"/>
+    <text_small name="row_print_time"
+                width="90" text="$print_time" style_text_align="right" flex_grow="0" style_pad_all="0" clickable="false"/>
   </view>
 </component>

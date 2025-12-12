@@ -12,12 +12,16 @@
     <lv_obj flex_flow="row" style_pad_gap="#space_md" style_pad_top="4">
       <!-- Print time -->
       <lv_obj flex_flow="row" style_pad_gap="#space_xs">
-        <lv_image src="mat_clock_img" width="16" height="16" scale_x="64" scale_y="64" style_image_recolor_opa="100%" align="center"/>
+        <lv_image width="16"
+                  height="16" src="mat_clock_img" scale_x="64" scale_y="64" style_image_recolor_opa="100%"
+                  align="center"/>
         <text_small name="card_print_time" text="0m"/>
       </lv_obj>
       <!-- Filament weight -->
       <lv_obj flex_flow="row" style_pad_gap="#space_xs">
-        <lv_image src="mat_spoolman_img" width="16" height="16" scale_x="64" scale_y="64" style_image_recolor_opa="100%" align="center"/>
+        <lv_image width="16"
+                  height="16" src="mat_spoolman_img" scale_x="64" scale_y="64" style_image_recolor_opa="100%"
+                  align="center"/>
         <text_small name="card_filament" text="0g"/>
       </lv_obj>
     </lv_obj>

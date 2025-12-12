@@ -404,9 +404,9 @@ void WizardConnectionStep::on_connection_success() {
                                 auto heaters = client->get_heaters();
                                 auto sensors = client->get_sensors();
                                 auto fans = client->get_fans();
-                                spdlog::info(
-                                    "[Wizard Connection] Discovered {} heaters, {} sensors, {} fans",
-                                    heaters.size(), sensors.size(), fans.size());
+                                spdlog::info("[Wizard Connection] Discovered {} heaters, {} "
+                                             "sensors, {} fans",
+                                             heaters.size(), sensors.size(), fans.size());
                                 spdlog::info("[Wizard Connection] Hostname: '{}'",
                                              client->get_hostname());
                             }
@@ -451,7 +451,8 @@ void WizardConnectionStep::on_connection_failure() {
 
             // Check if we're still in testing mode (must check on main thread)
             int testing_state = lv_subject_get_int(&self->connection_testing_);
-            spdlog::debug("[Wizard Connection] Connection failure, testing_state={}", testing_state);
+            spdlog::debug("[Wizard Connection] Connection failure, testing_state={}",
+                          testing_state);
 
             if (testing_state == 1) {
                 spdlog::error("[Wizard Connection] Connection failed");
@@ -642,7 +643,8 @@ void WizardConnectionStep::on_auto_probe_success() {
                     spdlog::debug("[Wizard Connection] Auto-probe: Saved configuration");
                 }
             } catch (const std::exception& e) {
-                spdlog::error("[Wizard Connection] Auto-probe: Failed to save config: {}", e.what());
+                spdlog::error("[Wizard Connection] Auto-probe: Failed to save config: {}",
+                              e.what());
             }
 
             // Update subjects with the successful connection target

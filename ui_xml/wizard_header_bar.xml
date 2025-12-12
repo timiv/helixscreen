@@ -1,31 +1,20 @@
 <?xml version="1.0"?>
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<!--
-  Wizard Header Bar Component
-
-  Two-row header for wizard screens:
-  - Row 1: Title (left) + Progress indicator (right)
-  - Row 2: Subtitle with contextual hint
-
-  Prerequisites:
-  - Subjects wizard_title, wizard_progress, wizard_subtitle must be initialized
-  - Constants #wizard_header_height, #wizard_gap, #wizard_title_font,
-    #wizard_header_font must be registered (done by ui_wizard.cpp)
-
-  Usage:
-    <wizard_header_bar name="wizard_header"/>
--->
 <component>
-  <view extends="lv_obj" name="wizard_header_bar" width="100%" height="content" flex_flow="column" scrollable="false" style_bg_opa="0" style_border_width="0" style_pad_all="#space_lg" style_pad_bottom="#space_sm">
+  <view name="wizard_header_bar"
+        extends="lv_obj" width="100%" height="content" flex_flow="column" scrollable="false" style_bg_opa="0"
+        style_border_width="0" style_pad_all="#space_lg" style_pad_bottom="#space_sm">
     <!-- Row 1: Title + Progress -->
-    <lv_obj width="100%" height="content" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center" style_bg_opa="0" style_border_width="0" style_pad_all="0">
+    <lv_obj width="100%"
+            height="content" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center"
+            style_bg_opa="0" style_border_width="0" style_pad_all="0">
       <!-- Title: "Printer Setup: Network", etc. -->
       <text_heading name="wizard_title" bind_text="wizard_title"/>
       <!-- Progress: "Step 2 of 7" -->
       <text_small name="wizard_progress" bind_text="wizard_progress"/>
     </lv_obj>
     <!-- Row 2: Subtitle (contextual hint) -->
-    <text_body name="wizard_subtitle" bind_text="wizard_subtitle" style_text_color="#text_secondary" width="100%"/>
+    <text_body name="wizard_subtitle" width="100%" bind_text="wizard_subtitle" style_text_color="#text_secondary"/>
   </view>
 </component>

@@ -1,54 +1,44 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0"?>
 <!-- Test panel for spool visualization comparison -->
 <component name="spool_test">
-    <lv_obj
-        name="spool_test_root"
-        width="100%"
-        height="100%"
-        style_bg_color="#surface_bg"
-        style_bg_opa="cover"
-        style_pad_all="#space_md"
-        style_flex_flow="column"
-        style_flex_main_place="start"
-        style_flex_cross_place="center"
-        style_flex_gap="#space_lg"
-    >
-        <!-- Title -->
-        <text_heading>Spool Visualization Test</text_heading>
-
-        <!-- Pseudo-3D Canvas Spools -->
-        <lv_obj style_flex_flow="column" style_flex_gap="#space_sm" width="100%">
-            <text_body>Pseudo-3D Canvas (new):</text_body>
-            <lv_obj
-                style_flex_flow="row"
-                style_flex_gap="#space_md"
-                style_flex_main_place="center"
-                width="100%"
-            >
-                <spool_canvas color="0xE53935" fill_level="1.0" size="64"/>
-                <spool_canvas color="0x1E88E5" fill_level="0.75" size="64"/>
-                <spool_canvas color="0x43A047" fill_level="0.40" size="64"/>
-                <spool_canvas color="0xFDD835" fill_level="0.10" size="64"/>
-            </lv_obj>
-            <text_small style_text_color="#text_secondary">100% / 75% / 40% / 10% fill</text_small>
-        </lv_obj>
-
-        <!-- Flat Concentric Ring Spools (existing ams_slot) -->
-        <lv_obj style_flex_flow="column" style_flex_gap="#space_sm" width="100%">
-            <text_body>Flat Concentric (current):</text_body>
-            <lv_obj
-                name="flat_spool_row"
-                style_flex_flow="row"
-                style_flex_gap="#space_md"
-                style_flex_main_place="center"
-                width="100%"
-            >
-                <ams_slot slot_index="0" fill_level="1.0"/>
-                <ams_slot slot_index="1" fill_level="0.75"/>
-                <ams_slot slot_index="2" fill_level="0.40"/>
-                <ams_slot slot_index="3" fill_level="0.10"/>
-            </lv_obj>
-            <text_small style_text_color="#text_secondary">100% / 75% / 40% / 10% fill</text_small>
-        </lv_obj>
+  <lv_obj name="spool_test_root"
+          width="100%" height="100%" style_bg_color="#surface_bg" style_bg_opa="cover" style_pad_all="#space_md"
+          style_flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center"
+          style_flex_gap="#space_lg">
+    <!-- Title -->
+    <text_heading>
+      Spool Visualization Test
+    </text_heading>
+    <!-- Pseudo-3D Canvas Spools -->
+    <lv_obj width="100%" style_flex_flow="column" style_flex_gap="#space_sm">
+      <text_body>
+        Pseudo-3D Canvas (new):
+      </text_body>
+      <lv_obj width="100%" style_flex_flow="row" style_flex_gap="#space_md" style_flex_main_place="center">
+        <spool_canvas color="0xE53935" fill_level="1.0" size="64"/>
+        <spool_canvas color="0x1E88E5" fill_level="0.75" size="64"/>
+        <spool_canvas color="0x43A047" fill_level="0.40" size="64"/>
+        <spool_canvas color="0xFDD835" fill_level="0.10" size="64"/>
+      </lv_obj>
+      <text_small style_text_color="#text_secondary">
+        100% / 75% / 40% / 10% fill
+      </text_small>
     </lv_obj>
+    <!-- Flat Concentric Ring Spools (existing ams_slot) -->
+    <lv_obj width="100%" style_flex_flow="column" style_flex_gap="#space_sm">
+      <text_body>
+        Flat Concentric (current):
+      </text_body>
+      <lv_obj name="flat_spool_row"
+              width="100%" style_flex_flow="row" style_flex_gap="#space_md" style_flex_main_place="center">
+        <ams_slot slot_index="0" fill_level="1.0"/>
+        <ams_slot slot_index="1" fill_level="0.75"/>
+        <ams_slot slot_index="2" fill_level="0.40"/>
+        <ams_slot slot_index="3" fill_level="0.10"/>
+      </lv_obj>
+      <text_small style_text_color="#text_secondary">
+        100% / 75% / 40% / 10% fill
+      </text_small>
+    </lv_obj>
+  </lv_obj>
 </component>

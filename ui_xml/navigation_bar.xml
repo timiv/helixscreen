@@ -1,85 +1,91 @@
 <?xml version="1.0"?>
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<!--
-  Navigation Bar Component - Vertical sidebar with nav buttons
-
-  Reactive Bindings:
-    - Nav icons: bound to active_panel subject (0-5)
-      Each button has dual icons (accent when active, secondary when inactive)
--->
 <component>
-  <view extends="lv_obj" width="#nav_width" height="100%" style_pad_all="#space_xl" flex_flow="column" style_flex_main_place="space_between" style_flex_track_place="center" style_flex_cross_place="center" style_border_width="0" style_radius="0" scrollable="false">
-      <!-- ================================================================== -->
-      <!-- Navigation Buttons - Dual icon pattern (accent/secondary variants) -->
-      <!-- ================================================================== -->
-
-      <!-- Home Button (Panel 0) -->
-      <lv_obj name="nav_btn_home" width="100%" height="content" clickable="true" scrollable="false" style_bg_opa="0" style_border_width="0" style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center">
-        <!-- Active icon (accent color) - shown when active_panel == 0 -->
-        <icon name="nav_icon_home_active" src="home" size="lg" variant="accent" hidden="true">
-          <lv_obj-bind_flag_if_not_eq subject="active_panel" flag="hidden" ref_value="0"/>
-        </icon>
-        <!-- Inactive icon (gray) - shown when active_panel != 0 -->
-        <icon name="nav_icon_home_inactive" src="home" size="lg" variant="secondary">
-          <lv_obj-bind_flag_if_eq subject="active_panel" flag="hidden" ref_value="0"/>
-        </icon>
-      </lv_obj>
-
-      <!-- Controls Button (Panel 2) - CONNECTION REQUIRED -->
-      <!-- Clickable only when connected (state == 2); shows disabled icon overlay when disconnected -->
-      <lv_obj name="nav_btn_controls" width="100%" height="content" clickable="false" scrollable="false" style_bg_opa="0" style_border_width="0" style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center">
-        <lv_obj-bind_flag_if_eq subject="printer_connection_state" flag="clickable" ref_value="2"/>
-        <!-- Active icon (accent) - shown when active_panel == 2 -->
-        <icon name="nav_icon_controls_active" src="fine_tune" size="lg" variant="accent" hidden="true">
-          <lv_obj-bind_flag_if_not_eq subject="active_panel" flag="hidden" ref_value="2"/>
-        </icon>
-        <!-- Inactive icon (secondary) - shown when active_panel != 2 -->
-        <icon name="nav_icon_controls_inactive" src="fine_tune" size="lg" variant="secondary">
-          <lv_obj-bind_flag_if_eq subject="active_panel" flag="hidden" ref_value="2"/>
-        </icon>
-        <!-- Disabled overlay - covers active/inactive when NOT connected -->
-        <icon name="nav_icon_controls_disabled" src="fine_tune" size="lg" variant="disabled" align="center" hidden="true">
-          <lv_obj-bind_flag_if_eq subject="printer_connection_state" flag="hidden" ref_value="2"/>
-        </icon>
-      </lv_obj>
-
-      <!-- Filament Button (Panel 3) - CONNECTION REQUIRED -->
-      <!-- Clickable only when connected (state == 2); shows disabled icon overlay when disconnected -->
-      <lv_obj name="nav_btn_filament" width="100%" height="content" clickable="false" scrollable="false" style_bg_opa="0" style_border_width="0" style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center">
-        <lv_obj-bind_flag_if_eq subject="printer_connection_state" flag="clickable" ref_value="2"/>
-        <!-- Active icon (accent) - shown when active_panel == 3 -->
-        <icon name="nav_icon_filament_active" src="filament" size="lg" variant="accent" hidden="true">
-          <lv_obj-bind_flag_if_not_eq subject="active_panel" flag="hidden" ref_value="3"/>
-        </icon>
-        <!-- Inactive icon (secondary) - shown when active_panel != 3 -->
-        <icon name="nav_icon_filament_inactive" src="filament" size="lg" variant="secondary">
-          <lv_obj-bind_flag_if_eq subject="active_panel" flag="hidden" ref_value="3"/>
-        </icon>
-        <!-- Disabled overlay - covers active/inactive when NOT connected -->
-        <icon name="nav_icon_filament_disabled" src="filament" size="lg" variant="disabled" align="center" hidden="true">
-          <lv_obj-bind_flag_if_eq subject="printer_connection_state" flag="hidden" ref_value="2"/>
-        </icon>
-      </lv_obj>
-
-      <!-- Settings Button (Panel 4) -->
-      <lv_obj name="nav_btn_settings" width="100%" height="content" clickable="true" scrollable="false" style_bg_opa="0" style_border_width="0" style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center">
-        <icon name="nav_icon_settings_active" src="settings" size="lg" variant="accent" hidden="true">
-          <lv_obj-bind_flag_if_not_eq subject="active_panel" flag="hidden" ref_value="4"/>
-        </icon>
-        <icon name="nav_icon_settings_inactive" src="settings" size="lg" variant="secondary">
-          <lv_obj-bind_flag_if_eq subject="active_panel" flag="hidden" ref_value="4"/>
-        </icon>
-      </lv_obj>
-
-      <!-- Advanced Button (Panel 5) -->
-      <lv_obj name="nav_btn_advanced" width="100%" height="content" clickable="true" scrollable="false" style_bg_opa="0" style_border_width="0" style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center">
-        <icon name="nav_icon_advanced_active" src="dots_vertical" size="lg" variant="accent" hidden="true">
-          <lv_obj-bind_flag_if_not_eq subject="active_panel" flag="hidden" ref_value="5"/>
-        </icon>
-        <icon name="nav_icon_advanced_inactive" src="dots_vertical" size="lg" variant="secondary">
-          <lv_obj-bind_flag_if_eq subject="active_panel" flag="hidden" ref_value="5"/>
-        </icon>
-      </lv_obj>
+  <view extends="lv_obj"
+        width="#nav_width" height="100%" style_pad_all="#space_xl" flex_flow="column"
+        style_flex_main_place="space_between" style_flex_track_place="center" style_flex_cross_place="center"
+        style_border_width="0" style_radius="0" scrollable="false">
+    <!-- ================================================================== -->
+    <!-- Navigation Buttons - Dual icon pattern (accent/secondary variants) -->
+    <!-- ================================================================== -->
+    <!-- Home Button (Panel 0) -->
+    <lv_obj name="nav_btn_home"
+            width="100%" height="content" clickable="true" scrollable="false" style_bg_opa="0" style_border_width="0"
+            style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+            style_flex_track_place="center">
+      <!-- Active icon (accent color) - shown when active_panel == 0 -->
+      <icon name="nav_icon_home_active" src="home" size="lg" variant="accent" hidden="true">
+        <lv_obj-bind_flag_if_not_eq subject="active_panel" flag="hidden" ref_value="0"/>
+      </icon>
+      <!-- Inactive icon (gray) - shown when active_panel != 0 -->
+      <icon name="nav_icon_home_inactive" src="home" size="lg" variant="secondary">
+        <lv_obj-bind_flag_if_eq subject="active_panel" flag="hidden" ref_value="0"/>
+      </icon>
+    </lv_obj>
+    <!-- Controls Button (Panel 2) - CONNECTION REQUIRED -->
+    <!-- Clickable only when connected (state == 2); shows disabled icon overlay when disconnected -->
+    <lv_obj name="nav_btn_controls"
+            width="100%" height="content" clickable="false" scrollable="false" style_bg_opa="0" style_border_width="0"
+            style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+            style_flex_track_place="center">
+      <lv_obj-bind_flag_if_eq subject="printer_connection_state" flag="clickable" ref_value="2"/>
+      <!-- Active icon (accent) - shown when active_panel == 2 -->
+      <icon name="nav_icon_controls_active" src="fine_tune" size="lg" variant="accent" hidden="true">
+        <lv_obj-bind_flag_if_not_eq subject="active_panel" flag="hidden" ref_value="2"/>
+      </icon>
+      <!-- Inactive icon (secondary) - shown when active_panel != 2 -->
+      <icon name="nav_icon_controls_inactive" src="fine_tune" size="lg" variant="secondary">
+        <lv_obj-bind_flag_if_eq subject="active_panel" flag="hidden" ref_value="2"/>
+      </icon>
+      <!-- Disabled overlay - covers active/inactive when NOT connected -->
+      <icon name="nav_icon_controls_disabled" src="fine_tune" size="lg" variant="disabled" align="center" hidden="true">
+        <lv_obj-bind_flag_if_eq subject="printer_connection_state" flag="hidden" ref_value="2"/>
+      </icon>
+    </lv_obj>
+    <!-- Filament Button (Panel 3) - CONNECTION REQUIRED -->
+    <!-- Clickable only when connected (state == 2); shows disabled icon overlay when disconnected -->
+    <lv_obj name="nav_btn_filament"
+            width="100%" height="content" clickable="false" scrollable="false" style_bg_opa="0" style_border_width="0"
+            style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+            style_flex_track_place="center">
+      <lv_obj-bind_flag_if_eq subject="printer_connection_state" flag="clickable" ref_value="2"/>
+      <!-- Active icon (accent) - shown when active_panel == 3 -->
+      <icon name="nav_icon_filament_active" src="filament" size="lg" variant="accent" hidden="true">
+        <lv_obj-bind_flag_if_not_eq subject="active_panel" flag="hidden" ref_value="3"/>
+      </icon>
+      <!-- Inactive icon (secondary) - shown when active_panel != 3 -->
+      <icon name="nav_icon_filament_inactive" src="filament" size="lg" variant="secondary">
+        <lv_obj-bind_flag_if_eq subject="active_panel" flag="hidden" ref_value="3"/>
+      </icon>
+      <!-- Disabled overlay - covers active/inactive when NOT connected -->
+      <icon name="nav_icon_filament_disabled" src="filament" size="lg" variant="disabled" align="center" hidden="true">
+        <lv_obj-bind_flag_if_eq subject="printer_connection_state" flag="hidden" ref_value="2"/>
+      </icon>
+    </lv_obj>
+    <!-- Settings Button (Panel 4) -->
+    <lv_obj name="nav_btn_settings"
+            width="100%" height="content" clickable="true" scrollable="false" style_bg_opa="0" style_border_width="0"
+            style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+            style_flex_track_place="center">
+      <icon name="nav_icon_settings_active" src="settings" size="lg" variant="accent" hidden="true">
+        <lv_obj-bind_flag_if_not_eq subject="active_panel" flag="hidden" ref_value="4"/>
+      </icon>
+      <icon name="nav_icon_settings_inactive" src="settings" size="lg" variant="secondary">
+        <lv_obj-bind_flag_if_eq subject="active_panel" flag="hidden" ref_value="4"/>
+      </icon>
+    </lv_obj>
+    <!-- Advanced Button (Panel 5) -->
+    <lv_obj name="nav_btn_advanced"
+            width="100%" height="content" clickable="true" scrollable="false" style_bg_opa="0" style_border_width="0"
+            style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+            style_flex_track_place="center">
+      <icon name="nav_icon_advanced_active" src="dots_vertical" size="lg" variant="accent" hidden="true">
+        <lv_obj-bind_flag_if_not_eq subject="active_panel" flag="hidden" ref_value="5"/>
+      </icon>
+      <icon name="nav_icon_advanced_inactive" src="dots_vertical" size="lg" variant="secondary">
+        <lv_obj-bind_flag_if_eq subject="active_panel" flag="hidden" ref_value="5"/>
+      </icon>
+    </lv_obj>
   </view>
 </component>

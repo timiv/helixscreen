@@ -1,31 +1,17 @@
 <?xml version="1.0"?>
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<!--
-  Camera Panel - Webcam viewer for print monitoring
-
-  Features (planned):
-  - Single MJPEG stream display
-  - Multi-camera selector
-  - Picture-in-picture during prints
-  - Snapshot button
-  - Rotation/flip settings
-  - Crowsnest integration
-
-  Moonraker API:
-  - GET /server/webcams/list
-  - GET /server/webcams/item
-
-  Status: STUB - Coming Soon
-  See: docs/FEATURE_STATUS.md for implementation progress
--->
 <component>
-  <view extends="lv_obj" name="camera_panel" width="#overlay_panel_width" height="100%" align="right_mid" style_border_width="0" style_pad_all="0" style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column">
+  <view name="camera_panel"
+        extends="lv_obj" width="#overlay_panel_width" height="100%" align="right_mid" style_border_width="0"
+        style_pad_all="0" style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column">
     <!-- Header Bar -->
     <header_bar name="overlay_header" title="Camera"/>
     <!-- Content Area with Coming Soon Overlay -->
-    <lv_obj name="panel_content" flex_grow="1" width="100%" style_bg_opa="0" style_border_width="0" scrollable="false">
-      <coming_soon_overlay feature_name="Camera View" feature_description="View your printer's webcam feed. Supports MJPEG streams, multi-camera, and picture-in-picture during prints." icon_name="webcam"/>
+    <lv_obj name="panel_content" width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" scrollable="false">
+      <coming_soon_overlay feature_name="Camera View"
+                           feature_description="View your printer's webcam feed. Supports MJPEG streams, multi-camera, and picture-in-picture during prints."
+                           icon_name="webcam"/>
     </lv_obj>
   </view>
 </component>

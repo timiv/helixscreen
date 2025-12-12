@@ -1,30 +1,6 @@
 <?xml version="1.0"?>
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<!--
-  Icon Component - Material Design Icons using Font Glyphs
-
-  Usage:
-    <icon src="home" size="xl" variant="primary"/>
-
-  Properties:
-    - src: Icon short name (e.g., "home", "wifi", "settings")
-    - size: Semantic size string - xs, sm, md, lg, xl (default: "xl")
-    - variant: Color variant - primary, secondary, accent, disabled, warning, error, none (default: none)
-    - color: Custom color override (e.g., "#header_text", "#FF0000") - takes precedence over variant
-
-  Size Mapping (font sizes):
-    xs: 16px (mdi_icons_16)
-    sm: 24px (mdi_icons_24)
-    md: 32px (mdi_icons_32)
-    lg: 48px (mdi_icons_48)
-    xl: 64px (mdi_icons_64)
-
-  Implementation:
-    This component is backed by a C++ custom widget (ui_icon) that extends lv_label.
-    The C++ code looks up the icon codepoint from ui_icon_codepoints.h and sets
-    the appropriate MDI font based on the requested size.
--->
 <component>
   <api>
     <prop name="src" type="string" default="home"/>

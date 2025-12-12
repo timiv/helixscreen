@@ -4,18 +4,17 @@
 <!-- Reusable Settings Info Row Component -->
 <!-- Creates a read-only row showing a label and value -->
 <!-- Usage: <setting_info_row label="Version" icon="info" value="1.0.0"/> -->
-<!-- Props:
-     - label: Label text on left side
-     - icon: Optional left icon (e.g., "info", "wifi"). If empty, no icon shown.
-     - value: Value text on right side (can be updated via bind_text in C++)
--->
 <component>
   <api>
-    <prop type="string" name="label" default="Info"/>
-    <prop type="string" name="icon" default=""/>
-    <prop type="string" name="value" default=""/>
+    <prop name="label" type="string" default="Info"/>
+    <prop name="icon" type="string" default=""/>
+    <prop name="value" type="string" default=""/>
   </api>
-  <view extends="lv_obj" name="info_row" width="100%" height="content" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center" style_bg_opa="0" style_border_width="0" style_pad_left="#space_lg" style_pad_right="#space_lg" style_pad_top="#space_md" style_pad_bottom="#space_md" style_pad_gap="#space_sm" scrollable="false">
+  <view name="info_row"
+        extends="lv_obj" width="100%" height="content" flex_flow="row" style_flex_main_place="start"
+        style_flex_cross_place="center" style_bg_opa="0" style_border_width="0" style_pad_left="#space_lg"
+        style_pad_right="#space_lg" style_pad_top="#space_md" style_pad_bottom="#space_md" style_pad_gap="#space_sm"
+        scrollable="false">
     <!-- Left side: Optional icon -->
     <icon name="row_icon" src="$icon" size="sm" variant="secondary"/>
     <!-- Middle: Label -->

@@ -7,33 +7,21 @@
   <!-- Uses responsive theme tokens: #space_lg for padding, #font_body for text -->
   <!-- Connected network is indicated via LV_STATE_CHECKED - adds left border accent -->
   <!-- Click triggers on_network_item_clicked callback in C++ -->
-
   <styles>
     <!-- Style applied when item has LV_STATE_CHECKED (connected network) -->
-    <style name="checked_style"
-           border_width="4"
-           border_side="left"
-           border_color="#primary_color"
-           bg_color="#theme_grey"/>
+    <style name="checked_style" border_width="4" border_side="left" border_color="#primary_color" bg_color="#theme_grey"/>
   </styles>
-
-  <view extends="lv_button" width="100%" scrollable="false" clickable="true"
-        style_bg_color="#card_bg"
-        style_bg_opa="255"
-        style_border_width="0"
-        style_shadow_width="0"
-        style_pad_all="#space_lg"
-        flex_flow="row"
-        style_flex_main_place="start"
-        style_flex_cross_place="center"
-        style_pad_gap="#space_md">
+  <view extends="lv_button"
+        width="100%" scrollable="false" clickable="true" style_bg_color="#card_bg" style_bg_opa="255"
+        style_border_width="0" style_shadow_width="0" style_pad_all="#space_lg" flex_flow="row"
+        style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_md">
     <style name="checked_style" selector="checked"/>
     <event_cb trigger="clicked" callback="on_network_item_clicked"/>
-
     <!-- Signal strength icons - 8 variants controlled by signal_icon_state subject -->
     <!-- States 1-4: unsecured networks, States 5-8: secured networks (with lock) -->
     <!-- Only one icon visible at a time via bind_flag_if_not_eq binding -->
-    <lv_obj name="signal_icons" width="content" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" clickable="false">
+    <lv_obj name="signal_icons"
+            width="content" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" clickable="false">
       <!-- Unsecured: strength 1 (weak) -->
       <icon name="sig_1" src="wifi_strength_1" size="sm" variant="accent" clickable="false" hidden="true"/>
       <!-- Unsecured: strength 2 (fair) -->
@@ -51,9 +39,11 @@
       <!-- Secured: strength 4 (strong) -->
       <icon name="sig_4_lock" src="wifi_strength_4_lock" size="sm" variant="accent" clickable="false" hidden="true"/>
     </lv_obj>
-
     <!-- SSID and security type column (center) -->
-    <lv_obj flex_grow="1" height="content" style_bg_opa="0" style_pad_all="0" radius="0" style_border_width="0" style_pad_gap="#space_xs" scrollable="false" clickable="false" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
+    <lv_obj height="content"
+            flex_grow="1" style_bg_opa="0" style_pad_all="0" radius="0" style_border_width="0" style_pad_gap="#space_xs"
+            scrollable="false" clickable="false" flex_flow="row" style_flex_main_place="space_between"
+            style_flex_cross_place="center">
       <!-- Network SSID - uses responsive font_body from theme -->
       <text_body name="ssid_label" clickable="false"/>
       <!-- Security type (right-justified) -->

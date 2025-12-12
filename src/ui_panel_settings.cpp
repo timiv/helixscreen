@@ -10,6 +10,8 @@
 #include "ui_panel_bed_mesh.h"
 #include "ui_panel_calibration_pid.h"
 #include "ui_panel_calibration_zoffset.h"
+#include "ui_panel_memory_stats.h"
+#include "ui_toast.h"
 
 #include "app_globals.h"
 #include "config.h"
@@ -67,6 +69,17 @@ static void on_display_sleep_dropdown_changed(lv_event_t* e) {
     SettingsManager::instance().set_display_sleep_sec(seconds);
 }
 
+// Static callback for version row long-press (memory debug toggle)
+// This provides a touch-based way to enable memory debugging on Pi (no keyboard)
+static void on_version_long_pressed(lv_event_t*) {
+    MemoryStatsOverlay::instance().toggle();
+    bool is_visible = MemoryStatsOverlay::instance().is_visible();
+    ui_toast_show(ToastSeverity::SUCCESS, is_visible ? "Memory debug: ON" : "Memory debug: OFF",
+                  1500);
+    spdlog::info("[SettingsPanel] Memory debug toggled via long-press: {}",
+                 is_visible ? "ON" : "OFF");
+}
+
 void SettingsPanel::init_subjects() {
     if (subjects_initialized_) {
         spdlog::warn("[{}] init_subjects() called twice - ignoring", get_name());
@@ -81,6 +94,7 @@ void SettingsPanel::init_subjects() {
                              on_completion_alert_dropdown_changed);
     lv_xml_register_event_cb(nullptr, "on_display_sleep_changed",
                              on_display_sleep_dropdown_changed);
+    lv_xml_register_event_cb(nullptr, "on_version_long_pressed", on_version_long_pressed);
 
     // Note: BedMeshPanel subjects are initialized in main.cpp during startup
 

@@ -1,28 +1,10 @@
 <?xml version="1.0"?>
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<!--
-  Overlay Backdrop Component - Semi-transparent dimming layer for modals
-
-  Usage:
-    Place this component in app_layout.xml AFTER the main content container
-    but BEFORE overlay panels. Visibility is controlled by the
-    overlay_backdrop_visible subject.
-
-  Reactive Binding:
-    - hidden when overlay_backdrop_visible == 0
-    - visible when overlay_backdrop_visible == 1
-
-  Note:
-    LVGL software renderer doesn't support backdrop blur.
-    Using 60% opacity black to dim content behind overlays.
--->
 <component>
-  <view extends="lv_obj" name="overlay_backdrop"
-        width="100%" height="100%" align="center"
-        style_bg_color="#000000" style_bg_opa="153"
-        style_border_width="0" style_pad_all="0" style_radius="0"
-        clickable="true" hidden="true" scrollable="false">
+  <view name="overlay_backdrop"
+        extends="lv_obj" width="100%" height="100%" align="center" style_bg_color="#000000" style_bg_opa="153"
+        style_border_width="0" style_pad_all="0" style_radius="0" clickable="true" hidden="true" scrollable="false">
     <!-- Bind visibility: show when overlay_backdrop_visible == 1 -->
     <lv_obj-bind_flag_if_eq subject="overlay_backdrop_visible" flag="hidden" ref_value="0"/>
   </view>

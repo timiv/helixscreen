@@ -38,48 +38,76 @@
     <const name="jog_highlight_dark" value="#FFFFFF"/>
   </consts>
   <!-- Uses shared backdrop from navigation system -->
-  <view extends="lv_obj" name="motion_panel" width="#overlay_panel_width_large" height="100%" align="right_mid" style_pad_all="0" style_border_width="0" style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column">
+  <view name="motion_panel"
+        extends="lv_obj" width="#overlay_panel_width_large" height="100%" align="right_mid" style_pad_all="0"
+        style_border_width="0" style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column">
     <!-- Header Bar (uses improved header_bar component) -->
     <header_bar name="overlay_header" title="Motion: XYZ"/>
     <!-- Content Area: Two Columns -->
-    <lv_obj name="overlay_content" flex_grow="1" width="100%" style_bg_opa="0" style_pad_all="#space_lg" scrollable="false" style_border_width="0" style_border_opa="0" flex_flow="row" style_flex_main_place="center">
+    <lv_obj name="overlay_content"
+            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_lg" scrollable="false"
+            style_border_width="0" style_border_opa="0" flex_flow="row" style_flex_main_place="center">
       <!-- Left Column (65%): XY Jog Pad -->
-      <lv_obj name="left_column" width="65%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0" style_border_opa="0">
+      <lv_obj name="left_column"
+              width="65%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0"
+              style_border_opa="0">
         <!-- Circular Jog Pad: Custom-Drawn Two-Zone Design (Bambu Lab Style) -->
         <!-- Outer ring = large jogs, inner circle = small jogs -->
         <!-- Custom draw shows concentric circles, radial dividers, axis labels, home icon -->
         <!-- Click detection uses angle from center to determine direction -->
-        <lv_obj name="jog_pad_container" width="content" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" style_border_opa="0" scrollable="false" clickable="true" align="center">
+        <lv_obj name="jog_pad_container"
+                width="content" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0"
+                style_border_opa="0" scrollable="false" clickable="true" align="center">
           <!-- No child widgets - all graphics drawn via LV_EVENT_DRAW_POST -->
           <!-- Click handled via LV_EVENT_CLICKED with angle-based direction detection -->
         </lv_obj>
       </lv_obj>
       <!-- Right Column (35%): Z-Axis Controls + Position Display -->
-      <lv_obj name="right_column" width="35%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0" style_border_opa="0" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_xl">
+      <lv_obj name="right_column"
+              width="35%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0"
+              style_border_opa="0" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center"
+              style_pad_gap="#space_xl">
         <!-- Position Display Card -->
-        <ui_card name="position_card" width="100%" height="#position_card_height" style_radius="#border_radius" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="start" style_pad_gap="#space_sm">
+        <ui_card name="position_card"
+                 width="100%" height="#position_card_height" style_radius="#border_radius" flex_flow="column"
+                 style_flex_main_place="start" style_flex_cross_place="start" style_pad_gap="#space_sm">
           <text_body text="Position:"/>
           <text_heading name="pos_x" bind_text="motion_pos_x"/>
           <text_heading name="pos_y" bind_text="motion_pos_y"/>
           <text_heading name="pos_z" bind_text="motion_pos_z"/>
         </ui_card>
         <!-- Z-Axis Section Header - shows "Bed" or "Print Head" based on kinematics -->
-        <text_body name="z_axis_label" bind_text="motion_z_axis_label" style_text_align="center" width="100%"/>
+        <text_body name="z_axis_label" width="100%" bind_text="motion_z_axis_label" style_text_align="center"/>
         <!-- Z-Axis Button Group (responsive: uses flex_grow to fill available space) -->
-        <lv_obj name="z_controls" width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="0" style_border_width="0" style_border_opa="0" scrollable="false" flex_flow="column" style_flex_main_place="space_evenly" style_flex_cross_place="center" style_pad_gap="#space_sm">
-          <lv_button name="z_up_10" width="100%" flex_grow="1" style_max_height="64" style_radius="#border_radius" style_border_width="0" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
+        <lv_obj name="z_controls"
+                width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="0" style_border_width="0"
+                style_border_opa="0" scrollable="false" flex_flow="column" style_flex_main_place="space_evenly"
+                style_flex_cross_place="center" style_pad_gap="#space_sm">
+          <lv_button name="z_up_10"
+                     width="100%" flex_grow="1" style_max_height="64" style_radius="#border_radius"
+                     style_border_width="0" flex_flow="row" style_flex_main_place="center"
+                     style_flex_cross_place="center" style_pad_gap="#space_xs">
             <icon src="arrow_up" size="sm" variant="primary"/>
             <text_body text="10mm"/>
           </lv_button>
-          <lv_button name="z_up_1" width="100%" flex_grow="1" style_max_height="64" style_radius="#border_radius" style_border_width="0" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
+          <lv_button name="z_up_1"
+                     width="100%" flex_grow="1" style_max_height="64" style_radius="#border_radius"
+                     style_border_width="0" flex_flow="row" style_flex_main_place="center"
+                     style_flex_cross_place="center" style_pad_gap="#space_xs">
             <icon src="arrow_up" size="sm" variant="primary"/>
             <text_body text="1mm"/>
           </lv_button>
-          <lv_button name="z_down_1" width="100%" flex_grow="1" style_max_height="64" style_radius="#border_radius" style_border_width="0" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
+          <lv_button name="z_down_1"
+                     width="100%" flex_grow="1" style_max_height="64" style_radius="#border_radius"
+                     style_border_width="0" flex_flow="row" style_flex_main_place="center"
+                     style_flex_cross_place="center" style_pad_gap="#space_xs">
             <icon src="arrow_down" size="sm" variant="primary"/>
             <text_body text="1mm"/>
           </lv_button>
-          <lv_button name="z_down_10" width="100%" flex_grow="1" style_max_height="64" style_radius="#border_radius" style_border_width="0" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
+          <lv_button name="z_down_10"
+                     width="100%" flex_grow="1" style_max_height="64" style_radius="#border_radius"
+                     style_border_width="0" flex_flow="row" style_flex_main_place="center"
+                     style_flex_cross_place="center" style_pad_gap="#space_xs">
             <icon src="arrow_down" size="sm" variant="primary"/>
             <text_body text="10mm"/>
           </lv_button>

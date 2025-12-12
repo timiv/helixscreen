@@ -181,18 +181,18 @@ class WizardConnectionStep {
     bool subjects_initialized_ = false;
 
     // Thread-safe state for async callback guards
-    std::atomic<bool> cleanup_called_{false};          ///< Guards async callbacks after navigation
-    std::atomic<uint64_t> connection_generation_{0};   ///< Invalidates stale callbacks
+    std::atomic<bool> cleanup_called_{false};        ///< Guards async callbacks after navigation
+    std::atomic<uint64_t> connection_generation_{0}; ///< Invalidates stale callbacks
 
     // Auto-probe state for localhost detection (atomic for cross-thread access)
     std::atomic<AutoProbeState> auto_probe_state_{AutoProbeState::IDLE};
-    bool auto_probe_attempted_ = false;  // Main thread only
+    bool auto_probe_attempted_ = false; // Main thread only
     lv_timer_t* auto_probe_timer_ = nullptr;
 
     // Saved values for async callback - protected by mutex for thread-safe access
     mutable std::mutex saved_values_mutex_;
-    std::string saved_ip_;    // Protected by saved_values_mutex_
-    std::string saved_port_;  // Protected by saved_values_mutex_
+    std::string saved_ip_;   // Protected by saved_values_mutex_
+    std::string saved_port_; // Protected by saved_values_mutex_
 
     // Event handler implementations
     void handle_test_connection_clicked();

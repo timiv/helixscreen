@@ -20,18 +20,21 @@
   -->
   <!-- API Properties -->
   <api>
-    <prop type="string" name="title" default="Overlay"/>
-    <prop type="string" name="action_button_text" default=""/>
-    <prop type="string" name="hide_action_button" default="true"/>
-    <prop type="string" name="width" default="#overlay_panel_width"/>
+    <prop name="title" type="string" default="Overlay"/>
+    <prop name="action_button_text" type="string" default=""/>
+    <prop name="hide_action_button" type="string" default="true"/>
+    <prop name="width" type="string" default="#overlay_panel_width"/>
   </api>
   <!-- Extends overlay_panel_base for consistent outer container styling -->
   <view extends="overlay_panel_base" width="$width">
     <!-- Header Bar (integrated, uses improved header_bar component) -->
-    <header_bar name="overlay_header" title="$title" action_button_text="$action_button_text" hide_action_button="$hide_action_button"/>
+    <header_bar name="overlay_header"
+                title="$title" action_button_text="$action_button_text" hide_action_button="$hide_action_button"/>
     <!-- Content Area (flexible height, fills remaining space) -->
     <!-- Panel-specific content goes here -->
-    <lv_obj name="overlay_content" flex_grow="1" width="100%" style_bg_opa="0" style_pad_all="#space_lg" style_border_width="0" scrollable="false" flex_flow="column">
+    <lv_obj name="overlay_content"
+            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_lg" style_border_width="0"
+            scrollable="false" flex_flow="column">
       <!-- Panel-specific content inserted here by child components -->
     </lv_obj>
   </view>

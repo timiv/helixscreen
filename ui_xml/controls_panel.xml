@@ -4,213 +4,213 @@
 <!-- Controls Panel Dashboard V2 - 5 smart cards with live data -->
 <component>
   <!-- Main container: 3+2 layout (3 cards top, 2 cards bottom) -->
-  <view extends="lv_obj" name="controls_panel" width="100%" height="100%"
-        style_pad_all="#space_md" style_border_width="0"
-        flex_flow="column" style_pad_gap="#space_md"
-        style_bg_color="#app_bg_color" scrollable="false">
-
+  <view name="controls_panel"
+        extends="lv_obj" width="100%" height="100%" style_pad_all="#space_md" style_border_width="0" flex_flow="column"
+        style_pad_gap="#space_md" style_bg_color="#app_bg_color" scrollable="false">
     <!-- Z-Offset Adjustment Banner (reactive: hidden when pending_z_offset_delta == 0) -->
-    <lv_obj name="z_offset_banner" width="100%" height="content"
-            style_bg_color="#info_color" style_bg_opa="60" style_radius="#border_radius"
-            style_pad_all="#space_sm" style_border_width="0" scrollable="false"
-            flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
+    <lv_obj name="z_offset_banner"
+            width="100%" height="content" style_bg_color="#info_color" style_bg_opa="60" style_radius="#border_radius"
+            style_pad_all="#space_sm" style_border_width="0" scrollable="false" flex_flow="row"
+            style_flex_main_place="space_between" style_flex_cross_place="center">
       <!-- Hide banner when pending_z_offset_delta == 0 -->
       <lv_obj-bind_flag_if_eq subject="pending_z_offset_delta" flag="hidden" ref_value="0"/>
-      <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0"
-              scrollable="false" flex_flow="column" style_pad_gap="2">
+      <lv_obj width="content"
+              height="content" style_bg_opa="0" style_border_width="0" scrollable="false" flex_flow="column"
+              style_pad_gap="2">
         <text_small text="Z-Offset Adjusted" style_text_color="#text_primary"/>
         <text_small name="z_offset_delta_label" bind_text="z_offset_delta_display" style_text_color="#text_secondary"/>
       </lv_obj>
-      <lv_button name="btn_save_z_offset" height="content"
-                 style_radius="#border_radius" style_bg_color="#success_color" style_border_width="0"
+      <lv_button name="btn_save_z_offset"
+                 height="content" style_radius="#border_radius" style_bg_color="#success_color" style_border_width="0"
                  style_pad_left="#space_sm" style_pad_right="#space_sm">
         <event_cb trigger="clicked" callback="on_controls_save_z_offset"/>
         <text_small text="Save" style_text_color="#text_primary"/>
       </lv_button>
     </lv_obj>
-
     <!-- Row 1: Quick Actions, Temperatures, Cooling (3 equal cards) -->
-    <lv_obj width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-            flex_flow="row" style_pad_gap="#space_md" scrollable="false">
-
+    <lv_obj width="100%"
+            flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+            style_pad_gap="#space_md" scrollable="false">
       <!-- Card 1: Quick Actions (Home + Macros) -->
-      <ui_card name="card_quick_actions" flex_grow="1" height="100%"
-               flex_flow="column" flex_main_place="center" flex_cross_place="center"
-               style_radius="#border_radius_large" style_pad_all="#space_sm"
-               scrollable="false" clickable="true">
+      <ui_card name="card_quick_actions"
+               height="100%" flex_grow="1" flex_flow="column" flex_main_place="center" flex_cross_place="center"
+               style_radius="#border_radius_large" style_pad_all="#space_sm" scrollable="false" clickable="true">
         <icon src="home" size="md" variant="secondary"/>
         <text_small text="Quick Actions" style_text_color="#text_secondary" style_pad_top="#space_xs"/>
-
         <!-- Home buttons row -->
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                scrollable="false" flex_flow="row" flex_main_place="center" style_pad_gap="#space_xs" style_pad_top="#space_sm">
-          <lv_button name="btn_home_all" width="content" height="32"
-                     style_radius="#border_radius" style_pad_left="#space_sm" style_pad_right="#space_sm"
-                     style_bg_color="#card_bg" style_border_width="1" style_border_color="#text_secondary" style_border_opa="60">
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                flex_flow="row" flex_main_place="center" style_pad_gap="#space_xs" style_pad_top="#space_sm">
+          <lv_button name="btn_home_all"
+                     width="content" height="32" style_radius="#border_radius" style_pad_left="#space_sm"
+                     style_pad_right="#space_sm" style_bg_color="#card_bg" style_border_width="1"
+                     style_border_color="#text_secondary" style_border_opa="60">
             <event_cb trigger="clicked" callback="on_controls_home_all"/>
             <text_small text="All"/>
           </lv_button>
-          <lv_button name="btn_home_xy" width="content" height="32"
-                     style_radius="#border_radius" style_pad_left="#space_sm" style_pad_right="#space_sm"
-                     style_bg_color="#card_bg" style_border_width="1" style_border_color="#text_secondary" style_border_opa="60">
+          <lv_button name="btn_home_xy"
+                     width="content" height="32" style_radius="#border_radius" style_pad_left="#space_sm"
+                     style_pad_right="#space_sm" style_bg_color="#card_bg" style_border_width="1"
+                     style_border_color="#text_secondary" style_border_opa="60">
             <event_cb trigger="clicked" callback="on_controls_home_xy"/>
             <text_small text="XY"/>
           </lv_button>
-          <lv_button name="btn_home_z" width="content" height="32"
-                     style_radius="#border_radius" style_pad_left="#space_sm" style_pad_right="#space_sm"
-                     style_bg_color="#card_bg" style_border_width="1" style_border_color="#text_secondary" style_border_opa="60">
+          <lv_button name="btn_home_z"
+                     width="content" height="32" style_radius="#border_radius" style_pad_left="#space_sm"
+                     style_pad_right="#space_sm" style_bg_color="#card_bg" style_border_width="1"
+                     style_border_color="#text_secondary" style_border_opa="60">
             <event_cb trigger="clicked" callback="on_controls_home_z"/>
             <text_small text="Z"/>
           </lv_button>
         </lv_obj>
-
         <!-- Macro buttons row -->
-        <lv_obj name="macro_buttons_row" width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                scrollable="false" flex_flow="row" flex_main_place="center" style_pad_gap="#space_xs" style_pad_top="#space_xs">
-          <lv_button name="btn_macro_1" width="content" height="28"
-                     style_radius="#border_radius" style_pad_left="#space_sm" style_pad_right="#space_sm"
-                     style_bg_color="#accent_color" style_bg_opa="40" style_border_width="0">
+        <lv_obj name="macro_buttons_row"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                scrollable="false" flex_flow="row" flex_main_place="center" style_pad_gap="#space_xs"
+                style_pad_top="#space_xs">
+          <lv_button name="btn_macro_1"
+                     width="content" height="28" style_radius="#border_radius" style_pad_left="#space_sm"
+                     style_pad_right="#space_sm" style_bg_color="#accent_color" style_bg_opa="40" style_border_width="0">
             <event_cb trigger="clicked" callback="on_controls_macro_1"/>
             <text_small name="macro_1_label" text="Macro 1" style_text_color="#text_primary"/>
           </lv_button>
-          <lv_button name="btn_macro_2" width="content" height="28"
-                     style_radius="#border_radius" style_pad_left="#space_sm" style_pad_right="#space_sm"
-                     style_bg_color="#accent_color" style_bg_opa="40" style_border_width="0">
+          <lv_button name="btn_macro_2"
+                     width="content" height="28" style_radius="#border_radius" style_pad_left="#space_sm"
+                     style_pad_right="#space_sm" style_bg_color="#accent_color" style_bg_opa="40" style_border_width="0">
             <event_cb trigger="clicked" callback="on_controls_macro_2"/>
             <text_small name="macro_2_label" text="Macro 2" style_text_color="#text_primary"/>
           </lv_button>
         </lv_obj>
       </ui_card>
-
       <!-- Card 2: Temperatures (Combined Nozzle + Bed) -->
-      <ui_card name="card_temperatures" flex_grow="1" height="100%"
-               flex_flow="column" flex_main_place="center" flex_cross_place="center"
-               style_radius="#border_radius_large" style_pad_all="#space_sm"
-               scrollable="false" clickable="true">
+      <ui_card name="card_temperatures"
+               height="100%" flex_grow="1" flex_flow="column" flex_main_place="center" flex_cross_place="center"
+               style_radius="#border_radius_large" style_pad_all="#space_sm" scrollable="false" clickable="true">
         <icon src="heater" size="md" variant="secondary"/>
         <text_small text="Temperatures" style_text_color="#text_secondary" style_pad_top="#space_xs"/>
-
         <!-- Nozzle section -->
-        <lv_obj width="90%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                scrollable="false" flex_flow="row" flex_main_place="space_between" flex_cross_place="center" style_pad_top="#space_sm">
+        <lv_obj width="90%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                flex_flow="row" flex_main_place="space_between" flex_cross_place="center" style_pad_top="#space_sm">
           <text_small text="Nozzle" style_text_color="#text_secondary"/>
           <text_body name="nozzle_temp_display" bind_text="controls_nozzle_temp"/>
         </lv_obj>
-        <lv_bar name="nozzle_progress" width="90%" height="6" bind_value="controls_nozzle_pct"
-                range_min="0" range_max="100" style_bg_color="#theme_grey" style_radius="3"/>
+        <lv_bar name="nozzle_progress"
+                width="90%" height="6" bind_value="controls_nozzle_pct" range_min="0" range_max="100"
+                style_bg_color="#theme_grey" style_radius="3"/>
         <text_small name="nozzle_status" bind_text="controls_nozzle_status" style_text_color="#text_secondary"/>
-
         <!-- Bed section -->
-        <lv_obj width="90%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                scrollable="false" flex_flow="row" flex_main_place="space_between" flex_cross_place="center" style_pad_top="#space_xs">
+        <lv_obj width="90%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                flex_flow="row" flex_main_place="space_between" flex_cross_place="center" style_pad_top="#space_xs">
           <text_small text="Bed" style_text_color="#text_secondary"/>
           <text_body name="bed_temp_display" bind_text="controls_bed_temp"/>
         </lv_obj>
-        <lv_bar name="bed_progress" width="90%" height="6" bind_value="controls_bed_pct"
-                range_min="0" range_max="100" style_bg_color="#theme_grey" style_radius="3"/>
+        <lv_bar name="bed_progress"
+                width="90%" height="6" bind_value="controls_bed_pct" range_min="0" range_max="100"
+                style_bg_color="#theme_grey" style_radius="3"/>
         <text_small name="bed_status" bind_text="controls_bed_status" style_text_color="#text_secondary"/>
       </ui_card>
-
       <!-- Card 3: Cooling (Multi-Fan) -->
-      <ui_card name="card_cooling" flex_grow="1" height="100%"
-               flex_flow="column" flex_main_place="center" flex_cross_place="center"
-               style_radius="#border_radius_large" style_pad_all="#space_sm"
-               scrollable="false" clickable="true">
+      <ui_card name="card_cooling"
+               height="100%" flex_grow="1" flex_flow="column" flex_main_place="center" flex_cross_place="center"
+               style_radius="#border_radius_large" style_pad_all="#space_sm" scrollable="false" clickable="true">
         <icon name="fan_icon" src="fan" size="md" variant="secondary"/>
         <text_small text="Cooling" style_text_color="#text_secondary" style_pad_top="#space_xs"/>
-
         <!-- Part cooling hero section -->
         <text_small text="Part Fan" style_text_color="#text_secondary" style_pad_top="#space_sm"/>
-        <lv_slider name="part_fan_slider" width="85%" height="20"
-                   bind_value="controls_fan_pct" range_min="0" range_max="100"
+        <lv_slider name="part_fan_slider"
+                   width="85%" height="20" bind_value="controls_fan_pct" range_min="0" range_max="100"
                    style_bg_color="#theme_grey" style_radius="10" style_pad_top="#space_xs">
           <event_cb trigger="value_changed" callback="on_controls_fan_slider"/>
         </lv_slider>
         <text_body name="fan_speed_display" bind_text="controls_fan_speed"/>
-
         <!-- Secondary fans list (populated dynamically) -->
-        <lv_obj name="secondary_fans_list" width="90%" height="content" style_bg_opa="0" style_border_width="0"
-                style_pad_all="0" scrollable="false" flex_flow="column" style_pad_gap="2" style_pad_top="#space_xs">
+        <lv_obj name="secondary_fans_list"
+                width="90%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                scrollable="false" flex_flow="column" style_pad_gap="2" style_pad_top="#space_xs">
           <!-- Dynamic fan rows will be added here by C++ -->
         </lv_obj>
       </ui_card>
     </lv_obj>
-
     <!-- Row 2: Filament (wider), Calibration (2 cards) -->
-    <lv_obj width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-            flex_flow="row" style_pad_gap="#space_md" scrollable="false">
-
+    <lv_obj width="100%"
+            flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+            style_pad_gap="#space_md" scrollable="false">
       <!-- Card 4: Filament (Preheat + Extrusion) - wider -->
-      <ui_card name="card_filament" flex_grow="2" height="100%"
-               flex_flow="column" flex_main_place="center" flex_cross_place="center"
-               style_radius="#border_radius_large" style_pad_all="#space_sm"
-               scrollable="false" clickable="true">
+      <ui_card name="card_filament"
+               height="100%" flex_grow="2" flex_flow="column" flex_main_place="center" flex_cross_place="center"
+               style_radius="#border_radius_large" style_pad_all="#space_sm" scrollable="false" clickable="true">
         <icon src="filament" size="md" variant="secondary"/>
         <text_small text="Filament" style_text_color="#text_secondary" style_pad_top="#space_xs"/>
-
         <!-- Preheat preset buttons -->
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                scrollable="false" flex_flow="row" flex_main_place="center" style_pad_gap="#space_xs" style_pad_top="#space_sm">
-          <lv_button name="btn_preheat_pla" width="content" height="28"
-                     style_radius="#border_radius" style_pad_left="#space_sm" style_pad_right="#space_sm"
-                     style_bg_color="#success_color" style_bg_opa="80" style_border_width="0">
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                flex_flow="row" flex_main_place="center" style_pad_gap="#space_xs" style_pad_top="#space_sm">
+          <lv_button name="btn_preheat_pla"
+                     width="content" height="28" style_radius="#border_radius" style_pad_left="#space_sm"
+                     style_pad_right="#space_sm" style_bg_color="#success_color" style_bg_opa="80"
+                     style_border_width="0">
             <event_cb trigger="clicked" callback="on_controls_preheat_pla"/>
             <text_small text="PLA" style_text_color="#text_primary"/>
           </lv_button>
-          <lv_button name="btn_preheat_petg" width="content" height="28"
-                     style_radius="#border_radius" style_pad_left="#space_sm" style_pad_right="#space_sm"
-                     style_bg_color="#info_color" style_bg_opa="80" style_border_width="0">
+          <lv_button name="btn_preheat_petg"
+                     width="content" height="28" style_radius="#border_radius" style_pad_left="#space_sm"
+                     style_pad_right="#space_sm" style_bg_color="#info_color" style_bg_opa="80" style_border_width="0">
             <event_cb trigger="clicked" callback="on_controls_preheat_petg"/>
             <text_small text="PETG" style_text_color="#text_primary"/>
           </lv_button>
-          <lv_button name="btn_preheat_abs" width="content" height="28"
-                     style_radius="#border_radius" style_pad_left="#space_sm" style_pad_right="#space_sm"
-                     style_bg_color="#warning_color" style_bg_opa="80" style_border_width="0">
+          <lv_button name="btn_preheat_abs"
+                     width="content" height="28" style_radius="#border_radius" style_pad_left="#space_sm"
+                     style_pad_right="#space_sm" style_bg_color="#warning_color" style_bg_opa="80"
+                     style_border_width="0">
             <event_cb trigger="clicked" callback="on_controls_preheat_abs"/>
             <text_small text="ABS" style_text_color="#text_primary"/>
           </lv_button>
-          <lv_button name="btn_preheat_asa" width="content" height="28"
-                     style_radius="#border_radius" style_pad_left="#space_sm" style_pad_right="#space_sm"
-                     style_bg_color="#accent_color" style_bg_opa="80" style_border_width="0">
+          <lv_button name="btn_preheat_asa"
+                     width="content" height="28" style_radius="#border_radius" style_pad_left="#space_sm"
+                     style_pad_right="#space_sm" style_bg_color="#accent_color" style_bg_opa="80" style_border_width="0">
             <event_cb trigger="clicked" callback="on_controls_preheat_asa"/>
             <text_small text="ASA" style_text_color="#text_primary"/>
           </lv_button>
-          <lv_button name="btn_preheat_off" width="content" height="28"
-                     style_radius="#border_radius" style_pad_left="#space_sm" style_pad_right="#space_sm"
-                     style_bg_color="#text_secondary" style_bg_opa="40" style_border_width="0">
+          <lv_button name="btn_preheat_off"
+                     width="content" height="28" style_radius="#border_radius" style_pad_left="#space_sm"
+                     style_pad_right="#space_sm" style_bg_color="#text_secondary" style_bg_opa="40"
+                     style_border_width="0">
             <event_cb trigger="clicked" callback="on_controls_preheat_off"/>
             <text_small text="Off" style_text_color="#text_primary"/>
           </lv_button>
         </lv_obj>
-
         <!-- Current temps status -->
-        <text_small name="preheat_status" bind_text="controls_preheat_status" style_text_color="#text_secondary" style_pad_top="#space_xs"/>
-
+        <text_small name="preheat_status"
+                    bind_text="controls_preheat_status" style_text_color="#text_secondary" style_pad_top="#space_xs"/>
         <!-- Extrude/Retract buttons -->
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                scrollable="false" flex_flow="row" flex_main_place="center" style_pad_gap="#space_sm" style_pad_top="#space_sm">
-          <lv_button name="btn_extrude" width="content" height="32"
-                     style_radius="#border_radius" style_pad_left="#space_md" style_pad_right="#space_md"
-                     style_bg_color="#card_bg" style_border_width="1" style_border_color="#text_secondary" style_border_opa="60">
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                flex_flow="row" flex_main_place="center" style_pad_gap="#space_sm" style_pad_top="#space_sm">
+          <lv_button name="btn_extrude"
+                     width="content" height="32" style_radius="#border_radius" style_pad_left="#space_md"
+                     style_pad_right="#space_md" style_bg_color="#card_bg" style_border_width="1"
+                     style_border_color="#text_secondary" style_border_opa="60">
             <event_cb trigger="clicked" callback="on_controls_extrude"/>
             <text_small text="Extrude 10mm"/>
           </lv_button>
-          <lv_button name="btn_retract" width="content" height="32"
-                     style_radius="#border_radius" style_pad_left="#space_md" style_pad_right="#space_md"
-                     style_bg_color="#card_bg" style_border_width="1" style_border_color="#text_secondary" style_border_opa="60">
+          <lv_button name="btn_retract"
+                     width="content" height="32" style_radius="#border_radius" style_pad_left="#space_md"
+                     style_pad_right="#space_md" style_bg_color="#card_bg" style_border_width="1"
+                     style_border_color="#text_secondary" style_border_opa="60">
             <event_cb trigger="clicked" callback="on_controls_retract"/>
             <text_small text="Retract 10mm"/>
           </lv_button>
         </lv_obj>
       </ui_card>
-
       <!-- Card 5: Calibration & Tools (unchanged) -->
-      <ui_card name="card_calibration" flex_grow="1" height="100%"
-               flex_flow="column" flex_main_place="center" flex_cross_place="center"
-               style_radius="#border_radius_large" style_pad_all="#space_sm"
-               scrollable="false" clickable="true">
-        <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                scrollable="false" flex_flow="row" flex_cross_place="center" style_pad_column="#space_sm">
+      <ui_card name="card_calibration"
+               height="100%" flex_grow="1" flex_flow="column" flex_main_place="center" flex_cross_place="center"
+               style_radius="#border_radius_large" style_pad_all="#space_sm" scrollable="false" clickable="true">
+        <lv_obj width="content"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                flex_flow="row" flex_cross_place="center" style_pad_column="#space_sm">
           <icon src="grid_large" size="sm" variant="accent"/>
           <icon src="z_closer" size="sm" variant="accent"/>
           <icon src="wrench" size="sm" variant="accent"/>
@@ -219,6 +219,5 @@
         <text_small text="Mesh | Z-Offset | Leveling" style_text_color="#text_secondary"/>
       </ui_card>
     </lv_obj>
-
   </view>
 </component>

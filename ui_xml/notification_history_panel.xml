@@ -3,22 +3,30 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- Notification History Panel - Review past notifications -->
 <component>
-  <view extends="lv_obj" name="notification_history_panel" width="#overlay_panel_width" height="100%" align="right_mid" style_bg_opa="255" style_bg_color="#app_bg_color" style_border_width="0" style_pad_all="0" flex_flow="column">
+  <view name="notification_history_panel"
+        extends="lv_obj" width="#overlay_panel_width" height="100%" align="right_mid" style_bg_opa="255"
+        style_bg_color="#app_bg_color" style_border_width="0" style_pad_all="0" flex_flow="column">
     <!-- Header Bar (uses improved header_bar component) -->
     <header_bar name="overlay_header" title="Notifications" action_button_text="Clear All" hide_action_button="false"/>
     <!-- NOTE: Filter buttons removed from UI for cleaner look.
          C++ filter logic retained in ui_panel_notification_history.cpp if needed later. -->
     <!-- Content Area (scrollable, hidden when no entries) -->
-    <lv_obj name="overlay_content" width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="#space_lg" style_pad_gap="#space_sm" flex_flow="column" scrollbar_mode="active">
+    <lv_obj name="overlay_content"
+            width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="#space_lg"
+            style_pad_gap="#space_sm" flex_flow="column" scrollbar_mode="active">
       <lv_obj-bind_flag_if_eq subject="notification_has_entries" flag="hidden" ref_value="0"/>
       <!-- Notification list items added dynamically via C++ -->
     </lv_obj>
     <!-- Empty state (shown when no notifications) -->
-    <lv_obj name="empty_state" width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" scrollable="false">
+    <lv_obj name="empty_state"
+            width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" flex_flow="column"
+            style_flex_main_place="center" style_flex_cross_place="center" scrollable="false">
       <lv_obj-bind_flag_if_eq subject="notification_has_entries" flag="hidden" ref_value="1"/>
       <!-- Bell icon for empty state -->
       <icon src="bell" size="xl" color="#text_secondary"/>
-      <text_body text="No notifications" width="100%" style_text_color="#text_secondary" style_pad_top="#space_md" style_text_align="center"/>
+      <text_body width="100%"
+                 text="No notifications" style_text_color="#text_secondary" style_pad_top="#space_md"
+                 style_text_align="center"/>
     </lv_obj>
   </view>
 </component>

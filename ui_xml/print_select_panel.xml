@@ -20,67 +20,105 @@
     <!-- Minimum widths to prevent text crushing -->
     <px name="metadata_label_min_width" value="30"/>
   </consts>
-  <view extends="lv_obj" width="100%" height="100%" style_pad_all="0" style_pad_gap="0" style_border_width="0" flex_flow="column" name="print_select_panel_root">
+  <view name="print_select_panel_root"
+        extends="lv_obj" width="100%" height="100%" style_pad_all="0" style_pad_gap="0" style_border_width="0"
+        flex_flow="column">
     <!-- Compact header with source tabs and view toggle (32px) -->
-    <lv_obj width="100%" height="content" style_border_width="0" style_bg_opa="0" style_pad_left="8" style_pad_right="8" style_pad_top="4" style_pad_bottom="4" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
+    <lv_obj width="100%"
+            height="content" style_border_width="0" style_bg_opa="0" style_pad_left="8" style_pad_right="8"
+            style_pad_top="4" style_pad_bottom="4" flex_flow="row" style_flex_main_place="space_between"
+            style_flex_cross_place="center" scrollable="false">
       <!-- Source selector (left side) - Segmented tab control -->
-      <lv_obj name="source_selector" height="26" width="content" style_bg_opa="80" style_radius="6" style_border_width="1" style_pad_all="2" flex_flow="row" style_pad_gap="0" scrollable="false">
-        <lv_button name="source_printer_btn" width="content" height="22" style_radius="4" style_border_width="0" style_shadow_width="0" style_pad_left="12" style_pad_right="12" style_pad_top="2" style_pad_bottom="2" scrollable="false">
+      <lv_obj name="source_selector"
+              width="content" height="26" style_bg_opa="80" style_radius="6" style_border_width="1" style_pad_all="2"
+              flex_flow="row" style_pad_gap="0" scrollable="false">
+        <lv_button name="source_printer_btn"
+                   width="content" height="22" style_radius="4" style_border_width="0" style_shadow_width="0"
+                   style_pad_left="12" style_pad_right="12" style_pad_top="2" style_pad_bottom="2" scrollable="false">
           <text_body text="Printer" scrollable="false"/>
         </lv_button>
-        <lv_button name="source_usb_btn" width="content" height="22" style_radius="4" style_border_width="0" style_shadow_width="0" style_pad_left="12" style_pad_right="12" style_pad_top="2" style_pad_bottom="2" scrollable="false">
+        <lv_button name="source_usb_btn"
+                   width="content" height="22" style_radius="4" style_border_width="0" style_shadow_width="0"
+                   style_pad_left="12" style_pad_right="12" style_pad_top="2" style_pad_bottom="2" scrollable="false">
           <text_body text="USB" scrollable="false"/>
         </lv_button>
       </lv_obj>
       <!-- View toggle button (icon-only, compact) -->
-      <lv_button name="view_toggle_btn" height="content" style_bg_opa="0" style_border_width="0" style_shadow_width="0" style_pad_all="0">
+      <lv_button name="view_toggle_btn"
+                 height="content" style_bg_opa="0" style_border_width="0" style_shadow_width="0" style_pad_all="0">
         <icon name="view_toggle_icon" src="list" size="sm" variant="primary"/>
       </lv_button>
     </lv_obj>
     <!-- Card view container (visible when view_mode == 0) -->
     <!-- Note: style_pad_gap controls spacing between cards, used by C++ layout calculations -->
-    <lv_obj name="card_view_container" width="100%" height="100%" style_pad_all="0" style_pad_left="#space_md" style_pad_right="#space_md" style_pad_gap="#space_lg" style_border_width="0" flex_flow="row_wrap" scrollable="true" flex_grow="1">
+    <lv_obj name="card_view_container"
+            width="100%" height="100%" style_pad_all="0" style_pad_left="#space_md" style_pad_right="#space_md"
+            style_pad_gap="#space_lg" style_border_width="0" flex_flow="row_wrap" scrollable="true" flex_grow="1">
       <lv_obj-bind_flag_if_eq subject="print_select_view_mode" flag="hidden" ref_value="1"/>
       <!-- Cards will be dynamically added here via C++ -->
     </lv_obj>
     <!-- List view container (visible when view_mode == 1) -->
-    <lv_obj name="list_view_container" width="100%" height="100%" style_pad_all="0" style_border_width="0" flex_flow="column" flex_grow="1">
+    <lv_obj name="list_view_container"
+            width="100%" height="100%" style_pad_all="0" style_border_width="0" flex_flow="column" flex_grow="1">
       <lv_obj-bind_flag_if_eq subject="print_select_view_mode" flag="hidden" ref_value="0"/>
       <!-- Column headers -->
-      <lv_obj name="list_header" width="100%" height="#list_header_height" style_border_width="0" style_border_side="bottom" style_pad_left="#nav_padding" style_pad_right="#nav_padding" style_pad_top="0" style_pad_bottom="0" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center">
+      <lv_obj name="list_header"
+              width="100%" height="#list_header_height" style_border_width="0" style_border_side="bottom"
+              style_pad_left="#nav_padding" style_pad_right="#nav_padding" style_pad_top="0" style_pad_bottom="0"
+              flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center">
         <!-- Filename header (flex-grow) -->
-        <lv_button name="header_filename" height="100%" style_bg_opa="0" style_border_width="0" style_shadow_width="0" style_pad_all="#list_header_padding" flex_grow="1" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center">
+        <lv_button name="header_filename"
+                   height="100%" style_bg_opa="0" style_border_width="0" style_shadow_width="0"
+                   style_pad_all="#list_header_padding" flex_grow="1" flex_flow="row" style_flex_main_place="start"
+                   style_flex_cross_place="center">
           <text_body name="header_filename_label" text="Filename" style_text_align="left"/>
           <icon name="header_filename_icon_up" src="arrow_up" size="xs" variant="primary" hidden="true"/>
           <icon name="header_filename_icon_down" src="arrow_down" size="xs" variant="primary" hidden="true"/>
         </lv_button>
         <!-- Size header -->
-        <lv_button name="header_size" width="#col_size_width" height="100%" style_bg_opa="0" style_border_width="0" style_shadow_width="0" style_pad_all="#list_header_padding" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center">
+        <lv_button name="header_size"
+                   width="#col_size_width" height="100%" style_bg_opa="0" style_border_width="0" style_shadow_width="0"
+                   style_pad_all="#list_header_padding" flex_flow="row" style_flex_main_place="start"
+                   style_flex_cross_place="center">
           <text_body name="header_size_label" text="Size" style_text_align="left"/>
           <icon name="header_size_icon_up" src="arrow_up" size="xs" variant="primary" hidden="true"/>
           <icon name="header_size_icon_down" src="arrow_down" size="xs" variant="primary" hidden="true"/>
         </lv_button>
         <!-- Modified header -->
-        <lv_button name="header_modified" width="#col_modified_width" height="100%" style_bg_opa="0" style_border_width="0" style_shadow_width="0" style_pad_all="#list_header_padding" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center">
+        <lv_button name="header_modified"
+                   width="#col_modified_width" height="100%" style_bg_opa="0" style_border_width="0"
+                   style_shadow_width="0" style_pad_all="#list_header_padding" flex_flow="row"
+                   style_flex_main_place="start" style_flex_cross_place="center">
           <text_body name="header_modified_label" text="Modified" style_text_align="left"/>
           <icon name="header_modified_icon_up" src="arrow_up" size="xs" variant="primary" hidden="true"/>
           <icon name="header_modified_icon_down" src="arrow_down" size="xs" variant="primary" hidden="true"/>
         </lv_button>
         <!-- Print Time header -->
-        <lv_button name="header_print_time" width="#col_time_width" height="100%" style_bg_opa="0" style_border_width="0" style_shadow_width="0" style_pad_all="#list_header_padding" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center">
+        <lv_button name="header_print_time"
+                   width="#col_time_width" height="100%" style_bg_opa="0" style_border_width="0" style_shadow_width="0"
+                   style_pad_all="#list_header_padding" flex_flow="row" style_flex_main_place="start"
+                   style_flex_cross_place="center">
           <text_body name="header_print_time_label" text="Time" style_text_align="left"/>
           <icon name="header_print_time_icon_up" src="arrow_up" size="xs" variant="primary" hidden="true"/>
           <icon name="header_print_time_icon_down" src="arrow_down" size="xs" variant="primary" hidden="true"/>
         </lv_button>
       </lv_obj>
       <!-- Scrollable list rows container -->
-      <lv_obj name="list_rows_container" width="100%" height="100%" style_pad_left="#nav_padding" style_pad_right="#nav_padding" style_pad_top="#space_sm" style_pad_bottom="#nav_padding" style_pad_gap="#space_sm" style_border_width="0" flex_flow="column" scrollable="true" flex_grow="1">
+      <lv_obj name="list_rows_container"
+              width="100%" height="100%" style_pad_left="#nav_padding" style_pad_right="#nav_padding"
+              style_pad_top="#space_sm" style_pad_bottom="#nav_padding" style_pad_gap="#space_sm" style_border_width="0"
+              flex_flow="column" scrollable="true" flex_grow="1">
         <!-- List rows will be dynamically added here via C++ -->
       </lv_obj>
     </lv_obj>
     <!-- Empty state message (shared, initially hidden) -->
-    <lv_obj name="empty_state_container" width="100%" height="100%" style_border_width="0" style_pad_all="0" align="center" flex_grow="1" hidden="true">
-      <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_xl" align="center" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm">
+    <lv_obj name="empty_state_container"
+            width="100%" height="100%" style_border_width="0" style_pad_all="0" align="center" flex_grow="1"
+            hidden="true">
+      <lv_obj width="content"
+              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_xl" align="center"
+              flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+              style_pad_gap="#space_sm">
         <text_heading text="No files available for printing" style_text_align="center"/>
         <text_body text="Upload gcode files to get started" style_text_align="center"/>
       </lv_obj>

@@ -18,42 +18,58 @@
     <!-- Applied to label when its filter is active -->
     <style name="filter_label_active" text_color="0xE6E8F0"/>
   </styles>
-  <view extends="lv_obj" name="history_dashboard_panel" width="#overlay_panel_width_large" height="100%" align="right_mid" style_bg_opa="255" style_bg_color="#card_bg" style_pad_all="0" style_border_width="0" scrollable="false" flex_flow="column">
+  <view name="history_dashboard_panel"
+        extends="lv_obj" width="#overlay_panel_width_large" height="100%" align="right_mid" style_bg_opa="255"
+        style_bg_color="#card_bg" style_pad_all="0" style_border_width="0" scrollable="false" flex_flow="column">
     <!-- Header Bar -->
     <header_bar name="overlay_header" title="Print History"/>
     <!-- Content Area - scrollable to fit all content on small screens -->
-    <lv_obj name="overlay_content" flex_grow="1" width="100%" style_bg_opa="0" style_pad_all="#space_lg" style_border_width="0" scrollable="true" scroll_dir="ver" flex_flow="column">
+    <lv_obj name="overlay_content"
+            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_lg" style_border_width="0"
+            scrollable="true" scroll_dir="ver" flex_flow="column">
       <!-- Time Filter Segmented Buttons (equal width via flex_grow) -->
-      <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_bottom="#space_md" flex_flow="row" style_pad_gap="#space_xs" scrollable="false">
-        <lv_button name="filter_day" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#surface_bg_dark" style_pad_all="#space_sm">
+      <lv_obj width="100%"
+              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_bottom="#space_md"
+              flex_flow="row" style_pad_gap="#space_xs" scrollable="false">
+        <lv_button name="filter_day"
+                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#surface_bg_dark"
+                   style_pad_all="#space_sm">
           <bind_style name="filter_btn_active" subject="history_filter" ref_value="0"/>
           <text_small name="filter_day_label" text="Day" style_text_color="#text_secondary" align="center">
             <bind_style name="filter_label_active" subject="history_filter" ref_value="0"/>
           </text_small>
           <event_cb trigger="clicked" callback="history_filter_day_clicked"/>
         </lv_button>
-        <lv_button name="filter_week" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#surface_bg_dark" style_pad_all="#space_sm">
+        <lv_button name="filter_week"
+                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#surface_bg_dark"
+                   style_pad_all="#space_sm">
           <bind_style name="filter_btn_active" subject="history_filter" ref_value="1"/>
           <text_small name="filter_week_label" text="Week" style_text_color="#text_secondary" align="center">
             <bind_style name="filter_label_active" subject="history_filter" ref_value="1"/>
           </text_small>
           <event_cb trigger="clicked" callback="history_filter_week_clicked"/>
         </lv_button>
-        <lv_button name="filter_month" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#surface_bg_dark" style_pad_all="#space_sm">
+        <lv_button name="filter_month"
+                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#surface_bg_dark"
+                   style_pad_all="#space_sm">
           <bind_style name="filter_btn_active" subject="history_filter" ref_value="2"/>
           <text_small name="filter_month_label" text="Month" style_text_color="#text_secondary" align="center">
             <bind_style name="filter_label_active" subject="history_filter" ref_value="2"/>
           </text_small>
           <event_cb trigger="clicked" callback="history_filter_month_clicked"/>
         </lv_button>
-        <lv_button name="filter_year" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#surface_bg_dark" style_pad_all="#space_sm">
+        <lv_button name="filter_year"
+                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#surface_bg_dark"
+                   style_pad_all="#space_sm">
           <bind_style name="filter_btn_active" subject="history_filter" ref_value="3"/>
           <text_small name="filter_year_label" text="Year" style_text_color="#text_secondary" align="center">
             <bind_style name="filter_label_active" subject="history_filter" ref_value="3"/>
           </text_small>
           <event_cb trigger="clicked" callback="history_filter_year_clicked"/>
         </lv_button>
-        <lv_button name="filter_all" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#surface_bg_dark" style_pad_all="#space_sm">
+        <lv_button name="filter_all"
+                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#surface_bg_dark"
+                   style_pad_all="#space_sm">
           <bind_style name="filter_btn_active" subject="history_filter" ref_value="4"/>
           <text_small name="filter_all_label" text="All" style_text_color="#text_secondary" align="center">
             <bind_style name="filter_label_active" subject="history_filter" ref_value="4"/>
@@ -62,61 +78,93 @@
         </lv_button>
       </lv_obj>
       <!-- Top Row: Stats (left) + Filament Chart (right) - hidden when no jobs -->
-      <lv_obj name="top_row" width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row" style_flex_main_place="space_between" style_pad_gap="#space_sm" scrollable="false">
+      <lv_obj name="top_row"
+              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+              style_flex_main_place="space_between" style_pad_gap="#space_sm" scrollable="false">
         <lv_obj-bind_flag_if_eq subject="history_has_jobs" flag="hidden" ref_value="0"/>
         <!-- Left: Stats Grid (2x2) -->
-        <lv_obj name="stats_grid" width="#stats_section_width" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row_wrap" style_flex_main_place="space_between" style_flex_cross_place="start" style_flex_track_place="start" style_pad_gap="#space_xs" scrollable="false">
+        <lv_obj name="stats_grid"
+                width="#stats_section_width" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                flex_flow="row_wrap" style_flex_main_place="space_between" style_flex_cross_place="start"
+                style_flex_track_place="start" style_pad_gap="#space_xs" scrollable="false">
           <!-- Row 1: Total Prints, Success Rate -->
-          <ui_card name="card_total_prints" width="48%" height="content" style_radius="#border_radius" style_pad_all="#space_xs" flex_flow="column" style_flex_cross_place="start">
+          <ui_card name="card_total_prints"
+                   width="48%" height="content" style_radius="#border_radius" style_pad_all="#space_xs"
+                   flex_flow="column" style_flex_cross_place="start">
             <text_small text="Total Prints" style_text_color="#text_secondary"/>
             <text_heading name="stat_total_prints" text="0" style_text_color="#text_primary"/>
           </ui_card>
-          <ui_card name="card_success_rate" width="48%" height="content" style_radius="#border_radius" style_pad_all="#space_xs" flex_flow="column" style_flex_cross_place="start">
+          <ui_card name="card_success_rate"
+                   width="48%" height="content" style_radius="#border_radius" style_pad_all="#space_xs"
+                   flex_flow="column" style_flex_cross_place="start">
             <text_small text="Success Rate" style_text_color="#text_secondary"/>
             <text_heading name="stat_success_rate" text="0%" style_text_color="#success_color"/>
           </ui_card>
           <!-- Row 2: Print Time, Filament Used -->
-          <ui_card name="card_print_time" width="48%" height="content" style_radius="#border_radius" style_pad_all="#space_xs" flex_flow="column" style_flex_cross_place="start">
+          <ui_card name="card_print_time"
+                   width="48%" height="content" style_radius="#border_radius" style_pad_all="#space_xs"
+                   flex_flow="column" style_flex_cross_place="start">
             <text_small text="Print Time" style_text_color="#text_secondary"/>
             <text_heading name="stat_print_time" text="0h" style_text_color="#text_primary"/>
           </ui_card>
-          <ui_card name="card_filament" width="48%" height="content" style_radius="#border_radius" style_pad_all="#space_xs" flex_flow="column" style_flex_cross_place="start">
+          <ui_card name="card_filament"
+                   width="48%" height="content" style_radius="#border_radius" style_pad_all="#space_xs"
+                   flex_flow="column" style_flex_cross_place="start">
             <text_small text="Filament Used" style_text_color="#text_secondary"/>
             <text_heading name="stat_filament" text="0m" style_text_color="#text_primary"/>
           </ui_card>
         </lv_obj>
         <!-- Right: Filament by Type Chart with Labels -->
-        <ui_card name="card_filament_chart" width="#chart_section_width" height="content" style_radius="#border_radius" style_pad_all="#space_sm" flex_flow="column" style_pad_gap="#space_xs">
+        <ui_card name="card_filament_chart"
+                 width="#chart_section_width" height="content" style_radius="#border_radius" style_pad_all="#space_sm"
+                 flex_flow="column" style_pad_gap="#space_xs">
           <text_xs text="Filament by Type" style_text_color="#text_secondary"/>
           <!-- Chart container for horizontal bars -->
-          <lv_obj name="filament_chart_container" width="100%" height="content" style_min_height="80" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column" style_pad_gap="#space_xxs" scrollable="false">
+          <lv_obj name="filament_chart_container"
+                  width="100%" height="content" style_min_height="80" style_bg_opa="0" style_border_width="0"
+                  style_pad_all="0" flex_flow="column" style_pad_gap="#space_xxs" scrollable="false">
             <!-- Filament rows will be populated by C++ - each row has label + bar -->
           </lv_obj>
         </ui_card>
       </lv_obj>
       <!-- Prints Trend Sparkline (full width, below stats and chart) - hidden when no jobs -->
-      <ui_card name="card_prints_trend" width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_sm" style_margin_top="#space_sm" flex_flow="column" style_pad_gap="#space_xs">
+      <ui_card name="card_prints_trend"
+               width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_sm"
+               style_margin_top="#space_sm" flex_flow="column" style_pad_gap="#space_xs">
         <lv_obj-bind_flag_if_eq subject="history_has_jobs" flag="hidden" ref_value="0"/>
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
           <text_body text="Prints Trend" style_text_color="#text_secondary"/>
           <text_small name="trend_period" text="Last 7 days" style_text_color="#text_secondary"/>
         </lv_obj>
         <!-- Chart container - will be populated by C++ -->
-        <lv_obj name="trend_chart_container" width="100%" style_min_height="50" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"/>
+        <lv_obj name="trend_chart_container"
+                width="100%" height="content" style_min_height="50" style_bg_opa="0" style_border_width="0"
+                style_pad_all="0" scrollable="false"/>
       </ui_card>
       <!-- Empty State (shown when no history) - centered in available space -->
-      <lv_obj name="empty_state" width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="#space_xl" hidden="true" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_md" scrollable="false">
+      <lv_obj name="empty_state"
+              width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="#space_xl" hidden="true"
+              flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+              style_flex_track_place="center" style_pad_gap="#space_md" scrollable="false">
         <lv_obj-bind_flag_if_not_eq subject="history_has_jobs" flag="hidden" ref_value="0"/>
         <icon src="clock" size="xl" variant="secondary"/>
         <text_body width="100%" text="No print history yet" style_text_color="#text_secondary" style_text_align="center"/>
-        <text_small width="100%" text="Your completed prints will appear here" style_text_color="#text_secondary" style_text_align="center"/>
+        <text_small width="100%"
+                    text="Your completed prints will appear here" style_text_color="#text_secondary"
+                    style_text_align="center"/>
       </lv_obj>
       <!-- Flex shim to push button to bottom (hidden when empty state is shown) -->
-      <lv_obj name="flex_shim" width="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_grow="1" scrollable="false">
+      <lv_obj name="flex_shim"
+              width="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_grow="1" scrollable="false">
         <lv_obj-bind_flag_if_eq subject="history_has_jobs" flag="hidden" ref_value="0"/>
       </lv_obj>
       <!-- View Full History Button (at bottom) -->
-      <lv_button name="btn_view_history" width="100%" height="#button_height_normal" style_radius="#border_radius" style_border_width="0" style_bg_color="#primary_color" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_sm">
+      <lv_button name="btn_view_history"
+                 width="100%" height="#button_height_normal" style_radius="#border_radius" style_border_width="0"
+                 style_bg_color="#primary_color" flex_flow="row" style_flex_main_place="center"
+                 style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_sm">
         <icon src="list" size="sm" variant="primary"/>
         <text_body text="View Full History" style_text_color="#text_primary"/>
         <event_cb trigger="clicked" callback="history_view_full_clicked"/>

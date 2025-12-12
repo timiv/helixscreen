@@ -1,21 +1,6 @@
 <?xml version="1.0"?>
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-
-<!--
-  temp_display - Reusable temperature display widget
-
-  Shows temperature in "current / target°C" format with consistent styling.
-  Supports reactive binding via bind_current and bind_target props.
-
-  Example usage:
-    <temp_display name="nozzle_temp" size="lg"
-                  bind_current="nozzle_current_temp"
-                  bind_target="nozzle_target_temp"/>
-
-    <temp_display name="bed_temp" size="md" show_target="false"
-                  bind_current="bed_current_temp"/>
--->
 <component>
   <api>
     <!-- Font size: "sm" (small), "md" (medium/default), "lg" (large/heading) -->
@@ -27,7 +12,6 @@
     <!-- Subject name for target temperature (int) -->
     <prop name="bind_target" type="string" default=""/>
   </api>
-
   <!--
     The temp_display widget is a custom C++ widget registered via ui_temp_display_init().
     It creates a row of labels: [current] [ / ] [target] [°C]
@@ -37,9 +21,7 @@
     - Subject binding for reactive updates
     - text_primary for temps, text_secondary for separators
   -->
-  <view extends="temp_display" name="temp_display_widget"
-        size="$size"
-        show_target="$show_target"
-        bind_current="$bind_current"
+  <view name="temp_display_widget"
+        extends="temp_display" size="$size" show_target="$show_target" bind_current="$bind_current"
         bind_target="$bind_target"/>
 </component>

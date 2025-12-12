@@ -1,73 +1,54 @@
 <?xml version="1.0"?>
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<!-- Save Z-Offset Confirmation Modal
-     WARNING: SAVE_CONFIG restarts Klipper and will CANCEL any active print!
-     Shown when user clicks "Save Z-Offset" during an active print.
--->
 <component>
   <!-- Full-screen backdrop overlay -->
-  <view extends="lv_obj" name="save_z_offset_modal_root"
-        width="100%" height="100%"
-        style_bg_opa="200" style_border_width="0" style_radius="0" style_pad_all="0"
-        align="center" clickable="true">
-
+  <view name="save_z_offset_modal_root"
+        extends="lv_obj" width="100%" height="100%" style_bg_opa="200" style_border_width="0" style_radius="0"
+        style_pad_all="0" align="center" clickable="true">
     <!-- Dialog card -->
-    <ui_dialog name="dialog_card" width="70%" height="content" align="center"
-               flex_flow="column" style_flex_main_place="start" style_pad_gap="0">
-
+    <ui_dialog name="dialog_card"
+               width="70%" height="content" align="center" flex_flow="column" style_flex_main_place="start"
+               style_pad_gap="0">
       <!-- Content area -->
-      <lv_obj width="100%" height="content"
-              style_min_height="160"
-              style_bg_opa="0" style_border_width="0"
-              style_pad_left="#space_lg" style_pad_right="#space_lg"
-              style_pad_top="#space_lg" style_pad_bottom="#space_lg"
-              flex_flow="column" style_flex_cross_place="center" style_pad_gap="#space_md">
-
+      <lv_obj width="100%"
+              height="content" style_min_height="160" style_bg_opa="0" style_border_width="0" style_pad_left="#space_lg"
+              style_pad_right="#space_lg" style_pad_top="#space_lg" style_pad_bottom="#space_lg" flex_flow="column"
+              style_flex_cross_place="center" style_pad_gap="#space_md">
         <!-- Warning icon -->
         <icon src="alert" size="lg" color="#warning_color"/>
-
         <!-- Title -->
-        <text_heading text="Save Z-Offset?" width="100%" style_text_align="center"/>
-
+        <text_heading width="100%" text="Save Z-Offset?" style_text_align="center"/>
         <!-- Warning message (VERY IMPORTANT) -->
-        <text_body text="Saving will restart Klipper and CANCEL any active print!"
-                   width="100%" long_mode="wrap"
+        <text_body width="100%"
+                   text="Saving will restart Klipper and CANCEL any active print!" long_mode="wrap"
                    style_text_align="center" style_text_color="#warning_color"/>
-
         <!-- Info message -->
-        <text_small text="Adjustments stay active until restart. Save after print completes."
-                    width="100%" long_mode="wrap"
+        <text_small width="100%"
+                    text="Adjustments stay active until restart. Save after print completes." long_mode="wrap"
                     style_text_align="center" style_text_color="#text_secondary"/>
       </lv_obj>
-
       <!-- Horizontal divider above buttons -->
-      <lv_obj width="100%" height="1"
-              style_bg_color="#text_secondary" style_bg_opa="64"
-              style_border_width="0" style_pad_all="0"/>
-
+      <lv_obj width="100%"
+              height="1" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"/>
       <!-- Button row -->
-      <lv_obj width="100%" height="#button_height"
-              style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_gap="0"
+      <lv_obj width="100%"
+              height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_gap="0"
               flex_flow="row">
-
         <!-- Cancel button (ModalBase wires this as "cancel") -->
-        <lv_button name="btn_cancel" flex_grow="1" height="100%"
-                   style_radius="0" style_border_width="0" style_shadow_width="0"
+        <lv_button name="btn_cancel"
+                   height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
                    clickable="true">
           <text_body text="Cancel" align="center"/>
         </lv_button>
-
         <!-- Vertical divider -->
-        <lv_obj width="1" height="100%"
-                style_bg_color="#text_secondary" style_bg_opa="64"
-                style_border_width="0" style_pad_all="0"/>
-
+        <lv_obj width="1"
+                height="100%" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0"
+                style_pad_all="0"/>
         <!-- Save button (ModalBase wires this as "ok" - danger styling) -->
-        <lv_button name="btn_ok" flex_grow="1" height="100%"
-                   style_radius="0" style_border_width="0" style_shadow_width="0"
-                   style_bg_color="#error_color"
-                   clickable="true">
+        <lv_button name="btn_ok"
+                   height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
+                   style_bg_color="#error_color" clickable="true">
           <text_body text="Save &amp; Restart" align="center" style_text_color="#text_primary"/>
         </lv_button>
       </lv_obj>

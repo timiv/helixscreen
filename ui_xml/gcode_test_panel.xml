@@ -6,32 +6,47 @@
     <!-- Main Layout: Left (viewer + sliders) + Right (controls) -->
     <lv_obj width="100%" height="100%" flex_flow="row" style_pad_all="0" style_pad_gap="0">
       <!-- Left: Viewer + Sliders (70%) -->
-      <lv_obj flex_grow="7" height="100%" flex_flow="column" style_border_width="0" style_pad_all="0" style_pad_gap="0">
+      <lv_obj height="100%" flex_grow="7" flex_flow="column" style_border_width="0" style_pad_all="0" style_pad_gap="0">
         <!-- 3D Viewer -->
         <gcode_viewer name="gcode_viewer" width="100%" flex_grow="1" style_bg_color="#000000" style_border_width="0"/>
         <!-- Lighting Controls Bar (bottom) -->
-        <lv_obj width="100%" height="content" flex_flow="row" style_bg_color="#bg_dark" style_pad_all="#space_md" style_border_width="0">
+        <lv_obj width="100%"
+                height="content" flex_flow="row" style_bg_color="#bg_dark" style_pad_all="#space_md"
+                style_border_width="0">
           <!-- Specular Intensity -->
-          <lv_obj flex_grow="1" height="content" flex_flow="row" style_pad_all="0" style_pad_top="10" style_border_width="0" style_flex_cross_place="center">
-            <lv_label text="Specular:" style_text_color="#text_secondary" style_text_font="#font_small" style_pad_right="10"/>
+          <lv_obj height="content"
+                  flex_grow="1" flex_flow="row" style_pad_all="0" style_pad_top="10" style_border_width="0"
+                  style_flex_cross_place="center">
+            <lv_label text="Specular:"
+                      style_text_color="#text_secondary" style_text_font="#font_small" style_pad_right="10"/>
             <lv_slider name="specular_slider" flex_grow="1" min_value="0" max_value="20" value="5"/>
-            <lv_label name="specular_value_label" text="0.05" style_text_color="#text_primary" style_text_font="#font_small" style_pad_left="8"/>
+            <lv_label name="specular_value_label"
+                      text="0.05" style_text_color="#text_primary" style_text_font="#font_small" style_pad_left="8"/>
           </lv_obj>
           <!-- Shininess -->
-          <lv_obj flex_grow="1" height="content" flex_flow="row" style_pad_all="0" style_pad_top="10" style_border_width="0" style_flex_cross_place="center">
-            <lv_label text="Shininess:" style_text_color="#text_secondary" style_text_font="#font_small" style_pad_right="10"/>
+          <lv_obj height="content"
+                  flex_grow="1" flex_flow="row" style_pad_all="0" style_pad_top="10" style_border_width="0"
+                  style_flex_cross_place="center">
+            <lv_label text="Shininess:"
+                      style_text_color="#text_secondary" style_text_font="#font_small" style_pad_right="10"/>
             <lv_slider name="shininess_slider" flex_grow="1" min_value="5" max_value="50" value="5"/>
-            <lv_label name="shininess_value_label" text="5" style_text_color="#text_primary" style_text_font="#font_small" style_pad_left="8"/>
+            <lv_label name="shininess_value_label"
+                      text="5" style_text_color="#text_primary" style_text_font="#font_small" style_pad_left="8"/>
           </lv_obj>
         </lv_obj>
       </lv_obj>
       <!-- Right: Control Panel (30%) -->
-      <lv_obj name="control_panel" flex_grow="3" height="100%" scrollable="false" flex_flow="column" style_bg_color="#card_bg" style_pad_all="4" style_pad_gap="#space_xs" style_border_width="0">
+      <lv_obj name="control_panel"
+              height="100%" flex_grow="3" scrollable="false" flex_flow="column" style_bg_color="#card_bg"
+              style_pad_all="4" style_pad_gap="#space_xs" style_border_width="0">
         <!-- View Presets Section -->
-        <lv_obj width="100%" height="content" flex_flow="column" style_bg_color="#bg_dark" style_radius="#card_radius" style_pad_all="4" style_pad_gap="#space_xs" style_border_width="0">
+        <lv_obj width="100%"
+                height="content" flex_flow="column" style_bg_color="#bg_dark" style_radius="#card_radius"
+                style_pad_all="4" style_pad_gap="#space_xs" style_border_width="0">
           <lv_label text="View Presets" style_text_font="#font_subheader" style_text_color="#text_primary"/>
           <!-- Row 1 -->
-          <lv_obj width="100%" height="content" flex_flow="row" style_pad_all="0" style_pad_gap="#space_sm" style_border_width="0">
+          <lv_obj width="100%"
+                  height="content" flex_flow="row" style_pad_all="0" style_pad_gap="#space_sm" style_border_width="0">
             <lv_button name="btn_travels" flex_grow="1" flag_checkable="true">
               <text_body text="Travels" align="center"/>
             </lv_button>
@@ -43,7 +58,8 @@
             </lv_button>
           </lv_obj>
           <!-- Row 2 -->
-          <lv_obj width="100%" height="content" flex_flow="row" style_pad_all="0" style_pad_gap="#space_sm" style_border_width="0">
+          <lv_obj width="100%"
+                  height="content" flex_flow="row" style_pad_all="0" style_pad_gap="#space_sm" style_border_width="0">
             <lv_button name="btn_side" flex_grow="1">
               <text_body text="Side" align="center"/>
             </lv_button>
@@ -53,9 +69,12 @@
           </lv_obj>
         </lv_obj>
         <!-- Zoom Section -->
-        <lv_obj width="100%" height="content" flex_flow="column" style_bg_color="#bg_dark" style_radius="#card_radius" style_pad_all="4" style_pad_gap="#space_xs" style_border_width="0">
+        <lv_obj width="100%"
+                height="content" flex_flow="column" style_bg_color="#bg_dark" style_radius="#card_radius"
+                style_pad_all="4" style_pad_gap="#space_xs" style_border_width="0">
           <lv_label text="Zoom" style_text_font="#font_subheader" style_text_color="#text_primary"/>
-          <lv_obj width="100%" height="content" flex_flow="row" style_pad_all="0" style_pad_gap="#space_sm" style_border_width="0">
+          <lv_obj width="100%"
+                  height="content" flex_flow="row" style_pad_all="0" style_pad_gap="#space_sm" style_border_width="0">
             <lv_button name="btn_zoom_in" flex_grow="1">
               <text_body text="+" align="center"/>
             </lv_button>
@@ -65,24 +84,37 @@
           </lv_obj>
         </lv_obj>
         <!-- Layer Progress Section (Ghost Layer Test) -->
-        <lv_obj width="100%" height="content" flex_flow="column" style_bg_color="#bg_dark" style_radius="#card_radius" style_pad_all="4" style_pad_gap="#space_xs" style_border_width="0">
-          <lv_obj width="100%" height="content" flex_flow="row" style_pad_all="0" style_border_width="0" style_flex_cross_place="center">
+        <lv_obj width="100%"
+                height="content" flex_flow="column" style_bg_color="#bg_dark" style_radius="#card_radius"
+                style_pad_all="4" style_pad_gap="#space_xs" style_border_width="0">
+          <lv_obj width="100%"
+                  height="content" flex_flow="row" style_pad_all="0" style_border_width="0"
+                  style_flex_cross_place="center">
             <lv_label text="Layer:" style_text_font="#font_subheader" style_text_color="#text_primary"/>
-            <lv_label name="layer_value_label" text=" 0 / 0" style_text_font="#font_small" style_text_color="#text_secondary" style_pad_left="4"/>
+            <lv_label name="layer_value_label"
+                      text=" 0 / 0" style_text_font="#font_small" style_text_color="#text_secondary" style_pad_left="4"/>
           </lv_obj>
-          <lv_obj width="100%" height="40" flex_flow="row" style_pad_top="8" style_pad_bottom="8" style_pad_left="8" style_pad_right="20" style_border_width="0" style_flex_cross_place="center" flag_overflow_visible="true">
+          <lv_obj width="100%"
+                  height="40" flex_flow="row" style_pad_top="8" style_pad_bottom="8" style_pad_left="8"
+                  style_pad_right="20" style_border_width="0" style_flex_cross_place="center"
+                  flag_overflow_visible="true">
             <lv_slider name="layer_slider" flex_grow="1" min_value="0" max_value="100" value="100"/>
           </lv_obj>
           <!-- Ghost Mode Dropdown -->
-          <lv_obj width="100%" height="content" flex_flow="row" style_pad_all="0" style_pad_gap="#space_sm" style_border_width="0" style_flex_cross_place="center">
+          <lv_obj width="100%"
+                  height="content" flex_flow="row" style_pad_all="0" style_pad_gap="#space_sm" style_border_width="0"
+                  style_flex_cross_place="center">
             <lv_label text="Ghost:" style_text_font="#font_small" style_text_color="#text_secondary"/>
-            <lv_dropdown name="ghost_mode_dropdown" flex_grow="1" options="Stipple&#10;Solid"/>
+            <lv_dropdown name="ghost_mode_dropdown" flex_grow="1" options="Stipple Solid"/>
           </lv_obj>
         </lv_obj>
         <!-- File Section -->
-        <lv_obj width="100%" height="content" flex_flow="column" style_bg_color="#bg_dark" style_radius="#card_radius" style_pad_all="4" style_pad_gap="#space_xs" style_border_width="0">
+        <lv_obj width="100%"
+                height="content" flex_flow="column" style_bg_color="#bg_dark" style_radius="#card_radius"
+                style_pad_all="4" style_pad_gap="#space_xs" style_border_width="0">
           <lv_label text="File" style_text_font="#font_subheader" style_text_color="#text_primary"/>
-          <lv_obj width="100%" height="content" flex_flow="row" style_pad_all="0" style_pad_gap="#space_sm" style_border_width="0">
+          <lv_obj width="100%"
+                  height="content" flex_flow="row" style_pad_all="0" style_pad_gap="#space_sm" style_border_width="0">
             <lv_button name="btn_load_test" flex_grow="1">
               <text_body text="Browse" align="center"/>
             </lv_button>
@@ -92,9 +124,13 @@
           </lv_obj>
         </lv_obj>
         <!-- Statistics Section (flex_grow to fill remaining space) -->
-        <lv_obj width="100%" flex_grow="1" flex_flow="column" style_bg_color="#bg_dark" style_radius="#card_radius" style_pad_all="4" style_pad_gap="#space_xs" style_border_width="0">
+        <lv_obj width="100%"
+                flex_grow="1" flex_flow="column" style_bg_color="#bg_dark" style_radius="#card_radius" style_pad_all="4"
+                style_pad_gap="#space_xs" style_border_width="0">
           <lv_label text="File Info" style_text_font="#font_subheader" style_text_color="#text_primary"/>
-          <lv_label width="100%" flex_grow="1" name="stats_label" text="Loading..." style_text_color="#text_secondary" style_text_font="#font_small" long_mode="wrap"/>
+          <lv_label name="stats_label"
+                    width="100%" flex_grow="1" text="Loading..." style_text_color="#text_secondary"
+                    style_text_font="#font_small" long_mode="wrap"/>
         </lv_obj>
       </lv_obj>
     </lv_obj>

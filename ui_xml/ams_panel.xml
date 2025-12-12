@@ -1,45 +1,6 @@
 <?xml version="1.0"?>
 <!-- Copyright 2025 HelixScreen -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-
-<!-- AMS Panel - Bambu-style Multi-Filament Unit Visualization & Control
-
-     Beautiful two-column layout inspired by Bambu Lab's AMS interface:
-
-     LEFT COLUMN (60%): AMS Unit Visualization
-       - ui_card containing 2x2 grid of slot cards (or 1x4 on narrow screens)
-       - Each slot shows color swatch, material type, slot number, status
-       - Active slot has highlighted border
-       - Slots beyond gate_count are hidden by C++
-
-     RIGHT COLUMN (40%): Status & Controls
-       - "Currently Loaded" card at top with large color swatch and material info
-       - Status section with action text and spinner during operations
-       - Action buttons (Unload, Reset) at bottom
-
-     Named widgets for C++ access:
-       - overlay_header: header_bar component
-       - overlay_content: main content area
-       - left_column: AMS unit visualization column
-       - right_column: status and controls column
-       - slot_grid: container for slot widgets
-       - slot_0..slot_7: individual ams_slot components
-       - current_loaded_card: card showing currently loaded filament
-       - current_swatch: color swatch for current filament
-       - current_material: material name label
-       - current_slot_label: "Slot X" or "None" label
-       - status_section: status display container
-       - status_label: bound to ams_action_detail subject
-       - action_progress: lv_spinner (hidden by default)
-       - btn_unload: unload button
-       - btn_reset: reset button
-
-     Reactive bindings:
-       - status_label bind_text="ams_action_detail"
-       - action_progress visibility controlled by C++ based on ams_action
-
-     See: ui_panel_ams.cpp for C++ integration
--->
 <component>
   <!-- Component-local constants -->
   <consts>
@@ -51,94 +12,48 @@
     <!-- Status spinner size -->
     <px name="spinner_size" value="28"/>
   </consts>
-
   <!-- Overlay panel - right-aligned, uses standard large width -->
-  <view extends="lv_obj" name="ams_panel"
-        width="#overlay_panel_width_large" height="100%"
-        align="right_mid"
-        style_pad_all="0" style_border_width="0"
-        style_bg_opa="255" style_bg_color="#card_bg"
-        scrollable="false"
-        flex_flow="column">
-
+  <view name="ams_panel"
+        extends="lv_obj" width="#overlay_panel_width_large" height="100%" align="right_mid" style_pad_all="0"
+        style_border_width="0" style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column">
     <!-- Header Bar -->
     <header_bar name="overlay_header" title="Multi-Filament"/>
-
     <!-- Content Area: Two Columns -->
     <lv_obj name="overlay_content"
-            flex_grow="1" width="100%"
-            style_bg_opa="0"
-            style_pad_all="#space_lg"
-            style_pad_gap="#space_lg"
-            scrollable="false"
-            style_border_width="0"
-            flex_flow="row"
-            style_flex_main_place="space_between"
+            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_lg" style_pad_gap="#space_lg"
+            scrollable="false" style_border_width="0" flex_flow="row" style_flex_main_place="space_between"
             style_flex_cross_place="stretch">
-
       <!-- ================================================================== -->
       <!-- LEFT COLUMN: AMS Unit Visualization                               -->
       <!-- ================================================================== -->
       <lv_obj name="left_column"
-              width="#left_col_width" height="100%"
-              style_bg_opa="0"
-              style_pad_all="0"
-              style_border_width="0"
-              scrollable="false"
-              flex_flow="column"
-              style_flex_main_place="start"
-              style_flex_cross_place="center"
+              width="#left_col_width" height="100%" style_bg_opa="0" style_pad_all="0" style_border_width="0"
+              scrollable="false" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center"
               style_pad_gap="#space_xs">
-
         <!-- Section Header -->
-        <text_body text="Filament Slots" width="100%"/>
-
+        <text_body width="100%" text="Filament Slots"/>
         <!-- AMS Unit Card - contains the slot grid with visible border -->
         <ui_card name="ams_unit_card"
-                 width="100%" height="content"
-                 style_radius="#border_radius_large"
-                 style_pad_all="#space_sm"
-                 style_border_width="1"
-                 style_border_color="#card_border"
-                 flex_flow="column"
-                 style_flex_main_place="center"
-                 style_flex_cross_place="center"
-                 scrollable="false">
-
+                 width="100%" height="content" style_radius="#border_radius_large" style_pad_all="#space_sm"
+                 style_border_width="1" style_border_color="#card_border" flex_flow="column"
+                 style_flex_main_place="center" style_flex_cross_place="center" scrollable="false">
           <!-- Slot Grid Container
                Uses flex_grow=1 on slots to divide space equally.
                Slot centers align with path canvas gate entry points:
                gate_x = card_padding + segment/2 + i*segment (where segment = effective_width/gate_count)
                Slots are created dynamically by C++ based on gate_count subject. -->
           <lv_obj name="slot_grid"
-                  width="100%"
-                  height="content"
-                  style_bg_opa="0"
-                  style_border_width="0"
-                  style_pad_all="0"
-                  style_pad_row="0"
-                  style_pad_column="0"
-                  flex_flow="row"
-                  style_flex_main_place="space_between"
-                  style_flex_cross_place="start"
-                  scrollable="false">
+                  width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                  style_pad_row="0" style_pad_column="0" flex_flow="row" style_flex_main_place="space_between"
+                  style_flex_cross_place="start" scrollable="false">
             <!-- Slots created dynamically by AmsPanel::create_slots() based on gate_count -->
           </lv_obj>
-
         </ui_card>
-
         <!-- Path Canvas - shows routing from gates to nozzle (no card border)
              Uses flex_grow="1" to fill remaining vertical space in left column -->
         <lv_obj name="path_container"
-                width="100%" flex_grow="1"
-                style_bg_opa="0"
-                style_border_width="0"
-                style_pad_all="0"
-                flex_flow="column"
-                style_flex_main_place="start"
-                style_flex_cross_place="center"
-                scrollable="false">
-
+                width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                style_flex_main_place="start" style_flex_cross_place="center" scrollable="false">
           <!-- Filament Path Canvas
                Shows schematic view of filament routing:
                - Gates at top (entry points)
@@ -153,138 +68,72 @@
 
                Uses flex_grow="1" so canvas height scales with screen size.
                All vertical segments scale proportionally via Y ratios. -->
-          <filament_path_canvas name="path_canvas"
-                                 width="100%"
-                                 flex_grow="1"/>
-
+          <filament_path_canvas name="path_canvas" width="100%" flex_grow="1"/>
         </lv_obj>
-
       </lv_obj>
-
       <!-- ================================================================== -->
       <!-- RIGHT COLUMN: Status & Controls                                   -->
       <!-- ================================================================== -->
       <lv_obj name="right_column"
-              width="#right_col_width" height="100%"
-              style_bg_opa="0"
-              style_pad_all="0"
-              style_border_width="0"
-              scrollable="false"
-              flex_flow="column"
-              style_flex_main_place="start"
-              style_flex_cross_place="center"
+              width="#right_col_width" height="100%" style_bg_opa="0" style_pad_all="0" style_border_width="0"
+              scrollable="false" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center"
               style_pad_gap="#space_md">
-
         <!-- Currently Loaded Section Header -->
-        <text_body text="Currently Loaded" width="100%"/>
-
+        <text_body width="100%" text="Currently Loaded"/>
         <!-- Currently Loaded Card -->
         <ui_card name="current_loaded_card"
-                 width="100%" height="content"
-                 style_radius="#border_radius_large"
-                 style_pad_all="#space_md"
-                 flex_flow="column"
-                 style_flex_main_place="center"
-                 style_flex_cross_place="center"
+                 width="100%" height="content" style_radius="#border_radius_large" style_pad_all="#space_md"
+                 flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
                  style_pad_gap="#space_xs">
-
           <!-- Large color swatch for current filament -->
           <lv_obj name="current_swatch"
-                  width="#current_swatch_size" height="#current_swatch_size"
-                  style_radius="#border_radius"
-                  style_bg_color="#text_secondary"
-                  style_bg_opa="255"
-                  style_border_width="2"
-                  style_border_color="#text_secondary"
-                  style_border_opa="80"
-                  scrollable="false" clickable="false"/>
-
+                  width="#current_swatch_size" height="#current_swatch_size" style_radius="#border_radius"
+                  style_bg_color="#text_secondary" style_bg_opa="255" style_border_width="2"
+                  style_border_color="#text_secondary" style_border_opa="80" scrollable="false" clickable="false"/>
           <!-- Material name (e.g., "PLA", "PETG") -->
-          <text_heading name="current_material" text="---"
-                        style_text_align="center" width="100%"/>
-
+          <text_heading name="current_material" width="100%" text="---" style_text_align="center"/>
           <!-- Slot indicator (e.g., "Slot 2" or "None") -->
-          <text_small name="current_slot_label" text="None"
-                      style_text_align="center" width="100%"/>
-
+          <text_small name="current_slot_label" width="100%" text="None" style_text_align="center"/>
         </ui_card>
-
         <!-- Status Section -->
         <lv_obj name="status_section"
-                width="100%" height="content"
-                style_bg_opa="0" style_border_width="0"
-                style_pad_all="#space_sm"
-                flex_flow="row"
-                style_flex_main_place="center"
-                style_flex_cross_place="center"
-                style_pad_gap="#space_sm"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_sm"
+                flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm"
                 scrollable="false">
-
           <!-- Progress spinner (hidden by default, shown during operations) -->
           <lv_spinner name="action_progress"
-                      width="#spinner_size" height="#spinner_size"
-                      style_arc_width_indicator="3"
-                      style_arc_color="#primary_color"
-                      style_arc_opa_main="0"
-                      hidden="true"/>
-
+                      width="#spinner_size" height="#spinner_size" style_arc_width_indicator="3"
+                      style_arc_color="#primary_color" style_arc_opa_main="0" hidden="true"/>
           <!-- Status label - bound to ams_action_detail subject -->
-          <text_body name="status_label"
-                     bind_text="ams_action_detail"
-                     style_text_align="center"
-                     flex_grow="1"/>
-
+          <text_body name="status_label" bind_text="ams_action_detail" style_text_align="center" flex_grow="1"/>
         </lv_obj>
-
         <!-- Action Buttons -->
-        <lv_obj width="100%" height="content"
-                style_bg_opa="0" style_border_width="0"
-                style_pad_all="0"
-                style_pad_gap="#space_sm"
-                flex_flow="column"
-                style_flex_main_place="start"
-                style_flex_cross_place="center"
-                scrollable="false">
-
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_gap="#space_sm"
+                flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center" scrollable="false">
           <!-- Bypass Button (visible when supports_bypass - visibility controlled by C++) -->
           <lv_button name="btn_bypass"
-                     width="100%"
-                     height="#button_height"
-                     style_radius="#border_radius"
-                     style_border_width="0"
-                     style_shadow_width="0"
-                     style_bg_color="#primary_color">
+                     width="100%" height="#button_height" style_radius="#border_radius" style_border_width="0"
+                     style_shadow_width="0" style_bg_color="#primary_color">
             <text_body name="bypass_label" text="Enable Bypass" align="center"/>
             <event_cb trigger="clicked" callback="ams_bypass_clicked_cb"/>
           </lv_button>
-
           <!-- Unload Button (full width) -->
           <lv_button name="btn_unload"
-                     width="100%"
-                     height="#button_height"
-                     style_radius="#border_radius"
-                     style_border_width="0"
+                     width="100%" height="#button_height" style_radius="#border_radius" style_border_width="0"
                      style_shadow_width="0">
             <text_body text="Unload Filament" align="center"/>
             <event_cb trigger="clicked" callback="ams_unload_clicked_cb"/>
           </lv_button>
-
           <!-- Reset Button (full width) -->
           <lv_button name="btn_reset"
-                     width="100%"
-                     height="#button_height"
-                     style_radius="#border_radius"
-                     style_border_width="0"
+                     width="100%" height="#button_height" style_radius="#border_radius" style_border_width="0"
                      style_shadow_width="0">
             <text_body text="Reset" align="center"/>
             <event_cb trigger="clicked" callback="ams_reset_clicked_cb"/>
           </lv_button>
-
         </lv_obj>
-
       </lv_obj>
-
     </lv_obj>
-
   </view>
 </component>

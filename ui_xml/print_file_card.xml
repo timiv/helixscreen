@@ -7,10 +7,10 @@
 	     Container's flex_flow="row_wrap" will automatically fit cards and wrap.
 	-->
   <api>
-    <prop type="string" name="thumbnail_src"/>
-    <prop type="string" name="filename"/>
-    <prop type="string" name="print_time"/>
-    <prop type="string" name="filament_weight"/>
+    <prop name="thumbnail_src" type="string"/>
+    <prop name="filename" type="string"/>
+    <prop name="print_time" type="string"/>
+    <prop name="filament_weight" type="string"/>
   </api>
   <consts>
     <!-- Component-specific spacing (not in globals) -->
@@ -27,28 +27,45 @@
     <!-- Metadata overlay minimum height -->
     <px name="metadata_overlay_min_height" value="70"/>
   </consts>
-  <view extends="ui_card" style_flex_basis="#card_base_width" flex_grow="1" style_min_width="#card_min_width" style_max_width="#card_max_width" height="#card_height" style_radius="#border_radius" style_pad_all="0" style_clip_corner="true" clickable="true" name="card_root">
+  <view name="card_root"
+        extends="ui_card" height="#card_height" style_flex_basis="#card_base_width" flex_grow="1"
+        style_min_width="#card_min_width" style_max_width="#card_max_width" style_radius="#border_radius"
+        style_pad_all="0" style_clip_corner="true" clickable="true">
     <!-- Diagonal gradient background (bright top-right to dark bottom-left) -->
     <ui_gradient_canvas width="100%" height="100%" dither="true"/>
     <!-- Thumbnail image (object-fit:contain - scales to fit, centered, no clipping) -->
-    <lv_image src="$thumbnail_src" width="100%" height="100%" style_bg_opa="0" align="center" inner_align="contain" style_translate_y="-20%" name="thumbnail"/>
+    <lv_image name="thumbnail"
+              width="100%" height="100%" src="$thumbnail_src" style_bg_opa="0" align="center" inner_align="contain"
+              style_translate_y="-20%"/>
     <!-- Metadata clip container - sharp top edge, clips the inner overlay's top rounded corners -->
-    <lv_obj width="100%" height="#metadata_overlay_min_height" style_bg_opa="0" style_border_width="0" style_radius="0" style_pad_all="0" align="bottom_mid" scrollable="false" name="metadata_clip">
+    <lv_obj name="metadata_clip"
+            width="100%" height="#metadata_overlay_min_height" style_bg_opa="0" style_border_width="0" style_radius="0"
+            style_pad_all="0" align="bottom_mid" scrollable="false">
       <!-- Inner overlay with rounded corners - taller to extend above clip, hiding top radius -->
-      <lv_obj width="100%" height="78" style_bg_opa="#metadata_overlay_opacity" style_border_width="0" style_radius="#border_radius" style_pad_left="#space_xs" style_pad_right="#space_xs" style_pad_top="14" style_pad_bottom="#space_xs" align="bottom_mid" flex_flow="column" scrollable="false" name="metadata_overlay">
+      <lv_obj name="metadata_overlay"
+              width="100%" height="78" style_bg_opa="#metadata_overlay_opacity" style_border_width="0"
+              style_radius="#border_radius" style_pad_left="#space_xs" style_pad_right="#space_xs" style_pad_top="14"
+              style_pad_bottom="#space_xs" align="bottom_mid" flex_flow="column" scrollable="false">
         <!-- Filename label (single line, truncated with ...) -->
-        <text_xs text="$filename" width="100%" height="18" long_mode="dots" style_text_color="#text_primary" name="filename_label"/>
+        <text_xs name="filename_label"
+                 width="100%" height="18" text="$filename" long_mode="dots" style_text_color="#text_primary"/>
         <!-- Metadata row (horizontal layout, responsive) -->
-        <lv_obj width="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#metadata_top_pad" flex_flow="row" style_pad_gap="#space_xs" flex_grow="1" name="metadata_row">
+        <lv_obj name="metadata_row"
+                width="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#metadata_top_pad"
+                flex_flow="row" style_pad_gap="#space_xs" flex_grow="1">
           <!-- Print time (icon + text) -->
-          <lv_obj flex_grow="1" height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row" style_pad_gap="#icon_text_gap" style_flex_cross_place="center">
+          <lv_obj height="100%"
+                  flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                  style_pad_gap="#icon_text_gap" style_flex_cross_place="center">
             <icon src="clock" size="xs" variant="accent"/>
-            <text_xs text="$print_time" flex_grow="1" name="time_label"/>
+            <text_xs name="time_label" text="$print_time" flex_grow="1"/>
           </lv_obj>
           <!-- Filament weight (icon + text) -->
-          <lv_obj flex_grow="1" height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row" style_pad_gap="#icon_text_gap" style_flex_cross_place="center">
+          <lv_obj height="100%"
+                  flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                  style_pad_gap="#icon_text_gap" style_flex_cross_place="center">
             <icon src="weight" size="xs" variant="accent"/>
-            <text_xs text="$filament_weight" flex_grow="1" name="filament_label"/>
+            <text_xs name="filament_label" text="$filament_weight" flex_grow="1"/>
           </lv_obj>
         </lv_obj>
       </lv_obj>

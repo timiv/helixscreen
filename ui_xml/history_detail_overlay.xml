@@ -23,192 +23,195 @@
     - history_detail_thumbnail: Path to thumbnail image (may be empty)
     - history_detail_has_timelapse: 1 if timelapse available, 0 otherwise
   -->
-  <view extends="lv_obj" name="history_detail_overlay"
-        width="#overlay_panel_width_large" height="100%" align="right_mid"
-        style_border_width="0" style_pad_all="0" style_bg_opa="255" style_bg_color="#card_bg"
-        scrollable="false" flex_flow="column">
-
+  <view name="history_detail_overlay"
+        extends="lv_obj" width="#overlay_panel_width_large" height="100%" align="right_mid" style_border_width="0"
+        style_pad_all="0" style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column">
     <!-- Header Bar with title and back button -->
     <header_bar name="overlay_header" title="Print Details"/>
-
     <!-- Content Area - Horizontal split -->
-    <lv_obj name="overlay_content" flex_grow="1" width="100%" style_bg_opa="0"
-            style_pad_all="#space_md" scrollable="false" style_border_width="0"
-            flex_flow="row" style_pad_gap="#space_md">
-
+    <lv_obj name="overlay_content"
+            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_md" scrollable="false"
+            style_border_width="0" flex_flow="row" style_pad_gap="#space_md">
       <!-- LEFT: Thumbnail Section (40%) -->
-      <lv_obj name="thumbnail_section" flex_grow="4" height="100%"
-              style_bg_opa="0" style_border_width="0" style_pad_all="0"
-              scrollable="false" flex_flow="column">
+      <lv_obj name="thumbnail_section"
+              height="100%" flex_grow="4" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+              flex_flow="column">
         <!-- Thumbnail card with clip corner for overlay effect -->
-        <ui_card name="thumbnail_card" width="100%" flex_grow="1"
-                 style_radius="#border_radius" style_pad_all="0"
-                 style_clip_corner="true" scrollable="false">
+        <ui_card name="thumbnail_card"
+                 width="100%" flex_grow="1" style_radius="#border_radius" style_pad_all="0" style_clip_corner="true"
+                 scrollable="false">
           <!-- Gradient background (like print_file_detail) -->
           <ui_gradient_canvas width="100%" height="100%" dither="true"/>
           <!-- Fallback shown when no thumbnail (centered) -->
-          <lv_obj name="thumbnail_fallback" width="100%" height="100%"
-                  style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                  flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-                  scrollable="false" align="center">
+          <lv_obj name="thumbnail_fallback"
+                  width="100%" height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                  flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" scrollable="false"
+                  align="center">
             <icon src="printer_3d" size="xl" variant="secondary"/>
             <text_small text="No preview" style_text_color="#text_secondary" style_margin_top="#space_sm"/>
           </lv_obj>
           <!-- Actual thumbnail (overlays fallback when available) -->
           <!-- Note: Image will be set programmatically when available -->
-          <lv_image name="thumbnail_image" width="100%" height="100%"
-                    hidden="true" align="center" inner_align="contain" style_translate_y="-10%"/>
+          <lv_image name="thumbnail_image"
+                    width="100%" height="100%" hidden="true" align="center" inner_align="contain"
+                    style_translate_y="-10%"/>
           <!-- Metadata clip container - clips top rounded corners of inner overlay -->
-          <lv_obj width="100%" height="55" style_bg_opa="0" style_border_width="0"
-                  style_radius="0" style_pad_all="0" align="bottom_mid" scrollable="false"
-                  name="filename_clip">
+          <lv_obj name="filename_clip"
+                  width="100%" height="55" style_bg_opa="0" style_border_width="0" style_radius="0" style_pad_all="0"
+                  align="bottom_mid" scrollable="false">
             <!-- Inner overlay with rounded corners - taller to hide top radius -->
-            <lv_obj width="100%" height="63" style_bg_opa="160" style_border_width="0"
-                    style_radius="#border_radius" style_pad_left="#space_sm" style_pad_right="#space_sm"
-                    style_pad_top="#space_md" style_pad_bottom="#space_sm" align="bottom_mid"
-                    flex_flow="column" scrollable="false" name="filename_overlay">
+            <lv_obj name="filename_overlay"
+                    width="100%" height="63" style_bg_opa="160" style_border_width="0" style_radius="#border_radius"
+                    style_pad_left="#space_sm" style_pad_right="#space_sm" style_pad_top="#space_md"
+                    style_pad_bottom="#space_sm" align="bottom_mid" flex_flow="column" scrollable="false">
               <!-- Filename label (single line, truncated with ...) -->
-              <text_body bind_text="history_detail_filename" width="100%" height="24"
-                         long_mode="dots" name="detail_filename"/>
+              <text_body name="detail_filename"
+                         width="100%" height="24" bind_text="history_detail_filename" long_mode="dots"/>
             </lv_obj>
           </lv_obj>
         </ui_card>
       </lv_obj>
-
       <!-- RIGHT: Metadata + Buttons Section (60%) -->
-      <lv_obj name="metadata_section" flex_grow="6" height="100%"
-              style_bg_opa="0" style_border_width="0" style_pad_all="0"
-              scrollable="false" flex_flow="column" style_pad_gap="#space_sm">
-
+      <lv_obj name="metadata_section"
+              height="100%" flex_grow="6" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+              flex_flow="column" style_pad_gap="#space_sm">
         <!-- Status row with icon (multiple icons, show/hide based on status) -->
         <!-- Status values: 0=completed, 1=cancelled, 2=error, 3=in_progress -->
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0"
-                style_pad_all="0" flex_flow="row"
+        <lv_obj name="status_section"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
                 style_pad_gap="#space_xs" style_flex_cross_place="center" style_flex_track_place="center"
-                scrollable="false" name="status_section">
+                scrollable="false">
           <!-- Completed icon (status=0) -->
-          <icon src="check_circle" size="sm" variant="success" name="status_icon_completed">
+          <icon name="status_icon_completed" src="check_circle" size="sm" variant="success">
             <lv_obj-bind_flag_if_not_eq subject="history_detail_status_code" flag="hidden" ref_value="0"/>
           </icon>
           <!-- Cancelled icon (status=1) -->
-          <icon src="close_circle" size="sm" variant="warning" name="status_icon_cancelled" hidden="true">
+          <icon name="status_icon_cancelled" src="close_circle" size="sm" variant="warning" hidden="true">
             <lv_obj-bind_flag_if_not_eq subject="history_detail_status_code" flag="hidden" ref_value="1"/>
           </icon>
           <!-- Error icon (status=2) -->
-          <icon src="alert" size="sm" variant="error" name="status_icon_error" hidden="true">
+          <icon name="status_icon_error" src="alert" size="sm" variant="error" hidden="true">
             <lv_obj-bind_flag_if_not_eq subject="history_detail_status_code" flag="hidden" ref_value="2"/>
           </icon>
           <!-- In Progress icon (status=3) -->
-          <icon src="clock" size="sm" variant="secondary" name="status_icon_progress" hidden="true">
+          <icon name="status_icon_progress" src="clock" size="sm" variant="secondary" hidden="true">
             <lv_obj-bind_flag_if_not_eq subject="history_detail_status_code" flag="hidden" ref_value="3"/>
           </icon>
-          <text_body bind_text="history_detail_status" name="status_label"/>
+          <text_body name="status_label" bind_text="history_detail_status"/>
         </lv_obj>
-
         <!-- Metadata grid (3 columns × 3 rows) -->
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0"
-                style_pad_all="0" flex_flow="column" style_pad_gap="#space_xs"
-                scrollable="false" name="metadata_grid">
-
+        <lv_obj name="metadata_grid"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                flex_flow="column" style_pad_gap="#space_xs" scrollable="false">
           <!-- Row 1: Started | Ended | Duration -->
-          <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0"
-                  style_pad_all="0" flex_flow="row" style_pad_gap="#space_sm" scrollable="false">
-            <lv_obj flex_grow="1" height="content" style_bg_opa="0" style_border_width="0"
-                    style_pad_all="0" flex_flow="column" scrollable="false">
+          <lv_obj width="100%"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                  style_pad_gap="#space_sm" scrollable="false">
+            <lv_obj height="content"
+                    flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                    scrollable="false">
               <text_small text="Started" style_text_color="#text_secondary"/>
-              <text_body bind_text="history_detail_start_time" name="start_time_label" style_text_color="#text_primary"/>
+              <text_body name="start_time_label" bind_text="history_detail_start_time" style_text_color="#text_primary"/>
             </lv_obj>
-            <lv_obj flex_grow="1" height="content" style_bg_opa="0" style_border_width="0"
-                    style_pad_all="0" flex_flow="column" scrollable="false">
+            <lv_obj height="content"
+                    flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                    scrollable="false">
               <text_small text="Ended" style_text_color="#text_secondary"/>
-              <text_body bind_text="history_detail_end_time" name="end_time_label" style_text_color="#text_primary"/>
+              <text_body name="end_time_label" bind_text="history_detail_end_time" style_text_color="#text_primary"/>
             </lv_obj>
-            <lv_obj flex_grow="1" height="content" style_bg_opa="0" style_border_width="0"
-                    style_pad_all="0" flex_flow="column" scrollable="false">
+            <lv_obj height="content"
+                    flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                    scrollable="false">
               <text_small text="Duration" style_text_color="#text_secondary"/>
-              <text_body bind_text="history_detail_duration" name="duration_label" style_text_color="#text_primary"/>
+              <text_body name="duration_label" bind_text="history_detail_duration" style_text_color="#text_primary"/>
             </lv_obj>
           </lv_obj>
-
           <!-- Row 2: Layers | Nozzle | Bed Temp -->
-          <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0"
-                  style_pad_all="0" flex_flow="row" style_pad_gap="#space_sm" scrollable="false">
-            <lv_obj flex_grow="1" height="content" style_bg_opa="0" style_border_width="0"
-                    style_pad_all="0" flex_flow="column" scrollable="false">
+          <lv_obj width="100%"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                  style_pad_gap="#space_sm" scrollable="false">
+            <lv_obj height="content"
+                    flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                    scrollable="false">
               <text_small text="Layers" style_text_color="#text_secondary"/>
-              <text_body bind_text="history_detail_layers" name="layers_label" style_text_color="#text_primary"/>
+              <text_body name="layers_label" bind_text="history_detail_layers" style_text_color="#text_primary"/>
             </lv_obj>
-            <lv_obj flex_grow="1" height="content" style_bg_opa="0" style_border_width="0"
-                    style_pad_all="0" flex_flow="column" scrollable="false">
+            <lv_obj height="content"
+                    flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                    scrollable="false">
               <text_small text="Nozzle" style_text_color="#text_secondary"/>
-              <text_body bind_text="history_detail_nozzle_temp" name="nozzle_temp_label" style_text_color="#text_primary"/>
+              <text_body name="nozzle_temp_label"
+                         bind_text="history_detail_nozzle_temp" style_text_color="#text_primary"/>
             </lv_obj>
-            <lv_obj flex_grow="1" height="content" style_bg_opa="0" style_border_width="0"
-                    style_pad_all="0" flex_flow="column" scrollable="false">
+            <lv_obj height="content"
+                    flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                    scrollable="false">
               <text_small text="Bed" style_text_color="#text_secondary"/>
-              <text_body bind_text="history_detail_bed_temp" name="bed_temp_label" style_text_color="#text_primary"/>
+              <text_body name="bed_temp_label" bind_text="history_detail_bed_temp" style_text_color="#text_primary"/>
             </lv_obj>
           </lv_obj>
-
           <!-- Row 3: Filament | Type | Layer Height -->
-          <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0"
-                  style_pad_all="0" flex_flow="row" style_pad_gap="#space_sm" scrollable="false">
-            <lv_obj flex_grow="1" height="content" style_bg_opa="0" style_border_width="0"
-                    style_pad_all="0" flex_flow="column" scrollable="false">
+          <lv_obj width="100%"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                  style_pad_gap="#space_sm" scrollable="false">
+            <lv_obj height="content"
+                    flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                    scrollable="false">
               <text_small text="Filament" style_text_color="#text_secondary"/>
-              <text_body bind_text="history_detail_filament" name="filament_label" style_text_color="#text_primary"/>
+              <text_body name="filament_label" bind_text="history_detail_filament" style_text_color="#text_primary"/>
             </lv_obj>
-            <lv_obj flex_grow="1" height="content" style_bg_opa="0" style_border_width="0"
-                    style_pad_all="0" flex_flow="column" scrollable="false">
+            <lv_obj height="content"
+                    flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                    scrollable="false">
               <text_small text="Type" style_text_color="#text_secondary"/>
-              <text_body bind_text="history_detail_filament_type" name="filament_type_label" style_text_color="#text_primary"/>
+              <text_body name="filament_type_label"
+                         bind_text="history_detail_filament_type" style_text_color="#text_primary"/>
             </lv_obj>
-            <lv_obj flex_grow="1" height="content" style_bg_opa="0" style_border_width="0"
-                    style_pad_all="0" flex_flow="column" scrollable="false">
+            <lv_obj height="content"
+                    flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                    scrollable="false">
               <text_small text="Layer Height" style_text_color="#text_secondary"/>
-              <text_body bind_text="history_detail_layer_height" name="layer_height_label" style_text_color="#text_primary"/>
+              <text_body name="layer_height_label"
+                         bind_text="history_detail_layer_height" style_text_color="#text_primary"/>
             </lv_obj>
           </lv_obj>
         </lv_obj>
-
         <!-- Timelapse section (shown when timelapse is available) -->
-        <lv_obj name="timelapse_section" width="100%" height="content"
-                style_bg_opa="0" style_border_width="0" style_pad_all="0"
+        <lv_obj name="timelapse_section"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                 flex_flow="column" style_pad_gap="#space_sm" scrollable="false">
           <lv_obj-bind_flag_if_eq subject="history_detail_has_timelapse" flag="hidden" ref_value="0"/>
-
           <!-- Label row with icon -->
-          <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0"
-                  style_pad_all="0" flex_flow="row" style_pad_gap="#space_sm"
-                  style_flex_cross_place="center" scrollable="false">
+          <lv_obj width="100%"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                  style_pad_gap="#space_sm" style_flex_cross_place="center" scrollable="false">
             <icon src="video" size="sm" variant="primary"/>
             <text_body text="Timelapse Available" style_text_color="#text_secondary"/>
           </lv_obj>
-
           <!-- View Timelapse button -->
-          <lv_button name="view_timelapse_btn" width="100%" height="#button_height_small"
-                     style_radius="#border_radius" style_bg_color="#surface_bg_dark">
+          <lv_button name="view_timelapse_btn"
+                     width="100%" height="#button_height_small" style_radius="#border_radius"
+                     style_bg_color="#surface_bg_dark">
             <text_body text="View Timelapse" align="center"/>
             <event_cb trigger="clicked" callback="history_detail_view_timelapse"/>
           </lv_button>
         </lv_obj>
-
         <!-- Spacer to push buttons to bottom -->
-        <lv_obj flex_grow="1" width="100%" style_bg_opa="0" style_border_width="0" scrollable="false"/>
-
+        <lv_obj width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" scrollable="false"/>
         <!-- Action buttons row -->
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0"
-                style_pad_all="0" style_pad_gap="#space_sm"
-                flex_flow="row" scrollable="false" name="button_row">
+        <lv_obj name="button_row"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                style_pad_gap="#space_sm" flex_flow="row" scrollable="false">
           <!-- Delete button (secondary style) -->
-          <lv_button name="delete_button" flex_grow="1" height="#button_height"
-                     style_radius="#border_radius" style_bg_color="#button_secondary_bg">
+          <lv_button name="delete_button"
+                     height="#button_height" flex_grow="1" style_radius="#border_radius"
+                     style_bg_color="#button_secondary_bg">
             <text_body text="Delete" align="center"/>
             <event_cb trigger="clicked" callback="history_detail_delete"/>
           </lv_button>
           <!-- Reprint button (primary, disabled if file doesn't exist) -->
-          <lv_button name="reprint_button" flex_grow="1" height="#button_height"
-                     style_radius="#border_radius" style_bg_color="#primary_color">
+          <lv_button name="reprint_button"
+                     height="#button_height" flex_grow="1" style_radius="#border_radius" style_bg_color="#primary_color">
             <text_body text="Reprint" align="center"/>
             <event_cb trigger="clicked" callback="history_detail_reprint"/>
             <lv_obj-bind_flag_if_eq subject="history_detail_can_reprint" flag="disabled" ref_value="0"/>

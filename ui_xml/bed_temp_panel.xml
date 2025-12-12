@@ -11,55 +11,82 @@
     <const name="temp_graph_bed_dark" value="#33E5E8"/>
   </consts>
   <!-- Uses shared backdrop from navigation system -->
-  <view extends="lv_obj" name="bed_temp_panel" width="#overlay_panel_width_large" height="100%" align="right_mid" style_bg_opa="255" style_bg_color="#card_bg" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="column">
+  <view name="bed_temp_panel"
+        extends="lv_obj" width="#overlay_panel_width_large" height="100%" align="right_mid" style_bg_opa="255"
+        style_bg_color="#card_bg" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="column">
     <!-- Header Bar (uses improved header_bar component) -->
-    <header_bar name="overlay_header" title="Heatbed Temperature" action_button_text="Confirm" hide_action_button="false"/>
+    <header_bar name="overlay_header"
+                title="Heatbed Temperature" action_button_text="Confirm" hide_action_button="false"/>
     <!-- Content Area: Two Columns -->
-    <lv_obj name="overlay_content" flex_grow="1" width="100%" style_bg_opa="0" style_pad_all="#space_lg" scrollable="false" style_border_width="0" style_border_opa="0" flex_flow="row" style_flex_main_place="space_between">
+    <lv_obj name="overlay_content"
+            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_lg" scrollable="false"
+            style_border_width="0" style_border_opa="0" flex_flow="row" style_flex_main_place="space_between">
       <!-- Left Column (66%): Temperature Graph with Y-axis labels + X-axis time labels -->
-      <lv_obj name="graph_outer_container" width="66%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0" style_border_opa="0" flex_flow="column" style_pad_gap="0">
+      <lv_obj name="graph_outer_container"
+              width="66%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0"
+              style_border_opa="0" flex_flow="column" style_pad_gap="0">
         <!-- Chart area (Y-axis labels and X-axis time labels rendered directly on canvas) -->
-        <lv_obj name="chart_area" width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0" style_border_opa="0">
+        <lv_obj name="chart_area"
+                width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0"
+                style_border_opa="0">
           <!-- Temperature graph widget created programmatically in C++ -->
         </lv_obj>
         <!-- X-axis time labels are now rendered directly on the graph canvas via draw callback -->
       </lv_obj>
       <!-- Right Column (33%): Controls - simple top-to-bottom flow -->
-      <lv_obj name="right_column" width="33%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0" style_border_opa="0" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_sm">
+      <lv_obj name="right_column"
+              width="33%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0"
+              style_border_opa="0" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center"
+              style_pad_gap="#space_sm">
         <!-- Current/Target Temperature Display Card with Icon and Status -->
-        <ui_card name="temp_display_card" width="100%" height="content" style_radius="0" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs" style_pad_all="#space_sm">
+        <ui_card name="temp_display_card"
+                 width="100%" height="content" style_radius="0" flex_flow="column" style_flex_main_place="center"
+                 style_flex_cross_place="center" style_pad_gap="#space_xs" style_pad_all="#space_sm">
           <!-- Composite heatbed icon (xl size, stacked) -->
-          <lv_obj name="bed_icon" width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="column" style_flex_cross_place="center" style_pad_row="-8">
+          <lv_obj name="bed_icon"
+                  width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                  scrollable="false" flex_flow="column" style_flex_cross_place="center" style_pad_row="-8">
             <icon name="heat_wave_icon" src="heat_wave" size="xl" variant="secondary"/>
             <icon name="flatbed_icon" src="train_flatbed" size="xl" variant="secondary"/>
           </lv_obj>
-          <lv_obj height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xxs">
+          <lv_obj height="content"
+                  style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="column"
+                  style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xxs">
             <text_small text="Current / Target" align="center"/>
-            <temp_display name="bed_temp_display" size="lg"
-                          bind_current="bed_temp"
-                          bind_target="bed_target"/>
+            <temp_display name="bed_temp_display" size="lg" bind_current="bed_temp" bind_target="bed_target"/>
           </lv_obj>
           <!-- Status Message -->
-          <text_small name="status_message" bind_text="bed_status" width="100%" style_text_align="center"/>
+          <text_small name="status_message" width="100%" bind_text="bed_status" style_text_align="center"/>
         </ui_card>
         <!-- Spacer to push buttons to bottom -->
-        <lv_obj flex_grow="1" width="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"/>
+        <lv_obj width="1" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"/>
         <!-- Buttons: all together at bottom -->
-        <lv_obj name="preset_grid" width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" scrollable="false" flex_flow="row_wrap" style_flex_main_place="space_between" style_pad_gap="#space_xs">
-          <lv_button name="preset_off" width="48%" height="#button_height_small" style_radius="#border_radius_small" style_border_width="0">
+        <lv_obj name="preset_grid"
+                width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0"
+                scrollable="false" flex_flow="row_wrap" style_flex_main_place="space_between" style_pad_gap="#space_xs">
+          <lv_button name="preset_off"
+                     width="48%" height="#button_height_small" style_radius="#border_radius_small"
+                     style_border_width="0">
             <text_small text="Off" align="center"/>
           </lv_button>
-          <lv_button name="preset_pla" width="48%" height="#button_height_small" style_radius="#border_radius_small" style_border_width="0">
+          <lv_button name="preset_pla"
+                     width="48%" height="#button_height_small" style_radius="#border_radius_small"
+                     style_border_width="0">
             <text_small text="PLA" align="center"/>
           </lv_button>
-          <lv_button name="preset_petg" width="48%" height="#button_height_small" style_radius="#border_radius_small" style_border_width="0">
+          <lv_button name="preset_petg"
+                     width="48%" height="#button_height_small" style_radius="#border_radius_small"
+                     style_border_width="0">
             <text_small text="PETG" align="center"/>
           </lv_button>
-          <lv_button name="preset_abs" width="48%" height="#button_height_small" style_radius="#border_radius_small" style_border_width="0">
+          <lv_button name="preset_abs"
+                     width="48%" height="#button_height_small" style_radius="#border_radius_small"
+                     style_border_width="0">
             <text_small text="ABS" align="center"/>
           </lv_button>
         </lv_obj>
-        <lv_button name="btn_custom" width="100%" height="#button_height_small" style_radius="#border_radius_small" style_border_width="0">
+        <lv_button name="btn_custom"
+                   width="100%" height="#button_height_small" style_radius="#border_radius_small" style_border_width="0">
           <text_body text="Custom..." align="center"/>
         </lv_button>
       </lv_obj>

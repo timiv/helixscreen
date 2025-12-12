@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0"?>
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <component>
@@ -6,12 +6,16 @@
     <!-- Container with vertical flex layout -->
     <lv_obj width="100%" height="100%" flex_flow="column" style_bg_color="#bg_dark" style_pad_all="0">
       <!-- Header -->
-      <lv_obj width="100%" height="#header_height" style_bg_color="#card_bg" style_pad_all="#space_lg" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
+      <lv_obj width="100%"
+              height="#header_height" style_bg_color="#card_bg" style_pad_all="#space_lg" flex_flow="row"
+              style_flex_main_place="space_between" style_flex_cross_place="center">
         <text_heading text="LVGL Symbol Glyphs"/>
         <text_small name="glyph_count_label"/>
       </lv_obj>
       <!-- Scrollable content area -->
-      <lv_obj width="100%" flex_grow="1" scrollable="true" scroll_dir="VER" flex_flow="column" style_bg_color="#bg_dark" style_pad_all="#space_lg" style_pad_row="8">
+      <lv_obj width="100%"
+              flex_grow="1" scrollable="true" scroll_dir="VER" flex_flow="column" style_bg_color="#bg_dark"
+              style_pad_all="#space_lg" style_pad_row="8">
         <!-- Glyph items will be added here dynamically from C++ -->
         <!-- Each item: [Icon] LV_SYMBOL_NAME -->
       </lv_obj>

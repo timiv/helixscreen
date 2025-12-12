@@ -1,43 +1,37 @@
 <?xml version="1.0"?>
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<!--
-  Coming Soon Overlay Component - Used for stub panels during breadth-first development
-
-  Usage:
-    Add this component to any stub panel to clearly indicate the feature is under development.
-    The overlay fills the parent container with a semi-transparent background and centered message.
-
-  Props:
-    - feature_name: Name of the feature (e.g., "Macro Panel", "Camera View")
-    - feature_description: Brief description of what's coming (optional)
-    - icon_name: MDI icon name to display (default: "construction")
-
-  Example:
-    <coming_soon_overlay feature_name="Camera View"
-                         feature_description="View and control your webcam feed"
-                         icon_name="webcam"/>
--->
 <component>
   <api>
-    <prop type="string" name="feature_name" default="Feature"/>
-    <prop type="string" name="feature_description" default="This feature is under development"/>
-    <prop type="string" name="icon_name" default="construction"/>
+    <prop name="feature_name" type="string" default="Feature"/>
+    <prop name="feature_description" type="string" default="This feature is under development"/>
+    <prop name="icon_name" type="string" default="construction"/>
   </api>
-  <view extends="lv_obj" name="coming_soon_overlay" width="100%" height="100%" align="center" style_bg_color="#card_bg" style_bg_opa="230" style_border_width="0" style_pad_all="#space_lg" style_radius="0" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center" scrollable="false">
+  <view name="coming_soon_overlay"
+        extends="lv_obj" width="100%" height="100%" align="center" style_bg_color="#card_bg" style_bg_opa="230"
+        style_border_width="0" style_pad_all="#space_lg" style_radius="0" flex_flow="column"
+        style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
+        scrollable="false">
     <!-- Icon -->
     <icon src="$icon_name" size="xl" color="#text_secondary" style_pad_bottom="#space_lg"/>
     <!-- Construction icon indicator -->
-    <lv_obj style_bg_color="#warning_color" style_bg_opa="255" style_radius="8" style_pad_all="#space_sm" style_border_width="0" width="auto" height="auto">
+    <lv_obj width="auto"
+            height="auto" style_bg_color="#warning_color" style_bg_opa="255" style_radius="8" style_pad_all="#space_sm"
+            style_border_width="0">
       <text_body text="Coming Soon" style_text_color="#000000"/>
     </lv_obj>
     <!-- Feature name -->
     <text_heading text="$feature_name" style_pad_top="#space_lg" style_text_align="center"/>
     <!-- Description -->
-    <text_body text="$feature_description" style_pad_top="#space_sm" style_text_color="#text_secondary" style_text_align="center" width="80%"/>
+    <text_body width="80%"
+               text="$feature_description" style_pad_top="#space_sm" style_text_color="#text_secondary"
+               style_text_align="center"/>
     <!-- Progress indicator placeholder -->
-    <lv_obj style_pad_top="#space_xl" width="60%" height="auto" style_bg_opa="0" style_border_width="0" flex_flow="column" style_flex_cross_place="center">
-      <text_small text="Check docs/FEATURE_STATUS.md for progress" style_text_color="#text_secondary" style_text_align="center"/>
+    <lv_obj width="60%"
+            height="auto" style_pad_top="#space_xl" style_bg_opa="0" style_border_width="0" flex_flow="column"
+            style_flex_cross_place="center">
+      <text_small text="Check docs/FEATURE_STATUS.md for progress"
+                  style_text_color="#text_secondary" style_text_align="center"/>
     </lv_obj>
   </view>
 </component>

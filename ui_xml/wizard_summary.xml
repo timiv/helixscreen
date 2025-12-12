@@ -10,60 +10,88 @@
     <str name="step_subtitle" value="Review your configuration below, then click Finish to save"/>
     <int name="step_order" value="7"/>
   </consts>
-  <view extends="lv_obj" width="100%" height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center" name="wizard_summary_root">
+  <view name="wizard_summary_root"
+        extends="lv_obj" width="100%" height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+        flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center">
     <!-- Summary container - scrollable -->
-    <ui_card width="100%" flex_grow="1" style_radius="#border_radius_large" style_pad_all="#space_md" style_pad_gap="#space_md" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="start" scrollable="true" scroll_dir="ver">
+    <ui_card width="100%"
+             flex_grow="1" style_radius="#border_radius_large" style_pad_all="#space_md" style_pad_gap="#space_md"
+             flex_flow="row" style_flex_main_place="start" style_flex_cross_place="start" scrollable="true"
+             scroll_dir="ver">
       <!-- Left column: Connection settings -->
-      <lv_obj width="48%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_gap="#space_xs" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="start">
+      <lv_obj width="48%"
+              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_gap="#space_xs"
+              flex_flow="column" style_flex_main_place="start" style_flex_cross_place="start">
         <text_heading text="Connection" style_pad_bottom="#space_xs"/>
         <!-- Printer Name -->
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column" style_pad_gap="0">
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                style_pad_gap="0">
           <text_small text="Printer Name" style_text_color="#text_secondary"/>
           <text_body name="summary_printer_name_label" bind_text="summary_printer_name" style_text_color="#text_primary"/>
         </lv_obj>
         <!-- Printer Type -->
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_xs" flex_flow="column" style_pad_gap="0">
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_xs"
+                flex_flow="column" style_pad_gap="0">
           <text_small text="Printer Type" style_text_color="#text_secondary"/>
           <text_body name="summary_printer_type_label" bind_text="summary_printer_type" style_text_color="#text_primary"/>
         </lv_obj>
         <!-- WiFi -->
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_xs" flex_flow="column" style_pad_gap="0">
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_xs"
+                flex_flow="column" style_pad_gap="0">
           <text_small text="WiFi Network" style_text_color="#text_secondary"/>
           <text_body name="summary_wifi_ssid_label" bind_text="summary_wifi_ssid" style_text_color="#text_primary"/>
         </lv_obj>
         <!-- Moonraker -->
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_xs" flex_flow="column" style_pad_gap="0">
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_xs"
+                flex_flow="column" style_pad_gap="0">
           <text_small text="Moonraker" style_text_color="#text_secondary"/>
-          <text_body name="summary_moonraker_label" bind_text="summary_moonraker_connection" style_text_color="#text_primary"/>
+          <text_body name="summary_moonraker_label"
+                     bind_text="summary_moonraker_connection" style_text_color="#text_primary"/>
         </lv_obj>
       </lv_obj>
       <!-- Right column: Hardware mapping -->
-      <lv_obj width="48%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_gap="#space_xs" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="start">
+      <lv_obj width="48%"
+              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_gap="#space_xs"
+              flex_flow="column" style_flex_main_place="start" style_flex_cross_place="start">
         <text_heading text="Hardware" style_pad_bottom="#space_xs"/>
         <!-- Heated Bed -->
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column" style_pad_gap="0">
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                style_pad_gap="0">
           <text_small text="Heated Bed" style_text_color="#text_secondary"/>
           <text_body name="summary_bed_label" bind_text="summary_bed" style_text_color="#text_primary"/>
         </lv_obj>
         <!-- Hotend -->
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_xs" flex_flow="column" style_pad_gap="0">
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_xs"
+                flex_flow="column" style_pad_gap="0">
           <text_small text="Hotend" style_text_color="#text_secondary"/>
           <text_body name="summary_hotend_label" bind_text="summary_hotend" style_text_color="#text_primary"/>
         </lv_obj>
         <!-- Part Cooling Fan (conditionally visible) -->
-        <lv_obj name="part_fan_row" width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_xs" flex_flow="column" style_pad_gap="0">
+        <lv_obj name="part_fan_row"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                style_pad_top="#space_xs" flex_flow="column" style_pad_gap="0">
           <text_small text="Part Cooling Fan" style_text_color="#text_secondary"/>
           <text_body name="summary_part_fan_label" bind_text="summary_part_fan" style_text_color="#text_primary"/>
           <lv_obj-bind_flag_if_eq subject="summary_part_fan_visible" flag="hidden" ref_value="0"/>
         </lv_obj>
         <!-- Hotend Cooling Fan (conditionally visible) -->
-        <lv_obj name="hotend_fan_row" width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_xs" flex_flow="column" style_pad_gap="0">
+        <lv_obj name="hotend_fan_row"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                style_pad_top="#space_xs" flex_flow="column" style_pad_gap="0">
           <text_small text="Hotend Fan" style_text_color="#text_secondary"/>
           <text_body name="summary_hotend_fan_label" bind_text="summary_hotend_fan" style_text_color="#text_primary"/>
           <lv_obj-bind_flag_if_eq subject="summary_hotend_fan_visible" flag="hidden" ref_value="0"/>
         </lv_obj>
         <!-- LED Strip (conditionally visible) -->
-        <lv_obj name="led_strip_row" width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_xs" flex_flow="column" style_pad_gap="0">
+        <lv_obj name="led_strip_row"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                style_pad_top="#space_xs" flex_flow="column" style_pad_gap="0">
           <text_small text="LED Strip" style_text_color="#text_secondary"/>
           <text_body name="summary_led_strip_label" bind_text="summary_led_strip" style_text_color="#text_primary"/>
           <lv_obj-bind_flag_if_eq subject="summary_led_strip_visible" flag="hidden" ref_value="0"/>

@@ -5,24 +5,36 @@
   <!-- Extrusion Panel: Extrude/Retract with animation, speed control, and safety checks -->
   <!-- Two-column layout: left (visualization + temp), right (controls) -->
   <!-- Compact layout: Extrude/Retract side-by-side, all 4 amounts in one row -->
-  <view extends="lv_obj" name="extrusion_panel" width="#overlay_panel_width_large" height="100%" align="right_mid" style_border_width="0" style_pad_all="0" style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column">
+  <view name="extrusion_panel"
+        extends="lv_obj" width="#overlay_panel_width_large" height="100%" align="right_mid" style_border_width="0"
+        style_pad_all="0" style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column">
     <!-- Header Bar -->
     <header_bar name="overlay_header" title="Extrude / Retract"/>
     <!-- Content Area: Two Columns -->
-    <lv_obj name="overlay_content" flex_grow="1" width="100%" style_bg_opa="0" style_pad_all="#space_md" scrollable="false" style_border_width="0" flex_flow="row" style_flex_main_place="space_between" style_pad_gap="#space_md">
+    <lv_obj name="overlay_content"
+            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_md" scrollable="false"
+            style_border_width="0" flex_flow="row" style_flex_main_place="space_between" style_pad_gap="#space_md">
       <!-- ================================================================== -->
       <!-- LEFT COLUMN (40%): Visualization & Temperature Status             -->
       <!-- ================================================================== -->
-      <lv_obj name="left_column" width="40%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_md">
+      <lv_obj name="left_column"
+              width="40%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0"
+              flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_md">
         <!-- Extruder Visualization Card -->
-        <ui_card name="viz_container" width="100%" flex_grow="2" style_radius="#border_radius_large" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
+        <ui_card name="viz_container"
+                 width="100%" flex_grow="2" style_radius="#border_radius_large" flex_flow="column"
+                 style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
           <!-- Nozzle icon with filament (not heating icon) -->
           <icon name="nozzle_icon" src="filament" size="xl" variant="accent"/>
           <!-- Animated filament flow indicator (controlled by C++) -->
-          <lv_obj name="filament_animation" width="8" height="32" style_radius="4" style_bg_opa="0" style_border_width="0" scrollable="false" hidden="true"/>
+          <lv_obj name="filament_animation"
+                  width="8" height="32" style_radius="4" style_bg_opa="0" style_border_width="0" scrollable="false"
+                  hidden="true"/>
         </ui_card>
         <!-- Temperature Status Card -->
-        <ui_card name="temp_status_card" width="100%" flex_grow="1" style_radius="#border_radius" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
+        <ui_card name="temp_status_card"
+                 width="100%" flex_grow="1" style_radius="#border_radius" flex_flow="column"
+                 style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
           <text_small text="Nozzle Temp" align="center"/>
           <text_heading name="temp_status_display" bind_text="extrusion_temp_status" align="center"/>
         </ui_card>
@@ -30,10 +42,15 @@
       <!-- ================================================================== -->
       <!-- RIGHT COLUMN (60%): Controls                                      -->
       <!-- ================================================================== -->
-      <lv_obj name="right_column" width="60%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="stretch" style_pad_gap="#space_sm">
+      <lv_obj name="right_column"
+              width="60%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0"
+              flex_flow="column" style_flex_main_place="start" style_flex_cross_place="stretch"
+              style_pad_gap="#space_sm">
         <!-- Amount Selector: Single row of 4 compact buttons -->
-        <text_small text="Amount:" width="100%"/>
-        <lv_obj name="amount_grid" width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="row" style_pad_gap="#space_xs">
+        <text_small width="100%" text="Amount:"/>
+        <lv_obj name="amount_grid"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                scrollable="false" flex_flow="row" style_pad_gap="#space_xs">
           <lv_button name="amount_5mm" flex_grow="1" style_radius="#border_radius" style_border_width="0">
             <text_small text="5" align="center"/>
           </lv_button>
@@ -48,41 +65,59 @@
           </lv_button>
         </lv_obj>
         <!-- Speed Control: Compact inline -->
-        <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_xs">
-          <text_small text="Speed:" width="content"/>
-          <text_small name="speed_display" bind_text="extrusion_speed_display" width="content"/>
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_xs">
+          <text_small width="content" text="Speed:"/>
+          <text_small name="speed_display" width="content" bind_text="extrusion_speed_display"/>
         </lv_obj>
-        <lv_obj name="speed_control" width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_left="#space_xs" style_pad_right="#space_sm" scrollable="false" flex_flow="row" style_flex_cross_place="center" flag_overflow_visible="true">
+        <lv_obj name="speed_control"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                style_pad_left="#space_xs" style_pad_right="#space_sm" scrollable="false" flex_flow="row"
+                style_flex_cross_place="center" flag_overflow_visible="true">
           <lv_slider name="speed_slider" flex_grow="1" min_value="60" max_value="600" value="300"/>
         </lv_obj>
         <!-- Action Buttons: Extrude/Retract side-by-side, Purge below -->
         <!-- Disabled state bound to extrusion_safety_warning_visible: 1=disabled, 0=enabled -->
-        <lv_obj name="action_buttons" width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="0" style_border_width="0" scrollable="false" flex_flow="column" style_flex_main_place="center" style_pad_gap="#space_sm">
+        <lv_obj name="action_buttons"
+                width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="0" style_border_width="0" scrollable="false"
+                flex_flow="column" style_flex_main_place="center" style_pad_gap="#space_sm">
           <!-- Extrude/Retract Row -->
-          <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="row" style_pad_gap="#space_sm">
-            <lv_button name="btn_extrude" flex_grow="1" style_radius="#border_radius" style_border_width="0" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
+          <lv_obj width="100%"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                  flex_flow="row" style_pad_gap="#space_sm">
+            <lv_button name="btn_extrude"
+                       flex_grow="1" style_radius="#border_radius" style_border_width="0" flex_flow="row"
+                       style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
               <lv_obj-bind_state_if_eq subject="extrusion_safety_warning_visible" state="disabled" ref_value="1"/>
               <icon src="arrow_down" size="sm"/>
               <text_body text="Extrude"/>
             </lv_button>
-            <lv_button name="btn_retract" flex_grow="1" style_radius="#border_radius" style_border_width="0" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
+            <lv_button name="btn_retract"
+                       flex_grow="1" style_radius="#border_radius" style_border_width="0" flex_flow="row"
+                       style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
               <lv_obj-bind_state_if_eq subject="extrusion_safety_warning_visible" state="disabled" ref_value="1"/>
               <icon src="arrow_up" size="sm"/>
               <text_body text="Retract"/>
             </lv_button>
           </lv_obj>
           <!-- Purge Button -->
-          <lv_button name="btn_purge" width="100%" style_radius="#border_radius" style_border_width="0" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
+          <lv_button name="btn_purge"
+                     width="100%" style_radius="#border_radius" style_border_width="0" flex_flow="row"
+                     style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
             <lv_obj-bind_state_if_eq subject="extrusion_safety_warning_visible" state="disabled" ref_value="1"/>
             <icon src="water" size="sm"/>
             <text_body text="Purge 50mm"/>
           </lv_button>
         </lv_obj>
         <!-- Safety Warning: Compact single line when nozzle cold -->
-        <lv_obj name="safety_warning" width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" scrollable="false" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_xs">
+        <lv_obj name="safety_warning"
+                width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0"
+                scrollable="false" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
+                style_pad_gap="#space_xs">
           <lv_obj-bind_flag_if_eq subject="extrusion_safety_warning_visible" flag="hidden" ref_value="0"/>
           <icon src="alert" size="sm" variant="warning"/>
-          <text_small text="Heat to 170°C to extrude" width="content"/>
+          <text_small width="content" text="Heat to 170°C to extrude"/>
         </lv_obj>
       </lv_obj>
     </lv_obj>
