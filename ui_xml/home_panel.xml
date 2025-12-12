@@ -89,7 +89,7 @@
         <lv_obj-bind_state_if_not_eq subject="printer_connection_state" state="disabled" ref_value="2"/>
         <!-- Thumbnail - shows Benchy when idle, current print thumbnail when printing -->
         <lv_image name="print_card_thumb"
-                  width="content" height="100%" src="A:assets/images/benchy_thumbnail_white.png" inner_align="contain"/>
+                  width="50%" height="100%" src="A:assets/images/benchy_thumbnail_white.png" inner_align="contain"/>
         <!-- Label - shows "Print Files" when idle, progress + ETA when printing -->
         <text_body name="print_card_label" text="Print Files"/>
         <event_cb trigger="clicked" callback="print_card_clicked_cb"/>
