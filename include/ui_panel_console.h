@@ -10,7 +10,7 @@
 #include "printer_state.h"
 
 #include <deque>
-#include <nlohmann/json.hpp>
+#include "hv/json.hpp"
 #include <string>
 #include <vector>
 

@@ -80,7 +80,7 @@ PrintStartCollector::PrintStartCollector(MoonrakerClient& client, PrinterState& 
 
 PrintStartCollector::~PrintStartCollector() {
     stop();
-    spdlog::debug("[PrintStartCollector] Destroyed");
+    // Note: Don't log here - spdlog may be destroyed before this destructor runs
 }
 
 // ============================================================================

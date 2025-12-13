@@ -56,10 +56,13 @@
  * ## Styling
  *
  * The widget uses semantic colors from the theme:
- * - Current temp: text_primary
+ * - Current temp: **primary_color** when heating (target > 0), text_primary when idle
  * - Separator (" / "): text_secondary
  * - Target temp: text_primary
  * - Unit ("°C"): text_secondary
+ *
+ * The heating accent provides immediate visual feedback that a heater is active,
+ * making it easy to see at a glance which heaters are currently heating.
  *
  * Standard lv_obj style properties can also be applied (align, width, etc.)
  *

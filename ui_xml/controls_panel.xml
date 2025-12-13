@@ -95,7 +95,7 @@
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                 flex_flow="row" flex_main_place="space_between" flex_cross_place="center" style_pad_top="#space_sm">
           <text_small text="Nozzle" style_text_color="#text_secondary"/>
-          <text_body name="nozzle_temp_display" bind_text="controls_nozzle_temp"/>
+          <temp_display name="nozzle_temp_display" size="md" bind_current="extruder_temp" bind_target="extruder_target"/>
         </lv_obj>
         <lv_bar name="nozzle_progress"
                 width="90%" height="6" bind_value="controls_nozzle_pct" range_min="0" range_max="100"
@@ -106,7 +106,7 @@
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                 flex_flow="row" flex_main_place="space_between" flex_cross_place="center" style_pad_top="#space_xs">
           <text_small text="Bed" style_text_color="#text_secondary"/>
-          <text_body name="bed_temp_display" bind_text="controls_bed_temp"/>
+          <temp_display name="bed_temp_display" size="md" bind_current="bed_temp" bind_target="bed_target"/>
         </lv_obj>
         <lv_bar name="bed_progress"
                 width="90%" height="6" bind_value="controls_bed_pct" range_min="0" range_max="100"

@@ -215,7 +215,7 @@
             <lv_obj-bind_state_if_not_eq subject="printer_connection_state" state="disabled" ref_value="2"/>
             <event_cb trigger="clicked" callback="temp_clicked_cb"/>
             <icon name="temp_icon" src="heater" size="#icon_size_card" variant="secondary"/>
-            <text_body name="temp_text_label" width="100%" bind_text="temp_text" style_text_align="center"/>
+            <temp_display name="temp_text_label" width="100%" size="md" show_target="false" bind_current="extruder_temp" bind_target="extruder_target" align="center"/>
           </lv_button>
           <!-- Vertical divider (80% height for visual breathing room) -->
           <lv_obj name="divider1"

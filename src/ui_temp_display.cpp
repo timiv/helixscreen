@@ -85,6 +85,55 @@ static const lv_font_t* get_font_for_size(const char* size) {
     return font;
 }
 
+/**
+ * @brief Update current temp label color based on heating state
+ *
+ * When the heater is ON (target > 0), the current temperature is displayed
+ * in primary_color to provide visual feedback that heating is active.
+ * When OFF, it reverts to text_primary.
+ */
+static void update_heating_color(TempDisplayData* data) {
+    if (!data || !data->current_label)
+        return;
+
+    lv_color_t color = (data->target_temp > 0) ? ui_theme_get_color("primary_color")
+                                               : ui_theme_get_color("text_primary");
+    lv_obj_set_style_text_color(data->current_label, color, LV_PART_MAIN);
+}
+
+/**
+ * @brief Update visibility of separator and target based on heater state
+ *
+ * When show_target is true but target temp is 0 (heater off), we hide the
+ * separator and target to show just "XX°C" instead of "XX / --°C".
+ */
+static void update_target_visibility(TempDisplayData* data) {
+    if (!data)
+        return;
+
+    // If show_target is false, separator and target are always hidden (set at create time)
+    if (!data->show_target)
+        return;
+
+    // When show_target is true, hide separator/target dynamically if heater is off
+    bool should_show = (data->target_temp > 0);
+
+    if (data->separator_label) {
+        if (should_show) {
+            lv_obj_remove_flag(data->separator_label, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(data->separator_label, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    if (data->target_label) {
+        if (should_show) {
+            lv_obj_remove_flag(data->target_label, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(data->target_label, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+}
+
 /** Update the display text based on current values */
 static void update_display(TempDisplayData* data) {
     if (!data)
@@ -119,6 +168,9 @@ static void update_display(TempDisplayData* data) {
             lv_obj_add_flag(data->target_label, LV_OBJ_FLAG_HIDDEN);
         }
     }
+
+    // Update heating accent color
+    update_heating_color(data);
 }
 
 /** Cleanup callback when widget is deleted */
@@ -175,9 +227,13 @@ static void target_temp_observer_cb(lv_observer_t* observer, lv_subject_t* subje
 
     if (data) {
         data->target_temp = temp_deg;
+        // Update heating accent: primary_color when target > 0 (heater ON)
+        update_heating_color(data);
+        // Hide separator/target when heater is off
+        update_target_visibility(data);
     }
 
-    // Update just this label
+    // Update label text (only matters when visible)
     char buf[16];
     snprintf(buf, sizeof(buf), "%d", temp_deg);
     lv_label_set_text(label, buf);
@@ -303,9 +359,14 @@ static void ui_temp_display_apply_cb(lv_xml_parser_state_t* state, const char** 
                 // Set initial value (convert centidegrees to degrees)
                 int temp_centi = lv_subject_get_int(subject);
                 data->target_temp = temp_centi / 10;
+                // Set label text
                 char buf[16];
                 snprintf(buf, sizeof(buf), "%d", data->target_temp);
                 lv_label_set_text(data->target_label, buf);
+                // Apply initial heating color (primary_color if target > 0)
+                update_heating_color(data);
+                // Hide separator/target when heater is off
+                update_target_visibility(data);
                 spdlog::debug("[temp_display] Bound target to subject '{}' ({}°C)", value,
                               data->target_temp);
             } else if (!subject) {
