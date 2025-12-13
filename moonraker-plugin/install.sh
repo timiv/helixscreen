@@ -3,22 +3,21 @@
 #
 # HelixPrint Moonraker Plugin Installer
 #
-# This script creates a symlink from Moonraker's components directory
-# to the helix_print.py plugin file.
+# This script installs the helix_print Moonraker plugin.
 #
 # Usage:
-#   ./install.sh              # Auto-detect Moonraker location
-#   ./install.sh /path/to/moonraker  # Specify Moonraker path
+#   ./install.sh              # Interactive install (manual config steps)
+#   ./install.sh --auto       # Full auto-install (updates config, restarts Moonraker)
+#   ./install.sh --uninstall  # Remove the plugin
 #
-# The script will:
-#   1. Find Moonraker's installation directory
-#   2. Create a symlink to helix_print.py in the components directory
-#   3. Remind you to add [helix_print] to moonraker.conf
+# Remote install (from GitHub):
+#   curl -sSL https://raw.githubusercontent.com/pbrownco/helixscreen/main/moonraker-plugin/remote-install.sh | bash
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_FILE="$SCRIPT_DIR/helix_print.py"
+AUTO_MODE=false
 
 # Colors for output
 RED='\033[0;31m'

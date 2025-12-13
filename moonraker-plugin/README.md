@@ -2,6 +2,21 @@
 
 A Moonraker component that handles modified G-code files while preserving original file attribution in Klipper's `print_stats` and Moonraker's history.
 
+## Quick Install (Recommended)
+
+**One-liner install** - run this on your printer:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/pbrownco/helixscreen/main/moonraker-plugin/remote-install.sh | bash
+```
+
+This automatically:
+- Clones the plugin to `~/helix_print`
+- Creates the Moonraker symlink
+- Adds `[helix_print]` config section
+- Adds `[update_manager helix_print]` for auto-updates
+- Restarts Moonraker
+
 ## Problem
 
 When a touchscreen UI (like HelixScreen) modifies G-code files before printing (e.g., disabling bed leveling), the modifications create temporary files that pollute:
@@ -18,7 +33,9 @@ This plugin provides a single API endpoint that:
 4. Patches history entries to record the original filename
 5. Automatically cleans up temp files after a configurable delay
 
-## Installation
+## Manual Installation
+
+If you prefer manual installation:
 
 ```bash
 # Clone or copy the plugin
@@ -32,6 +49,19 @@ cd /path/to/helixscreen/moonraker-plugin
 ```
 
 The installer creates a symlink from Moonraker's components directory to `helix_print.py`.
+
+### Update Manager (Auto-Updates)
+
+To enable automatic updates via Moonraker's update manager, add to `moonraker.conf`:
+
+```ini
+[update_manager helix_print]
+type: git_repo
+origin: https://github.com/pbrownco/helixscreen.git
+path: ~/helix_print
+primary_branch: main
+managed_services: moonraker
+```
 
 ## Configuration
 
