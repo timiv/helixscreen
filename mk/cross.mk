@@ -319,10 +319,9 @@ help-cross:
 	echo "  $${G}ad5m$${X}                 - Cross-compile for Adventurer 5M"; \
 	echo ""; \
 	echo "$${C}Pi Deployment:$${X}"; \
-	echo "  $${G}deploy-pi$${X}            - Deploy binaries + assets to Pi via rsync"; \
-	echo "  $${G}deploy-pi-run$${X}        - Deploy and run in foreground (debug)"; \
-	echo "  $${G}deploy-pi-bg$${X}         - Deploy and run in background"; \
-	echo "  $${G}pi-test$${X}              - Full cycle: build + deploy + run"; \
+	echo "  $${G}deploy-pi$${X}            - Deploy and restart in background (default)"; \
+	echo "  $${G}deploy-pi-fg$${X}         - Deploy and run in foreground (debug)"; \
+	echo "  $${G}pi-test$${X}              - Full cycle: build + deploy + run (fg)"; \
 	echo "  $${G}pi-ssh$${X}               - SSH into the Pi"; \
 	echo ""; \
 	echo "$${C}Deployment Options:$${X}"; \
@@ -358,10 +357,11 @@ endif
 # Pi Deployment Targets
 # =============================================================================
 
-.PHONY: deploy-pi deploy-pi-run deploy-pi-run-quiet deploy-pi-bg pi-ssh pi-test
+.PHONY: deploy-pi deploy-pi-fg deploy-pi-quiet pi-ssh pi-test
 
-# Deploy full application to Pi using rsync (binary + assets + config + XML)
+# Deploy full application to Pi and restart in background
 # Uses rsync for efficient delta transfers - only changed files are sent
+# Kills any existing instance and restarts automatically
 deploy-pi:
 	@test -f build/pi/bin/helix-screen || { echo "$(RED)Error: build/pi/bin/helix-screen not found. Run 'make pi-docker' first.$(RESET)"; exit 1; }
 	@test -f build/pi/bin/helix-splash || { echo "$(RED)Error: build/pi/bin/helix-splash not found. Run 'make pi-docker' first.$(RESET)"; exit 1; }
@@ -377,28 +377,46 @@ deploy-pi:
 		config \
 		$(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/
 	@echo "$(GREEN)✓ Deployed to $(PI_HOST):$(PI_DEPLOY_DIR)$(RESET)"
+	@echo "$(CYAN)Restarting helix-screen on $(PI_HOST)...$(RESET)"
+	ssh $(PI_SSH_TARGET) "cd $(PI_DEPLOY_DIR) && killall helix-screen helix-splash 2>/dev/null || true; sleep 0.5; nohup ./config/helix-launcher.sh > /tmp/helix.log 2>&1 &"
+	@echo "$(GREEN)✓ helix-screen restarted in background$(RESET)"
+	@echo "$(DIM)Logs: ssh $(PI_SSH_TARGET) 'tail -f /tmp/helix.log'$(RESET)"
 
-# Deploy and run in foreground with debug logging (kills any existing instance first)
+# Deploy and run in foreground with debug logging (for interactive debugging)
 # Uses --debug for debug-level logging and --log-dest=console for immediate output
-deploy-pi-run: deploy-pi
-	@echo "$(CYAN)Starting helix-screen on $(PI_HOST) (debug mode)...$(RESET)"
+deploy-pi-fg:
+	@test -f build/pi/bin/helix-screen || { echo "$(RED)Error: build/pi/bin/helix-screen not found. Run 'make pi-docker' first.$(RESET)"; exit 1; }
+	@test -f build/pi/bin/helix-splash || { echo "$(RED)Error: build/pi/bin/helix-splash not found. Run 'make pi-docker' first.$(RESET)"; exit 1; }
+	@echo "$(CYAN)Deploying HelixScreen to $(PI_SSH_TARGET):$(PI_DEPLOY_DIR)...$(RESET)"
+	ssh $(PI_SSH_TARGET) "mkdir -p $(PI_DEPLOY_DIR)"
+	rsync -avz --progress \
+		build/pi/bin/helix-screen \
+		build/pi/bin/helix-splash \
+		ui_xml \
+		assets \
+		config \
+		$(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/
+	@echo "$(CYAN)Starting helix-screen on $(PI_HOST) (foreground, debug mode)...$(RESET)"
 	ssh -t $(PI_SSH_TARGET) "cd $(PI_DEPLOY_DIR) && killall helix-screen helix-splash 2>/dev/null || true; sleep 0.5; ./config/helix-launcher.sh --debug --log-dest=console"
 
-# Deploy and run without debug logging (production mode)
-deploy-pi-run-quiet: deploy-pi
-	@echo "$(CYAN)Starting helix-screen on $(PI_HOST)...$(RESET)"
+# Deploy and run in foreground without debug logging (production mode)
+deploy-pi-quiet:
+	@test -f build/pi/bin/helix-screen || { echo "$(RED)Error: build/pi/bin/helix-screen not found. Run 'make pi-docker' first.$(RESET)"; exit 1; }
+	@test -f build/pi/bin/helix-splash || { echo "$(RED)Error: build/pi/bin/helix-splash not found. Run 'make pi-docker' first.$(RESET)"; exit 1; }
+	ssh $(PI_SSH_TARGET) "mkdir -p $(PI_DEPLOY_DIR)"
+	rsync -avz --progress \
+		build/pi/bin/helix-screen \
+		build/pi/bin/helix-splash \
+		ui_xml \
+		assets \
+		config \
+		$(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/
+	@echo "$(CYAN)Starting helix-screen on $(PI_HOST) (foreground)...$(RESET)"
 	ssh -t $(PI_SSH_TARGET) "cd $(PI_DEPLOY_DIR) && killall helix-screen helix-splash 2>/dev/null || true; sleep 0.5; ./config/helix-launcher.sh"
-
-# Deploy and run in background (kills existing, starts detached)
-deploy-pi-bg: deploy-pi
-	@echo "$(CYAN)Starting helix-screen on $(PI_HOST) in background...$(RESET)"
-	ssh $(PI_SSH_TARGET) "cd $(PI_DEPLOY_DIR) && killall helix-screen helix-splash 2>/dev/null || true; sleep 0.5; nohup ./config/helix-launcher.sh > /tmp/helix.log 2>&1 &"
-	@echo "$(GREEN)✓ helix-screen started in background on $(PI_HOST)$(RESET)"
-	@echo "$(DIM)Logs: ssh $(PI_SSH_TARGET) 'tail -f /tmp/helix.log'$(RESET)"
 
 # Convenience: SSH into the Pi
 pi-ssh:
 	ssh $(PI_SSH_TARGET)
 
-# Full cycle: build + deploy + run
-pi-test: pi-docker deploy-pi-run
+# Full cycle: build + deploy + run in foreground
+pi-test: pi-docker deploy-pi-fg
