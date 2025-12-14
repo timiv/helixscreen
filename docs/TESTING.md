@@ -504,6 +504,31 @@ REQUIRE(count == 2);  // Fired again on change
 
 ## Common Issues
 
+### Build Issues
+
+#### Missing LVGL
+```bash
+# Ensure submodules are initialized
+git submodule update --init --recursive
+```
+
+#### Font Generation Errors
+```bash
+# Skip font generation if not needed for tests
+touch .fonts.stamp
+make test
+```
+
+#### Missing libhv
+```bash
+# Clean and rebuild to ensure libhv is built
+make clean
+make -j
+make test
+```
+
+### Test Code Issues
+
 ### Issue: "Catch2 header not found"
 **Solution:** Use `#include "../catch_amalgamated.hpp"` not `<catch2/...>`
 
