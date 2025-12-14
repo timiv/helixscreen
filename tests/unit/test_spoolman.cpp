@@ -1,10 +1,10 @@
 // Copyright 2025 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "advanced_panel_types.h"
 #include "moonraker_api_mock.h"
 #include "moonraker_client_mock.h"
 #include "printer_state.h"
+#include "spoolman_types.h" // For SpoolInfo
 
 #include "../catch_amalgamated.hpp"
 

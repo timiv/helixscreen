@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "advanced_panel_types.h"
+#include "calibration_types.h" // For InputShaperResult
 #include "lvgl/lvgl.h"
 
 #include <array>

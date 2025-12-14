@@ -14,7 +14,7 @@
  * Uses mock client to simulate G-code responses from Klipper.
  */
 
-#include "../../include/advanced_panel_types.h"
+#include "../../include/calibration_types.h" // For InputShaperResult
 #include "../../include/moonraker_api.h"
 #include "../../include/moonraker_client_mock.h"
 #include "../../include/printer_state.h"

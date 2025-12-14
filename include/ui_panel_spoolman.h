@@ -5,7 +5,7 @@
 
 #include "ui_panel_base.h"
 
-#include "advanced_panel_types.h" // For SpoolInfo
+#include "spoolman_types.h" // For SpoolInfo
 
 #include <vector>
 
