@@ -135,6 +135,14 @@ class AmsState {
     }
 
     /**
+     * @brief Get system name subject
+     * @return Subject holding AMS system display name (e.g., "Happy Hare", "AFC")
+     */
+    lv_subject_t* get_ams_system_name_subject() {
+        return &ams_system_name_;
+    }
+
+    /**
      * @brief Get current gate subject
      * @return Subject holding current gate index (-1 if none)
      */
@@ -318,9 +326,11 @@ class AmsState {
     lv_subject_t gate_count_;
     lv_subject_t gates_version_;
 
-    // String subject for action detail (needs buffer)
+    // String subjects (need buffers)
     lv_subject_t ams_action_detail_;
     char action_detail_buf_[64];
+    lv_subject_t ams_system_name_;
+    char system_name_buf_[32];
 
     // Filament path visualization subjects
     lv_subject_t path_topology_;

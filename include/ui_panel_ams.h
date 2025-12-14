@@ -124,6 +124,7 @@ class AmsPanel : public PanelBase {
 
     // === Setup Helpers ===
 
+    void setup_system_header();
     void setup_slots();
     void setup_action_buttons();
     void setup_status_display();

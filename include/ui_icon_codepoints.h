@@ -108,7 +108,8 @@ static const IconMapping ICON_MAP[] = {
     {"home_import",        "\xF3\xB0\xBE\x9C"},  // F0F9C home-import-outline (home-z)
     {"hourglass",          "\xF3\xB0\x8F\x94"},  // F03D4 hourglass (approx, need exact)
 
-    // Info
+    // Info/Image
+    {"image_broken_variant", "\xF3\xB1\xA3\x86"}, // F18C6 image-broken-variant (fallback)
     {"info",               "\xF3\xB0\x8B\xBC"},  // F02FC information
     {"info_outline",       "\xF3\xB0\x8B\xBD"},  // F02FD information-outline
     {"inputshaper",        "\xF3\xB0\xA5\x9B"},  // F095B sine-wave
@@ -138,6 +139,7 @@ static const IconMapping ICON_MAP[] = {
     {"print",              "\xF3\xB0\x90\xAA"},  // F042A printer
     {"printer_3d",         "\xF3\xB0\x90\xAB"},  // F042B printer-3d
     {"prohibited",         "\xF3\xB0\x82\xAD"},  // F00AD block-helper
+    {"rabbit",             "\xF3\xB0\xA4\x87"},  // F0907 rabbit (Happy Hare logo)
 
     // Radiator/Heating
     {"radiator",           "\xF3\xB0\x90\xB8"},  // F0438 radiator
@@ -165,6 +167,7 @@ static const IconMapping ICON_MAP[] = {
     {"thermometer",        "\xF3\xB0\x94\x8F"},  // F050F thermometer
     {"thermometer_minus",  "\xF3\xB0\xB8\x84"},  // F0E04 thermometer-minus
     {"thermometer_plus",   "\xF3\xB0\xB8\x85"},  // F0E05 thermometer-plus
+    {"tortoise",           "\xF3\xB0\xB4\x97"},  // F0D17 tortoise (AFC/Box Turtle logo)
     {"train_flatbed",      "\xF3\xB1\xAC\xB5"},  // F1B35 train-car-flatbed (print bed base)
     {"tune",               "\xF3\xB0\x98\xAE"},  // F062E tune
     {"undo",               "\xF3\xB0\x95\x8C"},  // F054C undo (counter-clockwise arrow - loosen)

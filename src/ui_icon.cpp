@@ -169,7 +169,7 @@ static void apply_variant(lv_obj_t* obj, IconVariant variant) {
  */
 static void apply_source(lv_obj_t* obj, const char* src) {
     if (!src || strlen(src) == 0) {
-        src = "home"; // Default icon
+        src = "image_broken_variant"; // Default icon (broken image)
     }
 
     // Try direct lookup first
@@ -187,12 +187,12 @@ static void apply_source(lv_obj_t* obj, const char* src) {
         lv_label_set_text(obj, codepoint);
         spdlog::trace("[Icon] Set icon '{}' -> codepoint", src);
     } else {
-        // Fallback to home icon
-        const char* fallback = ui_icon::lookup_codepoint("home");
+        // Fallback to broken image icon
+        const char* fallback = ui_icon::lookup_codepoint("image_broken_variant");
         if (fallback) {
             lv_label_set_text(obj, fallback);
         }
-        spdlog::warn("[Icon] Icon '{}' not found, using 'home' fallback", src);
+        spdlog::warn("[Icon] Icon '{}' not found, using 'image_broken_variant' fallback", src);
     }
 }
 
@@ -208,8 +208,8 @@ static void* ui_icon_xml_create(lv_xml_parser_state_t* state, const char** attrs
     // Apply default size (xl = 64px)
     apply_size(obj, IconSize::XL);
 
-    // Apply default source (home icon)
-    apply_source(obj, "home");
+    // Apply default source (broken image icon)
+    apply_source(obj, "image_broken_variant");
 
     // Default variant (primary text color)
     apply_variant(obj, IconVariant::NONE);

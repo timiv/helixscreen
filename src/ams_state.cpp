@@ -48,6 +48,7 @@ AmsState& AmsState::instance() {
 
 AmsState::AmsState() {
     std::memset(action_detail_buf_, 0, sizeof(action_detail_buf_));
+    std::memset(system_name_buf_, 0, sizeof(system_name_buf_));
 }
 
 AmsState::~AmsState() {
@@ -80,9 +81,11 @@ void AmsState::init_subjects(bool register_xml) {
     lv_subject_init_int(&gate_count_, 0);
     lv_subject_init_int(&gates_version_, 0);
 
-    // String subject for action detail
+    // String subjects
     lv_subject_init_string(&ams_action_detail_, action_detail_buf_, nullptr,
                            sizeof(action_detail_buf_), "");
+    lv_subject_init_string(&ams_system_name_, system_name_buf_, nullptr, sizeof(system_name_buf_),
+                           "");
 
     // Filament path visualization subjects
     lv_subject_init_int(&path_topology_, static_cast<int>(PathTopology::HUB));
@@ -102,6 +105,7 @@ void AmsState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "ams_type", &ams_type_);
         lv_xml_register_subject(NULL, "ams_action", &ams_action_);
         lv_xml_register_subject(NULL, "ams_action_detail", &ams_action_detail_);
+        lv_xml_register_subject(NULL, "ams_system_name", &ams_system_name_);
         lv_xml_register_subject(NULL, "ams_current_gate", &current_gate_);
         lv_xml_register_subject(NULL, "ams_current_tool", &current_tool_);
         lv_xml_register_subject(NULL, "ams_filament_loaded", &filament_loaded_);
@@ -127,7 +131,7 @@ void AmsState::init_subjects(bool register_xml) {
         }
 
         spdlog::info(
-            "[AMS State] Registered {} system subjects, {} path subjects, {} per-gate subjects", 9,
+            "[AMS State] Registered {} system subjects, {} path subjects, {} per-gate subjects", 10,
             5, MAX_GATES * 2);
     }
 
@@ -281,6 +285,13 @@ void AmsState::sync_from_backend() {
     // Update system-level subjects
     lv_subject_set_int(&ams_type_, static_cast<int>(info.type));
     lv_subject_set_int(&ams_action_, static_cast<int>(info.action));
+
+    // Set system name from backend type_name or fallback to type string
+    if (!info.type_name.empty()) {
+        lv_subject_copy_string(&ams_system_name_, info.type_name.c_str());
+    } else {
+        lv_subject_copy_string(&ams_system_name_, ams_type_to_string(info.type));
+    }
     lv_subject_set_int(&current_gate_, info.current_gate);
     lv_subject_set_int(&current_tool_, info.current_tool);
     lv_subject_set_int(&filament_loaded_, info.filament_loaded ? 1 : 0);

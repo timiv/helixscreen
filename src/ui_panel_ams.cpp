@@ -7,6 +7,7 @@
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_filament_path_canvas.h"
+#include "ui_icon.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
 #include "ui_panel_common.h"
@@ -24,9 +25,72 @@
 
 #include <cstring>
 #include <memory>
+#include <unordered_map>
 
 // Global instance pointer for XML callback access
 static AmsPanel* g_ams_panel_instance = nullptr;
+
+/**
+ * @brief Map AMS system/type name to logo image path
+ *
+ * Maps both generic firmware names (Happy Hare, AFC) and specific hardware
+ * names (ERCF, Box Turtle, etc.) to their logo assets.
+ *
+ * @param name System or type name (case-insensitive matching)
+ * @return Logo path or empty string if no matching logo
+ */
+static const char* get_ams_logo_path(const std::string& name) {
+    // Normalize to lowercase for matching
+    std::string lower_name = name;
+    for (auto& c : lower_name) {
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    }
+
+    // Strip common suffixes like " (mock)", " (test)", etc.
+    size_t paren_pos = lower_name.find(" (");
+    if (paren_pos != std::string::npos) {
+        lower_name = lower_name.substr(0, paren_pos);
+    }
+
+    // Map system names to logo paths
+    // Note: All logos are 64x64 white-on-transparent PNGs
+    static const std::unordered_map<std::string, const char*> logo_map = {
+        // AFC/Box Turtle (AFC firmware only runs on Box Turtle hardware)
+        {"afc", "A:assets/images/ams/box_turtle_64.png"},
+        {"box turtle", "A:assets/images/ams/box_turtle_64.png"},
+        {"box_turtle", "A:assets/images/ams/box_turtle_64.png"},
+        {"boxturtle", "A:assets/images/ams/box_turtle_64.png"},
+
+        // Happy Hare - generic firmware, defaults to ERCF logo
+        // (most common hardware running Happy Hare)
+        {"happy hare", "A:assets/images/ams/ercf_64.png"},
+        {"happy_hare", "A:assets/images/ams/ercf_64.png"},
+        {"happyhare", "A:assets/images/ams/ercf_64.png"},
+
+        // Specific hardware types (when detected or configured)
+        {"ercf", "A:assets/images/ams/ercf_64.png"},
+        {"3ms", "A:assets/images/ams/3ms_64.png"},
+        {"tradrack", "A:assets/images/ams/tradrack_64.png"},
+        {"mmx", "A:assets/images/ams/mmx_64.png"},
+        {"night owl", "A:assets/images/ams/night_owl_64.png"},
+        {"night_owl", "A:assets/images/ams/night_owl_64.png"},
+        {"nightowl", "A:assets/images/ams/night_owl_64.png"},
+        {"quattro box", "A:assets/images/ams/quattro_box_64.png"},
+        {"quattro_box", "A:assets/images/ams/quattro_box_64.png"},
+        {"quattrobox", "A:assets/images/ams/quattro_box_64.png"},
+        {"btt vivid", "A:assets/images/ams/btt_vivid_64.png"},
+        {"btt_vivid", "A:assets/images/ams/btt_vivid_64.png"},
+        {"bttvivid", "A:assets/images/ams/btt_vivid_64.png"},
+        {"vivid", "A:assets/images/ams/btt_vivid_64.png"},
+        {"kms", "A:assets/images/ams/kms_64.png"},
+    };
+
+    auto it = logo_map.find(lower_name);
+    if (it != logo_map.end()) {
+        return it->second;
+    }
+    return nullptr;
+}
 
 // Lazy registration flag - widgets and XML registered on first use
 static bool s_ams_widgets_registered = false;
@@ -152,6 +216,7 @@ void AmsPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     ui_overlay_panel_setup_standard(panel_, parent_screen_, "overlay_header", "overlay_content");
 
     // Setup UI components
+    setup_system_header();
     setup_slots();
     setup_action_buttons();
     setup_status_display();
@@ -211,6 +276,42 @@ void AmsPanel::clear_panel_reference() {
 // ============================================================================
 // Setup Helpers
 // ============================================================================
+
+void AmsPanel::setup_system_header() {
+    // Find the system logo image in the header
+    lv_obj_t* system_logo = lv_obj_find_by_name(panel_, "system_logo");
+    if (!system_logo) {
+        spdlog::warn("[{}] system_logo not found in XML", get_name());
+        return;
+    }
+
+    // Get AMS system info from backend
+    AmsBackend* backend = AmsState::instance().get_backend();
+    if (!backend) {
+        spdlog::debug("[{}] No backend, hiding logo", get_name());
+        lv_obj_add_flag(system_logo, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    // Get system name for logo lookup
+    const auto& info = backend->get_system_info();
+    const char* logo_path = get_ams_logo_path(info.type_name);
+
+    if (logo_path) {
+        spdlog::info("[{}] Setting logo: '{}' -> {}", get_name(), info.type_name, logo_path);
+        lv_image_set_src(system_logo, logo_path);
+        lv_obj_remove_flag(system_logo, LV_OBJ_FLAG_HIDDEN);
+        // Log image dimensions after setting source
+        lv_coord_t w = lv_obj_get_width(system_logo);
+        lv_coord_t h = lv_obj_get_height(system_logo);
+        spdlog::info("[{}] Logo widget size: {}x{}, hidden={}", get_name(), w, h,
+                     lv_obj_has_flag(system_logo, LV_OBJ_FLAG_HIDDEN));
+    } else {
+        // Hide logo for unknown systems
+        lv_obj_add_flag(system_logo, LV_OBJ_FLAG_HIDDEN);
+        spdlog::debug("[{}] No logo for system '{}'", get_name(), info.type_name);
+    }
+}
 
 void AmsPanel::setup_slots() {
     slot_grid_ = lv_obj_find_by_name(panel_, "slot_grid");

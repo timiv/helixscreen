@@ -841,6 +841,52 @@ sudo dnf install ImageMagick
 make icon  # Regenerates all icon files (platform-specific)
 ```
 
+## SVG to PNG Conversion
+
+When converting SVG files to PNG for use in the project, **always use `rsvg-convert`** from the librsvg library.
+
+### Why Not ImageMagick?
+
+ImageMagick's SVG renderer doesn't correctly handle certain SVG features (transforms, filters, complex paths). This produces corrupted output—often solid white/black rectangles instead of the intended graphics.
+
+### Using rsvg-convert
+
+```bash
+# Single file at specific size:
+rsvg-convert logo.svg -w 64 -h 64 -o logo_64.png
+
+# Batch convert all SVGs in a directory:
+for svg in *.svg; do
+  name="${svg%.svg}"
+  rsvg-convert "$svg" -w 64 -h 64 -o "${name}_64.png"
+done
+
+# Common size options:
+rsvg-convert input.svg -w 128 -h 128 -o output.png  # By pixel dimensions
+rsvg-convert input.svg --dpi-x 192 --dpi-y 192 -o output.png  # By DPI
+```
+
+### Installation
+
+The `librsvg` package is already tracked as a dependency for lv_img_conv. Install with:
+
+```bash
+# macOS
+brew install librsvg
+
+# Debian/Ubuntu
+sudo apt install librsvg2-bin
+
+# Fedora/RHEL
+sudo dnf install librsvg2-tools
+```
+
+### Current Usage
+
+- **AMS logos** (`assets/images/ams/`) - Multi-material system icons converted from SVG sources
+
+---
+
 ## Build Targets
 
 ### Primary Targets
