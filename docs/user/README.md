@@ -40,7 +40,7 @@ Welcome! This documentation is for **users** of HelixScreen who want to install 
 | Platform | Status | Notes |
 |----------|--------|-------|
 | **MainsailOS** (Raspberry Pi) | ✅ Fully supported | Primary target |
-| **Adventurer 5M/Pro** | ✅ Fully supported | With Klipper mod |
+| **Adventurer 5M/Pro** | ✅ Fully supported | With [Forge-X](https://github.com/DrA1ex/ff5m) |
 | **Other Pi OS** (Raspbian, etc.) | ⚠️ Should work | Less tested |
 | **Other ARM Linux** | ⚠️ May work | Community supported |
 

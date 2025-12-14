@@ -26,7 +26,7 @@ HelixScreen is a next-generation printer control interface built from the ground
 >
 > **What's been tested:**
 > - Raspberry Pi 5 with 5" touchscreen
-> - FlashForge Adventurer 5M Pro (with Klipper mod)
+> - FlashForge Adventurer 5M Pro (with [Forge-X](https://github.com/DrA1ex/ff5m) or similar Klipper firmware)
 > - Automated and manual testing during development
 >
 > **Our Vision:** The best Klipper touchscreen experience available — period. Low memory footprint, beautiful modern UI, and the full functionality you'd expect from premium commercial printer displays. But open source and community-driven.

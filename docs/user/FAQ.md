@@ -25,7 +25,7 @@ HelixScreen is a touchscreen interface for Klipper 3D printers. It connects to y
 - Prusa (with Klipper mod)
 - Creality (K1, Ender with Klipper)
 - Bambu (with Klipper mod)
-- FlashForge Adventurer 5M (with Klipper mod)
+- FlashForge Adventurer 5M (with [Forge-X](https://github.com/DrA1ex/ff5m))
 - Ratrig
 - Any custom Klipper build
 

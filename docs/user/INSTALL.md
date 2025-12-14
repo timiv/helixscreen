@@ -79,7 +79,7 @@ After installation, the setup wizard will guide you through initial configuratio
   - Network connection
 
 - **Software:**
-  - Klipper mod already installed and working
+  - [Forge-X](https://github.com/DrA1ex/ff5m) or similar Klipper firmware installed and working
   - SSH access to the printer (usually `root@<printer-ip>`)
   - About 100MB free disk space
 
