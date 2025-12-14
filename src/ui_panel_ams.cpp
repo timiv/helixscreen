@@ -407,7 +407,8 @@ void AmsPanel::update_tray_size() {
     lv_obj_set_height(tray, tray_height);
     lv_obj_align(tray, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    spdlog::debug("[{}] Tray sized to {}px (1/3 of {}px grid)", get_name(), tray_height, grid_height);
+    spdlog::debug("[{}] Tray sized to {}px (1/3 of {}px grid)", get_name(), tray_height,
+                  grid_height);
 }
 
 void AmsPanel::on_gate_count_changed(lv_observer_t* observer, lv_subject_t* subject) {
