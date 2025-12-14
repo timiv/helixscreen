@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -30,7 +31,8 @@ constexpr uint32_t AMS_DEFAULT_SLOT_COLOR = 0x808080;
 enum class AmsType {
     NONE = 0,       ///< No AMS detected
     HAPPY_HARE = 1, ///< Happy Hare MMU (mmu object in Moonraker)
-    AFC = 2         ///< AFC-Klipper-Add-On (afc object, lane_data database)
+    AFC = 2,        ///< AFC-Klipper-Add-On (afc object, lane_data database)
+    VALGACE = 3     ///< AnyCubic ACE Pro via ValgACE Klipper driver
 };
 
 /**
@@ -44,6 +46,8 @@ inline const char* ams_type_to_string(AmsType type) {
         return "Happy Hare";
     case AmsType::AFC:
         return "AFC";
+    case AmsType::VALGACE:
+        return "ACE Pro";
     default:
         return "None";
     }
@@ -61,6 +65,9 @@ inline AmsType ams_type_from_string(std::string_view str) {
     }
     if (str == "afc" || str == "AFC") {
         return AmsType::AFC;
+    }
+    if (str == "valgace" || str == "ValgACE" || str == "ace" || str == "ACE Pro") {
+        return AmsType::VALGACE;
     }
     return AmsType::NONE;
 }
@@ -606,3 +613,103 @@ struct PrintColorInfo {
     int initial_tool = 0;       ///< First tool used in print
     bool all_satisfied = false; ///< All requirements have mapped slots
 };
+
+// ============================================================================
+// Dryer Types (for AMS systems with integrated drying)
+// ============================================================================
+
+/**
+ * @brief Preset drying profile
+ *
+ * Standard drying profiles for common filament materials.
+ * Can be overridden via helixconfig.json "dryer_presets" array.
+ */
+struct DryingPreset {
+    std::string name;        ///< Preset name (e.g., "PLA", "PETG", "ABS")
+    float temp_c = 45.0f;    ///< Target temperature in Celsius
+    int duration_min = 240;  ///< Drying duration in minutes
+    int fan_pct = 50;        ///< Fan speed percentage (0-100)
+
+    /**
+     * @brief Create a drying preset
+     * @param n Preset name
+     * @param t Temperature in Celsius
+     * @param d Duration in minutes
+     * @param f Fan speed percentage
+     */
+    DryingPreset(std::string n, float t, int d, int f = 50)
+        : name(std::move(n)), temp_c(t), duration_min(d), fan_pct(f) {}
+    DryingPreset() = default;
+};
+
+/**
+ * @brief Dryer capability and state information
+ *
+ * Not all AMS systems have integrated dryers. Currently only ACE Pro (ValgACE)
+ * has dryer support. This struct provides a generic interface that other
+ * backends can implement when dryer hardware becomes available.
+ */
+struct DryerInfo {
+    bool supported = false;             ///< Does this AMS have a dryer?
+    bool active = false;                ///< Currently drying?
+    bool allows_during_print = false;   ///< Can run while printing? (backend capability)
+
+    // Current state
+    float current_temp_c = 0.0f;        ///< Current chamber temperature
+    float target_temp_c = 0.0f;         ///< Target temperature (0 = off)
+    int duration_min = 0;               ///< Total drying duration set
+    int remaining_min = 0;              ///< Minutes remaining
+    int fan_pct = 0;                    ///< Current fan speed (0-100)
+
+    // Hardware capabilities
+    float min_temp_c = 35.0f;           ///< Minimum settable temperature
+    float max_temp_c = 70.0f;           ///< Maximum settable temperature
+    int max_duration_min = 720;         ///< Maximum drying time (12h default)
+    bool supports_fan_control = false;  ///< Can fan speed be set independently?
+
+    /**
+     * @brief Get progress as percentage
+     * @return 0-100 percentage, or -1 if not drying
+     */
+    [[nodiscard]] int get_progress_pct() const {
+        if (!active || duration_min <= 0)
+            return -1;
+        int elapsed = duration_min - remaining_min;
+        // Clamp to valid range (handles firmware reporting remaining > duration)
+        if (elapsed < 0)
+            elapsed = 0;
+        if (elapsed > duration_min)
+            elapsed = duration_min;
+        return (elapsed * 100) / duration_min;
+    }
+
+    /**
+     * @brief Check if dryer is at target temperature
+     * @param tolerance_c Temperature tolerance in Celsius (default 2°C)
+     * @return true if within tolerance of target
+     */
+    [[nodiscard]] bool is_at_temp(float tolerance_c = 2.0f) const {
+        if (target_temp_c <= 0)
+            return false;
+        return std::abs(current_temp_c - target_temp_c) <= tolerance_c;
+    }
+};
+
+/**
+ * @brief Get default drying presets
+ *
+ * Returns hardcoded presets for common filament materials.
+ * These can be overridden via helixconfig.json "dryer_presets" array.
+ *
+ * @return Vector of default DryingPreset structs
+ */
+inline std::vector<DryingPreset> get_default_drying_presets() {
+    return {
+        {"PLA", 45.0f, 240, 50},   // 45°C for 4 hours
+        {"PETG", 55.0f, 360, 50},  // 55°C for 6 hours
+        {"ABS", 65.0f, 360, 50},   // 65°C for 6 hours
+        {"TPU", 50.0f, 300, 40},   // 50°C for 5 hours
+        {"Nylon", 70.0f, 480, 50}, // 70°C for 8 hours
+        {"ASA", 65.0f, 360, 50}    // 65°C for 6 hours
+    };
+}

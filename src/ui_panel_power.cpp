@@ -146,7 +146,7 @@ void PowerPanel::fetch_devices() {
     lv_subject_copy_string(&status_subject_, status_buf_);
 
     api_->get_power_devices(
-        [this](const std::vector<MoonrakerAPI::PowerDevice>& devices) {
+        [this](const std::vector<PowerDevice>& devices) {
             spdlog::info("[{}] Received {} power devices", get_name(), devices.size());
             populate_device_list(devices);
         },
@@ -167,7 +167,7 @@ void PowerPanel::clear_device_list() {
     device_rows_.clear();
 }
 
-void PowerPanel::populate_device_list(const std::vector<MoonrakerAPI::PowerDevice>& devices) {
+void PowerPanel::populate_device_list(const std::vector<PowerDevice>& devices) {
     clear_device_list();
 
     bool has_devices = !devices.empty();
@@ -203,7 +203,7 @@ void PowerPanel::populate_device_list(const std::vector<MoonrakerAPI::PowerDevic
     lv_subject_copy_string(&status_subject_, status_buf_);
 }
 
-void PowerPanel::create_device_row(const MoonrakerAPI::PowerDevice& device) {
+void PowerPanel::create_device_row(const PowerDevice& device) {
     if (!device_list_container_) {
         return;
     }

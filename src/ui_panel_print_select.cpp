@@ -2373,7 +2373,7 @@ void PrintSelectPanel::modify_and_print(
                 self->api_->start_modified_print(
                     file_path, modified_content, mod_names,
                     // Success callback
-                    [self, original_filename](const MoonrakerAPI::ModifiedPrintResult& result) {
+                    [self, original_filename](const ModifiedPrintResult& result) {
                         spdlog::info("[{}] Print started via helix_print plugin: {} -> {}",
                                      self->get_name(), result.original_filename,
                                      result.print_filename);

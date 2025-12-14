@@ -29,6 +29,7 @@ const std::vector<std::string> MoonrakerAPIMock::PATH_PREFIXES = {
 MoonrakerAPIMock::MoonrakerAPIMock(MoonrakerClient& client, PrinterState& state)
     : MoonrakerAPI(client, state) {
     spdlog::info("[MoonrakerAPIMock] Created - HTTP methods will use local test files");
+    init_mock_spools();
 }
 
 std::string MoonrakerAPIMock::find_test_file(const std::string& filename) const {
@@ -492,4 +493,411 @@ void MoonrakerAPIMock::calculate_screws_tilt(ScrewTiltCallback on_success,
 void MoonrakerAPIMock::reset_mock_bed_state() {
     mock_bed_state_.reset();
     spdlog::info("[MoonrakerAPIMock] Mock bed state reset");
+}
+
+// ============================================================================
+// MoonrakerAPIMock - Spoolman Override
+// ============================================================================
+
+void MoonrakerAPIMock::init_mock_spools() {
+    // Create a realistic mock spool inventory
+    mock_spools_.clear();
+
+    // Spool 1: Polymaker PLA - Jet Black (active, 85% remaining)
+    SpoolInfo spool1;
+    spool1.id = 1;
+    spool1.vendor = "Polymaker";
+    spool1.material = "PLA";
+    spool1.color_name = "Jet Black";
+    spool1.color_hex = "1A1A2E";
+    spool1.remaining_weight_g = 850.0;
+    spool1.initial_weight_g = 1000.0;
+    spool1.remaining_length_m = 290.0;
+    spool1.spool_weight_g = 140.0;
+    spool1.nozzle_temp_recommended = 210;
+    spool1.bed_temp_recommended = 60;
+    spool1.is_active = true;
+    mock_spools_.push_back(spool1);
+
+    // Spool 2: eSUN Silk PLA - Silk Blue (75% remaining)
+    SpoolInfo spool2;
+    spool2.id = 2;
+    spool2.vendor = "eSUN";
+    spool2.material = "Silk PLA";
+    spool2.color_name = "Silk Blue";
+    spool2.color_hex = "26DCD9";
+    spool2.remaining_weight_g = 750.0;
+    spool2.initial_weight_g = 1000.0;
+    spool2.remaining_length_m = 258.0;
+    spool2.spool_weight_g = 240.0;
+    spool2.nozzle_temp_recommended = 210;
+    spool2.bed_temp_recommended = 50;
+    spool2.is_active = false;
+    mock_spools_.push_back(spool2);
+
+    // Spool 3: Elegoo ASA - Pop Blue (50% remaining)
+    SpoolInfo spool3;
+    spool3.id = 3;
+    spool3.vendor = "Elegoo";
+    spool3.material = "ASA";
+    spool3.color_name = "Pop Blue";
+    spool3.color_hex = "00AEFF";
+    spool3.remaining_weight_g = 500.0;
+    spool3.initial_weight_g = 1000.0;
+    spool3.remaining_length_m = 185.0;
+    spool3.spool_weight_g = 170.0;
+    spool3.nozzle_temp_recommended = 260;
+    spool3.bed_temp_recommended = 100;
+    spool3.is_active = false;
+    mock_spools_.push_back(spool3);
+
+    // Spool 4: Flashforge ABS - Fire Engine Red (LOW: 10% remaining)
+    SpoolInfo spool4;
+    spool4.id = 4;
+    spool4.vendor = "Flashforge";
+    spool4.material = "ABS";
+    spool4.color_name = "Fire Engine Red";
+    spool4.color_hex = "D20000";
+    spool4.remaining_weight_g = 100.0;
+    spool4.initial_weight_g = 1000.0;
+    spool4.remaining_length_m = 39.0;
+    spool4.spool_weight_g = 160.0;
+    spool4.nozzle_temp_recommended = 260;
+    spool4.bed_temp_recommended = 100;
+    spool4.is_active = false;
+    mock_spools_.push_back(spool4);
+
+    // Spool 5: Kingroon PETG - Signal Yellow (NEW: 100% remaining)
+    SpoolInfo spool5;
+    spool5.id = 5;
+    spool5.vendor = "Kingroon";
+    spool5.material = "PETG";
+    spool5.color_name = "Signal Yellow";
+    spool5.color_hex = "F4E111";
+    spool5.remaining_weight_g = 1000.0;
+    spool5.initial_weight_g = 1000.0;
+    spool5.remaining_length_m = 333.0;
+    spool5.spool_weight_g = 155.0;
+    spool5.nozzle_temp_recommended = 235;
+    spool5.bed_temp_recommended = 70;
+    spool5.is_active = false;
+    mock_spools_.push_back(spool5);
+
+    // Spool 6: Overture TPU - Clear (60% remaining)
+    SpoolInfo spool6;
+    spool6.id = 6;
+    spool6.vendor = "Overture";
+    spool6.material = "TPU";
+    spool6.color_name = "Clear";
+    spool6.color_hex = "E8E8E8";
+    spool6.remaining_weight_g = 600.0;
+    spool6.initial_weight_g = 1000.0;
+    spool6.remaining_length_m = 198.0;
+    spool6.spool_weight_g = 230.0;
+    spool6.nozzle_temp_recommended = 220;
+    spool6.bed_temp_recommended = 50;
+    spool6.is_active = false;
+    mock_spools_.push_back(spool6);
+
+    // === Additional spools from real Spoolman inventory for realistic testing ===
+
+    // Spool 7: Bambu Lab ASA - Gray (NEW: 100%)
+    SpoolInfo spool7;
+    spool7.id = 7;
+    spool7.vendor = "Bambu Lab";
+    spool7.material = "ASA";
+    spool7.color_name = "Gray ASA";
+    spool7.color_hex = "8A949E";
+    spool7.remaining_weight_g = 1000.0;
+    spool7.initial_weight_g = 1000.0;
+    spool7.remaining_length_m = 370.0;
+    spool7.spool_weight_g = 250.0;
+    spool7.nozzle_temp_recommended = 250;
+    spool7.bed_temp_recommended = 90;
+    spool7.is_active = false;
+    mock_spools_.push_back(spool7);
+
+    // Spool 8: Polymaker PC - Grey (67% - Polycarbonate engineering material)
+    SpoolInfo spool8;
+    spool8.id = 8;
+    spool8.vendor = "Polymaker";
+    spool8.material = "PC";
+    spool8.color_name = "PolyMax PC Grey";
+    spool8.color_hex = "A2AAAD";
+    spool8.remaining_weight_g = 500.0;
+    spool8.initial_weight_g = 750.0;
+    spool8.remaining_length_m = 152.0;
+    spool8.spool_weight_g = 125.0;
+    spool8.nozzle_temp_recommended = 270;
+    spool8.bed_temp_recommended = 100;
+    spool8.is_active = false;
+    mock_spools_.push_back(spool8);
+
+    // Spool 9: Polymaker PA12-CF15 - Carbon Fiber Nylon (100% - HIGH TEMP)
+    SpoolInfo spool9;
+    spool9.id = 9;
+    spool9.vendor = "Polymaker";
+    spool9.material = "PA-CF";
+    spool9.color_name = "Fiberon PA12-CF15 Black";
+    spool9.color_hex = "000000";
+    spool9.remaining_weight_g = 500.0;
+    spool9.initial_weight_g = 500.0;
+    spool9.remaining_length_m = 170.0;
+    spool9.spool_weight_g = 190.0;
+    spool9.nozzle_temp_recommended = 290;
+    spool9.bed_temp_recommended = 50;
+    spool9.is_active = false;
+    mock_spools_.push_back(spool9);
+
+    // Spool 10: Tinmorry TPU - Blue (90% - Flexible)
+    SpoolInfo spool10;
+    spool10.id = 10;
+    spool10.vendor = "Tinmorry";
+    spool10.material = "TPU";
+    spool10.color_name = "Blue TPU";
+    spool10.color_hex = "435FCC";
+    spool10.remaining_weight_g = 900.0;
+    spool10.initial_weight_g = 1000.0;
+    spool10.remaining_length_m = 297.0;
+    spool10.spool_weight_g = 200.0;
+    spool10.nozzle_temp_recommended = 230;
+    spool10.bed_temp_recommended = 50;
+    spool10.is_active = false;
+    mock_spools_.push_back(spool10);
+
+    // Spool 11: eSUN ABS - Black (40%)
+    SpoolInfo spool11;
+    spool11.id = 11;
+    spool11.vendor = "eSUN";
+    spool11.material = "ABS";
+    spool11.color_name = "Black ABS+HS";
+    spool11.color_hex = "000000";
+    spool11.remaining_weight_g = 400.0;
+    spool11.initial_weight_g = 1000.0;
+    spool11.remaining_length_m = 148.0;
+    spool11.spool_weight_g = 160.0;
+    spool11.nozzle_temp_recommended = 260;
+    spool11.bed_temp_recommended = 100;
+    spool11.is_active = false;
+    mock_spools_.push_back(spool11);
+
+    // Spool 12: Flashforge ASA - Dark Green Sparkle (35%)
+    SpoolInfo spool12;
+    spool12.id = 12;
+    spool12.vendor = "Flashforge";
+    spool12.material = "ASA";
+    spool12.color_name = "Dark Green Sparkle ASA";
+    spool12.color_hex = "276E27";
+    spool12.remaining_weight_g = 350.0;
+    spool12.initial_weight_g = 1000.0;
+    spool12.remaining_length_m = 129.5;
+    spool12.spool_weight_g = 175.0;
+    spool12.nozzle_temp_recommended = 260;
+    spool12.bed_temp_recommended = 100;
+    spool12.is_active = false;
+    mock_spools_.push_back(spool12);
+
+    // Spool 13: Bambu Lab PETG - Translucent Green (100%)
+    SpoolInfo spool13;
+    spool13.id = 13;
+    spool13.vendor = "Bambu Lab";
+    spool13.material = "PETG";
+    spool13.color_name = "Translucent Green PETG";
+    spool13.color_hex = "29A261";
+    spool13.remaining_weight_g = 1000.0;
+    spool13.initial_weight_g = 1000.0;
+    spool13.remaining_length_m = 333.0;
+    spool13.spool_weight_g = 250.0;
+    spool13.nozzle_temp_recommended = 250;
+    spool13.bed_temp_recommended = 70;
+    spool13.is_active = false;
+    mock_spools_.push_back(spool13);
+
+    // Spool 14: Eryone Silk PLA - Gold/Silver/Copper (49% - tri-color)
+    SpoolInfo spool14;
+    spool14.id = 14;
+    spool14.vendor = "Eryone";
+    spool14.material = "Silk PLA";
+    spool14.color_name = "Gold/Silver/Copper Tri-Color";
+    spool14.color_hex = "D4AF37";
+    spool14.remaining_weight_g = 494.0;
+    spool14.initial_weight_g = 1000.0;
+    spool14.remaining_length_m = 170.0;
+    spool14.spool_weight_g = 150.0;
+    spool14.nozzle_temp_recommended = 220;
+    spool14.bed_temp_recommended = 60;
+    spool14.is_active = false;
+    mock_spools_.push_back(spool14);
+
+    // Spool 15: Bambu Lab PLA - Red (100%)
+    SpoolInfo spool15;
+    spool15.id = 15;
+    spool15.vendor = "Bambu Lab";
+    spool15.material = "PLA";
+    spool15.color_name = "Red PLA";
+    spool15.color_hex = "C12E1F";
+    spool15.remaining_weight_g = 1000.0;
+    spool15.initial_weight_g = 1000.0;
+    spool15.remaining_length_m = 340.0;
+    spool15.spool_weight_g = 250.0;
+    spool15.nozzle_temp_recommended = 220;
+    spool15.bed_temp_recommended = 60;
+    spool15.is_active = false;
+    mock_spools_.push_back(spool15);
+
+    // Spool 16: Polymaker ABS - Metallic Blue (17%)
+    SpoolInfo spool16;
+    spool16.id = 16;
+    spool16.vendor = "Polymaker";
+    spool16.material = "ABS";
+    spool16.color_name = "PolyLite ABS Metallic Blue";
+    spool16.color_hex = "333C64";
+    spool16.remaining_weight_g = 174.0;
+    spool16.initial_weight_g = 1000.0;
+    spool16.remaining_length_m = 64.0;
+    spool16.spool_weight_g = 140.0;
+    spool16.nozzle_temp_recommended = 260;
+    spool16.bed_temp_recommended = 100;
+    spool16.is_active = false;
+    mock_spools_.push_back(spool16);
+
+    // Spool 17: Sunlu PETG - Black (55%)
+    SpoolInfo spool17;
+    spool17.id = 17;
+    spool17.vendor = "Sunlu";
+    spool17.material = "PETG";
+    spool17.color_name = "Black PETG";
+    spool17.color_hex = "000000";
+    spool17.remaining_weight_g = 550.0;
+    spool17.initial_weight_g = 1000.0;
+    spool17.remaining_length_m = 183.0;
+    spool17.spool_weight_g = 130.0;
+    spool17.nozzle_temp_recommended = 255;
+    spool17.bed_temp_recommended = 80;
+    spool17.is_active = false;
+    mock_spools_.push_back(spool17);
+
+    // Spool 18: eSUN PLA+ - White (30%)
+    SpoolInfo spool18;
+    spool18.id = 18;
+    spool18.vendor = "eSUN";
+    spool18.material = "PLA+";
+    spool18.color_name = "PLA+ White";
+    spool18.color_hex = "FFFFFF";
+    spool18.remaining_weight_g = 300.0;
+    spool18.initial_weight_g = 1000.0;
+    spool18.remaining_length_m = 103.0;
+    spool18.spool_weight_g = 170.0;
+    spool18.nozzle_temp_recommended = 220;
+    spool18.bed_temp_recommended = 60;
+    spool18.is_active = false;
+    mock_spools_.push_back(spool18);
+
+    spdlog::debug("[MoonrakerAPIMock] Initialized {} mock spools", mock_spools_.size());
+}
+
+void MoonrakerAPIMock::get_spoolman_status(std::function<void(bool, int)> on_success,
+                                           ErrorCallback /*on_error*/) {
+    spdlog::debug("[MoonrakerAPIMock] get_spoolman_status() -> connected={}, active={}",
+                  mock_spoolman_enabled_, mock_active_spool_id_);
+
+    if (on_success) {
+        on_success(mock_spoolman_enabled_, mock_active_spool_id_);
+    }
+}
+
+void MoonrakerAPIMock::get_spoolman_spools(SpoolListCallback on_success,
+                                           ErrorCallback /*on_error*/) {
+    spdlog::debug("[MoonrakerAPIMock] get_spoolman_spools() -> {} spools", mock_spools_.size());
+
+    if (on_success) {
+        on_success(mock_spools_);
+    }
+}
+
+void MoonrakerAPIMock::set_active_spool(int spool_id, SuccessCallback on_success,
+                                        ErrorCallback /*on_error*/) {
+    spdlog::info("[MoonrakerAPIMock] set_active_spool({}) - was {}", spool_id, mock_active_spool_id_);
+
+    // Update active spool state
+    mock_active_spool_id_ = spool_id;
+
+    // Update is_active flag on all spools
+    for (auto& spool : mock_spools_) {
+        spool.is_active = (spool.id == spool_id);
+    }
+
+    if (on_success) {
+        on_success();
+    }
+}
+
+// ============================================================================
+// MoonrakerAPIMock - REST Endpoint Methods
+// ============================================================================
+
+void MoonrakerAPIMock::call_rest_get(const std::string& endpoint, RestCallback on_complete) {
+    spdlog::debug("[MoonrakerAPIMock] REST GET: {}", endpoint);
+
+    RestResponse resp;
+    resp.success = true;
+    resp.status_code = 200;
+
+    // Return mock responses for known ValgACE endpoints
+    if (endpoint == "/server/ace/info") {
+        resp.data = {
+            {"result", {
+                {"model", "ACE Pro"},
+                {"version", "1.0.0-mock"},
+                {"slot_count", 4}
+            }}
+        };
+    } else if (endpoint == "/server/ace/status") {
+        resp.data = {
+            {"result", {
+                {"loaded_slot", -1},
+                {"action", "idle"},
+                {"dryer", {
+                    {"active", false},
+                    {"current_temp", 25.0},
+                    {"target_temp", 0.0},
+                    {"remaining_minutes", 0},
+                    {"duration_minutes", 0}
+                }}
+            }}
+        };
+    } else if (endpoint == "/server/ace/slots") {
+        resp.data = {
+            {"result", {
+                {"slots", {
+                    {{"status", "available"}, {"color", "#FF0000"}, {"material", "PLA"}, {"temp_min", 190}, {"temp_max", 220}},
+                    {{"status", "available"}, {"color", "#00FF00"}, {"material", "PETG"}, {"temp_min", 220}, {"temp_max", 250}},
+                    {{"status", "empty"}, {"color", "#000000"}, {"material", ""}, {"temp_min", 0}, {"temp_max", 0}},
+                    {{"status", "available"}, {"color", "#0000FF"}, {"material", "ABS"}, {"temp_min", 240}, {"temp_max", 270}}
+                }}
+            }}
+        };
+    } else {
+        // Unknown endpoint - return generic success with empty result
+        resp.data = {{"result", nlohmann::json::object()}};
+        spdlog::debug("[MoonrakerAPIMock] Unknown REST endpoint: {}", endpoint);
+    }
+
+    if (on_complete) {
+        on_complete(resp);
+    }
+}
+
+void MoonrakerAPIMock::call_rest_post(const std::string& endpoint, const nlohmann::json& params,
+                                      RestCallback on_complete) {
+    spdlog::debug("[MoonrakerAPIMock] REST POST: {} ({} bytes)", endpoint, params.dump().size());
+
+    RestResponse resp;
+    resp.success = true;
+    resp.status_code = 200;
+    resp.data = {{"result", "ok"}};
+
+    if (on_complete) {
+        on_complete(resp);
+    }
 }

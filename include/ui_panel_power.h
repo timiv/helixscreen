@@ -55,8 +55,8 @@ class PowerPanel : public PanelBase {
 
     // Setup helpers
     void fetch_devices();
-    void populate_device_list(const std::vector<MoonrakerAPI::PowerDevice>& devices);
-    void create_device_row(const MoonrakerAPI::PowerDevice& device);
+    void populate_device_list(const std::vector<PowerDevice>& devices);
+    void create_device_row(const PowerDevice& device);
     void clear_device_list();
 
     // Event handlers

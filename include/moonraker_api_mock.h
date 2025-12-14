@@ -277,6 +277,91 @@ class MoonrakerAPIMock : public MoonrakerAPI {
         return mock_bed_state_;
     }
 
+    // ========================================================================
+    // Overridden Spoolman Methods (return mock filament inventory)
+    // ========================================================================
+
+    /**
+     * @brief Get mock Spoolman status
+     *
+     * Returns mock connection status and active spool ID for testing
+     * Spoolman integration without a real Spoolman server.
+     *
+     * @param on_success Callback with (connected, active_spool_id)
+     * @param on_error Error callback (never called - mock always succeeds)
+     */
+    void get_spoolman_status(std::function<void(bool, int)> on_success,
+                             ErrorCallback on_error) override;
+
+    /**
+     * @brief Get mock spool list
+     *
+     * Returns a predefined list of spools with realistic data for testing
+     * the Spoolman UI without a real Spoolman server.
+     *
+     * @param on_success Callback with list of mock SpoolInfo
+     * @param on_error Error callback (never called - mock always succeeds)
+     */
+    void get_spoolman_spools(SpoolListCallback on_success, ErrorCallback on_error) override;
+
+    /**
+     * @brief Mock set active spool (updates internal state)
+     *
+     * Updates mock_active_spool_id_ and marks the corresponding spool as active.
+     * Always calls success callback.
+     *
+     * @param spool_id Spool ID to set as active (0 or negative to clear)
+     * @param on_success Success callback (always called)
+     * @param on_error Error callback (never called)
+     */
+    void set_active_spool(int spool_id, SuccessCallback on_success, ErrorCallback on_error) override;
+
+    /**
+     * @brief Enable or disable mock Spoolman integration
+     *
+     * Controls whether get_spoolman_status returns connected=true or false.
+     * When disabled, the Spoolman panel should be hidden.
+     *
+     * @param enabled true to enable mock Spoolman, false to disable
+     */
+    void set_mock_spoolman_enabled(bool enabled) {
+        mock_spoolman_enabled_ = enabled;
+    }
+
+    /**
+     * @brief Check if mock Spoolman is enabled
+     */
+    [[nodiscard]] bool is_mock_spoolman_enabled() const {
+        return mock_spoolman_enabled_;
+    }
+
+    // ========================================================================
+    // Overridden REST Methods (return mock responses)
+    // ========================================================================
+
+    /**
+     * @brief Mock REST GET request
+     *
+     * Returns mock responses for known endpoints (e.g., /server/ace/)
+     * or a generic success response for unknown endpoints.
+     *
+     * @param endpoint REST endpoint path (e.g., "/server/ace/info")
+     * @param on_complete Callback with RestResponse
+     */
+    void call_rest_get(const std::string& endpoint, RestCallback on_complete) override;
+
+    /**
+     * @brief Mock REST POST request
+     *
+     * Logs the request and returns a generic success response.
+     *
+     * @param endpoint REST endpoint path
+     * @param params JSON parameters
+     * @param on_complete Callback with RestResponse
+     */
+    void call_rest_post(const std::string& endpoint, const nlohmann::json& params,
+                        RestCallback on_complete) override;
+
   private:
     // Shared mock state for coordination with MoonrakerClientMock
     std::shared_ptr<MockPrinterState> mock_state_;
@@ -303,4 +388,14 @@ class MoonrakerAPIMock : public MoonrakerAPI {
 
     /// Mock bed state for screws tilt simulation
     MockScrewsTiltState mock_bed_state_;
+
+    // Mock Spoolman state
+    bool mock_spoolman_enabled_ = true;                       ///< Whether Spoolman is "connected"
+    int mock_active_spool_id_ = 1;                            ///< Currently active spool ID
+    std::vector<SpoolInfo> mock_spools_;                      ///< Mock spool inventory
+
+    /**
+     * @brief Initialize mock spool data with realistic sample inventory
+     */
+    void init_mock_spools();
 };

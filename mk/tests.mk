@@ -130,6 +130,7 @@ TEST_MOONRAKER_DEPS := \
     $(OBJ_DIR)/moonraker_api_motion.o \
     $(OBJ_DIR)/moonraker_api_advanced.o \
     $(OBJ_DIR)/moonraker_api_history.o \
+    $(OBJ_DIR)/moonraker_api_rest.o \
     $(OBJ_DIR)/moonraker_api_mock.o \
     $(OBJ_DIR)/printer_state.o \
     $(OBJ_DIR)/printer_detector.o \
@@ -142,6 +143,7 @@ TEST_MOONRAKER_DEPS := \
     $(OBJ_DIR)/ams_backend_afc.o \
     $(OBJ_DIR)/ams_backend_happy_hare.o \
     $(OBJ_DIR)/ams_backend_mock.o \
+    $(OBJ_DIR)/ams_backend_valgace.o \
     $(OBJ_DIR)/ams_state.o \
     $(OBJ_DIR)/thumbnail_cache.o
 

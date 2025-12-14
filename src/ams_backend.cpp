@@ -6,6 +6,7 @@
 #include "ams_backend_afc.h"
 #include "ams_backend_happy_hare.h"
 #include "ams_backend_mock.h"
+#include "ams_backend_valgace.h"
 #include "moonraker_api.h"
 #include "runtime_config.h"
 
@@ -29,6 +30,10 @@ std::unique_ptr<AmsBackend> AmsBackend::create(AmsType detected_type) {
 
     case AmsType::AFC:
         spdlog::warn("[AMS Backend] AFC detected but no API/client provided - using mock");
+        return std::make_unique<AmsBackendMock>(config.mock_ams_gate_count);
+
+    case AmsType::VALGACE:
+        spdlog::warn("[AMS Backend] ValgACE detected but no API/client provided - using mock");
         return std::make_unique<AmsBackendMock>(config.mock_ams_gate_count);
 
     case AmsType::NONE:
@@ -65,6 +70,14 @@ std::unique_ptr<AmsBackend> AmsBackend::create(AmsType detected_type, MoonrakerA
         }
         spdlog::debug("[AMS Backend] Creating AFC backend");
         return std::make_unique<AmsBackendAfc>(api, client);
+
+    case AmsType::VALGACE:
+        if (!api || !client) {
+            spdlog::error("[AMS Backend] ValgACE requires MoonrakerAPI and MoonrakerClient");
+            return nullptr;
+        }
+        spdlog::debug("[AMS Backend] Creating ValgACE backend");
+        return std::make_unique<AmsBackendValgACE>(api, client);
 
     case AmsType::NONE:
     default:

@@ -357,6 +357,83 @@ class AmsBackend {
     [[nodiscard]] virtual bool is_bypass_active() const = 0;
 
     // ========================================================================
+    // Dryer Control (Optional - default implementations return "not supported")
+    // ========================================================================
+
+    /**
+     * @brief Get dryer state and capabilities
+     *
+     * Returns current dryer state including temperature, duration, and
+     * hardware capabilities. Not all AMS systems have dryers - check
+     * DryerInfo::supported before showing dryer UI.
+     *
+     * @return DryerInfo struct (supported=false if no dryer)
+     */
+    [[nodiscard]] virtual DryerInfo get_dryer_info() const {
+        return DryerInfo{.supported = false};
+    }
+
+    /**
+     * @brief Start drying operation
+     *
+     * Initiates filament drying at specified temperature and duration.
+     * Not all AMS systems support drying - check get_dryer_info().supported.
+     *
+     * @param temp_c Target temperature in Celsius (within min_temp_c..max_temp_c)
+     * @param duration_min Drying duration in minutes (positive, capped at max_duration_min)
+     * @param fan_pct Fan speed percentage (0-100, -1 = use backend default)
+     * @return AmsError with SUCCESS result on success, or error with reason
+     */
+    virtual AmsError start_drying(float temp_c, int duration_min, int fan_pct = -1) {
+        (void)temp_c;
+        (void)duration_min;
+        (void)fan_pct;
+        return AmsErrorHelper::not_supported("Dryer");
+    }
+
+    /**
+     * @brief Stop drying operation
+     *
+     * Stops any active drying and turns off heater/fan.
+     *
+     * @return AmsError with SUCCESS result on success, or error with reason
+     */
+    virtual AmsError stop_drying() {
+        return AmsErrorHelper::not_supported("Dryer");
+    }
+
+    /**
+     * @brief Update drying parameters while running
+     *
+     * Adjusts temperature, duration, or fan speed during an active dry cycle.
+     * Pass -1 to keep current value for any parameter.
+     *
+     * @param temp_c New target temperature (-1 = no change)
+     * @param duration_min New duration (-1 = no change)
+     * @param fan_pct New fan speed (-1 = no change)
+     * @return AmsError with SUCCESS result on success, or error with reason
+     */
+    virtual AmsError update_drying(float temp_c = -1, int duration_min = -1, int fan_pct = -1) {
+        (void)temp_c;
+        (void)duration_min;
+        (void)fan_pct;
+        return AmsErrorHelper::not_supported("Dryer");
+    }
+
+    /**
+     * @brief Get available drying presets
+     *
+     * Returns preset profiles for common filament materials.
+     * Backends can override to provide hardware-specific presets.
+     * Falls back to get_default_drying_presets() if not overridden.
+     *
+     * @return Vector of DryingPreset structs
+     */
+    [[nodiscard]] virtual std::vector<DryingPreset> get_drying_presets() const {
+        return get_default_drying_presets();
+    }
+
+    // ========================================================================
     // Factory Method
     // ========================================================================
 

@@ -59,6 +59,9 @@ enum class AmsResult {
     SPOOLMAN_NOT_AVAILABLE, ///< Spoolman service not reachable
     SPOOL_NOT_FOUND,        ///< Requested spool ID not found
 
+    // Feature not available
+    NOT_SUPPORTED, ///< Feature not supported by this backend
+
     // Generic
     UNKNOWN_ERROR ///< Unexpected error condition
 };
@@ -120,6 +123,8 @@ inline const char* ams_result_to_string(AmsResult result) {
         return "Spoolman Not Available";
     case AmsResult::SPOOL_NOT_FOUND:
         return "Spool Not Found";
+    case AmsResult::NOT_SUPPORTED:
+        return "Not Supported";
     default:
         return "Unknown Error";
     }
@@ -372,5 +377,16 @@ class AmsErrorHelper {
     static AmsError command_failed(const std::string& command, const std::string& response) {
         return AmsError(AmsResult::COMMAND_FAILED, "Command '" + command + "' failed: " + response,
                         "Command failed", "Check Klipper console for details");
+    }
+
+    /**
+     * @brief Create a not supported error
+     * @param feature Description of the unsupported feature
+     * @return AmsError configured for UI display
+     */
+    static AmsError not_supported(const std::string& feature) {
+        return AmsError(AmsResult::NOT_SUPPORTED, feature + " is not supported by this backend",
+                        "Feature not available",
+                        "This feature requires different hardware or configuration");
     }
 };

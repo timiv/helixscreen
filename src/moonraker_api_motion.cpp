@@ -361,11 +361,11 @@ void MoonrakerAPI::get_power_devices(PowerDevicesCallback on_success, ErrorCallb
         // Parse JSON response
         try {
             json j = json::parse(resp->body);
-            std::vector<MoonrakerAPI::PowerDevice> devices;
+            std::vector<PowerDevice> devices;
 
             if (j.contains("result") && j["result"].contains("devices")) {
                 for (const auto& [name, info] : j["result"]["devices"].items()) {
-                    MoonrakerAPI::PowerDevice dev;
+                    PowerDevice dev;
                     dev.device = name;
                     dev.type = info.value("type", "unknown");
                     dev.status = info.value("status", "off");
