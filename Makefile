@@ -100,6 +100,11 @@ ifeq ($(origin CXX),default)
     endif
 endif
 
+# Set RANLIB if not defined (needed for wpa_supplicant build on Linux)
+ifeq ($(origin RANLIB),undefined)
+    RANLIB := ranlib
+endif
+
 # Ccache integration - auto-detect and use if available (10x faster rebuilds)
 CCACHE := $(shell command -v ccache 2>/dev/null)
 ifneq ($(CCACHE),)
