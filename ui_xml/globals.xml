@@ -9,6 +9,8 @@
     <px name="nav_padding" value="16"/>
     <px name="nav_button_size" value="70"/>
     <px name="border_radius" value="8"/>
+    <px name="border_radius_small" value="4"/>
+    <px name="border_radius_large" value="12"/>
     <!-- ===================================================================== -->
     <!-- Unified Responsive Spacing System (space_*)                         -->
     <!-- ===================================================================== -->
@@ -164,6 +166,18 @@
     <!-- Width for wizard navigation buttons (Back/Next) -->
     <px name="input_height" value="48"/>
     <!-- Standard height for all input fields (textareas, dropdowns, etc.) -->
+    <px name="slider_height" value="8"/>
+    <!-- Standard slider track height -->
+    <px name="icon_button_size" value="32"/>
+    <!-- Icon-only buttons (close, edit, etc.) -->
+    <!-- Color picker preview swatch (responsive) -->
+    <px name="color_preview_size_small" value="40"/>
+    <px name="color_preview_size_medium" value="48"/>
+    <px name="color_preview_size_large" value="56"/>
+    <!-- Color picker text area height (hex + 2-line name, responsive) -->
+    <px name="color_text_height_small" value="52"/>
+    <px name="color_text_height_medium" value="60"/>
+    <px name="color_text_height_large" value="68"/>
     <px name="wizard_printer_img_height" value="140"/>
     <!-- Printer image height in printer identification screen -->
     <!-- Wizard Container - Responsive constants (overridden by C++ at runtime) -->

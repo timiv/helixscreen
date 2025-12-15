@@ -41,6 +41,18 @@ class AmsState {
      */
     static constexpr int MAX_SLOTS = 16;
 
+    /// @name Dryer Constants
+    /// @{
+    static constexpr int DEFAULT_DRYER_TEMP_C = 55;        ///< Default dryer temp (PETG)
+    static constexpr int DEFAULT_DRYER_DURATION_MIN = 240; ///< Default duration (4 hours)
+    static constexpr int MIN_DRYER_TEMP_C = 35;            ///< Minimum dryer temperature
+    static constexpr int MAX_DRYER_TEMP_C = 70;            ///< Maximum dryer temperature
+    static constexpr int MIN_DRYER_DURATION_MIN = 30;      ///< Minimum duration (30 min)
+    static constexpr int MAX_DRYER_DURATION_MIN = 720;     ///< Maximum duration (12 hours)
+    static constexpr int DRYER_TEMP_STEP_C = 5;            ///< Temperature adjustment step
+    static constexpr int DRYER_DURATION_STEP_MIN = 30;     ///< Duration adjustment step
+    /// @}
+
     /**
      * @brief Get the singleton instance
      * @return Reference to the global AmsState instance
@@ -604,8 +616,8 @@ class AmsState {
     char dryer_modal_temp_text_buf_[16];
     lv_subject_t dryer_modal_duration_text_;
     char dryer_modal_duration_text_buf_[16];
-    int modal_target_temp_c_ = 55; ///< Modal's target temp (default 55°C for PETG)
-    int modal_duration_min_ = 240; ///< Modal's duration (default 4 hours)
+    int modal_target_temp_c_ = DEFAULT_DRYER_TEMP_C;      ///< Modal's target temp (default PETG)
+    int modal_duration_min_ = DEFAULT_DRYER_DURATION_MIN; ///< Modal's duration (default)
 
     // Currently Loaded display subjects (reactive binding for "Currently Loaded" card)
     lv_subject_t current_material_text_;

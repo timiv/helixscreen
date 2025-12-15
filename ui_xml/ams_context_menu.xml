@@ -7,8 +7,9 @@
   </api>
   <!-- Full-screen backdrop overlay - tap to dismiss -->
   <view name="context_backdrop"
-        extends="lv_obj" width="100%" height="100%" style_bg_opa="128" style_bg_color="#000000" style_border_width="0"
+        extends="lv_obj" width="100%" height="100%" style_bg_opa="128" style_bg_color="0x000000" style_border_width="0"
         style_pad_all="0" style_radius="0" clickable="true">
+    <event_cb trigger="clicked" callback="ams_context_backdrop_cb"/>
     <!-- Context menu card - positioned by C++ -->
     <lv_obj name="context_menu"
             width="150" height="content" style_bg_color="#theme_grey" style_bg_opa="255" style_radius="#border_radius"
@@ -21,6 +22,7 @@
                  style_flex_cross_place="center" style_pad_left="#space_sm" style_pad_gap="#space_sm" clickable="true">
         <icon src="z_closer" size="sm" variant="primary"/>
         <text_body text="Load"/>
+        <event_cb trigger="clicked" callback="ams_context_load_cb"/>
       </lv_button>
       <!-- Unload Button -->
       <lv_button name="btn_unload"
@@ -29,6 +31,7 @@
                  style_flex_cross_place="center" style_pad_left="#space_sm" style_pad_gap="#space_sm" clickable="true">
         <icon src="z_farther" size="sm" variant="primary"/>
         <text_body text="Unload"/>
+        <event_cb trigger="clicked" callback="ams_context_unload_cb"/>
       </lv_button>
       <!-- Edit Button -->
       <lv_button name="btn_edit"
@@ -37,6 +40,7 @@
                  style_flex_cross_place="center" style_pad_left="#space_sm" style_pad_gap="#space_sm" clickable="true">
         <icon src="tune" size="sm" variant="primary"/>
         <text_body text="Edit"/>
+        <event_cb trigger="clicked" callback="ams_context_edit_cb"/>
       </lv_button>
       <!-- Assign Spoolman Button (only shown when Spoolman is available) -->
       <lv_button name="btn_spoolman"

@@ -719,7 +719,8 @@ void MoonrakerAPIMock::init_mock_spools() {
     spool14.vendor = "Eryone";
     spool14.material = "Silk PLA";
     spool14.color_name = "Gold/Silver/Copper Tri-Color";
-    spool14.color_hex = "D4AF37";
+    spool14.color_hex = "D4AF37";                          // Primary color (gold)
+    spool14.multi_color_hexes = "#D4AF37,#C0C0C0,#B87333"; // Gold, Silver, Copper
     spool14.remaining_weight_g = 494.0;
     spool14.initial_weight_g = 1000.0;
     spool14.remaining_length_m = 170.0;
@@ -792,6 +793,23 @@ void MoonrakerAPIMock::init_mock_spools() {
     spool18.bed_temp_recommended = 60;
     spool18.is_active = false;
     mock_spools_.push_back(spool18);
+
+    // Spool 19: TTYT3D Marble PLA - Black/White (85% - dual-color marble)
+    SpoolInfo spool19;
+    spool19.id = 19;
+    spool19.vendor = "TTYT3D";
+    spool19.material = "Marble PLA";
+    spool19.color_name = "Black/White Marble";
+    spool19.color_hex = "202020";                  // Primary color (dark base)
+    spool19.multi_color_hexes = "#202020,#F0F0F0"; // Black, White
+    spool19.remaining_weight_g = 850.0;
+    spool19.initial_weight_g = 1000.0;
+    spool19.remaining_length_m = 292.0;
+    spool19.spool_weight_g = 200.0;
+    spool19.nozzle_temp_recommended = 210;
+    spool19.bed_temp_recommended = 60;
+    spool19.is_active = false;
+    mock_spools_.push_back(spool19);
 
     spdlog::debug("[MoonrakerAPIMock] Initialized {} mock spools", mock_spools_.size());
 }

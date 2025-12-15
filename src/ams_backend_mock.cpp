@@ -3,9 +3,12 @@
 
 #include "ams_backend_mock.h"
 
+#include "runtime_config.h"
+
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <thread>
 
 // Sample filament colors for mock slots
@@ -30,6 +33,19 @@ constexpr MockFilament SAMPLE_FILAMENTS[] = {
     {0x90CAF9, "Sky Blue", "PETG-GF", "Prusa"}, // Slot 7: PETG-GF (Glass Filled)
 };
 constexpr int NUM_SAMPLE_FILAMENTS = sizeof(SAMPLE_FILAMENTS) / sizeof(SAMPLE_FILAMENTS[0]);
+
+// Timing constants for realistic mode (milliseconds at 1x speed)
+// These values simulate real AMS/MMU timing behavior
+constexpr int HEATING_BASE_MS = 3000;           // 3 seconds to heat nozzle
+constexpr int FORMING_TIP_BASE_MS = 4000;       // 4 seconds for tip forming
+constexpr int CHECKING_BASE_MS = 1500;          // 1.5 seconds for sensor check
+constexpr int SEGMENT_ANIMATION_BASE_MS = 5000; // 5 seconds for full segment animation
+
+// Variance factors (±percentage) for natural timing variation
+constexpr float HEATING_VARIANCE = 0.3f;  // ±30%
+constexpr float TIP_VARIANCE = 0.2f;      // ±20%
+constexpr float LOADING_VARIANCE = 0.2f;  // ±20%
+constexpr float CHECKING_VARIANCE = 0.2f; // ±20%
 } // namespace
 
 AmsBackendMock::AmsBackendMock(int slot_count) {
@@ -485,6 +501,10 @@ AmsError AmsBackendMock::cancel() {
         spdlog::info("[AmsBackendMock] Operation cancelled");
     }
 
+    // Signal the operation thread to stop
+    cancel_requested_ = true;
+    shutdown_cv_.notify_all();
+
     emit_event(EVENT_STATE_CHANGED);
     return AmsErrorHelper::success();
 }
@@ -845,6 +865,200 @@ AmsError AmsBackendMock::stop_drying() {
     return AmsError{AmsResult::SUCCESS};
 }
 
+// ============================================================================
+// Realistic mode implementation
+// ============================================================================
+
+void AmsBackendMock::set_realistic_mode(bool enabled) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    realistic_mode_ = enabled;
+    spdlog::info("[AmsBackendMock] Realistic mode {}", enabled ? "enabled" : "disabled");
+}
+
+bool AmsBackendMock::is_realistic_mode() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return realistic_mode_;
+}
+
+int AmsBackendMock::get_effective_delay_ms(int base_ms, float variance) const {
+    double speedup = get_runtime_config().sim_speedup;
+    if (speedup <= 0)
+        speedup = 1.0;
+
+    int effective = static_cast<int>(base_ms / speedup);
+
+    // Apply variance if non-zero
+    if (variance > 0.0f && effective > 0) {
+        // Random factor between (1-variance) and (1+variance)
+        float random_factor = static_cast<float>(std::rand() % 1000) / 1000.0f; // 0.0-0.999
+        float factor = 1.0f + (random_factor - 0.5f) * 2.0f * variance;
+        effective = static_cast<int>(effective * factor);
+    }
+
+    return std::max(1, effective); // At least 1ms
+}
+
+void AmsBackendMock::set_action(AmsAction action, const std::string& detail) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    system_info_.action = action;
+    system_info_.operation_detail = detail;
+}
+
+void AmsBackendMock::run_load_segment_animation(int slot_index,
+                                                InterruptibleSleep interruptible_sleep) {
+    // Calculate per-segment delay
+    int total_animation_ms =
+        realistic_mode_ ? get_effective_delay_ms(SEGMENT_ANIMATION_BASE_MS, LOADING_VARIANCE)
+                        : get_effective_delay_ms(operation_delay_ms_);
+    int segment_delay = total_animation_ms / 6;
+
+    const PathSegment load_sequence[] = {
+        PathSegment::SPOOL,  PathSegment::PREP,     PathSegment::LANE,  PathSegment::HUB,
+        PathSegment::OUTPUT, PathSegment::TOOLHEAD, PathSegment::NOZZLE};
+
+    for (auto seg : load_sequence) {
+        if (shutdown_requested_ || cancel_requested_)
+            return;
+
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            filament_segment_ = seg;
+            system_info_.current_slot = slot_index; // Set active slot early for visualization
+        }
+        emit_event(EVENT_STATE_CHANGED);
+        if (!interruptible_sleep(segment_delay))
+            return;
+    }
+}
+
+void AmsBackendMock::run_unload_segment_animation(InterruptibleSleep interruptible_sleep) {
+    int total_animation_ms =
+        realistic_mode_ ? get_effective_delay_ms(SEGMENT_ANIMATION_BASE_MS, LOADING_VARIANCE)
+                        : get_effective_delay_ms(operation_delay_ms_);
+    int segment_delay = total_animation_ms / 6;
+
+    const PathSegment unload_sequence[] = {
+        PathSegment::NOZZLE, PathSegment::TOOLHEAD, PathSegment::OUTPUT, PathSegment::HUB,
+        PathSegment::LANE,   PathSegment::PREP,     PathSegment::SPOOL,  PathSegment::NONE};
+
+    for (auto seg : unload_sequence) {
+        if (shutdown_requested_ || cancel_requested_)
+            return;
+
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            filament_segment_ = seg;
+        }
+        emit_event(EVENT_STATE_CHANGED);
+        if (!interruptible_sleep(segment_delay))
+            return;
+    }
+}
+
+void AmsBackendMock::finalize_load_state(int slot_index) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    system_info_.filament_loaded = true;
+    filament_segment_ = PathSegment::NOZZLE;
+    if (slot_index >= 0) {
+        system_info_.current_slot = slot_index;
+        system_info_.current_tool = slot_index;
+        auto* slot = system_info_.get_slot_global(slot_index);
+        if (slot) {
+            slot->status = SlotStatus::LOADED;
+        }
+    }
+    system_info_.action = AmsAction::IDLE;
+    system_info_.operation_detail.clear();
+}
+
+void AmsBackendMock::finalize_unload_state() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (system_info_.current_slot >= 0) {
+        auto* slot = system_info_.get_slot_global(system_info_.current_slot);
+        if (slot) {
+            slot->status = SlotStatus::AVAILABLE;
+        }
+    }
+    system_info_.filament_loaded = false;
+    system_info_.current_slot = -1;
+    filament_segment_ = PathSegment::NONE;
+    system_info_.action = AmsAction::IDLE;
+    system_info_.operation_detail.clear();
+}
+
+void AmsBackendMock::execute_load_operation(int slot_index,
+                                            InterruptibleSleep interruptible_sleep) {
+    if (realistic_mode_) {
+        // Phase 1: HEATING
+        spdlog::debug("[AmsBackendMock] Load phase: HEATING");
+        set_action(AmsAction::HEATING, "Heating nozzle for load");
+        emit_event(EVENT_STATE_CHANGED);
+        if (!interruptible_sleep(get_effective_delay_ms(HEATING_BASE_MS, HEATING_VARIANCE)))
+            return;
+        if (shutdown_requested_ || cancel_requested_)
+            return;
+
+        // Phase 2: LOADING with segment animation
+        spdlog::debug("[AmsBackendMock] Load phase: LOADING (segment animation)");
+        set_action(AmsAction::LOADING, "Loading from slot " + std::to_string(slot_index));
+        emit_event(EVENT_STATE_CHANGED);
+    }
+
+    // Segment animation (same for both modes)
+    run_load_segment_animation(slot_index, interruptible_sleep);
+    if (shutdown_requested_ || cancel_requested_)
+        return;
+
+    if (realistic_mode_) {
+        // Phase 3: CHECKING
+        spdlog::debug("[AmsBackendMock] Load phase: CHECKING");
+        set_action(AmsAction::CHECKING, "Verifying filament sensor");
+        emit_event(EVENT_STATE_CHANGED);
+        if (!interruptible_sleep(get_effective_delay_ms(CHECKING_BASE_MS, CHECKING_VARIANCE)))
+            return;
+        if (shutdown_requested_ || cancel_requested_)
+            return;
+    }
+
+    // Finalize
+    finalize_load_state(slot_index);
+}
+
+void AmsBackendMock::execute_unload_operation(InterruptibleSleep interruptible_sleep) {
+    if (realistic_mode_) {
+        // Phase 1: HEATING (shorter - just for clean tip forming)
+        spdlog::debug("[AmsBackendMock] Unload phase: HEATING");
+        set_action(AmsAction::HEATING, "Heating for tip forming");
+        emit_event(EVENT_STATE_CHANGED);
+        if (!interruptible_sleep(get_effective_delay_ms(HEATING_BASE_MS / 2, HEATING_VARIANCE)))
+            return;
+        if (shutdown_requested_ || cancel_requested_)
+            return;
+
+        // Phase 2: FORMING_TIP
+        spdlog::debug("[AmsBackendMock] Unload phase: FORMING_TIP");
+        set_action(AmsAction::FORMING_TIP, "Forming filament tip");
+        emit_event(EVENT_STATE_CHANGED);
+        if (!interruptible_sleep(get_effective_delay_ms(FORMING_TIP_BASE_MS, TIP_VARIANCE)))
+            return;
+        if (shutdown_requested_ || cancel_requested_)
+            return;
+
+        // Phase 3: UNLOADING with segment animation
+        spdlog::debug("[AmsBackendMock] Unload phase: UNLOADING (segment animation)");
+        set_action(AmsAction::UNLOADING, "Retracting filament");
+        emit_event(EVENT_STATE_CHANGED);
+    }
+
+    // Reverse segment animation
+    run_unload_segment_animation(interruptible_sleep);
+    if (shutdown_requested_ || cancel_requested_)
+        return;
+
+    // Finalize
+    finalize_unload_state();
+}
+
 void AmsBackendMock::emit_event(const std::string& event, const std::string& data) {
     EventCallback cb;
     {
@@ -862,99 +1076,32 @@ void AmsBackendMock::schedule_completion(AmsAction action, const std::string& co
     // Wait for any previous operation to complete first
     wait_for_operation_thread();
 
-    // Reset shutdown flag for new operation
+    // Reset flags for new operation
     shutdown_requested_ = false;
+    cancel_requested_ = false;
 
     // Mark thread as running BEFORE creating it (for safe shutdown)
     operation_thread_running_ = true;
 
     // Simulate operation delay in background thread with path segment progression
     operation_thread_ = std::thread([this, action, complete_event, slot_index]() {
-        // Helper lambda for interruptible sleep
-        auto interruptible_sleep = [this](int ms) -> bool {
+        // Helper lambda for interruptible sleep (returns false if cancelled/shutdown)
+        InterruptibleSleep interruptible_sleep = [this](int ms) -> bool {
             std::unique_lock<std::mutex> lock(shutdown_mutex_);
-            return !shutdown_cv_.wait_for(lock, std::chrono::milliseconds(ms),
-                                          [this] { return shutdown_requested_.load(); });
+            return !shutdown_cv_.wait_for(lock, std::chrono::milliseconds(ms), [this] {
+                return shutdown_requested_.load() || cancel_requested_.load();
+            });
         };
 
-        // Calculate delay per segment for smooth animation
-        int segment_delay = operation_delay_ms_ / 6; // 6 segments to traverse
-
         if (action == AmsAction::LOADING) {
-            // Progress through segments: SPOOL → PREP → LANE → HUB → OUTPUT → TOOLHEAD → NOZZLE
-            const PathSegment load_sequence[] = {
-                PathSegment::SPOOL,  PathSegment::PREP,     PathSegment::LANE,  PathSegment::HUB,
-                PathSegment::OUTPUT, PathSegment::TOOLHEAD, PathSegment::NOZZLE};
-
-            for (auto seg : load_sequence) {
-                if (shutdown_requested_)
-                    return; // Early exit on shutdown
-
-                {
-                    std::lock_guard<std::mutex> lock(mutex_);
-                    filament_segment_ = seg;
-                    system_info_.current_slot =
-                        slot_index; // Set active slot early for visualization
-                }
-                emit_event(EVENT_STATE_CHANGED);
-                if (!interruptible_sleep(segment_delay))
-                    return; // Exit if shutdown signaled
-            }
-
-            // Final state
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                system_info_.filament_loaded = true;
-                filament_segment_ = PathSegment::NOZZLE;
-                if (slot_index >= 0) {
-                    system_info_.current_slot = slot_index;
-                    system_info_.current_tool = slot_index;
-                    auto* slot = system_info_.get_slot_global(slot_index);
-                    if (slot) {
-                        slot->status = SlotStatus::LOADED;
-                    }
-                }
-                system_info_.action = AmsAction::IDLE;
-                system_info_.operation_detail.clear();
-            }
+            // Use phase executor (handles both realistic and simple modes)
+            execute_load_operation(slot_index, interruptible_sleep);
         } else if (action == AmsAction::UNLOADING) {
-            // Progress through segments in reverse: NOZZLE → TOOLHEAD → OUTPUT → HUB → LANE → PREP
-            // → SPOOL → NONE
-            const PathSegment unload_sequence[] = {
-                PathSegment::NOZZLE, PathSegment::TOOLHEAD, PathSegment::OUTPUT, PathSegment::HUB,
-                PathSegment::LANE,   PathSegment::PREP,     PathSegment::SPOOL,  PathSegment::NONE};
-
-            for (auto seg : unload_sequence) {
-                if (shutdown_requested_)
-                    return; // Early exit on shutdown
-
-                {
-                    std::lock_guard<std::mutex> lock(mutex_);
-                    filament_segment_ = seg;
-                }
-                emit_event(EVENT_STATE_CHANGED);
-                if (!interruptible_sleep(segment_delay))
-                    return; // Exit if shutdown signaled
-            }
-
-            // Final state
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                if (system_info_.current_slot >= 0) {
-                    auto* slot = system_info_.get_slot_global(system_info_.current_slot);
-                    if (slot) {
-                        slot->status = SlotStatus::AVAILABLE;
-                    }
-                }
-                system_info_.filament_loaded = false;
-                system_info_.current_slot = -1;
-                filament_segment_ = PathSegment::NONE;
-                system_info_.action = AmsAction::IDLE;
-                system_info_.operation_detail.clear();
-            }
+            // Use phase executor (handles both realistic and simple modes)
+            execute_unload_operation(interruptible_sleep);
         } else {
             // For other actions, just wait and complete
-            if (!interruptible_sleep(operation_delay_ms_))
+            if (!interruptible_sleep(get_effective_delay_ms(operation_delay_ms_)))
                 return;
             {
                 std::lock_guard<std::mutex> lock(mutex_);
@@ -963,7 +1110,7 @@ void AmsBackendMock::schedule_completion(AmsAction action, const std::string& co
             }
         }
 
-        if (shutdown_requested_)
+        if (shutdown_requested_ || cancel_requested_)
             return; // Final check before emitting
 
         emit_event(complete_event, slot_index >= 0 ? std::to_string(slot_index) : "");

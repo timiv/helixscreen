@@ -123,9 +123,9 @@ static void helix_theme_apply(lv_theme_t* theme, lv_obj_t* obj) {
         // Set MDI font for the dropdown indicator (chevron symbol)
         lv_obj_add_style(obj, &helix->dropdown_indicator_style, LV_PART_INDICATOR);
     }
-    // Dropdown list uses button style to contrast with card backgrounds
+    // Dropdown list uses input bg style to match dropdown button appearance
     if (lv_obj_check_type(obj, &lv_dropdownlist_class)) {
-        lv_obj_add_style(obj, &helix->button_style, LV_PART_MAIN);
+        lv_obj_add_style(obj, &helix->input_bg_style, LV_PART_MAIN);
     }
 #endif
 

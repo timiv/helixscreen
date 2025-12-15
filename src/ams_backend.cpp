@@ -14,8 +14,8 @@
 
 #include <cstdlib>
 
-// Helper to create mock backend with optional dryer support
-static std::unique_ptr<AmsBackendMock> create_mock_with_dryer(int gate_count) {
+// Helper to create mock backend with optional features
+static std::unique_ptr<AmsBackendMock> create_mock_with_features(int gate_count) {
     auto mock = std::make_unique<AmsBackendMock>(gate_count);
 
     // Enable mock dryer if requested via environment variable
@@ -23,6 +23,14 @@ static std::unique_ptr<AmsBackendMock> create_mock_with_dryer(int gate_count) {
     if (dryer_env && (std::string(dryer_env) == "1" || std::string(dryer_env) == "true")) {
         mock->set_dryer_enabled(true);
         spdlog::info("[AMS Backend] Mock dryer enabled via HELIX_MOCK_DRYER");
+    }
+
+    // Enable realistic multi-phase operations if requested
+    const char* realistic_env = std::getenv("HELIX_MOCK_AMS_REALISTIC");
+    if (realistic_env &&
+        (std::string(realistic_env) == "1" || std::string(realistic_env) == "true")) {
+        mock->set_realistic_mode(true);
+        spdlog::info("[AMS Backend] Mock realistic mode enabled via HELIX_MOCK_AMS_REALISTIC");
     }
 
     return mock;
@@ -35,7 +43,7 @@ std::unique_ptr<AmsBackend> AmsBackend::create(AmsType detected_type) {
     if (config.should_mock_ams()) {
         spdlog::debug("[AMS Backend] Creating mock backend with {} gates (mock mode enabled)",
                       config.mock_ams_gate_count);
-        return create_mock_with_dryer(config.mock_ams_gate_count);
+        return create_mock_with_features(config.mock_ams_gate_count);
     }
 
     // Without API/client dependencies, we can only return mock backends
@@ -67,7 +75,7 @@ std::unique_ptr<AmsBackend> AmsBackend::create(AmsType detected_type, MoonrakerA
     if (config.should_mock_ams()) {
         spdlog::debug("[AMS Backend] Creating mock backend with {} gates (mock mode enabled)",
                       config.mock_ams_gate_count);
-        return create_mock_with_dryer(config.mock_ams_gate_count);
+        return create_mock_with_features(config.mock_ams_gate_count);
     }
 
     switch (detected_type) {

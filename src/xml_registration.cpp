@@ -4,17 +4,53 @@
 
 #include "ui_fonts.h"
 #include "ui_gcode_viewer.h"
+#include "ui_hsv_picker.h"
 #include "ui_spinner.h"
 #include "ui_spool_canvas.h"
 #include "ui_switch.h"
 #include "ui_text.h"
 #include "ui_text_input.h"
+#include "ui_theme.h"
 
 #include <spdlog/spdlog.h>
 
 #include <lvgl.h>
 
 namespace helix {
+
+/**
+ * Register responsive constants for color picker sizing based on screen dimensions
+ * Call this BEFORE registering XML components that use the color picker
+ */
+static void register_color_picker_responsive_constants() {
+    lv_display_t* display = lv_display_get_default();
+    int32_t hor_res = lv_display_get_horizontal_resolution(display);
+    int32_t ver_res = lv_display_get_vertical_resolution(display);
+    int32_t greater_res = LV_MAX(hor_res, ver_res);
+
+    // Preview swatch size and text height scale with screen
+    const char* preview_size;
+    const char* text_height;
+    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) {
+        preview_size = "40";
+        text_height = "52";
+    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) {
+        preview_size = "48";
+        text_height = "60";
+    } else {
+        preview_size = "56";
+        text_height = "68";
+    }
+
+    lv_xml_component_scope_t* scope = lv_xml_component_get_scope("globals");
+    if (scope) {
+        lv_xml_register_const(scope, "color_preview_size", preview_size);
+        lv_xml_register_const(scope, "color_text_height", text_height);
+        spdlog::debug(
+            "[Color Picker] Registered color_preview_size={}, color_text_height={} for screen {}px",
+            preview_size, text_height, greater_res);
+    }
+}
 
 void register_fonts_and_images() {
     spdlog::debug("[XML Registration] Registering fonts and images...");
@@ -86,6 +122,7 @@ void register_xml_components() {
 
     // Register responsive constants (AFTER globals, BEFORE components that use them)
     ui_switch_register_responsive_constants();
+    register_color_picker_responsive_constants();
 
     // Register semantic text widgets (AFTER theme init, BEFORE components that use them)
     ui_text_init();
@@ -95,6 +132,7 @@ void register_xml_components() {
     // Register custom widgets (BEFORE components that use them)
     ui_gcode_viewer_register();
     ui_spool_canvas_register(); // Needed by Spoolman panel (and AMS panel)
+    ui_hsv_picker_register();   // HSV color picker for edit filament modal
     // NOTE: Other AMS widgets (ams_slot, filament_path_canvas) are
     // registered lazily in ui_panel_ams.cpp when the AMS panel is first accessed
 

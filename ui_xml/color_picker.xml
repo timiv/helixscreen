@@ -1,0 +1,258 @@
+<?xml version="1.0"?>
+<!-- Copyright 2025 HelixScreen -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Modal color picker with preset swatches -->
+<!-- NOTE: Use 0x prefix for literal hex colors, NOT # (# triggers constant lookup) -->
+<component>
+  <consts>
+    <px name="swatch_size" value="32"/>
+    <!-- preview_size comes from globals as #color_preview_size (responsive: 40/48/56px) -->
+    <px name="picker_size" value="160"/>
+  </consts>
+  <!-- Full-screen backdrop overlay -->
+  <view name="color_picker"
+        extends="lv_obj" width="100%" height="100%" style_bg_color="0x000000" style_bg_opa="200" style_border_width="0"
+        style_radius="0" style_pad_all="0" align="center" clickable="true">
+    <!-- Dialog card - wider for horizontal layout -->
+    <ui_dialog name="dialog_card"
+               width="470" height="content" align="center" flex_flow="column" style_flex_main_place="start"
+               style_pad_gap="0">
+      <!-- Header with title and close button -->
+      <lv_obj width="100%"
+              height="content" style_bg_opa="0" style_border_width="0" style_pad_left="#space_lg"
+              style_pad_right="#space_md" style_pad_top="#space_lg" style_pad_bottom="#space_sm" flex_flow="row"
+              style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
+        <text_heading text="Pick Color"/>
+        <!-- Close button -->
+        <lv_button name="btn_close"
+                   width="40" height="40" style_radius="#border_radius" style_bg_opa="0" style_border_width="0"
+                   style_shadow_width="0" clickable="true">
+          <event_cb trigger="clicked" callback="color_picker_close_cb"/>
+          <icon src="close" size="sm" variant="secondary" align="center"/>
+        </lv_button>
+      </lv_obj>
+      <!-- Horizontal divider -->
+      <lv_obj width="100%"
+              height="1" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"
+              scrollable="false"/>
+      <!-- Content area - HORIZONTAL layout -->
+      <lv_obj width="100%"
+              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_md" flex_flow="row"
+              style_pad_gap="#space_lg" scrollable="false">
+
+        <!-- LEFT COLUMN: Preview + HSV Picker (fixed width to prevent jumping) -->
+        <lv_obj width="190" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                flex_flow="column" style_flex_main_place="start" style_flex_cross_place="start"
+                style_pad_gap="#space_md" scrollable="false">
+          <!-- Selected color preview + hex display row -->
+          <lv_obj width="190" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                  flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
+                  style_pad_gap="#space_sm" scrollable="false">
+            <!-- Color preview swatch -->
+            <lv_obj name="selected_color_preview"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius"
+                    style_bg_color="0x808080" style_bg_opa="255"
+                    style_border_width="2" style_border_color="#text_secondary" style_border_opa="80"
+                    scrollable="false"/>
+            <!-- Hex value and name (fixed size to prevent dialog jumping) -->
+            <!-- Height via token accommodates hex + 2-line color name (52/60/68px) -->
+            <lv_obj width="130" height="#color_text_height" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                    flex_flow="column" style_pad_gap="2" style_flex_main_place="center" scrollable="false">
+              <text_body name="selected_hex_label" text="#808080"/>
+              <lv_label name="selected_name_label" text="Gray" style_text_color="#text_secondary"
+                        width="130" long_mode="wrap"/>
+            </lv_obj>
+          </lv_obj>
+
+          <!-- HSV picker: SV square + horizontal hue bar below -->
+          <ui_hsv_picker name="hsv_picker" sv_size="180" hue_height="20" gap="6"/>
+        </lv_obj>
+
+        <!-- RIGHT COLUMN: Preset colors grid -->
+        <!-- Height matches left column: 48 (preview) + 12 (gap) + 206 (HSV picker) = 266px -->
+        <!-- Top padding aligns "Presets" label with color name (~24px down) -->
+        <lv_obj width="content" height="266" style_bg_opa="0" style_border_width="0"
+                style_pad_top="24" style_pad_left="0" style_pad_right="0" style_pad_bottom="0"
+                flex_flow="column" style_flex_main_place="space_between" style_flex_cross_place="start"
+                style_pad_gap="#space_sm" scrollable="false">
+          <text_small text="Presets" style_text_color="#text_secondary"/>
+
+          <!-- Preset grid: 6 columns x 4 rows -->
+          <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                  flex_flow="column" style_pad_gap="4" scrollable="false">
+            <!-- Row 1: Grays -->
+            <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                    flex_flow="row" style_pad_gap="4" scrollable="false">
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0x1A1A1A" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0x4A4A4A" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0x808080" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xB0B0B0" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xE8E8E8" style_bg_opa="255" style_border_width="1" style_border_color="#text_secondary" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xFFFFFF" style_bg_opa="255" style_border_width="1" style_border_color="#text_secondary" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+            </lv_obj>
+
+            <!-- Row 2: Warm colors -->
+            <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                    flex_flow="row" style_pad_gap="4" scrollable="false">
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xE53935" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xFF9800" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xFFEB3B" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xD4AF37" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xCD7F32" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0x8B4513" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+            </lv_obj>
+
+            <!-- Row 3: Cool colors -->
+            <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                    flex_flow="row" style_pad_gap="4" scrollable="false">
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0x43A047" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xAEEA00" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0x009688" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0x00BCD4" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0x1E88E5" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0x1A237E" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+            </lv_obj>
+
+            <!-- Row 4: Purple/Pink/Special -->
+            <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                    flex_flow="row" style_pad_gap="4" scrollable="false">
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0x7B1FA2" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xE91E63" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xF48FB1" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xFF7043" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xC0C0C0" style_bg_opa="255" style_border_width="1" style_border_color="#text_secondary" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xE0D5C7" style_bg_opa="255" style_border_width="1" style_border_color="#text_secondary" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+            </lv_obj>
+
+            <!-- Row 5: More colors -->
+            <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                    flex_flow="row" style_pad_gap="4" scrollable="false">
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0x00E676" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0x18FFFF" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0x536DFE" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xEA80FC" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xFF80AB" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+              <lv_obj width="#swatch_size" height="#swatch_size" style_radius="#border_radius_small"
+                      style_bg_color="0xBCAAA4" style_bg_opa="255" style_border_width="0" clickable="true" scrollable="false">
+                <event_cb trigger="clicked" callback="color_swatch_clicked_cb"/>
+              </lv_obj>
+            </lv_obj>
+          </lv_obj>
+        </lv_obj>
+      </lv_obj>
+      <!-- Horizontal divider above buttons -->
+      <lv_obj width="100%"
+              height="1" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"
+              scrollable="false"/>
+      <!-- Action buttons row -->
+      <lv_obj width="100%"
+              height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+              scrollable="false">
+        <!-- Cancel button -->
+        <lv_button name="btn_cancel"
+                   height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0"
+                   style_shadow_width="0" clickable="true">
+          <text_body text="Cancel" align="center" style_text_color="#text_secondary"/>
+          <event_cb trigger="clicked" callback="color_picker_cancel_cb"/>
+        </lv_button>
+        <!-- Vertical divider -->
+        <lv_obj width="1" height="100%" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0"
+                style_pad_all="0" scrollable="false"/>
+        <!-- Select button -->
+        <lv_button name="btn_select"
+                   height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0"
+                   style_shadow_width="0" clickable="true">
+          <text_body text="Select" align="center" style_text_color="#text_primary"/>
+          <event_cb trigger="clicked" callback="color_picker_select_cb"/>
+        </lv_button>
+      </lv_obj>
+    </ui_dialog>
+  </view>
+</component>

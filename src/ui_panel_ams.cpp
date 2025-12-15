@@ -8,6 +8,7 @@
 #include "ui_event_safety.h"
 #include "ui_filament_path_canvas.h"
 #include "ui_fonts.h"
+#include "ui_hsv_picker.h"
 #include "ui_icon.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
@@ -19,18 +20,24 @@
 #include "ams_state.h"
 #include "ams_types.h"
 #include "app_globals.h"
+#include "color_utils.h"
 #include "moonraker_api.h"
 #include "printer_state.h"
 
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
-#include <cstring>
+#include <atomic>
 #include <memory>
 #include <unordered_map>
 
-// Global instance pointer for XML callback access
-static AmsPanel* g_ams_panel_instance = nullptr;
+// Global instance pointer for XML callback access (atomic for safety during destruction)
+static std::atomic<AmsPanel*> g_ams_panel_instance{nullptr};
+
+// Subject for edit modal remaining weight mode (0=view, 1=edit)
+// Registered globally for XML binding: <bind_flag_if_eq subject="edit_remaining_mode" .../>
+static lv_subject_t s_edit_remaining_mode;
+static bool s_edit_remaining_mode_initialized = false;
 
 /**
  * @brief Map AMS system/type name to logo image path
@@ -113,10 +120,33 @@ static void on_dryer_temp_plus_xml(lv_event_t* e);
 static void on_dryer_duration_minus_xml(lv_event_t* e);
 static void on_dryer_duration_plus_xml(lv_event_t* e);
 static void on_dryer_power_toggled_xml(lv_event_t* e);
+static void on_context_backdrop_xml(lv_event_t* e);
+static void on_context_load_xml(lv_event_t* e);
+static void on_context_unload_xml(lv_event_t* e);
+static void on_context_edit_xml(lv_event_t* e);
 static void on_context_spoolman_xml(lv_event_t* e);
 static void on_spoolman_picker_close_xml(lv_event_t* e);
 static void on_spoolman_picker_unlink_xml(lv_event_t* e);
 static void on_spoolman_spool_item_clicked_xml(lv_event_t* e);
+
+// Edit modal callbacks (referenced in ams_edit_modal.xml)
+static void on_edit_modal_close_xml(lv_event_t* e);
+static void on_edit_vendor_changed_xml(lv_event_t* e);
+static void on_edit_material_changed_xml(lv_event_t* e);
+static void on_edit_color_clicked_xml(lv_event_t* e);
+static void on_edit_remaining_edit_xml(lv_event_t* e);
+static void on_edit_remaining_accept_xml(lv_event_t* e);
+static void on_edit_remaining_cancel_xml(lv_event_t* e);
+static void on_edit_remaining_changed_xml(lv_event_t* e);
+static void on_edit_sync_spoolman_xml(lv_event_t* e);
+static void on_edit_reset_xml(lv_event_t* e);
+static void on_edit_save_xml(lv_event_t* e);
+
+// Color picker callbacks (referenced in color_picker.xml)
+static void on_color_picker_close_xml(lv_event_t* e);
+static void on_color_swatch_clicked_xml(lv_event_t* e);
+static void on_color_picker_cancel_xml(lv_event_t* e);
+static void on_color_picker_select_xml(lv_event_t* e);
 
 /**
  * @brief Register AMS widgets and XML component (lazy, called once on first use)
@@ -140,6 +170,15 @@ static void ensure_ams_widgets_registered() {
     ui_ams_slot_register();
     ui_filament_path_canvas_register();
 
+    // Initialize and register edit modal subjects BEFORE XML components
+    // (subjects must exist when XML parser encounters <bind_flag_if_eq> elements)
+    if (!s_edit_remaining_mode_initialized) {
+        lv_subject_init_int(&s_edit_remaining_mode, 0); // 0 = view mode, 1 = edit mode
+        lv_xml_register_subject(nullptr, "edit_remaining_mode", &s_edit_remaining_mode);
+        s_edit_remaining_mode_initialized = true;
+        spdlog::debug("[AMS Panel] Registered edit_remaining_mode subject");
+    }
+
     // Register XML event callbacks BEFORE registering XML components
     // (callbacks must exist when XML parser encounters <event_cb> elements)
     lv_xml_register_event_cb(nullptr, "ams_unload_clicked_cb", on_unload_clicked_xml);
@@ -161,6 +200,10 @@ static void ensure_ams_widgets_registered() {
     lv_xml_register_event_cb(nullptr, "dryer_power_toggled_cb", on_dryer_power_toggled_xml);
 
     // Context menu callbacks (referenced in ams_context_menu.xml)
+    lv_xml_register_event_cb(nullptr, "ams_context_backdrop_cb", on_context_backdrop_xml);
+    lv_xml_register_event_cb(nullptr, "ams_context_load_cb", on_context_load_xml);
+    lv_xml_register_event_cb(nullptr, "ams_context_unload_cb", on_context_unload_xml);
+    lv_xml_register_event_cb(nullptr, "ams_context_edit_cb", on_context_edit_xml);
     lv_xml_register_event_cb(nullptr, "ams_context_spoolman_cb", on_context_spoolman_xml);
 
     // Spoolman picker callbacks (referenced in spoolman_picker_modal.xml)
@@ -168,6 +211,26 @@ static void ensure_ams_widgets_registered() {
     lv_xml_register_event_cb(nullptr, "spoolman_picker_unlink_cb", on_spoolman_picker_unlink_xml);
     lv_xml_register_event_cb(nullptr, "spoolman_spool_item_clicked_cb",
                              on_spoolman_spool_item_clicked_xml);
+
+    // Edit modal callbacks (referenced in ams_edit_modal.xml)
+    lv_xml_register_event_cb(nullptr, "ams_edit_modal_close_cb", on_edit_modal_close_xml);
+    lv_xml_register_event_cb(nullptr, "ams_edit_vendor_changed_cb", on_edit_vendor_changed_xml);
+    lv_xml_register_event_cb(nullptr, "ams_edit_material_changed_cb", on_edit_material_changed_xml);
+    lv_xml_register_event_cb(nullptr, "ams_edit_color_clicked_cb", on_edit_color_clicked_xml);
+    lv_xml_register_event_cb(nullptr, "ams_edit_remaining_edit_cb", on_edit_remaining_edit_xml);
+    lv_xml_register_event_cb(nullptr, "ams_edit_remaining_accept_cb", on_edit_remaining_accept_xml);
+    lv_xml_register_event_cb(nullptr, "ams_edit_remaining_cancel_cb", on_edit_remaining_cancel_xml);
+    lv_xml_register_event_cb(nullptr, "ams_edit_remaining_changed_cb",
+                             on_edit_remaining_changed_xml);
+    lv_xml_register_event_cb(nullptr, "ams_edit_sync_spoolman_cb", on_edit_sync_spoolman_xml);
+    lv_xml_register_event_cb(nullptr, "ams_edit_reset_cb", on_edit_reset_xml);
+    lv_xml_register_event_cb(nullptr, "ams_edit_save_cb", on_edit_save_xml);
+
+    // Color picker callbacks (referenced in color_picker.xml)
+    lv_xml_register_event_cb(nullptr, "color_picker_close_cb", on_color_picker_close_xml);
+    lv_xml_register_event_cb(nullptr, "color_swatch_clicked_cb", on_color_swatch_clicked_xml);
+    lv_xml_register_event_cb(nullptr, "color_picker_cancel_cb", on_color_picker_cancel_xml);
+    lv_xml_register_event_cb(nullptr, "color_picker_select_cb", on_color_picker_select_xml);
 
     // Register XML components (dryer card must be registered before ams_panel since it's used
     // there)
@@ -177,6 +240,8 @@ static void ensure_ams_widgets_registered() {
     lv_xml_register_component_from_file("A:ui_xml/ams_context_menu.xml");
     lv_xml_register_component_from_file("A:ui_xml/spoolman_spool_item.xml");
     lv_xml_register_component_from_file("A:ui_xml/spoolman_picker_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/ams_edit_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/color_picker.xml");
 
     s_ams_widgets_registered = true;
     spdlog::debug("[AMS Panel] Widget and XML registration complete");
@@ -188,29 +253,33 @@ static void ensure_ams_widgets_registered() {
 
 static void on_unload_clicked_xml(lv_event_t* e) {
     LV_UNUSED(e);
-    if (g_ams_panel_instance) {
-        g_ams_panel_instance->handle_unload();
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_unload();
     }
 }
 
 static void on_reset_clicked_xml(lv_event_t* e) {
     LV_UNUSED(e);
-    if (g_ams_panel_instance) {
-        g_ams_panel_instance->handle_reset();
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_reset();
     }
 }
 
 static void on_bypass_clicked_xml(lv_event_t* e) {
     LV_UNUSED(e);
-    if (g_ams_panel_instance) {
-        g_ams_panel_instance->handle_bypass_toggle();
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_bypass_toggle();
     }
 }
 
 static void on_bypass_toggled_xml(lv_event_t* e) {
     LV_UNUSED(e);
-    if (g_ams_panel_instance) {
-        g_ams_panel_instance->handle_bypass_toggle();
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_bypass_toggle();
     }
 }
 
@@ -221,8 +290,9 @@ static void on_dryer_preset_pla_xml(lv_event_t* e) {
     AmsState::instance().set_modal_preset(45, 240); // PLA: 45°C, 4h
     // If dryer is running, apply immediately
     AmsBackend* backend = AmsState::instance().get_backend();
-    if (backend && backend->get_dryer_info().active && g_ams_panel_instance) {
-        g_ams_panel_instance->handle_dryer_preset(45.0f, 240, 50);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (backend && backend->get_dryer_info().active && panel) {
+        panel->handle_dryer_preset(45.0f, 240, 50);
     }
 }
 
@@ -230,8 +300,9 @@ static void on_dryer_preset_petg_xml(lv_event_t* e) {
     LV_UNUSED(e);
     AmsState::instance().set_modal_preset(55, 240); // PETG: 55°C, 4h
     AmsBackend* backend = AmsState::instance().get_backend();
-    if (backend && backend->get_dryer_info().active && g_ams_panel_instance) {
-        g_ams_panel_instance->handle_dryer_preset(55.0f, 240, 50);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (backend && backend->get_dryer_info().active && panel) {
+        panel->handle_dryer_preset(55.0f, 240, 50);
     }
 }
 
@@ -239,24 +310,25 @@ static void on_dryer_preset_abs_xml(lv_event_t* e) {
     LV_UNUSED(e);
     AmsState::instance().set_modal_preset(65, 240); // ABS: 65°C, 4h
     AmsBackend* backend = AmsState::instance().get_backend();
-    if (backend && backend->get_dryer_info().active && g_ams_panel_instance) {
-        g_ams_panel_instance->handle_dryer_preset(65.0f, 240, 50);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (backend && backend->get_dryer_info().active && panel) {
+        panel->handle_dryer_preset(65.0f, 240, 50);
     }
 }
 
 static void on_dryer_stop_xml(lv_event_t* e) {
     LV_UNUSED(e);
-    if (g_ams_panel_instance) {
-        g_ams_panel_instance->handle_dryer_stop();
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_dryer_stop();
     }
 }
 
 static void on_dryer_open_modal_xml(lv_event_t* e) {
     LV_UNUSED(e);
-    spdlog::info("[AmsPanel] *** DRYER BUTTON CLICKED ***");
+    spdlog::debug("[AmsPanel] Dryer button clicked, showing modal");
     // Show the dryer presets modal by setting visibility subject
     lv_subject_set_int(AmsState::instance().get_dryer_modal_visible_subject(), 1);
-    spdlog::info("[AmsPanel] Dryer modal visible subject set to 1");
 }
 
 static void on_dryer_modal_close_xml(lv_event_t* e) {
@@ -291,7 +363,8 @@ static void on_dryer_duration_plus_xml(lv_event_t* e) {
 // Dryer power toggle callback
 static void on_dryer_power_toggled_xml(lv_event_t* e) {
     LV_UNUSED(e);
-    if (g_ams_panel_instance) {
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
         // Check current state and toggle
         AmsBackend* backend = AmsState::instance().get_backend();
         if (!backend)
@@ -300,47 +373,211 @@ static void on_dryer_power_toggled_xml(lv_event_t* e) {
         DryerInfo dryer = backend->get_dryer_info();
         if (dryer.active) {
             // Currently on - stop it
-            g_ams_panel_instance->handle_dryer_stop();
+            panel->handle_dryer_stop();
         } else {
             // Currently off - start with modal settings
             int temp = AmsState::instance().get_modal_target_temp();
             int duration = AmsState::instance().get_modal_duration_min();
-            g_ams_panel_instance->handle_dryer_preset(static_cast<float>(temp), duration, 50);
+            panel->handle_dryer_preset(static_cast<float>(temp), duration, 50);
         }
     }
 }
 
-// Context menu Spoolman callback
+// Context menu callbacks (triggered via XML <event_cb>)
+static void on_context_backdrop_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->hide_context_menu();
+    }
+}
+
+static void on_context_load_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_context_load();
+    }
+}
+
+static void on_context_unload_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_context_unload();
+    }
+}
+
+static void on_context_edit_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_context_edit();
+    }
+}
+
 static void on_context_spoolman_xml(lv_event_t* e) {
     LV_UNUSED(e);
-    if (g_ams_panel_instance) {
-        g_ams_panel_instance->handle_context_spoolman();
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_context_spoolman();
     }
 }
 
 // Spoolman picker callbacks
 static void on_spoolman_picker_close_xml(lv_event_t* e) {
     LV_UNUSED(e);
-    if (g_ams_panel_instance) {
-        g_ams_panel_instance->handle_picker_close();
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_picker_close();
     }
 }
 
 static void on_spoolman_picker_unlink_xml(lv_event_t* e) {
     LV_UNUSED(e);
-    if (g_ams_panel_instance) {
-        g_ams_panel_instance->handle_picker_unlink();
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_picker_unlink();
     }
 }
 
 static void on_spoolman_spool_item_clicked_xml(lv_event_t* e) {
-    if (!g_ams_panel_instance) {
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (!panel) {
         return;
     }
     lv_obj_t* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
     // spool_id stored in user_data
     auto spool_id = static_cast<int>(reinterpret_cast<intptr_t>(lv_obj_get_user_data(target)));
-    g_ams_panel_instance->handle_picker_spool_selected(spool_id);
+    panel->handle_picker_spool_selected(spool_id);
+}
+
+// Edit modal callbacks
+static void on_edit_modal_close_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_edit_modal_close();
+    }
+}
+
+static void on_edit_vendor_changed_xml(lv_event_t* e) {
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (!panel) {
+        return;
+    }
+    lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    int index = lv_dropdown_get_selected(dropdown);
+    panel->handle_edit_vendor_changed(index);
+}
+
+static void on_edit_material_changed_xml(lv_event_t* e) {
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (!panel) {
+        return;
+    }
+    lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    int index = lv_dropdown_get_selected(dropdown);
+    panel->handle_edit_material_changed(index);
+}
+
+static void on_edit_color_clicked_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_edit_color_clicked();
+    }
+}
+
+static void on_edit_remaining_changed_xml(lv_event_t* e) {
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (!panel) {
+        return;
+    }
+    lv_obj_t* slider = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    int value = lv_slider_get_value(slider);
+    panel->handle_edit_remaining_changed(value);
+}
+
+static void on_edit_remaining_edit_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_edit_remaining_edit();
+    }
+}
+
+static void on_edit_remaining_accept_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_edit_remaining_accept();
+    }
+}
+
+static void on_edit_remaining_cancel_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_edit_remaining_cancel();
+    }
+}
+
+static void on_edit_sync_spoolman_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_edit_sync_spoolman();
+    }
+}
+
+static void on_edit_reset_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_edit_reset();
+    }
+}
+
+static void on_edit_save_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_edit_save();
+    }
+}
+
+// Color picker callback wrappers
+static void on_color_picker_close_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_color_picker_close();
+    }
+}
+
+static void on_color_swatch_clicked_xml(lv_event_t* e) {
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        lv_obj_t* swatch = static_cast<lv_obj_t*>(lv_event_get_target(e));
+        panel->handle_color_swatch_clicked(swatch);
+    }
+}
+
+static void on_color_picker_cancel_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_color_picker_cancel();
+    }
+}
+
+static void on_color_picker_select_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    AmsPanel* panel = g_ams_panel_instance.load();
+    if (panel) {
+        panel->handle_color_picker_select();
+    }
 }
 
 // ============================================================================
@@ -467,26 +704,32 @@ void AmsPanel::on_deactivate() {
 }
 
 void AmsPanel::clear_panel_reference() {
-    // Clear all widget references before LVGL object deletion
-    panel_ = nullptr;
-    parent_screen_ = nullptr;
-    slot_grid_ = nullptr;
-    labels_layer_ = nullptr;
-    path_canvas_ = nullptr;
-    dryer_progress_fill_ = nullptr;
-    dryer_modal_ = nullptr;
-    context_menu_ = nullptr;
-    context_menu_slot_ = -1;
-    spoolman_picker_ = nullptr;
-    picker_target_slot_ = -1;
-    current_slot_count_ = 0;
+    // Invalidate async callbacks before any widget deletion
+    picker_callback_guard_.reset();
 
-    for (int i = 0; i < MAX_VISIBLE_SLOTS; ++i) {
-        slot_widgets_[i] = nullptr;
-        label_widgets_[i] = nullptr;
+    // Delete modals on top layer first (they won't auto-delete with panel_)
+    if (dryer_modal_) {
+        lv_obj_delete(dryer_modal_);
+        dryer_modal_ = nullptr;
+    }
+    if (spoolman_picker_) {
+        lv_obj_delete(spoolman_picker_);
+        spoolman_picker_ = nullptr;
+    }
+    if (context_menu_) {
+        lv_obj_delete(context_menu_);
+        context_menu_ = nullptr;
+    }
+    if (edit_modal_) {
+        lv_obj_delete(edit_modal_);
+        edit_modal_ = nullptr;
+    }
+    if (color_picker_) {
+        lv_obj_delete(color_picker_);
+        color_picker_ = nullptr;
     }
 
-    // Clear observer guards (they reference deleted widgets)
+    // Clear observer guards BEFORE clearing widget pointers (they reference widgets)
     slots_version_observer_.reset();
     action_observer_.reset();
     current_slot_observer_.reset();
@@ -495,11 +738,28 @@ void AmsPanel::clear_panel_reference() {
     path_topology_observer_.reset();
     dryer_progress_observer_.reset();
 
+    // Now clear all widget references
+    panel_ = nullptr;
+    parent_screen_ = nullptr;
+    slot_grid_ = nullptr;
+    labels_layer_ = nullptr;
+    path_canvas_ = nullptr;
+    dryer_progress_fill_ = nullptr;
+    context_menu_slot_ = -1;
+    picker_target_slot_ = -1;
+    edit_slot_index_ = -1;
+    current_slot_count_ = 0;
+
+    for (int i = 0; i < MAX_VISIBLE_SLOTS; ++i) {
+        slot_widgets_[i] = nullptr;
+        label_widgets_[i] = nullptr;
+    }
+
     // Reset subjects_initialized_ so observers are recreated on next access
     subjects_initialized_ = false;
 
     // Clear global instance pointer to prevent callbacks from using stale pointer
-    g_ams_panel_instance = nullptr;
+    g_ams_panel_instance.store(nullptr);
 
     spdlog::debug("[AMS Panel] Cleared all widget references");
 }
@@ -741,7 +1001,7 @@ void AmsPanel::on_slot_count_changed(lv_observer_t* observer, lv_subject_t* subj
 void AmsPanel::setup_action_buttons() {
     // Store panel pointer for static callbacks to access
     // (Callbacks are registered earlier in ensure_ams_widgets_registered())
-    g_ams_panel_instance = this;
+    g_ams_panel_instance.store(this);
 
     spdlog::debug("[{}] Action buttons ready (callbacks registered during widget init)",
                   get_name());
@@ -1141,7 +1401,9 @@ void AmsPanel::on_slot_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[AmsPanel] on_slot_clicked");
     auto* self = static_cast<AmsPanel*>(lv_event_get_user_data(e));
     if (self) {
-        lv_obj_t* slot = static_cast<lv_obj_t*>(lv_event_get_target(e));
+        // Use current_target (widget callback was registered on) not target (originally clicked
+        // child)
+        lv_obj_t* slot = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
         auto slot_index = static_cast<int>(reinterpret_cast<intptr_t>(lv_obj_get_user_data(slot)));
         self->handle_slot_tap(slot_index);
     }
@@ -1432,11 +1694,12 @@ void AmsPanel::handle_context_edit() {
         return;
     }
 
-    spdlog::info("[{}] Context menu: Edit slot {}", get_name(), context_menu_slot_);
+    int slot_to_edit = context_menu_slot_;
+    spdlog::info("[{}] Context menu: Edit slot {}", get_name(), slot_to_edit);
     hide_context_menu();
 
-    // TODO: Phase 3 - Open edit modal with Spoolman integration
-    NOTIFY_INFO("Edit feature coming in Phase 3");
+    // Open edit modal for this slot
+    show_edit_modal(slot_to_edit);
 }
 
 void AmsPanel::handle_context_spoolman() {
@@ -1475,26 +1738,9 @@ void AmsPanel::show_context_menu(int slot_index, lv_obj_t* near_widget) {
         return;
     }
 
-    // Find and wire up callbacks
-    // Note: context_menu_ IS the backdrop (it's the root object from XML)
-    // lv_obj_find_by_name only searches children, not the object itself
-    lv_obj_t* backdrop = context_menu_; // The root IS the backdrop
+    // Event callbacks are handled via XML <event_cb> elements
+    // Find the menu card to position it
     lv_obj_t* menu_card = lv_obj_find_by_name(context_menu_, "context_menu");
-    lv_obj_t* btn_load = lv_obj_find_by_name(context_menu_, "btn_load");
-    lv_obj_t* btn_unload = lv_obj_find_by_name(context_menu_, "btn_unload");
-    lv_obj_t* btn_edit = lv_obj_find_by_name(context_menu_, "btn_edit");
-
-    // Backdrop click dismisses the menu
-    lv_obj_add_event_cb(backdrop, on_context_backdrop_clicked, LV_EVENT_CLICKED, this);
-    if (btn_load) {
-        lv_obj_add_event_cb(btn_load, on_context_load_clicked, LV_EVENT_CLICKED, this);
-    }
-    if (btn_unload) {
-        lv_obj_add_event_cb(btn_unload, on_context_unload_clicked, LV_EVENT_CLICKED, this);
-    }
-    if (btn_edit) {
-        lv_obj_add_event_cb(btn_edit, on_context_edit_clicked, LV_EVENT_CLICKED, this);
-    }
 
     // Position the menu card near the tapped widget
     if (menu_card) {
@@ -1638,6 +1884,9 @@ void AmsPanel::show_spoolman_picker(int slot_index) {
 }
 
 void AmsPanel::hide_spoolman_picker() {
+    // Invalidate async callbacks first (before deleting widget)
+    picker_callback_guard_.reset();
+
     if (spoolman_picker_) {
         lv_obj_delete(spoolman_picker_);
         spoolman_picker_ = nullptr;
@@ -1662,7 +1911,9 @@ void AmsPanel::populate_spoolman_picker() {
     }
 
     // Use weak_ptr pattern for async callback safety [L012]
-    std::weak_ptr<bool> weak_guard = std::make_shared<bool>(true);
+    // Store shared_ptr as member so it outlives the async callback
+    picker_callback_guard_ = std::make_shared<bool>(true);
+    std::weak_ptr<bool> weak_guard = picker_callback_guard_;
 
     // Get the current spoolman_id for this slot to mark as selected
     int current_spool_id = 0;
@@ -1876,6 +2127,591 @@ void AmsPanel::handle_picker_spool_selected(int spool_id) {
     NOTIFY_INFO("Spool assigned to Slot {}", picker_target_slot_ + 1);
 
     hide_spoolman_picker();
+}
+
+// ============================================================================
+// Edit Modal Management
+// ============================================================================
+
+void AmsPanel::show_edit_modal(int slot_index) {
+    // Hide any existing modal first
+    hide_edit_modal();
+
+    if (!parent_screen_) {
+        spdlog::warn("[{}] Cannot show edit modal - no parent screen", get_name());
+        return;
+    }
+
+    AmsBackend* backend = AmsState::instance().get_backend();
+    if (!backend) {
+        NOTIFY_WARNING("AMS not available");
+        return;
+    }
+
+    edit_slot_index_ = slot_index;
+
+    // Get current slot info and store original for reset
+    edit_original_slot_info_ = backend->get_slot_info(slot_index);
+    edit_slot_info_ = edit_original_slot_info_;
+
+    // Reset remaining edit mode to view (before XML creation so bindings start correctly)
+    lv_subject_set_int(&s_edit_remaining_mode, 0);
+
+    // Create edit modal from XML (component name = filename without extension)
+    edit_modal_ = static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "ams_edit_modal", nullptr));
+    if (!edit_modal_) {
+        spdlog::error("[{}] Failed to create edit modal", get_name());
+        return;
+    }
+
+    // Update the modal UI with current slot data
+    update_edit_modal_ui();
+
+    // Set initial sync button state (disabled since nothing is dirty yet)
+    update_sync_button_state();
+
+    spdlog::info("[{}] Edit modal shown for slot {}", get_name(), slot_index);
+}
+
+void AmsPanel::hide_edit_modal() {
+    if (edit_modal_) {
+        // Reset edit mode subject before destroying modal
+        lv_subject_set_int(&s_edit_remaining_mode, 0);
+
+        lv_obj_delete(edit_modal_);
+        edit_modal_ = nullptr;
+        edit_slot_index_ = -1;
+        spdlog::debug("[{}] Edit modal hidden", get_name());
+    }
+}
+
+bool AmsPanel::is_edit_dirty() const {
+    // Compare relevant fields that can be edited
+    return edit_slot_info_.color_rgb != edit_original_slot_info_.color_rgb ||
+           edit_slot_info_.material != edit_original_slot_info_.material ||
+           edit_slot_info_.brand != edit_original_slot_info_.brand ||
+           std::abs(edit_slot_info_.remaining_weight_g -
+                    edit_original_slot_info_.remaining_weight_g) > 0.1f;
+}
+
+void AmsPanel::update_sync_button_state() {
+    if (!edit_modal_) {
+        return;
+    }
+
+    lv_obj_t* sync_btn = lv_obj_find_by_name(edit_modal_, "btn_sync_spoolman");
+    if (!sync_btn) {
+        return;
+    }
+
+    // Only enable if dirty and has Spoolman link
+    bool should_enable = is_edit_dirty() && edit_slot_info_.spoolman_id > 0;
+
+    if (should_enable) {
+        lv_obj_remove_state(sync_btn, LV_STATE_DISABLED);
+        lv_obj_set_style_bg_opa(sync_btn, LV_OPA_COVER, LV_PART_MAIN);
+    } else {
+        lv_obj_add_state(sync_btn, LV_STATE_DISABLED);
+        lv_obj_set_style_bg_opa(sync_btn, LV_OPA_50, LV_PART_MAIN);
+    }
+}
+
+void AmsPanel::update_edit_modal_ui() {
+    if (!edit_modal_) {
+        return;
+    }
+
+    // Update slot indicator
+    lv_obj_t* slot_indicator = lv_obj_find_by_name(edit_modal_, "slot_indicator");
+    if (slot_indicator) {
+        char buf[32];
+        snprintf(buf, sizeof(buf), "Slot %d", edit_slot_index_ + 1);
+        lv_label_set_text(slot_indicator, buf);
+    }
+
+    // Set dropdown options (requires \n separators in C++)
+    lv_obj_t* vendor_dropdown = lv_obj_find_by_name(edit_modal_, "vendor_dropdown");
+    if (vendor_dropdown) {
+        lv_dropdown_set_options(vendor_dropdown,
+                                "Generic\nPolymaker\nBambu\neSUN\nOverture\nPrusa\nHatchbox");
+    }
+
+    lv_obj_t* material_dropdown = lv_obj_find_by_name(edit_modal_, "material_dropdown");
+    if (material_dropdown) {
+        lv_dropdown_set_options(material_dropdown, "PLA\nPETG\nABS\nASA\nTPU\nPA\nPC");
+    }
+
+    // Update color swatch
+    lv_obj_t* color_swatch = lv_obj_find_by_name(edit_modal_, "color_swatch");
+    if (color_swatch) {
+        lv_obj_set_style_bg_color(color_swatch, lv_color_hex(edit_slot_info_.color_rgb), 0);
+    }
+
+    // Update color name label
+    lv_obj_t* color_name_label = lv_obj_find_by_name(edit_modal_, "color_name_label");
+    if (color_name_label && !edit_slot_info_.color_name.empty()) {
+        lv_label_set_text(color_name_label, edit_slot_info_.color_name.c_str());
+    }
+
+    // Update remaining slider and label
+    int remaining_pct = 75; // Default
+    if (edit_slot_info_.total_weight_g > 0) {
+        remaining_pct = static_cast<int>(100.0f * edit_slot_info_.remaining_weight_g /
+                                         edit_slot_info_.total_weight_g);
+        remaining_pct = std::max(0, std::min(100, remaining_pct));
+    }
+
+    lv_obj_t* remaining_slider = lv_obj_find_by_name(edit_modal_, "remaining_slider");
+    if (remaining_slider) {
+        lv_slider_set_value(remaining_slider, remaining_pct, LV_ANIM_OFF);
+    }
+
+    lv_obj_t* remaining_label = lv_obj_find_by_name(edit_modal_, "remaining_pct_label");
+    if (remaining_label) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%d%%", remaining_pct);
+        lv_label_set_text(remaining_label, buf);
+    }
+
+    // Update progress bar fill width (shown in view mode)
+    // Note: lv_obj_update_layout() required to get accurate container width
+    lv_obj_t* progress_container = lv_obj_find_by_name(edit_modal_, "remaining_progress_container");
+    lv_obj_t* progress_fill = lv_obj_find_by_name(edit_modal_, "remaining_progress_fill");
+    if (progress_container && progress_fill) {
+        lv_obj_update_layout(progress_container);
+        int container_width = lv_obj_get_width(progress_container);
+        int fill_width = container_width * remaining_pct / 100;
+        lv_obj_set_width(progress_fill, fill_width);
+    }
+
+    // Update temperature display based on material
+    update_edit_temp_display();
+
+    // Show/hide Spoolman sync button based on whether slot has spoolman_id
+    lv_obj_t* btn_sync = lv_obj_find_by_name(edit_modal_, "btn_sync_spoolman");
+    if (btn_sync) {
+        if (edit_slot_info_.spoolman_id > 0) {
+            lv_obj_remove_flag(btn_sync, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(btn_sync, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+}
+
+void AmsPanel::update_edit_temp_display() {
+    if (!edit_modal_) {
+        return;
+    }
+
+    // Get temperature range from slot info (populated from Spoolman or material defaults)
+    int nozzle_min = edit_slot_info_.nozzle_temp_min;
+    int nozzle_max = edit_slot_info_.nozzle_temp_max;
+    int bed_temp = edit_slot_info_.bed_temp;
+
+    // Fall back to material-based defaults if not set
+    // (Phase 3 will use filament_database for proper lookup)
+    if (nozzle_min == 0 && nozzle_max == 0) {
+        // Simple material-based defaults
+        if (edit_slot_info_.material == "PLA") {
+            nozzle_min = 190;
+            nozzle_max = 230;
+            bed_temp = 60;
+        } else if (edit_slot_info_.material == "PETG") {
+            nozzle_min = 220;
+            nozzle_max = 250;
+            bed_temp = 70;
+        } else if (edit_slot_info_.material == "ABS" || edit_slot_info_.material == "ASA") {
+            nozzle_min = 240;
+            nozzle_max = 270;
+            bed_temp = 100;
+        } else if (edit_slot_info_.material == "TPU") {
+            nozzle_min = 210;
+            nozzle_max = 240;
+            bed_temp = 50;
+        } else {
+            // Generic defaults
+            nozzle_min = 200;
+            nozzle_max = 230;
+            bed_temp = 60;
+        }
+    }
+
+    // Update nozzle temp label
+    lv_obj_t* nozzle_label = lv_obj_find_by_name(edit_modal_, "temp_nozzle_label");
+    if (nozzle_label) {
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%d-%d°C", nozzle_min, nozzle_max);
+        lv_label_set_text(nozzle_label, buf);
+    }
+
+    // Update bed temp label
+    lv_obj_t* bed_label = lv_obj_find_by_name(edit_modal_, "temp_bed_label");
+    if (bed_label) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%d°C", bed_temp);
+        lv_label_set_text(bed_label, buf);
+    }
+}
+
+// ============================================================================
+// Edit Modal Handlers
+// ============================================================================
+
+void AmsPanel::handle_edit_modal_close() {
+    spdlog::debug("[{}] Edit modal close requested", get_name());
+    hide_edit_modal();
+}
+
+void AmsPanel::handle_edit_vendor_changed(int vendor_index) {
+    // Vendor list from XML: Generic, Polymaker, Bambu, eSUN, Overture, Prusa, Hatchbox
+    static const char* vendors[] = {"Generic",  "Polymaker", "Bambu",   "eSUN",
+                                    "Overture", "Prusa",     "Hatchbox"};
+    if (vendor_index >= 0 &&
+        vendor_index < static_cast<int>(sizeof(vendors) / sizeof(vendors[0]))) {
+        edit_slot_info_.brand = vendors[vendor_index];
+        spdlog::debug("[{}] Vendor changed to: {}", get_name(), edit_slot_info_.brand);
+        update_sync_button_state();
+    }
+}
+
+void AmsPanel::handle_edit_material_changed(int material_index) {
+    // Material list from XML: PLA, PETG, ABS, ASA, TPU, PA, PC
+    static const char* materials[] = {"PLA", "PETG", "ABS", "ASA", "TPU", "PA", "PC"};
+    if (material_index >= 0 &&
+        material_index < static_cast<int>(sizeof(materials) / sizeof(materials[0]))) {
+        edit_slot_info_.material = materials[material_index];
+        spdlog::debug("[{}] Material changed to: {}", get_name(), edit_slot_info_.material);
+
+        // Clear existing temp values so update_edit_temp_display uses material-based defaults
+        // (Otherwise Spoolman-sourced temps would persist when user changes material)
+        edit_slot_info_.nozzle_temp_min = 0;
+        edit_slot_info_.nozzle_temp_max = 0;
+        edit_slot_info_.bed_temp = 0;
+
+        // Update temperature display based on new material
+        update_edit_temp_display();
+        update_sync_button_state();
+    }
+}
+
+void AmsPanel::handle_edit_color_clicked() {
+    spdlog::info("[{}] Opening color picker", get_name());
+    show_color_picker();
+}
+
+void AmsPanel::handle_edit_remaining_changed(int percent) {
+    if (!edit_modal_) {
+        return;
+    }
+
+    // Update the percentage label
+    lv_obj_t* remaining_label = lv_obj_find_by_name(edit_modal_, "remaining_pct_label");
+    if (remaining_label) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%d%%", percent);
+        lv_label_set_text(remaining_label, buf);
+    }
+
+    // Update slot info remaining weight based on percentage
+    if (edit_slot_info_.total_weight_g > 0) {
+        edit_slot_info_.remaining_weight_g =
+            edit_slot_info_.total_weight_g * static_cast<float>(percent) / 100.0f;
+    }
+
+    update_sync_button_state();
+    spdlog::trace("[{}] Remaining changed to {}%", get_name(), percent);
+}
+
+void AmsPanel::handle_edit_remaining_edit() {
+    if (!edit_modal_) {
+        return;
+    }
+
+    // Store current remaining percentage before entering edit mode
+    lv_obj_t* slider = lv_obj_find_by_name(edit_modal_, "remaining_slider");
+    if (slider) {
+        edit_remaining_pre_edit_pct_ = lv_slider_get_value(slider);
+    }
+
+    // Enter edit mode - subject binding will show slider/accept/cancel, hide progress/edit button
+    lv_subject_set_int(&s_edit_remaining_mode, 1);
+    spdlog::debug("[{}] Entered remaining edit mode (was {}%)", get_name(),
+                  edit_remaining_pre_edit_pct_);
+}
+
+void AmsPanel::handle_edit_remaining_accept() {
+    if (!edit_modal_) {
+        return;
+    }
+
+    // Get the current slider value
+    lv_obj_t* slider = lv_obj_find_by_name(edit_modal_, "remaining_slider");
+    int new_pct = slider ? lv_slider_get_value(slider) : edit_remaining_pre_edit_pct_;
+
+    // Update the progress bar fill to match
+    lv_obj_t* progress_fill = lv_obj_find_by_name(edit_modal_, "remaining_progress_fill");
+    lv_obj_t* progress_container = lv_obj_find_by_name(edit_modal_, "remaining_progress_container");
+    if (progress_fill && progress_container) {
+        int container_width = lv_obj_get_width(progress_container);
+        int fill_width = container_width * new_pct / 100;
+        lv_obj_set_width(progress_fill, fill_width);
+    }
+
+    // Exit edit mode - subject binding will show progress/edit button, hide slider/accept/cancel
+    lv_subject_set_int(&s_edit_remaining_mode, 0);
+    spdlog::debug("[{}] Accepted remaining edit: {}%", get_name(), new_pct);
+}
+
+void AmsPanel::handle_edit_remaining_cancel() {
+    if (!edit_modal_) {
+        return;
+    }
+
+    // Revert slider to pre-edit value
+    lv_obj_t* slider = lv_obj_find_by_name(edit_modal_, "remaining_slider");
+    if (slider) {
+        lv_slider_set_value(slider, edit_remaining_pre_edit_pct_, LV_ANIM_OFF);
+    }
+
+    // Revert the percentage label
+    lv_obj_t* remaining_label = lv_obj_find_by_name(edit_modal_, "remaining_pct_label");
+    if (remaining_label) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%d%%", edit_remaining_pre_edit_pct_);
+        lv_label_set_text(remaining_label, buf);
+    }
+
+    // Revert the remaining weight in edit_slot_info_
+    if (edit_slot_info_.total_weight_g > 0) {
+        edit_slot_info_.remaining_weight_g = edit_slot_info_.total_weight_g *
+                                             static_cast<float>(edit_remaining_pre_edit_pct_) /
+                                             100.0f;
+    }
+
+    // Exit edit mode
+    lv_subject_set_int(&s_edit_remaining_mode, 0);
+    update_sync_button_state();
+    spdlog::debug("[{}] Cancelled remaining edit (reverted to {}%)", get_name(),
+                  edit_remaining_pre_edit_pct_);
+}
+
+void AmsPanel::handle_edit_sync_spoolman() {
+    if (edit_slot_info_.spoolman_id <= 0) {
+        NOTIFY_WARNING("Slot not linked to Spoolman");
+        return;
+    }
+
+    spdlog::info("[{}] Sync to Spoolman requested for spool ID {}", get_name(),
+                 edit_slot_info_.spoolman_id);
+
+    // TODO: Phase 4 - Call Spoolman PATCH API to update spool
+    // api_->update_spoolman_spool(edit_slot_info_.spoolman_id, ...)
+    NOTIFY_INFO("Spoolman sync coming in Phase 4");
+}
+
+void AmsPanel::handle_edit_reset() {
+    spdlog::debug("[{}] Resetting edit modal to original values", get_name());
+
+    // Restore original slot info
+    edit_slot_info_ = edit_original_slot_info_;
+
+    // Refresh the UI
+    update_edit_modal_ui();
+    update_sync_button_state();
+
+    NOTIFY_INFO("Reset to original values");
+}
+
+void AmsPanel::handle_edit_save() {
+    if (edit_slot_index_ < 0) {
+        return;
+    }
+
+    spdlog::info("[{}] Saving edits for slot {}", get_name(), edit_slot_index_);
+
+    AmsBackend* backend = AmsState::instance().get_backend();
+    if (!backend) {
+        NOTIFY_ERROR("AMS not available");
+        hide_edit_modal();
+        return;
+    }
+
+    // Apply the edited slot info to the backend
+    backend->set_slot_info(edit_slot_index_, edit_slot_info_);
+
+    // Update the slot display
+    AmsState::instance().sync_from_backend();
+    refresh_slots();
+
+    NOTIFY_INFO("Slot {} updated", edit_slot_index_ + 1);
+
+    hide_edit_modal();
+}
+
+// ============================================================================
+// Color Picker
+// ============================================================================
+
+/**
+ * @brief Map hex color value to human-readable name
+ *
+ * Uses algorithmic color naming (HSL-based) with special names for
+ * preset colors that have non-standard names (Gold, Bronze, Wood, etc.)
+ *
+ * Algorithm ported from Klipper DESCRIBE_COLOR macro on voronv2.local.
+ */
+static std::string get_color_name_from_hex(uint32_t rgb) {
+    // Special preset names that don't follow standard color naming
+    static const struct {
+        uint32_t hex;
+        const char* name;
+    } special_names[] = {
+        {0xD4AF37, "Gold"},  {0xCD7F32, "Bronze"}, {0x8B4513, "Wood"},
+        {0xE8E8FF, "Clear"}, {0xC0C0C0, "Silver"}, {0xE0D5C7, "Marble"},
+        {0xFF7043, "Coral"}, {0x1A237E, "Navy"},   {0xBCAAA4, "Taupe"},
+    };
+
+    // Check for special preset names first
+    for (const auto& entry : special_names) {
+        if (entry.hex == rgb) {
+            return entry.name;
+        }
+    }
+
+    // Use algorithmic color description
+    return helix::describe_color(rgb);
+}
+
+void AmsPanel::show_color_picker() {
+    hide_color_picker();
+
+    if (!parent_screen_) {
+        spdlog::warn("[{}] No parent screen for color picker", get_name());
+        return;
+    }
+
+    // Initialize selected color from current edit_slot_info_
+    picker_selected_color_ = edit_slot_info_.color_rgb;
+
+    // Create the color picker modal on the parent screen (above edit modal)
+    color_picker_ = static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "color_picker", nullptr));
+    if (!color_picker_) {
+        spdlog::error("[{}] Failed to create color picker", get_name());
+        return;
+    }
+
+    // Initialize preview with current color
+    update_color_picker_selection(picker_selected_color_);
+
+    // Initialize HSV picker with current color and set callback
+    lv_obj_t* hsv_picker = lv_obj_find_by_name(color_picker_, "hsv_picker");
+    if (hsv_picker) {
+        ui_hsv_picker_set_color_rgb(hsv_picker, picker_selected_color_);
+        ui_hsv_picker_set_callback(
+            hsv_picker,
+            [](uint32_t rgb, void* user_data) {
+                auto* panel = static_cast<AmsPanel*>(user_data);
+                panel->update_color_picker_selection(rgb, true); // from HSV picker
+            },
+            this);
+        spdlog::debug("[{}] HSV picker initialized with color #{:06X}", get_name(),
+                      picker_selected_color_);
+    }
+
+    spdlog::info("[{}] Color picker shown with initial color #{:06X}", get_name(),
+                 picker_selected_color_);
+}
+
+void AmsPanel::hide_color_picker() {
+    if (color_picker_) {
+        lv_obj_delete(color_picker_);
+        color_picker_ = nullptr;
+        spdlog::debug("[{}] Color picker hidden", get_name());
+    }
+}
+
+void AmsPanel::update_color_picker_selection(uint32_t color_rgb, bool from_hsv_picker) {
+    if (!color_picker_) {
+        return;
+    }
+
+    picker_selected_color_ = color_rgb;
+
+    // Update the preview swatch
+    lv_obj_t* preview = lv_obj_find_by_name(color_picker_, "selected_color_preview");
+    if (preview) {
+        lv_obj_set_style_bg_color(preview, lv_color_hex(color_rgb), 0);
+    }
+
+    // Update the hex label
+    lv_obj_t* hex_label = lv_obj_find_by_name(color_picker_, "selected_hex_label");
+    if (hex_label) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "#%06X", color_rgb);
+        lv_label_set_text(hex_label, buf);
+    }
+
+    // Update the color name label
+    lv_obj_t* name_label = lv_obj_find_by_name(color_picker_, "selected_name_label");
+    if (name_label) {
+        lv_label_set_text(name_label, get_color_name_from_hex(color_rgb).c_str());
+    }
+
+    // Sync HSV picker if change came from preset swatch (not from HSV picker itself)
+    if (!from_hsv_picker) {
+        lv_obj_t* hsv_picker = lv_obj_find_by_name(color_picker_, "hsv_picker");
+        if (hsv_picker) {
+            ui_hsv_picker_set_color_rgb(hsv_picker, color_rgb);
+        }
+    }
+}
+
+void AmsPanel::handle_color_picker_close() {
+    spdlog::debug("[{}] Color picker close requested", get_name());
+    hide_color_picker();
+}
+
+void AmsPanel::handle_color_swatch_clicked(lv_obj_t* swatch) {
+    if (!swatch || !color_picker_) {
+        return;
+    }
+
+    // Get the background color from the clicked swatch
+    lv_color_t color = lv_obj_get_style_bg_color(swatch, LV_PART_MAIN);
+    uint32_t rgb = lv_color_to_u32(color) & 0xFFFFFF;
+
+    update_color_picker_selection(rgb);
+}
+
+void AmsPanel::handle_color_picker_cancel() {
+    spdlog::debug("[{}] Color picker cancelled", get_name());
+    hide_color_picker();
+}
+
+void AmsPanel::handle_color_picker_select() {
+    spdlog::info("[{}] Color selected: #{:06X}", get_name(), picker_selected_color_);
+
+    // Update the edit slot info with selected color
+    edit_slot_info_.color_rgb = picker_selected_color_;
+    edit_slot_info_.color_name = get_color_name_from_hex(picker_selected_color_);
+
+    // Close the color picker
+    hide_color_picker();
+
+    // Update the edit modal's color swatch to show new selection
+    if (edit_modal_) {
+        lv_obj_t* swatch = lv_obj_find_by_name(edit_modal_, "color_swatch");
+        if (swatch) {
+            lv_obj_set_style_bg_color(swatch, lv_color_hex(picker_selected_color_), 0);
+        }
+
+        lv_obj_t* name_label = lv_obj_find_by_name(edit_modal_, "color_name_label");
+        if (name_label) {
+            lv_label_set_text(name_label, edit_slot_info_.color_name.c_str());
+        }
+
+        update_sync_button_state();
+    }
 }
 
 // ============================================================================

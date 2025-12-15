@@ -417,6 +417,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
 
     // ========================================================================
     // MATERIAL LABEL (above spool - leaves room for filament paths below)
+    // TODO: Convert ams_slot to XML component - styling should be declarative
     // ========================================================================
     lv_obj_t* material = lv_label_create(container);
     lv_label_set_text(material, "--");

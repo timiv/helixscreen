@@ -29,6 +29,8 @@ struct SpoolInfo {
     std::string material;          ///< Material type (e.g., "PLA", "PETG", "ABS", "TPU")
     std::string color_name;        ///< Color name (e.g., "Galaxy Black", "Jet Black")
     std::string color_hex;         ///< Hex color code (e.g., "#1A1A2E")
+    std::string multi_color_hexes; ///< Comma-separated hex codes for multi-color filaments
+                                   ///< (e.g., "#D4AF37,#C0C0C0,#B87333" for gold/silver/copper)
     double remaining_weight_g = 0; ///< Remaining filament weight in grams
     double remaining_length_m = 0; ///< Remaining filament length in meters
     double spool_weight_g = 0;     ///< Empty spool weight in grams
@@ -60,6 +62,14 @@ struct SpoolInfo {
      */
     [[nodiscard]] bool is_low(double threshold_grams = 100.0) const {
         return remaining_weight_g < threshold_grams;
+    }
+
+    /**
+     * @brief Check if this is a multi-color filament
+     * @return true if multi_color_hexes contains color data
+     */
+    [[nodiscard]] bool is_multi_color() const {
+        return !multi_color_hexes.empty();
     }
 
     /**

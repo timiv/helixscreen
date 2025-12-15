@@ -605,9 +605,9 @@ void AmsState::sync_current_loaded_from_backend() {
 void AmsState::adjust_modal_temp(int delta_c) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-    // Get limits from backend if available
-    float min_temp = 35.0f;
-    float max_temp = 70.0f;
+    // Get limits from backend if available, fallback to constants
+    float min_temp = static_cast<float>(MIN_DRYER_TEMP_C);
+    float max_temp = static_cast<float>(MAX_DRYER_TEMP_C);
     if (backend_) {
         DryerInfo dryer = backend_->get_dryer_info();
         min_temp = dryer.min_temp_c;
@@ -625,15 +625,15 @@ void AmsState::adjust_modal_temp(int delta_c) {
 void AmsState::adjust_modal_duration(int delta_min) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-    // Get max duration from backend if available
-    int max_duration = 720; // 12 hours default
+    // Get max duration from backend if available, fallback to constant
+    int max_duration = MAX_DRYER_DURATION_MIN;
     if (backend_) {
         DryerInfo dryer = backend_->get_dryer_info();
         max_duration = dryer.max_duration_min;
     }
 
     int new_duration = modal_duration_min_ + delta_min;
-    new_duration = std::max(30, std::min(new_duration, max_duration)); // Minimum 30 minutes
+    new_duration = std::max(MIN_DRYER_DURATION_MIN, std::min(new_duration, max_duration));
     modal_duration_min_ = new_duration;
 
     update_modal_text_subjects();

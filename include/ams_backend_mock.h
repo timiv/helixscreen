@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <functional>
 #include <mutex>
 #include <thread>
 
@@ -134,6 +135,25 @@ class AmsBackendMock : public AmsBackend {
      */
     void set_dryer_speed(int speed_x);
 
+    /**
+     * @brief Enable realistic multi-phase operation mode
+     * @param enabled true for HEATING→LOADING→CHECKING sequences
+     *
+     * When enabled, operations show realistic phase progression:
+     * - Load: HEATING → LOADING (segment animation) → CHECKING → IDLE
+     * - Unload: HEATING → FORMING_TIP → UNLOADING (animation) → IDLE
+     *
+     * Can also be set via HELIX_MOCK_AMS_REALISTIC environment variable.
+     * Timing respects --sim-speed flag with ±20-30% variance.
+     */
+    void set_realistic_mode(bool enabled);
+
+    /**
+     * @brief Check if realistic mode is enabled
+     * @return true if multi-phase operations are simulated
+     */
+    [[nodiscard]] bool is_realistic_mode() const;
+
   private:
     /**
      * @brief Initialize mock state with sample data
@@ -161,12 +181,68 @@ class AmsBackendMock : public AmsBackend {
      */
     void wait_for_operation_thread();
 
+    // Realistic mode helpers (multi-phase operations)
+    using InterruptibleSleep = std::function<bool(int)>;
+
+    /**
+     * @brief Get delay with speedup and optional variance applied
+     * @param base_ms Base delay in milliseconds (at 1x speed)
+     * @param variance Variance factor (0.2 = ±20%, 0 = no variance)
+     * @return Effective delay considering RuntimeConfig::sim_speedup
+     */
+    int get_effective_delay_ms(int base_ms, float variance = 0.0f) const;
+
+    /**
+     * @brief Update action state with thread safety
+     * @param action New action state
+     * @param detail Operation detail string
+     */
+    void set_action(AmsAction action, const std::string& detail);
+
+    /**
+     * @brief Execute load operation with optional multi-phase sequence
+     * @param slot_index Slot being loaded from
+     * @param interruptible_sleep Sleep function that respects shutdown
+     */
+    void execute_load_operation(int slot_index, InterruptibleSleep interruptible_sleep);
+
+    /**
+     * @brief Execute unload operation with optional multi-phase sequence
+     * @param interruptible_sleep Sleep function that respects shutdown
+     */
+    void execute_unload_operation(InterruptibleSleep interruptible_sleep);
+
+    /**
+     * @brief Animate filament through load path segments
+     * @param slot_index Slot being loaded from
+     * @param interruptible_sleep Sleep function that respects shutdown
+     */
+    void run_load_segment_animation(int slot_index, InterruptibleSleep interruptible_sleep);
+
+    /**
+     * @brief Animate filament through unload path segments (reverse)
+     * @param interruptible_sleep Sleep function that respects shutdown
+     */
+    void run_unload_segment_animation(InterruptibleSleep interruptible_sleep);
+
+    /**
+     * @brief Finalize state after successful load
+     * @param slot_index Slot that was loaded
+     */
+    void finalize_load_state(int slot_index);
+
+    /**
+     * @brief Finalize state after successful unload
+     */
+    void finalize_unload_state();
+
     mutable std::mutex mutex_;         ///< Protects state access
     std::atomic<bool> running_{false}; ///< Backend running state
     EventCallback event_callback_;     ///< Registered event handler
 
     AmsSystemInfo system_info_;    ///< Simulated system state
     int operation_delay_ms_ = 500; ///< Simulated operation delay
+    bool realistic_mode_ = false;  ///< Enable multi-phase operations (HEATING→LOADING→CHECKING)
 
     // Path visualization state
     PathTopology topology_ = PathTopology::HUB;        ///< Simulated topology (default hub for AFC)
@@ -177,6 +253,7 @@ class AmsBackendMock : public AmsBackend {
     std::thread operation_thread_;                      ///< Current operation thread (if any)
     std::atomic<bool> operation_thread_running_{false}; ///< Guards against double-join
     std::atomic<bool> shutdown_requested_{false};       ///< Signal thread to exit
+    std::atomic<bool> cancel_requested_{false};         ///< Signal operation cancellation
     std::condition_variable shutdown_cv_;               ///< For interruptible sleep
     mutable std::mutex shutdown_mutex_;                 ///< Protects shutdown_cv_ wait
 

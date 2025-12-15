@@ -7,6 +7,7 @@
 #include "ui_panel_base.h"
 
 #include "ams_state.h"
+#include "ams_types.h"      // For SlotInfo
 #include "spoolman_types.h" // For SpoolInfo
 
 /**
@@ -110,9 +111,23 @@ class AmsPanel : public PanelBase {
 
     // === Spoolman Picker ===
 
-    lv_obj_t* spoolman_picker_ = nullptr;  ///< Spoolman spool picker modal
-    int picker_target_slot_ = -1;          ///< Slot to assign selected spool to
-    std::vector<SpoolInfo> picker_spools_; ///< Cached spools for lookup on selection
+    lv_obj_t* spoolman_picker_ = nullptr;         ///< Spoolman spool picker modal
+    int picker_target_slot_ = -1;                 ///< Slot to assign selected spool to
+    std::vector<SpoolInfo> picker_spools_;        ///< Cached spools for lookup on selection
+    std::shared_ptr<bool> picker_callback_guard_; ///< RAII guard for async picker callbacks
+
+    // === Edit Modal ===
+
+    lv_obj_t* edit_modal_ = nullptr;      ///< Edit filament modal overlay
+    int edit_slot_index_ = -1;            ///< Slot being edited
+    SlotInfo edit_original_slot_info_{};  ///< Original slot info (for reset)
+    SlotInfo edit_slot_info_{};           ///< Working copy of slot info being edited
+    int edit_remaining_pre_edit_pct_ = 0; ///< Remaining % before edit mode (for cancel)
+
+    // === Color Picker ===
+
+    lv_obj_t* color_picker_ = nullptr;   ///< Color picker modal overlay
+    uint32_t picker_selected_color_ = 0; ///< Currently selected color in picker (RGB)
 
     // === Observers (RAII cleanup via ObserverGuard) ===
 
@@ -197,7 +212,6 @@ class AmsPanel : public PanelBase {
     // === Context Menu Management ===
 
     void show_context_menu(int slot_index, lv_obj_t* near_widget);
-    void hide_context_menu();
 
     // === Spoolman Integration ===
 
@@ -221,6 +235,10 @@ class AmsPanel : public PanelBase {
     void handle_dryer_stop();
 
     // Context menu handlers (public for XML event callbacks)
+    void hide_context_menu();
+    void handle_context_load();
+    void handle_context_unload();
+    void handle_context_edit();
     void handle_context_spoolman();
 
     // Spoolman picker handlers (public for XML event callbacks)
@@ -228,10 +246,38 @@ class AmsPanel : public PanelBase {
     void handle_picker_unlink();
     void handle_picker_spool_selected(int spool_id);
 
+    // Edit modal handlers (public for XML event callbacks)
+    void handle_edit_modal_close();
+    void handle_edit_vendor_changed(int vendor_index);
+    void handle_edit_material_changed(int material_index);
+    void handle_edit_color_clicked();
+    void handle_edit_remaining_changed(int percent);
+    void handle_edit_remaining_edit();   ///< Enter edit mode for remaining weight
+    void handle_edit_remaining_accept(); ///< Accept edited remaining weight
+    void handle_edit_remaining_cancel(); ///< Cancel edit mode, revert to original
+    void handle_edit_sync_spoolman();
+    void handle_edit_reset();
+    void handle_edit_save();
+
+    // Color picker handlers (public for XML event callbacks)
+    void handle_color_picker_close();
+    void handle_color_swatch_clicked(lv_obj_t* swatch);
+    void handle_color_picker_cancel();
+    void handle_color_picker_select();
+
   private:
-    void handle_context_load();
-    void handle_context_unload();
-    void handle_context_edit();
+    // Edit modal helpers
+    void show_edit_modal(int slot_index);
+    void hide_edit_modal();
+    void update_edit_modal_ui();
+    void update_edit_temp_display();
+    bool is_edit_dirty() const;      ///< Check if edit data differs from original
+    void update_sync_button_state(); ///< Enable/disable sync button based on dirty state
+
+    // Color picker helpers
+    void show_color_picker();
+    void hide_color_picker();
+    void update_color_picker_selection(uint32_t color_rgb, bool from_hsv_picker = false);
 };
 
 /**
