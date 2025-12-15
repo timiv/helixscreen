@@ -10,12 +10,29 @@
 #include <cstring>
 
 #ifdef __linux__
+#include <cerrno>
 #include <dirent.h>
 #include <fcntl.h>
 #include <fstream>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+// RAII guard for file descriptors to prevent leaks
+class FdGuard {
+    int fd_;
+
+  public:
+    explicit FdGuard(int fd) : fd_(fd) {}
+    ~FdGuard() {
+        if (fd_ >= 0) {
+            close(fd_);
+        }
+    }
+    int get() const { return fd_; }
+    FdGuard(const FdGuard&) = delete;
+    FdGuard& operator=(const FdGuard&) = delete;
+};
 #endif
 
 // ============================================================================
@@ -96,6 +113,10 @@ class BacklightBackendSysfs : public BacklightBackend {
         }
 
         f << target;
+        if (!f.good()) {
+            spdlog::warn("[Backlight-Sysfs] Failed to write brightness value to {}", brightness_path);
+            return false;
+        }
         f.close();
 
         spdlog::debug("[Backlight-Sysfs] Set {} to {}/{} ({}%)", device_name_, target,
@@ -209,8 +230,13 @@ class BacklightBackendSysfs : public BacklightBackend {
 class BacklightBackendAllwinner : public BacklightBackend {
   public:
     static constexpr const char* DISP_DEVICE = "/dev/disp";
+
+    // Allwinner DISP2 ioctl commands for LCD backlight control
+    // From sunxi-display2 kernel driver (not including header to avoid kernel deps)
+    // See: https://linux-sunxi.org/Sunxi_disp_driver_interface
     static constexpr unsigned long DISP_LCD_SET_BRIGHTNESS = 0x102;
     static constexpr unsigned long DISP_LCD_GET_BRIGHTNESS = 0x103;
+
     static constexpr int MAX_BRIGHTNESS = 255;
 
     BacklightBackendAllwinner() {
@@ -222,9 +248,10 @@ class BacklightBackendAllwinner : public BacklightBackend {
             return false;
         }
 
-        int fd = open(DISP_DEVICE, O_RDWR);
-        if (fd < 0) {
-            spdlog::warn("[Backlight-Allwinner] Cannot open {}: {}", DISP_DEVICE, strerror(errno));
+        FdGuard fd(open(DISP_DEVICE, O_RDWR));
+        if (fd.get() < 0) {
+            int err = errno; // Capture immediately
+            spdlog::warn("[Backlight-Allwinner] Cannot open {}: {}", DISP_DEVICE, strerror(err));
             return false;
         }
 
@@ -234,11 +261,11 @@ class BacklightBackendAllwinner : public BacklightBackend {
 
         // ioctl args: [screen_id, brightness, 0, 0]
         unsigned long args[4] = {0, static_cast<unsigned long>(brightness), 0, 0};
-        int ret = ioctl(fd, DISP_LCD_SET_BRIGHTNESS, args);
-        close(fd);
+        int ret = ioctl(fd.get(), DISP_LCD_SET_BRIGHTNESS, args);
 
         if (ret < 0) {
-            spdlog::warn("[Backlight-Allwinner] ioctl SET_BRIGHTNESS failed: {}", strerror(errno));
+            int err = errno; // Capture immediately
+            spdlog::warn("[Backlight-Allwinner] ioctl SET_BRIGHTNESS failed: {}", strerror(err));
             return false;
         }
 
@@ -251,27 +278,22 @@ class BacklightBackendAllwinner : public BacklightBackend {
             return -1;
         }
 
-        int fd = open(DISP_DEVICE, O_RDONLY);
-        if (fd < 0) {
+        FdGuard fd(open(DISP_DEVICE, O_RDONLY));
+        if (fd.get() < 0) {
             return -1;
         }
 
         // ioctl args: [screen_id, 0, 0, 0]
         unsigned long args[4] = {0, 0, 0, 0};
-        int ret = ioctl(fd, DISP_LCD_GET_BRIGHTNESS, args);
-        close(fd);
+        int ret = ioctl(fd.get(), DISP_LCD_GET_BRIGHTNESS, args);
 
         if (ret < 0) {
             return -1;
         }
 
-        // Brightness value is in args[1] after the call (some drivers)
-        // or in the return value (other drivers) - check both
+        // AD5M returns brightness in args[1] after the call (ret is 0 on success)
+        // Some other Allwinner drivers return it in ret directly
         int brightness = (ret > 0) ? ret : static_cast<int>(args[1]);
-        if (brightness == 0 && ret == 0) {
-            // Might be stored in args[1] even when ret is 0
-            brightness = static_cast<int>(args[1]);
-        }
 
         return (brightness * 100) / MAX_BRIGHTNESS;
     }
@@ -294,19 +316,20 @@ class BacklightBackendAllwinner : public BacklightBackend {
         }
 
         // Try to open and verify ioctl works
-        int fd = open(DISP_DEVICE, O_RDONLY);
-        if (fd < 0) {
-            spdlog::debug("[Backlight-Allwinner] Cannot open {}: {}", DISP_DEVICE, strerror(errno));
+        FdGuard fd(open(DISP_DEVICE, O_RDONLY));
+        if (fd.get() < 0) {
+            int err = errno; // Capture immediately
+            spdlog::debug("[Backlight-Allwinner] Cannot open {}: {}", DISP_DEVICE, strerror(err));
             return;
         }
 
         // Test GET_BRIGHTNESS to verify this is a display with backlight control
         unsigned long args[4] = {0, 0, 0, 0};
-        int ret = ioctl(fd, DISP_LCD_GET_BRIGHTNESS, args);
-        close(fd);
+        int ret = ioctl(fd.get(), DISP_LCD_GET_BRIGHTNESS, args);
 
         if (ret < 0) {
-            spdlog::debug("[Backlight-Allwinner] GET_BRIGHTNESS ioctl failed: {}", strerror(errno));
+            int err = errno; // Capture immediately
+            spdlog::debug("[Backlight-Allwinner] GET_BRIGHTNESS ioctl failed: {}", strerror(err));
             return;
         }
 

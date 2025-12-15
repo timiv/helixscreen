@@ -81,7 +81,7 @@ class BacklightBackend {
      * Detection order:
      * 1. Test mode check → Simulated (None with tracking)
      * 2. HELIX_BACKLIGHT_DEVICE env var ("sysfs", "allwinner", "none")
-     * 3. Sysfs (/sys/class/backlight/*)
+     * 3. Sysfs (/sys/class/backlight/)
      * 4. Allwinner (/dev/disp with ioctl)
      * 5. None fallback
      *
