@@ -76,6 +76,16 @@ void HistoryListPanel::init_subjects() {
     lv_subject_init_int(&subject_has_jobs_, 0);
     lv_xml_register_subject(nullptr, "history_list_has_jobs", &subject_has_jobs_);
 
+    // Initialize empty state message subjects (5-parameter signature)
+    lv_subject_init_string(&subject_empty_message_, empty_message_buf_, nullptr,
+                           sizeof(empty_message_buf_), "No print history found");
+    lv_subject_init_string(&subject_empty_hint_, empty_hint_buf_, nullptr, sizeof(empty_hint_buf_),
+                           "Completed prints will appear here");
+
+    // Register empty state message subjects for XML binding
+    lv_xml_register_subject(nullptr, "history_empty_message", &subject_empty_message_);
+    lv_xml_register_subject(nullptr, "history_empty_hint", &subject_empty_hint_);
+
     // Initialize detail overlay subjects
     init_detail_subjects();
 
@@ -90,8 +100,6 @@ void HistoryListPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     list_content_ = lv_obj_find_by_name(panel_, "list_content");
     list_rows_ = lv_obj_find_by_name(panel_, "list_rows");
     empty_state_ = lv_obj_find_by_name(panel_, "empty_state");
-    empty_message_ = lv_obj_find_by_name(panel_, "empty_message");
-    empty_hint_ = lv_obj_find_by_name(panel_, "empty_hint");
 
     // Get widget references - filter controls
     search_box_ = lv_obj_find_by_name(panel_, "search_box");
@@ -490,17 +498,17 @@ void HistoryListPanel::update_empty_state() {
     }
 
     // Update empty state message based on whether filters are active
-    if (!has_filtered_jobs && empty_message_ && empty_hint_) {
+    if (!has_filtered_jobs) {
         bool filters_active = !search_query_.empty() || status_filter_ != HistoryStatusFilter::ALL;
 
         if (filters_active) {
             // Filters are active but yielded no results
-            lv_label_set_text(empty_message_, "No matching prints");
-            lv_label_set_text(empty_hint_, "Try adjusting your search or filters");
+            lv_subject_copy_string(&subject_empty_message_, "No matching prints");
+            lv_subject_copy_string(&subject_empty_hint_, "Try adjusting your search or filters");
         } else if (jobs_.empty()) {
             // No jobs at all
-            lv_label_set_text(empty_message_, "No print history found");
-            lv_label_set_text(empty_hint_, "Completed prints will appear here");
+            lv_subject_copy_string(&subject_empty_message_, "No print history found");
+            lv_subject_copy_string(&subject_empty_hint_, "Completed prints will appear here");
         }
     }
 

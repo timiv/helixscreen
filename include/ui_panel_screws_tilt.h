@@ -136,8 +136,6 @@ class ScrewsTiltPanel {
     // Results UI elements
     lv_obj_t* bed_diagram_container_ = nullptr;
     lv_obj_t* results_instruction_ = nullptr;
-    lv_obj_t* probe_count_label_ = nullptr;
-    lv_obj_t* error_message_ = nullptr;
 
     // Dynamic screw indicators (bed diagram only - positions vary)
     std::vector<lv_obj_t*> screw_indicators_;
@@ -157,6 +155,14 @@ class ScrewsTiltPanel {
     // Fixed char arrays for string subjects (LVGL requires stable buffers)
     char screw_name_bufs_[MAX_SCREWS][SCREW_NAME_BUF_SIZE] = {};
     char screw_adj_bufs_[MAX_SCREWS][SCREW_ADJ_BUF_SIZE] = {};
+
+    // Subjects for status labels
+    static constexpr size_t PROBE_COUNT_BUF_SIZE = 64;
+    static constexpr size_t ERROR_MSG_BUF_SIZE = 256;
+    lv_subject_t probe_count_subject_;
+    lv_subject_t error_message_subject_;
+    char probe_count_buf_[PROBE_COUNT_BUF_SIZE] = {};
+    char error_message_buf_[ERROR_MSG_BUF_SIZE] = {};
 
     // Screw data
     std::vector<ScrewTiltResult> screw_results_;

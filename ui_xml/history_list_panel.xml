@@ -48,10 +48,9 @@
         <!-- Empty state icon (clock/history icon F0150) -->
         <lv_label name="empty_icon" text="󰅐" style_text_font="mdi_icons_48" style_text_color="#text_secondary"/>
         <!-- Empty state message -->
-        <text_body name="empty_message"
-                   text="No print history found" style_text_color="#text_secondary" style_text_align="center"/>
-        <text_small name="empty_hint"
-                    text="Completed prints will appear here" style_text_color="#text_secondary"
+        <text_body name="empty_message" bind_text="history_empty_message" style_text_color="#text_secondary"
+                   style_text_align="center"/>
+        <text_small name="empty_hint" bind_text="history_empty_hint" style_text_color="#text_secondary"
                     style_text_align="center"/>
       </lv_obj>
     </lv_obj>

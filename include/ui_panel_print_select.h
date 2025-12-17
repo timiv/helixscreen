@@ -98,6 +98,56 @@ struct PrintFileData {
 };
 
 /**
+ * @brief Per-card widget data for declarative text binding
+ *
+ * Stored with each pooled card widget. Subjects are bound to labels once
+ * at pool creation, then updated via lv_subject_copy_string() when card is recycled.
+ */
+struct CardWidgetData {
+    // Subjects and buffers for card labels
+    lv_subject_t filename_subject;
+    char filename_buf[128] = {0};
+
+    lv_subject_t time_subject;
+    char time_buf[32] = {0};
+
+    lv_subject_t filament_subject;
+    char filament_buf[32] = {0};
+
+    // Observer handles (saved for cleanup before DELETE)
+    lv_observer_t* filename_observer = nullptr;
+    lv_observer_t* time_observer = nullptr;
+    lv_observer_t* filament_observer = nullptr;
+};
+
+/**
+ * @brief Per-row widget data for declarative text binding
+ *
+ * Stored with each pooled list row widget. Subjects are bound to labels once
+ * at pool creation, then updated via lv_subject_copy_string() when row is recycled.
+ */
+struct ListRowWidgetData {
+    // Subjects and buffers for row labels
+    lv_subject_t filename_subject;
+    char filename_buf[128] = {0};
+
+    lv_subject_t size_subject;
+    char size_buf[16] = {0};
+
+    lv_subject_t modified_subject;
+    char modified_buf[32] = {0};
+
+    lv_subject_t time_subject;
+    char time_buf[32] = {0};
+
+    // Observer handles (saved for cleanup before DELETE)
+    lv_observer_t* filename_observer = nullptr;
+    lv_observer_t* size_observer = nullptr;
+    lv_observer_t* modified_observer = nullptr;
+    lv_observer_t* time_observer = nullptr;
+};
+
+/**
  * @brief Card layout dimensions calculated from container size
  */
 struct CardDimensions {
@@ -459,6 +509,8 @@ class PrintSelectPanel : public PanelBase {
     std::vector<lv_obj_t*> card_pool_; ///< Fixed pool of reusable card widgets
     std::vector<ssize_t>
         card_pool_indices_; ///< Which file index each pool card shows (-1 = unused)
+    std::vector<std::unique_ptr<CardWidgetData>>
+        card_data_pool_; ///< Per-card data with subjects (parallel to card_pool_)
     lv_obj_t* card_leading_spacer_ = nullptr; ///< Spacer before visible cards (pushes them down)
     lv_obj_t* card_trailing_spacer_ =
         nullptr;                 ///< Spacer after visible cards (enables scroll range)
@@ -469,6 +521,8 @@ class PrintSelectPanel : public PanelBase {
     // Virtualization state for list view
     std::vector<lv_obj_t*> list_pool_;       ///< Fixed pool of reusable list row widgets
     std::vector<ssize_t> list_pool_indices_; ///< Which file index each pool row shows (-1 = unused)
+    std::vector<std::unique_ptr<ListRowWidgetData>>
+        list_data_pool_; ///< Per-row data with subjects (parallel to list_pool_)
     lv_obj_t* list_leading_spacer_ = nullptr;  ///< Spacer before visible rows
     lv_obj_t* list_trailing_spacer_ = nullptr; ///< Spacer after visible rows
     int visible_list_start_ = -1;              ///< First visible list index (-1 = uninitialized)
@@ -531,10 +585,12 @@ class PrintSelectPanel : public PanelBase {
      * @brief Configure a pool card to display a specific file
      *
      * @param card Pool card widget to configure
-     * @param index Index into file_list_
+     * @param pool_index Index into card_pool_ and card_data_pool_
+     * @param file_index Index into file_list_
      * @param dims Pre-calculated card dimensions
      */
-    void configure_card(lv_obj_t* card, size_t index, const CardDimensions& dims);
+    void configure_card(lv_obj_t* card, size_t pool_index, size_t file_index,
+                        const CardDimensions& dims);
 
     /**
      * @brief Initialize virtualized list view
@@ -557,9 +613,10 @@ class PrintSelectPanel : public PanelBase {
      * @brief Configure a pool list row to display a specific file
      *
      * @param row Pool row widget to configure
-     * @param index Index into file_list_
+     * @param pool_index Index into list_pool_ and list_data_pool_
+     * @param file_index Index into file_list_
      */
-    void configure_list_row(lv_obj_t* row, size_t index);
+    void configure_list_row(lv_obj_t* row, size_t pool_index, size_t file_index);
 
     /**
      * @brief Animate visible list rows with staggered entrance

@@ -168,6 +168,52 @@ PrintSelectPanel::~PrintSelectPanel() {
         }
     }
 
+    // Remove bind_text observers BEFORE clearing data pools to prevent crashes
+    // (observers reference subjects which are in the data structures)
+    if (lv_is_initialized()) {
+        for (auto& data : card_data_pool_) {
+            if (data) {
+                if (data->filename_observer) {
+                    lv_observer_remove(data->filename_observer);
+                    data->filename_observer = nullptr;
+                }
+                if (data->time_observer) {
+                    lv_observer_remove(data->time_observer);
+                    data->time_observer = nullptr;
+                }
+                if (data->filament_observer) {
+                    lv_observer_remove(data->filament_observer);
+                    data->filament_observer = nullptr;
+                }
+            }
+        }
+
+        for (auto& data : list_data_pool_) {
+            if (data) {
+                if (data->filename_observer) {
+                    lv_observer_remove(data->filename_observer);
+                    data->filename_observer = nullptr;
+                }
+                if (data->size_observer) {
+                    lv_observer_remove(data->size_observer);
+                    data->size_observer = nullptr;
+                }
+                if (data->modified_observer) {
+                    lv_observer_remove(data->modified_observer);
+                    data->modified_observer = nullptr;
+                }
+                if (data->time_observer) {
+                    lv_observer_remove(data->time_observer);
+                    data->time_observer = nullptr;
+                }
+            }
+        }
+    }
+
+    // Clear pool data structures (unique_ptr automatically frees)
+    card_data_pool_.clear();
+    list_data_pool_.clear();
+
     // Clear pool vectors - they hold raw pointers to LVGL widgets which
     // are owned by LVGL's widget tree and cleaned up by lv_deinit().
     // We just clear our references to avoid dangling pointers.
@@ -1159,7 +1205,7 @@ void PrintSelectPanel::refresh_visible_content() {
         for (size_t i = 0; i < card_pool_.size(); i++) {
             ssize_t file_idx = card_pool_indices_[i];
             if (file_idx >= 0 && static_cast<size_t>(file_idx) < file_list_.size()) {
-                configure_card(card_pool_[i], static_cast<size_t>(file_idx), dims);
+                configure_card(card_pool_[i], i, static_cast<size_t>(file_idx), dims);
             }
         }
     }
@@ -1169,7 +1215,7 @@ void PrintSelectPanel::refresh_visible_content() {
         for (size_t i = 0; i < list_pool_.size(); i++) {
             ssize_t file_idx = list_pool_indices_[i];
             if (file_idx >= 0 && static_cast<size_t>(file_idx) < file_list_.size()) {
-                configure_list_row(list_pool_[i], static_cast<size_t>(file_idx));
+                configure_list_row(list_pool_[i], i, static_cast<size_t>(file_idx));
             }
         }
     }
@@ -1189,6 +1235,7 @@ void PrintSelectPanel::init_card_pool() {
     // Reserve pool storage
     card_pool_.reserve(CARD_POOL_SIZE);
     card_pool_indices_.resize(CARD_POOL_SIZE, -1);
+    card_data_pool_.reserve(CARD_POOL_SIZE);
 
     // Create pool cards (initially hidden)
     for (int i = 0; i < CARD_POOL_SIZE; i++) {
@@ -1216,38 +1263,61 @@ void PrintSelectPanel::init_card_pool() {
             // which is updated in configure_card() when the card is recycled.
             lv_obj_add_event_cb(card, on_file_clicked_static, LV_EVENT_CLICKED, this);
 
+            // Create per-card data with subjects for declarative text binding
+            auto data = std::make_unique<CardWidgetData>();
+
+            // Initialize subjects with 5-parameter signature
+            lv_subject_init_string(&data->filename_subject, data->filename_buf, nullptr,
+                                   sizeof(data->filename_buf), "");
+            lv_subject_init_string(&data->time_subject, data->time_buf, nullptr,
+                                   sizeof(data->time_buf), "--");
+            lv_subject_init_string(&data->filament_subject, data->filament_buf, nullptr,
+                                   sizeof(data->filament_buf), "--");
+
+            // Find labels in card and bind to subjects
+            lv_obj_t* filename_label = lv_obj_find_by_name(card, "filename_label");
+            if (filename_label) {
+                data->filename_observer =
+                    lv_label_bind_text(filename_label, &data->filename_subject, "%s");
+            }
+
+            lv_obj_t* time_label = lv_obj_find_by_name(card, "time_label");
+            if (time_label) {
+                data->time_observer = lv_label_bind_text(time_label, &data->time_subject, "%s");
+            }
+
+            lv_obj_t* filament_label = lv_obj_find_by_name(card, "filament_label");
+            if (filament_label) {
+                data->filament_observer =
+                    lv_label_bind_text(filament_label, &data->filament_subject, "%s");
+            }
+
             card_pool_.push_back(card);
+            card_data_pool_.push_back(std::move(data));
         }
     }
 
     spdlog::debug("[{}] Card pool initialized with {} cards", get_name(), card_pool_.size());
 }
 
-void PrintSelectPanel::configure_card(lv_obj_t* card, size_t index, const CardDimensions& dims) {
-    if (!card || index >= file_list_.size())
+void PrintSelectPanel::configure_card(lv_obj_t* card, size_t pool_index, size_t file_index,
+                                      const CardDimensions& dims) {
+    if (!card || file_index >= file_list_.size() || pool_index >= card_data_pool_.size())
         return;
 
-    const auto& file = file_list_[index];
+    const auto& file = file_list_[file_index];
+    CardWidgetData* data = card_data_pool_[pool_index].get();
+    if (!data)
+        return;
 
     // Update display name
     std::string display_name =
         file.is_dir ? file.filename + "/" : strip_gcode_extension(file.filename);
 
-    // Update labels
-    lv_obj_t* filename_label = lv_obj_find_by_name(card, "filename_label");
-    if (filename_label) {
-        lv_label_set_text(filename_label, display_name.c_str());
-    }
-
-    lv_obj_t* time_label = lv_obj_find_by_name(card, "time_label");
-    if (time_label) {
-        lv_label_set_text(time_label, file.print_time_str.c_str());
-    }
-
-    lv_obj_t* filament_label = lv_obj_find_by_name(card, "filament_label");
-    if (filament_label) {
-        lv_label_set_text(filament_label, file.filament_str.c_str());
-    }
+    // Update labels via subjects (declarative pattern)
+    lv_subject_copy_string(&data->filename_subject, display_name.c_str());
+    lv_subject_copy_string(&data->time_subject, file.print_time_str.c_str());
+    lv_subject_copy_string(&data->filament_subject, file.filament_str.c_str());
 
     // Update thumbnail
     lv_obj_t* thumb_img = lv_obj_find_by_name(card, "thumbnail");
@@ -1288,7 +1358,7 @@ void PrintSelectPanel::configure_card(lv_obj_t* card, size_t index, const CardDi
     lv_obj_set_height(card, dims.card_height);
 
     // Store file index for click handler
-    lv_obj_set_user_data(card, reinterpret_cast<void*>(index));
+    lv_obj_set_user_data(card, reinterpret_cast<void*>(file_index));
 
     // Show the card
     lv_obj_remove_flag(card, LV_OBJ_FLAG_HIDDEN);
@@ -1352,7 +1422,7 @@ void PrintSelectPanel::update_visible_cards() {
     for (int file_idx = first_visible_idx;
          file_idx < last_visible_idx && pool_idx < card_pool_.size(); file_idx++, pool_idx++) {
         lv_obj_t* card = card_pool_[pool_idx];
-        configure_card(card, static_cast<size_t>(file_idx), dims);
+        configure_card(card, pool_idx, static_cast<size_t>(file_idx), dims);
         card_pool_indices_[pool_idx] = file_idx;
 
         // Move card after spacer in container order
@@ -1451,6 +1521,7 @@ void PrintSelectPanel::init_list_pool() {
     // Reserve pool storage
     list_pool_.reserve(LIST_POOL_SIZE);
     list_pool_indices_.resize(LIST_POOL_SIZE, -1);
+    list_data_pool_.reserve(LIST_POOL_SIZE);
 
     // Create pool rows (initially hidden)
     for (int i = 0; i < LIST_POOL_SIZE; i++) {
@@ -1468,46 +1539,71 @@ void PrintSelectPanel::init_list_pool() {
             // which is updated in configure_list_row() when the row is recycled.
             lv_obj_add_event_cb(row, on_file_clicked_static, LV_EVENT_CLICKED, this);
 
+            // Create per-row data with subjects for declarative text binding
+            auto data = std::make_unique<ListRowWidgetData>();
+
+            // Initialize subjects with 5-parameter signature
+            lv_subject_init_string(&data->filename_subject, data->filename_buf, nullptr,
+                                   sizeof(data->filename_buf), "");
+            lv_subject_init_string(&data->size_subject, data->size_buf, nullptr,
+                                   sizeof(data->size_buf), "--");
+            lv_subject_init_string(&data->modified_subject, data->modified_buf, nullptr,
+                                   sizeof(data->modified_buf), "--");
+            lv_subject_init_string(&data->time_subject, data->time_buf, nullptr,
+                                   sizeof(data->time_buf), "--");
+
+            // Find labels in row and bind to subjects
+            lv_obj_t* filename_label = lv_obj_find_by_name(row, "row_filename");
+            if (filename_label) {
+                data->filename_observer =
+                    lv_label_bind_text(filename_label, &data->filename_subject, "%s");
+            }
+
+            lv_obj_t* size_label = lv_obj_find_by_name(row, "row_size");
+            if (size_label) {
+                data->size_observer = lv_label_bind_text(size_label, &data->size_subject, "%s");
+            }
+
+            lv_obj_t* modified_label = lv_obj_find_by_name(row, "row_modified");
+            if (modified_label) {
+                data->modified_observer =
+                    lv_label_bind_text(modified_label, &data->modified_subject, "%s");
+            }
+
+            lv_obj_t* time_label = lv_obj_find_by_name(row, "row_print_time");
+            if (time_label) {
+                data->time_observer = lv_label_bind_text(time_label, &data->time_subject, "%s");
+            }
+
             list_pool_.push_back(row);
+            list_data_pool_.push_back(std::move(data));
         }
     }
 
     spdlog::debug("[{}] List pool initialized with {} rows", get_name(), list_pool_.size());
 }
 
-void PrintSelectPanel::configure_list_row(lv_obj_t* row, size_t index) {
-    if (!row || index >= file_list_.size())
+void PrintSelectPanel::configure_list_row(lv_obj_t* row, size_t pool_index, size_t file_index) {
+    if (!row || file_index >= file_list_.size() || pool_index >= list_data_pool_.size())
         return;
 
-    const auto& file = file_list_[index];
+    const auto& file = file_list_[file_index];
+    ListRowWidgetData* data = list_data_pool_[pool_index].get();
+    if (!data)
+        return;
 
     // Update display name
     std::string display_name =
         file.is_dir ? file.filename + "/" : strip_gcode_extension(file.filename);
 
-    // Update labels by finding them in the row (names match XML component)
-    lv_obj_t* filename_label = lv_obj_find_by_name(row, "row_filename");
-    if (filename_label) {
-        lv_label_set_text(filename_label, display_name.c_str());
-    }
-
-    lv_obj_t* size_label = lv_obj_find_by_name(row, "row_size");
-    if (size_label) {
-        lv_label_set_text(size_label, file.size_str.c_str());
-    }
-
-    lv_obj_t* modified_label = lv_obj_find_by_name(row, "row_modified");
-    if (modified_label) {
-        lv_label_set_text(modified_label, file.modified_str.c_str());
-    }
-
-    lv_obj_t* time_label = lv_obj_find_by_name(row, "row_print_time");
-    if (time_label) {
-        lv_label_set_text(time_label, file.print_time_str.c_str());
-    }
+    // Update labels via subjects (declarative pattern)
+    lv_subject_copy_string(&data->filename_subject, display_name.c_str());
+    lv_subject_copy_string(&data->size_subject, file.size_str.c_str());
+    lv_subject_copy_string(&data->modified_subject, file.modified_str.c_str());
+    lv_subject_copy_string(&data->time_subject, file.print_time_str.c_str());
 
     // Store file index for click handler
-    lv_obj_set_user_data(row, reinterpret_cast<void*>(index));
+    lv_obj_set_user_data(row, reinterpret_cast<void*>(file_index));
 
     // Show the row
     lv_obj_remove_flag(row, LV_OBJ_FLAG_HIDDEN);
@@ -1668,7 +1764,7 @@ void PrintSelectPanel::update_visible_list_rows() {
     for (int file_idx = first_visible; file_idx < last_visible && pool_idx < list_pool_.size();
          file_idx++, pool_idx++) {
         lv_obj_t* row = list_pool_[pool_idx];
-        configure_list_row(row, static_cast<size_t>(file_idx));
+        configure_list_row(row, pool_idx, static_cast<size_t>(file_idx));
         list_pool_indices_[pool_idx] = file_idx;
 
         // Position row after leading spacer

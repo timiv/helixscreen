@@ -196,7 +196,7 @@
         <lv_label text="#icon_check_circle" style_text_font="mdi_icons_48" style_text_color="#success_color"/>
         <text_heading text="Bed is Level!" style_text_align="center"/>
         <text_body text="All screws are within tolerance." style_text_color="#text_secondary"/>
-        <text_small name="probe_count_label" text="Completed in 3 probes" style_text_color="#text_secondary"/>
+        <text_small name="probe_count_label" bind_text="probe_count_text" style_text_color="#text_secondary"/>
         <lv_button name="btn_done_leveled"
                    width="#wizard_button_width" height="#button_height_normal" style_radius="#border_radius_small">
           <event_cb trigger="clicked" callback="screws_tilt_done_cb"/>
@@ -214,7 +214,7 @@
         <lv_label text="#icon_xmark_circle" style_text_font="mdi_icons_48" style_text_color="#error_color"/>
         <text_heading text="Probing Failed" style_text_align="center"/>
         <text_body name="error_message"
-                   width="80%" text="An error occurred during probing." style_text_color="#text_secondary"
+                   width="80%" bind_text="error_message_text" style_text_color="#text_secondary"
                    style_text_align="center" long_mode="wrap"/>
         <lv_obj width="100%"
                 height="#button_row_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"

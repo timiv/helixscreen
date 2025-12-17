@@ -143,6 +143,16 @@ void ScrewsTiltPanel::init_subjects() {
         lv_xml_register_subject(nullptr, reg_name, &screw_adjustment_subjects_[i]);
     }
 
+    // Initialize status label subjects
+    probe_count_buf_[0] = '\0';
+    error_message_buf_[0] = '\0';
+    lv_subject_init_string(&probe_count_subject_, probe_count_buf_, nullptr,
+                           PROBE_COUNT_BUF_SIZE, "");
+    lv_subject_init_string(&error_message_subject_, error_message_buf_, nullptr,
+                           ERROR_MSG_BUF_SIZE, "");
+    lv_xml_register_subject(nullptr, "probe_count_text", &probe_count_subject_);
+    lv_xml_register_subject(nullptr, "error_message_text", &error_message_subject_);
+
     subjects_initialized_ = true;
     spdlog::debug("[ScrewsTilt] Subjects initialized and registered");
 }
@@ -168,8 +178,6 @@ void ScrewsTiltPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen, MoonrakerC
     // Find display elements
     bed_diagram_container_ = lv_obj_find_by_name(panel_, "bed_diagram_container");
     results_instruction_ = lv_obj_find_by_name(panel_, "results_instruction");
-    probe_count_label_ = lv_obj_find_by_name(panel_, "probe_count_label");
-    error_message_ = lv_obj_find_by_name(panel_, "error_message");
 
     // Find screw dot widgets for color updates
     screw_dots_[0] = lv_obj_find_by_name(panel_, "screw_dot_0");
@@ -242,12 +250,10 @@ void ScrewsTiltPanel::on_screws_tilt_results(const std::vector<ScrewTiltResult>&
 
     // Check if all screws are within tolerance
     if (check_all_level()) {
-        if (probe_count_label_) {
-            char buf[64];
-            snprintf(buf, sizeof(buf), "Completed in %d probe%s", probe_count_,
-                     probe_count_ == 1 ? "" : "s");
-            lv_label_set_text(probe_count_label_, buf);
-        }
+        char buf[64];
+        snprintf(buf, sizeof(buf), "Completed in %d probe%s", probe_count_,
+                 probe_count_ == 1 ? "" : "s");
+        lv_subject_copy_string(&probe_count_subject_, buf);
         set_state(State::LEVELED);
     } else {
         set_state(State::RESULTS);
@@ -257,9 +263,7 @@ void ScrewsTiltPanel::on_screws_tilt_results(const std::vector<ScrewTiltResult>&
 void ScrewsTiltPanel::on_screws_tilt_error(const std::string& message) {
     spdlog::error("[ScrewsTilt] Error: {}", message);
 
-    if (error_message_) {
-        lv_label_set_text(error_message_, message.c_str());
-    }
+    lv_subject_copy_string(&error_message_subject_, message.c_str());
     set_state(State::ERROR);
 }
 

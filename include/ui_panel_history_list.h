@@ -219,8 +219,6 @@ class HistoryListPanel : public PanelBase {
     lv_obj_t* search_box_ = nullptr;    ///< Search textarea
     lv_obj_t* filter_status_ = nullptr; ///< Status filter dropdown
     lv_obj_t* sort_dropdown_ = nullptr; ///< Sort dropdown
-    lv_obj_t* empty_message_ = nullptr; ///< Empty state message label
-    lv_obj_t* empty_hint_ = nullptr;    ///< Empty state hint label
 
     //
     // === State ===
@@ -254,6 +252,14 @@ class HistoryListPanel : public PanelBase {
     //
 
     lv_subject_t subject_has_jobs_; ///< 0 = no jobs (show empty), 1 = has jobs (hide empty)
+
+    // Empty state message subjects (for dynamic text based on filter state)
+    lv_subject_t subject_empty_message_; ///< Empty state message text
+    lv_subject_t subject_empty_hint_;    ///< Empty state hint text
+
+    // Buffers for empty state string subjects
+    char empty_message_buf_[64] = {};
+    char empty_hint_buf_[64] = {};
 
     //
     // === Detail Overlay State ===
