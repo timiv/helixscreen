@@ -950,6 +950,66 @@ While subjects can be defined in XML, it's recommended to initialize them in C++
 
 **Note:** If you define subjects in XML, they'll be registered with empty/default values before C++ initialization. Prefer C++ initialization for predictable behavior.
 
+### Observer Cleanup in DELETE Handlers
+
+**⚠️ CRITICAL:** LVGL sends DELETE events BEFORE deleting child widgets. This causes crashes when DELETE handlers free structs containing subjects that child labels are bound to.
+
+**The Problem:**
+```cpp
+// ❌ WRONG - crashes on quit!
+struct MyWidgetData {
+    lv_subject_t text_subject;
+    char text_buf[32];
+};
+
+// In setup:
+lv_label_bind_text(label, &data->text_subject, "%s");
+lv_obj_add_event_cb(container, on_delete, LV_EVENT_DELETE, nullptr);
+
+// DELETE handler frees data while children still have observers
+static void on_delete(lv_event_t* e) {
+    MyWidgetData* data = get_data(e);
+    delete data;  // Subject freed, but child label's observer still points here!
+}
+// When LVGL deletes children afterward → crash in lv_observer_remove()
+```
+
+**The Solution:** Save observer pointers and remove them BEFORE freeing:
+
+```cpp
+// ✅ CORRECT - track and remove observers first
+struct MyWidgetData {
+    lv_subject_t text_subject;
+    char text_buf[32];
+    lv_observer_t* text_observer = nullptr;  // Track the observer!
+};
+
+// When binding, save the observer:
+data->text_observer = lv_label_bind_text(label, &data->text_subject, "%s");
+
+// In DELETE handler, remove observer BEFORE freeing:
+static void on_delete(lv_event_t* e) {
+    MyWidgetData* data = get_data(e);
+    if (data->text_observer) {
+        lv_observer_remove(data->text_observer);  // Remove first!
+        data->text_observer = nullptr;
+    }
+    delete data;  // Now safe - no dangling observers
+}
+```
+
+**When This Applies:**
+- Using `lv_label_bind_text()` with subjects in heap-allocated per-widget data
+- Any situation where subjects are freed in a DELETE handler
+- Custom widget implementations with internal subjects
+
+**When This Does NOT Apply:**
+- Subjects as class members of panels (panel outlives its widgets)
+- Global/singleton subjects (e.g., PrinterState)
+- Subjects in statically-allocated data
+
+**Reference implementations:** `ui_temp_display.cpp`, `ui_ams_slot.cpp`
+
 ---
 
 ## Layouts & Positioning

@@ -50,6 +50,10 @@ struct TempDisplayData {
     lv_subject_t current_text_subject;
     lv_subject_t target_text_subject;
 
+    // Observers from lv_label_bind_text (must be removed before freeing subjects)
+    lv_observer_t* current_text_observer = nullptr;
+    lv_observer_t* target_text_observer = nullptr;
+
     // Buffers for formatted text
     char current_text_buf[16];
     char target_text_buf[16];
@@ -253,6 +257,17 @@ static void on_delete(lv_event_t* e) {
     if (it != s_registry.end()) {
         std::unique_ptr<TempDisplayData> data(it->second);
         s_registry.erase(it);
+
+        // Remove observers BEFORE freeing subjects (DELETE event fires before
+        // children are deleted, so observers must be explicitly removed first)
+        if (data->current_text_observer) {
+            lv_observer_remove(data->current_text_observer);
+            data->current_text_observer = nullptr;
+        }
+        if (data->target_text_observer) {
+            lv_observer_remove(data->target_text_observer);
+            data->target_text_observer = nullptr;
+        }
         // data automatically freed when unique_ptr goes out of scope
     }
 }
@@ -390,9 +405,11 @@ static void* ui_temp_display_create_cb(lv_xml_parser_state_t* state, const char*
     lv_subject_init_string(&data_ptr->target_text_subject, data_ptr->target_text_buf, nullptr,
                            sizeof(data_ptr->target_text_buf), data_ptr->target_text_buf);
 
-    // Bind labels to subjects for reactive updates
-    lv_label_bind_text(data_ptr->current_label, &data_ptr->current_text_subject, nullptr);
-    lv_label_bind_text(data_ptr->target_label, &data_ptr->target_text_subject, nullptr);
+    // Bind labels to subjects for reactive updates (save observers for cleanup)
+    data_ptr->current_text_observer =
+        lv_label_bind_text(data_ptr->current_label, &data_ptr->current_text_subject, nullptr);
+    data_ptr->target_text_observer =
+        lv_label_bind_text(data_ptr->target_label, &data_ptr->target_text_subject, nullptr);
 
     // Register data and cleanup
     s_registry[container] = data_ptr.release();

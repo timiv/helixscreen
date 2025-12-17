@@ -80,6 +80,7 @@
 | 14 | **NO imperative visibility** | `lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN)` | XML `<bind_flag_if_eq subject="state" flag="hidden" ref_value="0"/>` |
 | 15 | **NO lv_label_set_text for data** | `lv_label_set_text(lbl, "value")` | Subject binding: `<text_body bind_text="my_subject"/>` |
 | 16 | **NO inline styling** | `lv_obj_set_style_bg_color(obj, ...)` | XML design tokens: `style_bg_color="#card_bg"` |
+| 17 | **Observer cleanup in DELETE** | Free struct with subjects | Save & remove observers first (see Rule 17 below) |
 
 **Rule 1 - Design Tokens (MANDATORY):**
 
@@ -109,6 +110,8 @@ lv_font_t* font = UI_FONT_SMALL;           // Responsive small font
 **Reference:** See `ui_icon.cpp` for semantic color usage pattern.
 
 **Rule 12 - XML event_cb:** Events ALWAYS in XML `<event_cb trigger="clicked" callback="name"/>`, register in C++ with `lv_xml_register_event_cb(nullptr, "name", func)`. **NEVER** `lv_obj_add_event_cb()`. See `hidden_network_modal.xml` + `ui_toast.cpp`.
+
+**Rule 17 - Observer cleanup:** When using `lv_label_bind_text()` with subjects in DELETE-freed structs, save observers and remove them BEFORE freeing. See `docs/LVGL9_XML_GUIDE.md` § Observer Cleanup.
 
 ---
 
