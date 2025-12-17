@@ -84,10 +84,19 @@ HomePanel::HomePanel(PrinterState& printer_state, MoonrakerAPI* api)
 
 HomePanel::~HomePanel() {
     // ObserverGuard handles observer cleanup automatically
-    // Timers are owned by LVGL - they will be cleaned up on shutdown
-    // Don't try to delete during static destruction (causes crash after LVGL teardown)
-    signal_poll_timer_ = nullptr;
-    tip_rotation_timer_ = nullptr;
+
+    // Clean up timers - must be deleted explicitly before LVGL shutdown
+    // Check lv_is_initialized() to avoid crash during static destruction
+    if (lv_is_initialized()) {
+        if (signal_poll_timer_) {
+            lv_timer_delete(signal_poll_timer_);
+            signal_poll_timer_ = nullptr;
+        }
+        if (tip_rotation_timer_) {
+            lv_timer_delete(tip_rotation_timer_);
+            tip_rotation_timer_ = nullptr;
+        }
+    }
 }
 
 void HomePanel::init_subjects() {
@@ -261,6 +270,12 @@ void HomePanel::on_activate() {
         spdlog::debug("[{}] Started signal polling timer ({}ms interval)", get_name(),
                       SIGNAL_POLL_INTERVAL_MS);
     }
+
+    // Resume tip rotation timer when panel becomes visible
+    if (!tip_rotation_timer_) {
+        tip_rotation_timer_ = lv_timer_create(tip_rotation_timer_cb, 60000, this);
+        spdlog::debug("[{}] Resumed tip rotation timer", get_name());
+    }
 }
 
 void HomePanel::on_deactivate() {
@@ -269,6 +284,13 @@ void HomePanel::on_deactivate() {
         lv_timer_delete(signal_poll_timer_);
         signal_poll_timer_ = nullptr;
         spdlog::debug("[{}] Stopped signal polling timer", get_name());
+    }
+
+    // Stop tip rotation timer when panel is hidden (saves CPU)
+    if (tip_rotation_timer_) {
+        lv_timer_delete(tip_rotation_timer_);
+        tip_rotation_timer_ = nullptr;
+        spdlog::debug("[{}] Stopped tip rotation timer", get_name());
     }
 }
 
