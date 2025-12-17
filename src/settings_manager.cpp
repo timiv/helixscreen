@@ -25,6 +25,7 @@ static const char* COMPLETION_ALERT_OPTIONS_TEXT = "Off\nNotification\nAlert";
 
 // Bed mesh render mode options (Auto=0, 3D=1, 2D=2)
 static const char* BED_MESH_RENDER_MODE_OPTIONS_TEXT = "Auto\n3D View\n2D Heatmap";
+static const char* GCODE_RENDER_MODE_OPTIONS_TEXT = "Auto\n3D View\n2D Layers";
 
 SettingsManager& SettingsManager::instance() {
     static SettingsManager instance;
@@ -121,6 +122,10 @@ void SettingsManager::init_subjects() {
     bed_mesh_mode = std::clamp(bed_mesh_mode, 0, 2);
     lv_subject_init_int(&bed_mesh_render_mode_subject_, bed_mesh_mode);
 
+    int gcode_mode = config->get<int>("/display/gcode_render_mode", 0);
+    gcode_mode = std::clamp(gcode_mode, 0, 2);
+    lv_subject_init_int(&gcode_render_mode_subject_, gcode_mode);
+
     // Register subjects with LVGL XML system for data binding
     lv_xml_register_subject(nullptr, "settings_dark_mode", &dark_mode_subject_);
     lv_xml_register_subject(nullptr, "settings_display_sleep", &display_sleep_subject_);
@@ -137,6 +142,7 @@ void SettingsManager::init_subjects() {
     lv_xml_register_subject(nullptr, "settings_gcode_3d_enabled", &gcode_3d_enabled_subject_);
     lv_xml_register_subject(nullptr, "settings_bed_mesh_render_mode",
                             &bed_mesh_render_mode_subject_);
+    lv_xml_register_subject(nullptr, "settings_gcode_render_mode", &gcode_render_mode_subject_);
 
     subjects_initialized_ = true;
     spdlog::info("[SettingsManager] Subjects initialized: dark_mode={}, sleep={}s, sounds={}, "
@@ -274,6 +280,31 @@ void SettingsManager::set_bed_mesh_render_mode(int mode) {
 
 const char* SettingsManager::get_bed_mesh_render_mode_options() {
     return BED_MESH_RENDER_MODE_OPTIONS_TEXT;
+}
+
+int SettingsManager::get_gcode_render_mode() const {
+    return lv_subject_get_int(const_cast<lv_subject_t*>(&gcode_render_mode_subject_));
+}
+
+void SettingsManager::set_gcode_render_mode(int mode) {
+    // Clamp to valid range (0=Auto, 1=3D, 2=2D)
+    int clamped = std::clamp(mode, 0, 2);
+    spdlog::info("[SettingsManager] set_gcode_render_mode({})", clamped);
+
+    // 1. Update subject (UI reacts)
+    lv_subject_set_int(&gcode_render_mode_subject_, clamped);
+
+    // 2. Persist to config
+    Config* config = Config::get_instance();
+    config->set<int>("/display/gcode_render_mode", clamped);
+    config->save();
+
+    spdlog::debug("[SettingsManager] G-code render mode set to {} ({})", clamped,
+                  clamped == 0 ? "Auto" : (clamped == 1 ? "3D" : "2D"));
+}
+
+const char* SettingsManager::get_gcode_render_mode_options() {
+    return GCODE_RENDER_MODE_OPTIONS_TEXT;
 }
 
 // =============================================================================

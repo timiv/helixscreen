@@ -1842,6 +1842,13 @@ int main(int argc, char** argv) {
     set_moonraker_api(nullptr);
     set_moonraker_client(nullptr);
 
+    // Stop print_start_collector BEFORE moonraker_client is destroyed
+    // (it holds a reference to the client for callback unregistration)
+    if (print_start_collector) {
+        print_start_collector->stop();
+        print_start_collector.reset();
+    }
+
     // Reset unique_ptrs explicitly in correct order (API before client)
     moonraker_api.reset();
     moonraker_client.reset();

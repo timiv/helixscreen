@@ -139,6 +139,8 @@ static void print_help(const char* program_name) {
     printf("  --gcode-el <deg>     Set camera elevation angle (degrees)\n");
     printf("  --gcode-zoom <n>     Set camera zoom level (positive number)\n");
     printf("  --gcode-debug-colors Enable per-face debug coloring\n");
+    printf("  --render-2d          Force 2D layer renderer (fast, no 3D)\n");
+    printf("  --render-3d          Force 3D TinyGL renderer\n");
     printf("\nAvailable panels:\n");
     printf("  home, controls, motion, nozzle-temp, bed-temp, bed-mesh, ams, spoolman,\n");
     printf("  zoffset, pid, extrusion, print-status, filament, settings, advanced,\n");
@@ -492,6 +494,10 @@ bool parse_cli_args(int argc, char** argv, CliArgs& args, int& screen_width, int
             config.gcode_camera_zoom_set = true;
         } else if (strcmp(argv[i], "--gcode-debug-colors") == 0) {
             config.gcode_debug_colors = true;
+        } else if (strcmp(argv[i], "--render-2d") == 0) {
+            config.gcode_render_mode = 2; // GCODE_VIEWER_RENDER_2D_LAYER
+        } else if (strcmp(argv[i], "--render-3d") == 0) {
+            config.gcode_render_mode = 1; // GCODE_VIEWER_RENDER_3D
         } else if (strcmp(argv[i], "--camera") == 0) {
             if (i + 1 >= argc) {
                 printf("Error: --camera requires a string argument\n");

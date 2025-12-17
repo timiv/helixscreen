@@ -75,6 +75,15 @@ static void on_bed_mesh_mode_changed(lv_event_t* e) {
     SettingsManager::instance().set_bed_mesh_render_mode(mode);
 }
 
+// Static callback for G-code render mode dropdown
+static void on_gcode_mode_changed(lv_event_t* e) {
+    lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+    int mode = static_cast<int>(lv_dropdown_get_selected(dropdown));
+    spdlog::info("[SettingsPanel] G-code render mode changed: {} ({})", mode,
+                 mode == 0 ? "Auto" : (mode == 1 ? "3D" : "2D Layers"));
+    SettingsManager::instance().set_gcode_render_mode(mode);
+}
+
 // Static callback for version row long-press (memory debug toggle)
 // This provides a touch-based way to enable memory debugging on Pi (no keyboard)
 static void on_version_long_pressed(lv_event_t*) {
@@ -111,6 +120,7 @@ void SettingsPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_display_sleep_changed",
                              on_display_sleep_dropdown_changed);
     lv_xml_register_event_cb(nullptr, "on_bed_mesh_mode_changed", on_bed_mesh_mode_changed);
+    lv_xml_register_event_cb(nullptr, "on_gcode_mode_changed", on_gcode_mode_changed);
     lv_xml_register_event_cb(nullptr, "on_version_long_pressed", on_version_long_pressed);
 
     // Register XML event callbacks for toggle switches
@@ -674,6 +684,21 @@ void SettingsPanel::handle_display_settings_clicked() {
                 spdlog::debug("[{}] Bed mesh mode dropdown initialized to {} ({})", get_name(),
                               current_mode,
                               current_mode == 0 ? "Auto" : (current_mode == 1 ? "3D" : "2D"));
+            }
+
+            // Initialize G-code render mode dropdown
+            lv_obj_t* gcode_dropdown =
+                lv_obj_find_by_name(display_settings_overlay_, "gcode_mode_dropdown");
+            if (gcode_dropdown) {
+                // Set dropdown options
+                lv_dropdown_set_options(gcode_dropdown,
+                                        SettingsManager::get_gcode_render_mode_options());
+                // Set initial selection based on current setting
+                int current_mode = SettingsManager::instance().get_gcode_render_mode();
+                lv_dropdown_set_selected(gcode_dropdown, current_mode);
+                spdlog::debug(
+                    "[{}] G-code mode dropdown initialized to {} ({})", get_name(), current_mode,
+                    current_mode == 0 ? "Auto" : (current_mode == 1 ? "3D" : "2D Layers"));
             }
 
             // Initially hidden

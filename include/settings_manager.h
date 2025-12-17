@@ -192,6 +192,27 @@ class SettingsManager {
     /** @brief Get dropdown options string "Auto\n3D View\n2D Heatmap" */
     static const char* get_bed_mesh_render_mode_options();
 
+    /**
+     * @brief Get G-code render mode
+     * @return Render mode (0=Auto, 1=3D View, 2=2D Layer View)
+     */
+    int get_gcode_render_mode() const;
+
+    /**
+     * @brief Set G-code render mode
+     *
+     * Controls how G-code visualization is rendered:
+     * - Auto (0): System decides based on measured FPS
+     * - 3D View (1): Always use TinyGL 3D ribbon view
+     * - 2D Layers (2): Always use 2D orthographic layer view (fast on AD5M)
+     *
+     * @param mode Render mode (0=Auto, 1=3D, 2=2D)
+     */
+    void set_gcode_render_mode(int mode);
+
+    /** @brief Get dropdown options string "Auto\n3D View\n2D Layers" */
+    static const char* get_gcode_render_mode_options();
+
     // =========================================================================
     // PRINTER SETTINGS
     // =========================================================================
@@ -348,6 +369,11 @@ class SettingsManager {
         return &bed_mesh_render_mode_subject_;
     }
 
+    /** @brief G-code render mode subject (integer: 0=auto, 1=3D, 2=2D) */
+    lv_subject_t* subject_gcode_render_mode() {
+        return &gcode_render_mode_subject_;
+    }
+
     /** @brief LED enabled subject (integer: 0=off, 1=on) */
     lv_subject_t* subject_led_enabled() {
         return &led_enabled_subject_;
@@ -466,6 +492,7 @@ class SettingsManager {
     lv_subject_t animations_enabled_subject_;
     lv_subject_t gcode_3d_enabled_subject_;
     lv_subject_t bed_mesh_render_mode_subject_;
+    lv_subject_t gcode_render_mode_subject_;
     lv_subject_t led_enabled_subject_;
     lv_subject_t sounds_enabled_subject_;
     lv_subject_t completion_alert_subject_;

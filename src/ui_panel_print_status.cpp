@@ -28,6 +28,7 @@
 #include <spdlog/spdlog.h>
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <memory>
@@ -180,7 +181,7 @@ void PrintStatusPanel::init_subjects() {
 
     // Progress bar subject (integer 0-100 for XML bind_value)
 
-    // Viewer mode subject (0=thumbnail, 1=gcode viewer)
+    // Viewer mode subject (0=thumbnail, 1=3D gcode viewer, 2=2D gcode viewer)
     UI_SUBJECT_INIT_AND_REGISTER_INT(gcode_viewer_mode_subject_, 0, "gcode_viewer_mode");
 
     // Print complete overlay visibility (0=hidden, 1=visible)
@@ -251,6 +252,31 @@ void PrintStatusPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     if (gcode_viewer_) {
         spdlog::debug("[{}]   ✓ G-code viewer widget found", get_name());
+
+        // Apply render mode - priority: cmdline > env var > settings
+        // Note: HELIX_GCODE_MODE env var is handled at widget creation, so we only
+        // override if there's an explicit command-line option or if no env var was set
+        const auto& config = get_runtime_config();
+        const char* env_mode = std::getenv("HELIX_GCODE_MODE");
+
+        if (config.gcode_render_mode >= 0) {
+            // Command line takes highest priority
+            auto render_mode = static_cast<gcode_viewer_render_mode_t>(config.gcode_render_mode);
+            ui_gcode_viewer_set_render_mode(gcode_viewer_, render_mode);
+            spdlog::info("[{}]   ✓ Set G-code render mode: {} (cmdline)", get_name(),
+                         config.gcode_render_mode);
+        } else if (env_mode) {
+            // Env var already applied at widget creation - just log
+            spdlog::info("[{}]   ✓ G-code render mode: {} (env var)", get_name(),
+                         ui_gcode_viewer_is_using_2d_mode(gcode_viewer_) ? "2D" : "3D");
+        } else {
+            // No cmdline or env var - apply saved settings
+            int render_mode_val = SettingsManager::instance().get_gcode_render_mode();
+            auto render_mode = static_cast<gcode_viewer_render_mode_t>(render_mode_val);
+            ui_gcode_viewer_set_render_mode(gcode_viewer_, render_mode);
+            spdlog::info("[{}]   ✓ Set G-code render mode: {} (settings)", get_name(),
+                         render_mode_val);
+        }
 
         // Register long-press callback for exclude object feature
         ui_gcode_viewer_set_object_long_press_callback(gcode_viewer_, on_object_long_pressed, this);
@@ -350,16 +376,24 @@ void PrintStatusPanel::format_time(int seconds, char* buf, size_t buf_size) {
 
 void PrintStatusPanel::show_gcode_viewer(bool show) {
     // Update viewer mode subject - XML bindings handle visibility reactively
-    // Mode 0 = thumbnail (gradient + thumbnail visible, gcode hidden)
-    // Mode 1 = gcode viewer (gcode visible, gradient + thumbnail hidden)
-    lv_subject_set_int(&gcode_viewer_mode_subject_, show ? 1 : 0);
+    // Mode 0 = thumbnail (gradient + thumbnail visible, gcode viewer hidden)
+    // Mode 1 = 3D gcode viewer (gcode visible, gradient + thumbnail hidden, rotate icon shown)
+    // Mode 2 = 2D gcode viewer (gcode visible, gradient shown, thumbnail + rotate icon hidden)
+    int mode = 0; // Default: thumbnail
+    if (show) {
+        // Check if the viewer is using 2D mode
+        bool is_2d = gcode_viewer_ && ui_gcode_viewer_is_using_2d_mode(gcode_viewer_);
+        mode = is_2d ? 2 : 1;
+    }
+    lv_subject_set_int(&gcode_viewer_mode_subject_, mode);
 
     // Pause/resume rendering based on visibility mode (CPU optimization)
     if (gcode_viewer_) {
         ui_gcode_viewer_set_paused(gcode_viewer_, !show);
     }
 
-    spdlog::debug("[{}] G-code viewer mode: {}", get_name(), show ? "gcode" : "thumbnail");
+    spdlog::debug("[{}] G-code viewer mode: {} ({})", get_name(), mode,
+                  mode == 0 ? "thumbnail" : (mode == 1 ? "3D" : "2D"));
 }
 
 void PrintStatusPanel::load_gcode_file(const char* file_path) {

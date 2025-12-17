@@ -16,6 +16,7 @@
 #include "ui_theme.h"
 
 #include "gcode_camera.h"
+#include "gcode_layer_renderer.h"
 #include "gcode_parser.h"
 #include "memory_utils.h"
 
@@ -25,11 +26,15 @@
 #include "gcode_renderer.h"
 #endif
 
+// FPS tracking constants (for diagnostic logging, not mode selection)
+constexpr size_t GCODE_FPS_WINDOW_SIZE = 10; // Rolling window of frame times
+
 #include <lvgl/src/xml/lv_xml_parser.h>
 #include <lvgl/src/xml/parsers/lv_xml_obj_parser.h>
 #include <spdlog/spdlog.h>
 
 #include <atomic>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <memory>
@@ -49,11 +54,36 @@ class GCodeViewerState {
         camera_ = std::make_unique<helix::gcode::GCodeCamera>();
 #ifdef ENABLE_TINYGL_3D
         renderer_ = std::make_unique<helix::gcode::GCodeTinyGLRenderer>();
-        spdlog::debug("[GCode Viewer] Using TinyGL 3D renderer");
+        spdlog::debug("[GCode Viewer] TinyGL 3D renderer available");
 #else
         renderer_ = std::make_unique<helix::gcode::GCodeRenderer>();
-        spdlog::debug("[GCode Viewer] Using LVGL 2D renderer");
+        spdlog::debug("[GCode Viewer] Using LVGL 2D renderer (TinyGL disabled)");
 #endif
+
+        // Check HELIX_GCODE_MODE env var for render mode override
+        // Default is 2D (TinyGL is too slow for production on ALL platforms)
+        const char* mode_env = std::getenv("HELIX_GCODE_MODE");
+        if (mode_env) {
+            if (std::strcmp(mode_env, "3D") == 0) {
+#ifdef ENABLE_TINYGL_3D
+                render_mode_ = GCODE_VIEWER_RENDER_3D;
+                spdlog::info("[GCode Viewer] HELIX_GCODE_MODE=3D: forcing 3D TinyGL renderer");
+#else
+                spdlog::warn("[GCode Viewer] HELIX_GCODE_MODE=3D ignored: TinyGL not available");
+                render_mode_ = GCODE_VIEWER_RENDER_2D_LAYER;
+#endif
+            } else if (std::strcmp(mode_env, "2D") == 0) {
+                render_mode_ = GCODE_VIEWER_RENDER_2D_LAYER;
+                spdlog::info("[GCode Viewer] HELIX_GCODE_MODE=2D: using 2D layer renderer");
+            } else {
+                spdlog::warn("[GCode Viewer] Unknown HELIX_GCODE_MODE='{}', using 2D", mode_env);
+                render_mode_ = GCODE_VIEWER_RENDER_2D_LAYER;
+            }
+        } else {
+            // Default: 2D layer renderer (TinyGL is ~3-4 FPS everywhere)
+            render_mode_ = GCODE_VIEWER_RENDER_2D_LAYER;
+            spdlog::debug("[GCode Viewer] Default render mode: 2D layer");
+        }
     }
 
     ~GCodeViewerState() {
@@ -172,6 +202,66 @@ class GCodeViewerState {
     lv_obj_t* loading_spinner{nullptr};
     lv_obj_t* loading_label{nullptr};
 
+    // ========================================================================
+    // Render Mode (Phase 5: 2D Layer View)
+    // ========================================================================
+
+    /// 2D orthographic layer renderer (default for all platforms)
+    std::unique_ptr<helix::gcode::GCodeLayerRenderer> layer_renderer_2d_;
+
+    /// Print progress layer (set via ui_gcode_viewer_set_print_progress)
+    /// -1 means "show all layers" (preview mode), >= 0 means "show up to this layer"
+    int print_progress_layer_{-1};
+
+    /// Render mode setting - set by constructor based on HELIX_GCODE_MODE env var
+    /// Default is 2D_LAYER (TinyGL is too slow for production use everywhere)
+    gcode_viewer_render_mode_t render_mode_{GCODE_VIEWER_RENDER_2D_LAYER};
+
+    /// Helper to check if currently using 2D layer renderer
+    /// AUTO mode now defaults to 2D (no FPS-based detection)
+    bool is_using_2d_mode() const {
+        // Only GCODE_VIEWER_RENDER_3D uses 3D renderer
+        // AUTO and 2D_LAYER both use 2D layer renderer
+        return render_mode_ != GCODE_VIEWER_RENDER_3D;
+    }
+
+    // FPS tracking kept for debugging/diagnostics but not used for mode selection
+    float fps_samples_[GCODE_FPS_WINDOW_SIZE]{0};
+    size_t fps_sample_index_{0};
+    size_t fps_sample_count_{0};
+
+    /// Record a frame time for FPS tracking (diagnostic only)
+    void record_frame_time(float ms) {
+        fps_samples_[fps_sample_index_] = ms;
+        fps_sample_index_ = (fps_sample_index_ + 1) % GCODE_FPS_WINDOW_SIZE;
+        if (fps_sample_count_ < GCODE_FPS_WINDOW_SIZE) {
+            fps_sample_count_++;
+        }
+    }
+
+    /// Calculate average FPS from sample buffer (diagnostic only)
+    float get_average_fps() const {
+        if (fps_sample_count_ == 0)
+            return 0.0f;
+        float total_ms = 0.0f;
+        for (size_t i = 0; i < fps_sample_count_; i++) {
+            total_ms += fps_samples_[i];
+        }
+        float avg_ms = total_ms / static_cast<float>(fps_sample_count_);
+        return (avg_ms > 0.0f) ? (1000.0f / avg_ms) : 0.0f;
+    }
+
+    /// Check if we have enough FPS data (diagnostic only)
+    bool has_enough_fps_data() const {
+        return fps_sample_count_ >= GCODE_FPS_WINDOW_SIZE;
+    }
+
+    // Per-widget FPS logging state (avoid static variables that would be shared
+    // between multiple gcode_viewer instances)
+    int fps_log_frame_count_{0};
+    int fps_actual_render_count_{0};
+    float fps_render_time_avg_ms_{0.0f};
+
   private:
     std::thread build_thread_;
     std::atomic<bool> building_{false};
@@ -192,6 +282,9 @@ static gcode_viewer_state_t* get_state(lv_obj_t* obj) {
 
 /**
  * @brief Main draw callback - renders G-code using custom renderer
+ *
+ * Dispatches to either the 3D TinyGL renderer or the 2D layer renderer
+ * based on current render mode and AUTO fallback state.
  */
 static void gcode_viewer_draw_cb(lv_event_t* e) {
     lv_obj_t* obj = lv_event_get_target_obj(e);
@@ -208,21 +301,16 @@ static void gcode_viewer_draw_cb(lv_event_t* e) {
         return;
     }
 
-    // NOTE: Removed per-frame trace log - it was causing log spam during normal operation
-    // The draw_cb is called every LVGL frame (~30fps) even when nothing changes
-
     // If no G-code loaded, draw placeholder message
     if (st->viewer_state != GCODE_VIEWER_STATE_LOADED || !st->gcode_file) {
-        // TODO: Draw "No G-code loaded" message
         return;
     }
 
     // On first render after async load, skip rendering to avoid blocking
-    // The "Rendering..." label was already created by the async callback
     if (st->first_render) {
         spdlog::debug(
             "[GCode Viewer] First draw after async load - skipping render, will render on timer");
-        return; // Timer will trigger actual render
+        return;
     }
 
     // Get widget's absolute screen coordinates for drawing
@@ -232,41 +320,90 @@ static void gcode_viewer_draw_cb(lv_event_t* e) {
     // Measure actual render time for FPS calculation
     auto render_start = std::chrono::high_resolution_clock::now();
 
-    // Render G-code (viewport size is already set by SIZE_CHANGED event)
-    st->renderer_->render(layer, *st->gcode_file, *st->camera_, &widget_coords);
+    // Dispatch to appropriate renderer based on mode
+    if (st->is_using_2d_mode()) {
+        // 2D Layer Renderer (orthographic top-down view)
+        if (!st->layer_renderer_2d_) {
+            // Lazy initialization of 2D renderer
+            st->layer_renderer_2d_ = std::make_unique<helix::gcode::GCodeLayerRenderer>();
+            st->layer_renderer_2d_->set_gcode(st->gcode_file.get());
+            int width = lv_area_get_width(&widget_coords);
+            int height = lv_area_get_height(&widget_coords);
+            st->layer_renderer_2d_->set_canvas_size(width, height);
+            st->layer_renderer_2d_->auto_fit();
+            spdlog::info("[GCode Viewer] Initialized 2D layer renderer ({}x{})", width, height);
+        }
+
+        // Use stored print progress layer (set via ui_gcode_viewer_set_print_progress)
+        // Consistent with 3D renderer:
+        //   - >= 0: Show layers 0 to current_layer (print progress mode)
+        //   - < 0:  Show all layers (preview mode)
+        int current_layer = st->print_progress_layer_;
+        if (current_layer < 0) {
+            // Preview mode: show all layers
+            int max_layer = st->layer_renderer_2d_->get_layer_count() - 1;
+            current_layer = std::max(0, max_layer);
+        }
+        st->layer_renderer_2d_->set_current_layer(current_layer);
+
+        // Render 2D layer view
+        st->layer_renderer_2d_->render(layer, &widget_coords);
+
+        // Check if progressive rendering needs more frames
+        // This drives ghost cache and solid cache completion
+        if (st->layer_renderer_2d_->needs_more_frames()) {
+            // IMPORTANT: Cannot call lv_obj_invalidate() during draw callback!
+            // LVGL asserts if we invalidate while rendering_in_progress is true.
+            // Use lv_async_call() to schedule invalidation after render completes.
+            lv_async_call(
+                [](void* user_data) {
+                    lv_obj_t* widget = static_cast<lv_obj_t*>(user_data);
+                    if (lv_obj_is_valid(widget)) {
+                        lv_obj_invalidate(widget);
+                    }
+                },
+                obj);
+        }
+    } else {
+        // 3D TinyGL Renderer (isometric ribbon view)
+        st->renderer_->render(layer, *st->gcode_file, *st->camera_, &widget_coords);
+    }
 
     auto render_end = std::chrono::high_resolution_clock::now();
     auto render_duration_us =
         std::chrono::duration_cast<std::chrono::microseconds>(render_end - render_start).count();
 
-    // FPS tracking - only count actual renders (>2ms), ignore cached frame copies
-    // Skipped renders (dirty flag hit) take ~0.5ms and shouldn't pollute the average
-    static float render_time_avg_ms = 0.0f;
-    static int actual_render_count = 0;
-    static int log_frame_count = 0;
-    static constexpr float FPS_ALPHA = 0.1f; // Exponential moving average smoothing factor
-    static constexpr float MIN_ACTUAL_RENDER_MS = 2.0f; // Threshold to detect real renders
-
+    // FPS tracking for AUTO mode evaluation
+    static constexpr float MIN_ACTUAL_RENDER_MS = 2.0f;
     float render_time_ms = render_duration_us / 1000.0f;
 
-    // Only update average for actual renders (not cached frame copies)
+    // Record frame time for AUTO mode evaluation (only count actual renders)
     if (render_time_ms > MIN_ACTUAL_RENDER_MS) {
-        render_time_avg_ms =
-            (render_time_avg_ms == 0.0f)
-                ? render_time_ms
-                : (FPS_ALPHA * render_time_ms + (1.0f - FPS_ALPHA) * render_time_avg_ms);
-        actual_render_count++;
+        st->record_frame_time(render_time_ms);
     }
 
-    // Log every 30 frames (controlled by spdlog level)
-    if (++log_frame_count >= 30) {
-        if (actual_render_count > 0 && render_time_avg_ms > MIN_ACTUAL_RENDER_MS) {
-            float avg_fps = 1000.0f / render_time_avg_ms;
-            spdlog::debug("[GCode Viewer] Avg render: {:.1f}ms ({:.1f}fps) over {} frames",
-                          render_time_avg_ms, avg_fps, actual_render_count);
+    // Periodic FPS logging (every 30 frames) - use per-widget state to avoid
+    // corruption when multiple gcode_viewer widgets exist
+    constexpr float FPS_ALPHA = 0.1f;
+
+    if (render_time_ms > MIN_ACTUAL_RENDER_MS) {
+        st->fps_render_time_avg_ms_ =
+            (st->fps_render_time_avg_ms_ == 0.0f)
+                ? render_time_ms
+                : (FPS_ALPHA * render_time_ms + (1.0f - FPS_ALPHA) * st->fps_render_time_avg_ms_);
+        st->fps_actual_render_count_++;
+    }
+
+    if (++st->fps_log_frame_count_ >= 30) {
+        if (st->fps_actual_render_count_ > 0 &&
+            st->fps_render_time_avg_ms_ > MIN_ACTUAL_RENDER_MS) {
+            float avg_fps = 1000.0f / st->fps_render_time_avg_ms_;
+            const char* mode_str = st->is_using_2d_mode() ? "2D" : "3D";
+            spdlog::debug("[GCode Viewer] {} mode: {:.1f}ms ({:.1f}fps) over {} frames", mode_str,
+                          st->fps_render_time_avg_ms_, avg_fps, st->fps_actual_render_count_);
         }
-        log_frame_count = 0;
-        actual_render_count = 0;
+        st->fps_log_frame_count_ = 0;
+        st->fps_actual_render_count_ = 0;
     }
 }
 
@@ -546,6 +683,12 @@ static void gcode_viewer_size_changed_cb(lv_event_t* e) {
     st->camera_->set_viewport_size(width, height);
     st->renderer_->set_viewport_size(width, height);
 
+    // Also update 2D renderer if initialized
+    if (st->layer_renderer_2d_) {
+        st->layer_renderer_2d_->set_canvas_size(width, height);
+        st->layer_renderer_2d_->auto_fit();
+    }
+
     // Trigger redraw with new aspect ratio
     lv_obj_invalidate(obj);
 
@@ -797,11 +940,17 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
                     }
                 }
 
-                // PHASE 2.5: Free parsed segment data immediately - no longer needed
+                // PHASE 2.5: Free parsed segment data (if 3D-only mode)
                 // This releases 40-160MB on large files while preserving metadata
-                size_t freed = result->gcode_file->clear_segments();
-                spdlog::info("[GCode Viewer] Freed {} MB of parsed segment data",
-                             freed / (1024 * 1024));
+                // BUT: Keep segments if using 2D mode (needs raw segment data for rendering)
+                if (st->render_mode_ == GCODE_VIEWER_RENDER_3D) {
+                    size_t freed = result->gcode_file->clear_segments();
+                    spdlog::info("[GCode Viewer] Freed {} MB of parsed segment data",
+                                 freed / (1024 * 1024));
+                } else {
+                    // Preserve segments for 2D renderer (AUTO or 2D_LAYER modes)
+                    spdlog::debug("[GCode Viewer] Preserving segment data for 2D renderer");
+                }
 #else
                 // 2D renderer: No geometry building needed
                 // The renderer uses ParsedGCodeFile directly for 2D line drawing
@@ -839,6 +988,12 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
 
                 // Store G-code data
                 st->gcode_file = std::move(r->gcode_file);
+
+                // Update 2D renderer if it exists (prevents dangling pointer)
+                if (st->layer_renderer_2d_) {
+                    st->layer_renderer_2d_->set_gcode(st->gcode_file.get());
+                    st->layer_renderer_2d_->auto_fit();
+                }
 
                 // Set pre-built geometry on renderer
                 // On memory-constrained systems, we only have coarse geometry
@@ -970,6 +1125,7 @@ void ui_gcode_viewer_clear(lv_obj_t* obj) {
         return;
 
     st->gcode_file.reset();
+    st->layer_renderer_2d_.reset(); // Clear 2D renderer to avoid dangling pointer
     st->viewer_state = GCODE_VIEWER_STATE_EMPTY;
 
     lv_obj_invalidate(obj);
@@ -1005,6 +1161,78 @@ void ui_gcode_viewer_set_paused(lv_obj_t* obj, bool paused) {
 bool ui_gcode_viewer_is_paused(lv_obj_t* obj) {
     gcode_viewer_state_t* st = get_state(obj);
     return st ? st->rendering_paused_ : true;
+}
+
+// ==============================================
+// Render Mode Control
+// ==============================================
+
+void ui_gcode_viewer_set_render_mode(lv_obj_t* obj, gcode_viewer_render_mode_t mode) {
+    gcode_viewer_state_t* st = get_state(obj);
+    if (!st)
+        return;
+
+    st->render_mode_ = mode;
+
+    // Reset FPS samples when switching modes (diagnostic tracking)
+    st->fps_sample_count_ = 0;
+    st->fps_sample_index_ = 0;
+
+    const char* mode_names[] = {"AUTO (2D)", "3D", "2D_LAYER"};
+    spdlog::info("[GCode Viewer] Render mode set to {}", mode_names[static_cast<int>(mode)]);
+
+    // If using 2D mode (AUTO or 2D_LAYER), ensure the 2D renderer is initialized
+    if (st->is_using_2d_mode() && st->gcode_file && !st->layer_renderer_2d_) {
+        st->layer_renderer_2d_ = std::make_unique<helix::gcode::GCodeLayerRenderer>();
+        st->layer_renderer_2d_->set_gcode(st->gcode_file.get());
+
+        lv_area_t coords;
+        lv_obj_get_coords(obj, &coords);
+        int width = lv_area_get_width(&coords);
+        int height = lv_area_get_height(&coords);
+        st->layer_renderer_2d_->set_canvas_size(width, height);
+        st->layer_renderer_2d_->auto_fit();
+    }
+
+    lv_obj_invalidate(obj);
+}
+
+gcode_viewer_render_mode_t ui_gcode_viewer_get_render_mode(lv_obj_t* obj) {
+    gcode_viewer_state_t* st = get_state(obj);
+    return st ? st->render_mode_ : GCODE_VIEWER_RENDER_AUTO;
+}
+
+void ui_gcode_viewer_evaluate_render_mode(lv_obj_t* obj) {
+    gcode_viewer_state_t* st = get_state(obj);
+    if (!st)
+        return;
+
+    // No-op: AUTO mode now defaults to 2D without FPS-based detection
+    // This function is kept for API compatibility but does nothing
+    // Render mode is determined at widget creation based on HELIX_GCODE_MODE env var
+
+    if (st->has_enough_fps_data()) {
+        float avg_fps = st->get_average_fps();
+        spdlog::debug("[GCode Viewer] FPS diagnostic: avg {:.1f} (mode: {})",
+                      avg_fps, st->is_using_2d_mode() ? "2D" : "3D");
+    }
+}
+
+bool ui_gcode_viewer_is_using_2d_mode(lv_obj_t* obj) {
+    gcode_viewer_state_t* st = get_state(obj);
+    return st ? st->is_using_2d_mode() : false;
+}
+
+void ui_gcode_viewer_set_show_supports(lv_obj_t* obj, bool show) {
+    gcode_viewer_state_t* st = get_state(obj);
+    if (!st)
+        return;
+
+    // Only affects 2D renderer
+    if (st->layer_renderer_2d_) {
+        st->layer_renderer_2d_->set_show_supports(show);
+        lv_obj_invalidate(obj);
+    }
 }
 
 // ==============================================
@@ -1126,6 +1354,12 @@ void ui_gcode_viewer_set_show_travels(lv_obj_t* obj, bool show) {
         return;
 
     st->renderer_->set_show_travels(show);
+
+    // Also update 2D renderer if initialized
+    if (st->layer_renderer_2d_) {
+        st->layer_renderer_2d_->set_show_travels(show);
+    }
+
     lv_obj_invalidate(obj);
 }
 
@@ -1135,6 +1369,12 @@ void ui_gcode_viewer_set_show_extrusions(lv_obj_t* obj, bool show) {
         return;
 
     st->renderer_->set_show_extrusions(show);
+
+    // Also update 2D renderer if initialized
+    if (st->layer_renderer_2d_) {
+        st->layer_renderer_2d_->set_show_extrusions(show);
+    }
+
     lv_obj_invalidate(obj);
 }
 
@@ -1297,7 +1537,15 @@ void ui_gcode_viewer_set_print_progress(lv_obj_t* obj, int current_layer) {
     if (!st)
         return;
 
+    // Store the print progress layer for use by render callback
+    st->print_progress_layer_ = current_layer;
+
+    // Update 3D renderer
     st->renderer_->set_print_progress_layer(current_layer);
+
+    // Note: 2D renderer's current_layer is set in the render callback
+    // using print_progress_layer_, so we just need to invalidate
+
     lv_obj_invalidate(obj);
 }
 

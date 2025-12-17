@@ -79,8 +79,12 @@ PrintStartCollector::PrintStartCollector(MoonrakerClient& client, PrinterState& 
 }
 
 PrintStartCollector::~PrintStartCollector() {
-    stop();
-    // Note: Don't log here - spdlog may be destroyed before this destructor runs
+    // Don't call stop() here - it uses client_ and state_ references which may
+    // already be destroyed during static destruction order. Callers should
+    // explicitly call stop() before letting the shared_ptr go out of scope.
+    // Just mark as inactive to prevent any pending callbacks from running.
+    active_.store(false);
+    registered_.store(false);
 }
 
 // ============================================================================
