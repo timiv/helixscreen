@@ -363,6 +363,15 @@
     <!-- Warming (amber) -->
     <color name="temp_gradient_hot" value="#FF4444"/>
     <!-- At target (red) -->
+    <!-- Heater-specific colors (nozzle heating and bed cooling) -->
+    <color name="heating_color_light" value="#FF4444"/>
+    <!-- Light mode: red for heating (nozzle) -->
+    <color name="heating_color_dark" value="#FF6666"/>
+    <!-- Dark mode: lighter red for heating (nozzle) -->
+    <color name="cooling_color_light" value="#00CED1"/>
+    <!-- Light mode: cyan for cooling (bed) -->
+    <color name="cooling_color_dark" value="#33E5E8"/>
+    <!-- Dark mode: lighter cyan for cooling (bed) -->
     <!-- App background colors (theme-specific variants) -->
     <color name="app_bg_color_light" value="#FFFFFF"/>
     <!-- Light mode: white -->

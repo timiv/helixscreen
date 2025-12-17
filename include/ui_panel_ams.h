@@ -172,7 +172,8 @@ class AmsPanel : public PanelBase {
     lv_subject_t picker_slot_indicator_subject_; ///< Subject for "Assigning to Slot X" text
     char picker_slot_indicator_buf_[48];         ///< Buffer for picker slot indicator text
 
-    lv_subject_t picker_state_subject_; ///< Subject for picker state (0=LOADING, 1=EMPTY, 2=CONTENT)
+    lv_subject_t
+        picker_state_subject_; ///< Subject for picker state (0=LOADING, 1=EMPTY, 2=CONTENT)
 
     // === Color Picker Subjects ===
 

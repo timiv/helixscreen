@@ -9,11 +9,7 @@
 
 #include <algorithm>
 
-// Gradient colors (cold → warm → hot)
-// These match the tokens we'll add to globals.xml
-static constexpr uint32_t COLOR_COLD = 0x2196F3; // Blue
-static constexpr uint32_t COLOR_WARM = 0xFFC107; // Amber
-static constexpr uint32_t COLOR_HOT = 0xFF4444;  // Red
+// Gradient colors now use theme tokens: temp_gradient_cold, temp_gradient_warm, temp_gradient_hot
 
 HeatingIconAnimator::~HeatingIconAnimator() {
     // Don't cleanup LVGL resources in destructor - may be called during static destruction
@@ -120,7 +116,7 @@ void HeatingIconAnimator::update(int current_temp, int target_temp) {
         case State::AT_TARGET:
             // Reached target - stop pulse, solid hot color
             stop_pulse();
-            current_color_ = lv_color_hex(COLOR_HOT);
+            current_color_ = ui_theme_get_color("temp_gradient_hot");
             current_opacity_ = LV_OPA_COVER;
             spdlog::debug("[HeatingIconAnimator] State: AT_TARGET");
             break;
@@ -148,9 +144,9 @@ lv_color_t HeatingIconAnimator::calculate_gradient_color(float progress) {
     // 0.0 - 0.5: cold (blue) → warm (amber)
     // 0.5 - 1.0: warm (amber) → hot (red)
 
-    lv_color_t cold = lv_color_hex(COLOR_COLD);
-    lv_color_t warm = lv_color_hex(COLOR_WARM);
-    lv_color_t hot = lv_color_hex(COLOR_HOT);
+    lv_color_t cold = ui_theme_get_color("temp_gradient_cold");
+    lv_color_t warm = ui_theme_get_color("temp_gradient_warm");
+    lv_color_t hot = ui_theme_get_color("temp_gradient_hot");
 
     if (progress < 0.5f) {
         // Cold → Warm
@@ -217,7 +213,7 @@ void HeatingIconAnimator::apply_color() {
 
 lv_color_t HeatingIconAnimator::get_secondary_color() {
     // Use theme's text_secondary color for "off" state
-    return ui_theme_parse_color("#ADAEB8");
+    return ui_theme_get_color("text_secondary");
 }
 
 void HeatingIconAnimator::pulse_anim_cb(void* var, int32_t value) {

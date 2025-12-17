@@ -392,7 +392,7 @@ echo "Hardcoded padding values: $hardcoded_padding"
 echo "Hardcoded margin values: $hardcoded_margin"
 echo "Hardcoded gap values: $hardcoded_gap"
 
-HARDCODED_SPACING_THRESHOLD=100
+HARDCODED_SPACING_THRESHOLD=30
 total_hardcoded=$((hardcoded_padding + hardcoded_margin + hardcoded_gap))
 if [ "$total_hardcoded" -gt "$HARDCODED_SPACING_THRESHOLD" ]; then
     warning "Hardcoded spacing values ($total_hardcoded) exceed threshold ($HARDCODED_SPACING_THRESHOLD)"
