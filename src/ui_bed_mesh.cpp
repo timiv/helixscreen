@@ -15,6 +15,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include <cstdlib>
+#include <cstring>
 #include <memory>
 
 // Canvas dimensions and rotation defaults are now in ui_bed_mesh.h
@@ -94,13 +96,13 @@ static void bed_mesh_draw_cb(lv_event_t* e) {
 }
 
 /**
- * Touch press event handler - start drag gesture
+ * Touch press event handler - start drag gesture or show 2D tooltip
  */
 static void bed_mesh_press_cb(lv_event_t* e) {
     lv_obj_t* obj = lv_event_get_target_obj(e);
     bed_mesh_widget_data_t* data = (bed_mesh_widget_data_t*)lv_obj_get_user_data(obj);
 
-    if (!data)
+    if (!data || !data->renderer)
         return;
 
     lv_indev_t* indev = lv_indev_active();
@@ -110,13 +112,29 @@ static void bed_mesh_press_cb(lv_event_t* e) {
     lv_point_t point;
     lv_indev_get_point(indev, &point);
 
+    // Get widget position for local coordinates
+    int obj_x = lv_obj_get_x(obj);
+    int obj_y = lv_obj_get_y(obj);
+    int local_x = point.x - obj_x;
+    int local_y = point.y - obj_y;
+    int width = lv_obj_get_width(obj);
+    int height = lv_obj_get_height(obj);
+
+    // In 2D mode: show cell tooltip on touch
+    if (bed_mesh_renderer_is_using_2d(data->renderer)) {
+        if (bed_mesh_renderer_handle_touch(data->renderer, local_x, local_y, width, height)) {
+            lv_obj_invalidate(obj); // Redraw to show tooltip
+            spdlog::trace("[bed_mesh] 2D touch at ({}, {}) - showing tooltip", local_x, local_y);
+        }
+        return; // Don't start dragging in 2D mode
+    }
+
+    // 3D mode: start drag gesture
     data->is_dragging = true;
     data->last_drag_pos = point;
 
     // Update renderer dragging state for fast solid-color rendering
-    if (data->renderer) {
-        bed_mesh_renderer_set_dragging(data->renderer, true);
-    }
+    bed_mesh_renderer_set_dragging(data->renderer, true);
 
     spdlog::trace("[bed_mesh] Press at ({}, {}), switching to solid", point.x, point.y);
 }
@@ -191,21 +209,28 @@ static void bed_mesh_pressing_cb(lv_event_t* e) {
 }
 
 /**
- * Touch release event handler - end drag gesture
+ * Touch release event handler - end drag gesture or hide 2D tooltip
  */
 static void bed_mesh_release_cb(lv_event_t* e) {
     lv_obj_t* obj = lv_event_get_target_obj(e);
     bed_mesh_widget_data_t* data = (bed_mesh_widget_data_t*)lv_obj_get_user_data(obj);
 
-    if (!data)
+    if (!data || !data->renderer)
         return;
 
+    // In 2D mode: clear tooltip on release
+    if (bed_mesh_renderer_is_using_2d(data->renderer)) {
+        bed_mesh_renderer_clear_touch(data->renderer);
+        lv_obj_invalidate(obj); // Redraw to hide tooltip
+        spdlog::trace("[bed_mesh] 2D touch released - hiding tooltip");
+        return;
+    }
+
+    // 3D mode: end drag gesture
     data->is_dragging = false;
 
     // Update renderer dragging state for high-quality gradient rendering
-    if (data->renderer) {
-        bed_mesh_renderer_set_dragging(data->renderer, false);
-    }
+    bed_mesh_renderer_set_dragging(data->renderer, false);
 
     // Force immediate redraw to switch back to gradient rendering
     lv_obj_invalidate(obj);
@@ -309,6 +334,13 @@ static void* bed_mesh_xml_create(lv_xml_parser_state_t* state, const char** attr
     data_ptr->rotation_x = BED_MESH_ROTATION_X_DEFAULT;
     data_ptr->rotation_z = BED_MESH_ROTATION_Z_DEFAULT;
     bed_mesh_renderer_set_rotation(data_ptr->renderer, data_ptr->rotation_x, data_ptr->rotation_z);
+
+    // Check for forced 2D mode via environment variable (for testing)
+    const char* force_2d = std::getenv("HELIX_BED_MESH_2D");
+    if (force_2d && std::strcmp(force_2d, "1") == 0) {
+        bed_mesh_renderer_set_render_mode(data_ptr->renderer, BED_MESH_RENDER_MODE_FORCE_2D);
+        spdlog::info("[bed_mesh] 2D heatmap mode forced via HELIX_BED_MESH_2D=1");
+    }
 
     // Initialize touch drag state
     data_ptr->is_dragging = false;
@@ -486,4 +518,56 @@ void ui_bed_mesh_redraw(lv_obj_t* widget) {
     lv_obj_invalidate(widget);
 
     spdlog::debug("[bed_mesh] Redraw requested");
+}
+
+/**
+ * Evaluate and possibly switch render mode based on FPS history
+ *
+ * Should be called when the bed mesh panel becomes visible.
+ * Mode evaluation only happens on panel entry, never during viewing.
+ */
+void ui_bed_mesh_evaluate_render_mode(lv_obj_t* widget) {
+    if (!widget) {
+        return;
+    }
+
+    bed_mesh_widget_data_t* data = (bed_mesh_widget_data_t*)lv_obj_get_user_data(widget);
+    if (!data || !data->renderer) {
+        return;
+    }
+
+    bed_mesh_renderer_evaluate_render_mode(data->renderer);
+}
+
+/**
+ * Get current render mode for display in settings
+ */
+bed_mesh_render_mode_t ui_bed_mesh_get_render_mode(lv_obj_t* widget) {
+    if (!widget) {
+        return BED_MESH_RENDER_MODE_AUTO;
+    }
+
+    bed_mesh_widget_data_t* data = (bed_mesh_widget_data_t*)lv_obj_get_user_data(widget);
+    if (!data || !data->renderer) {
+        return BED_MESH_RENDER_MODE_AUTO;
+    }
+
+    return bed_mesh_renderer_get_render_mode(data->renderer);
+}
+
+/**
+ * Set render mode (for settings UI)
+ */
+void ui_bed_mesh_set_render_mode(lv_obj_t* widget, bed_mesh_render_mode_t mode) {
+    if (!widget) {
+        return;
+    }
+
+    bed_mesh_widget_data_t* data = (bed_mesh_widget_data_t*)lv_obj_get_user_data(widget);
+    if (!data || !data->renderer) {
+        return;
+    }
+
+    bed_mesh_renderer_set_render_mode(data->renderer, mode);
+    lv_obj_invalidate(widget); // Redraw with new mode
 }
