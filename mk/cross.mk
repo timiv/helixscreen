@@ -31,9 +31,9 @@ ifeq ($(PLATFORM_TARGET),pi)
     TARGET_CFLAGS := -march=armv8-a -I/usr/aarch64-linux-gnu/include -I/usr/include/libdrm -Wno-error=conversion -Wno-error=sign-conversion
     DISPLAY_BACKEND := drm
     ENABLE_SDL := no
-    # OpenGL ES draw backend disabled - LVGL's implementation requires GLAD loader
-    # infrastructure which adds complexity. DRM + software rendering is efficient
-    # enough for UI with proper page flipping. TinyGL disabled for now (G-code preview).
+    # OpenGL ES disabled - LVGL's implementation has C++11 raw strings in .c files
+    # and tightly couples draw backend with display driver. Software rendering via
+    # DRM is reliable and performant enough for UI. Can revisit GPU accel later.
     ENABLE_OPENGLES := no
     ENABLE_TINYGL_3D := no
     ENABLE_EVDEV := yes

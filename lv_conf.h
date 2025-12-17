@@ -253,11 +253,17 @@
     #define LV_USE_DRAW_SDL 0
 #endif
 
-/* Draw using OpenGL ES textures.
- * NOTE: LVGL's OpenGL ES draw backend requires the GLAD-based display driver
- * infrastructure, which adds complexity. For Pi we use DRM display with
- * software rendering - still efficient via page flipping. */
-#define LV_USE_DRAW_OPENGLES 0
+/* Draw using OpenGL ES textures - GPU-accelerated on Pi via DRM+EGL.
+ * Uses LVGL's bundled GLAD loader for OpenGL ES function loading.
+ * Requires runtime: libgles2 libegl1 libgbm1 on target system. */
+#ifdef HELIX_ENABLE_OPENGLES
+    #define LV_USE_DRAW_OPENGLES 1
+    #if LV_USE_DRAW_OPENGLES
+        #define LV_DRAW_OPENGLES_TEXTURE_CACHE_COUNT 64
+    #endif
+#else
+    #define LV_USE_DRAW_OPENGLES 0
+#endif
 
 /* Use VG-Lite GPU. */
 #define LV_USE_DRAW_VG_LITE 0
@@ -1154,11 +1160,10 @@
 /* LVGL Windows backend */
 #define LV_USE_WINDOWS    0
 
-/* Use OpenGL to open window on PC and handle mouse and keyboard */
+/* Use OpenGL ES display driver (GLAD-based).
+ * Disabled: LVGL's implementation uses C++11 raw strings in .c files and
+ * has tight coupling between draw backend and display driver. */
 #define LV_USE_OPENGLES   0
-#if LV_USE_OPENGLES
-    #define LV_USE_OPENGLES_DEBUG        1    /* Enable or disable debug for opengles */
-#endif
 
 /* QNX Screen display and input drivers */
 #define LV_USE_QNX              0
