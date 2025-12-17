@@ -72,9 +72,9 @@ HistoryListPanel::HistoryListPanel(PrinterState& printer_state, MoonrakerAPI* ap
 // ============================================================================
 
 void HistoryListPanel::init_subjects() {
-    // Initialize subject for empty state binding
-    lv_subject_init_int(&subject_has_jobs_, 0);
-    lv_xml_register_subject(nullptr, "history_list_has_jobs", &subject_has_jobs_);
+    // Initialize subject for panel state binding (0=LOADING, 1=EMPTY, 2=HAS_JOBS)
+    lv_subject_init_int(&subject_panel_state_, 0);
+    lv_xml_register_subject(nullptr, "history_list_panel_state", &subject_panel_state_);
 
     // Initialize empty state message subjects (5-parameter signature)
     lv_subject_init_string(&subject_empty_message_, empty_message_buf_, nullptr,
@@ -168,6 +168,8 @@ void HistoryListPanel::on_activate() {
                   jobs_.size());
 
     if (!jobs_received_) {
+        // Show loading state while fetching from API
+        lv_subject_set_int(&subject_panel_state_, 0); // LOADING
         // Jobs weren't set by dashboard, fetch from API
         refresh_from_api();
     } else {
@@ -483,19 +485,18 @@ void HistoryListPanel::clear_list() {
 }
 
 void HistoryListPanel::update_empty_state() {
-    // Check if there are filtered results
+    // Determine panel state and update subject declaratively
+    // State values: 0=LOADING, 1=EMPTY, 2=HAS_JOBS
+    int state;
     bool has_filtered_jobs = !filtered_jobs_.empty();
-    lv_subject_set_int(&subject_has_jobs_, has_filtered_jobs ? 1 : 0);
 
-    // Explicit visibility control as backup to subject binding
-    // This ensures empty state visibility is correct regardless of binding timing
-    if (empty_state_) {
-        if (has_filtered_jobs) {
-            lv_obj_add_flag(empty_state_, LV_OBJ_FLAG_HIDDEN);
-        } else {
-            lv_obj_remove_flag(empty_state_, LV_OBJ_FLAG_HIDDEN);
-        }
+    if (has_filtered_jobs) {
+        state = 2; // HAS_JOBS
+    } else {
+        state = 1; // EMPTY
     }
+
+    lv_subject_set_int(&subject_panel_state_, state);
 
     // Update empty state message based on whether filters are active
     if (!has_filtered_jobs) {
@@ -512,8 +513,8 @@ void HistoryListPanel::update_empty_state() {
         }
     }
 
-    spdlog::debug("[{}] Empty state updated: has_filtered_jobs={}, total_jobs={}", get_name(),
-                  has_filtered_jobs, jobs_.size());
+    spdlog::debug("[{}] Panel state updated: state={}, has_filtered_jobs={}, total_jobs={}",
+                  get_name(), state, has_filtered_jobs, jobs_.size());
 }
 
 const char* HistoryListPanel::get_status_color(PrintJobStatus status) {

@@ -644,6 +644,10 @@ void AmsPanel::init_subjects() {
     lv_subject_init_string(&picker_slot_indicator_subject_, picker_slot_indicator_buf_, nullptr,
                            sizeof(picker_slot_indicator_buf_), "Assigning to Slot 1");
 
+    // Initialize picker state subject (0=LOADING, 1=EMPTY, 2=CONTENT)
+    lv_subject_init_int(&picker_state_subject_, 0);
+    lv_xml_register_subject(nullptr, "ams_picker_state", &picker_state_subject_);
+
     // Initialize string subjects for color picker
     lv_subject_init_string(&color_hex_subject_, color_hex_buf_, nullptr, sizeof(color_hex_buf_),
                            "#808080");
@@ -1897,11 +1901,8 @@ void AmsPanel::show_spoolman_picker(int slot_index) {
         }
     }
 
-    // Show loading state initially
-    lv_obj_t* loading_container = lv_obj_find_by_name(spoolman_picker_, "loading_container");
-    if (loading_container) {
-        lv_obj_remove_flag(loading_container, LV_OBJ_FLAG_HIDDEN);
-    }
+    // Show loading state initially (0=LOADING, 1=EMPTY, 2=CONTENT)
+    lv_subject_set_int(&picker_state_subject_, 0);
 
     // Populate the picker with spools from Spoolman API
     populate_spoolman_picker();
@@ -1924,15 +1925,8 @@ void AmsPanel::hide_spoolman_picker() {
 
 void AmsPanel::populate_spoolman_picker() {
     if (!spoolman_picker_ || !api_) {
-        // No API - show empty state
-        lv_obj_t* loading_container = lv_obj_find_by_name(spoolman_picker_, "loading_container");
-        lv_obj_t* empty_container = lv_obj_find_by_name(spoolman_picker_, "empty_container");
-        if (loading_container) {
-            lv_obj_add_flag(loading_container, LV_OBJ_FLAG_HIDDEN);
-        }
-        if (empty_container) {
-            lv_obj_remove_flag(empty_container, LV_OBJ_FLAG_HIDDEN);
-        }
+        // No API - show empty state (0=LOADING, 1=EMPTY, 2=CONTENT)
+        lv_subject_set_int(&picker_state_subject_, 1);
         return;
     }
 
@@ -1955,22 +1949,14 @@ void AmsPanel::populate_spoolman_picker() {
                 return; // Panel was destroyed
             }
 
-            // Hide loading state
-            lv_obj_t* loading_container =
-                lv_obj_find_by_name(spoolman_picker_, "loading_container");
-            if (loading_container) {
-                lv_obj_add_flag(loading_container, LV_OBJ_FLAG_HIDDEN);
-            }
-
             if (spools.empty()) {
-                // Show empty state
-                lv_obj_t* empty_container =
-                    lv_obj_find_by_name(spoolman_picker_, "empty_container");
-                if (empty_container) {
-                    lv_obj_remove_flag(empty_container, LV_OBJ_FLAG_HIDDEN);
-                }
+                // Show empty state (0=LOADING, 1=EMPTY, 2=CONTENT)
+                lv_subject_set_int(&picker_state_subject_, 1);
                 return;
             }
+
+            // Show content state - hide loading/empty, show spool list
+            lv_subject_set_int(&picker_state_subject_, 2);
 
             // Cache spools for lookup when user selects one
             picker_spools_ = spools;
@@ -2042,16 +2028,8 @@ void AmsPanel::populate_spoolman_picker() {
 
             spdlog::warn("[{}] Failed to fetch spools: {}", get_name(), err.message);
 
-            // Hide loading, show empty state with error
-            lv_obj_t* loading_container =
-                lv_obj_find_by_name(spoolman_picker_, "loading_container");
-            lv_obj_t* empty_container = lv_obj_find_by_name(spoolman_picker_, "empty_container");
-            if (loading_container) {
-                lv_obj_add_flag(loading_container, LV_OBJ_FLAG_HIDDEN);
-            }
-            if (empty_container) {
-                lv_obj_remove_flag(empty_container, LV_OBJ_FLAG_HIDDEN);
-            }
+            // Hide loading, show empty state with error (0=LOADING, 1=EMPTY, 2=CONTENT)
+            lv_subject_set_int(&picker_state_subject_, 1);
         });
 }
 

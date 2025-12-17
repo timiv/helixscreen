@@ -28,23 +28,31 @@
         <event_cb trigger="value_changed" callback="history_sort_changed"/>
       </lv_dropdown>
     </lv_obj>
-    <!-- Content area - scrollable list container -->
+    <!-- Content area - scrollable container with three state-based views -->
     <lv_obj name="list_content"
             width="100%" height="content" flex_grow="1" flex_flow="column" style_pad_top="#space_sm"
             style_pad_bottom="#space_md" style_pad_left="#space_md" style_pad_right="#space_md"
             style_flex_gap_row="#space_sm" style_bg_opa="0" style_border_width="0" scrollable="true" scroll_dir="ver">
-      <!-- List rows container (populated dynamically) -->
-      <!-- clickable="false" ensures clicks pass through to row children -->
-      <lv_obj name="list_rows"
-              width="100%" height="content" flex_flow="column" style_flex_gap_row="#space_sm" style_pad_all="0"
-              style_bg_opa="0" style_border_width="0" clickable="false"/>
-      <!-- Empty state (shown when no history) - fills available space -->
+      <!-- ================================================================== -->
+      <!-- STATE: LOADING (state=0) -->
+      <!-- ================================================================== -->
+      <lv_obj name="loading_state"
+              width="100%" flex_grow="1" flex_flow="column" style_flex_main_place="center"
+              style_flex_cross_place="center" style_flex_gap_row="#space_md" style_pad_all="#space_xl" style_bg_opa="0"
+              style_border_width="0">
+        <lv_obj-bind_flag_if_not_eq subject="history_list_panel_state" flag="hidden" ref_value="0"/>
+        <!-- Loading spinner -->
+        <lv_spinner name="loading_spinner" width="48" height="48"/>
+        <text_body text="Loading history..." style_text_color="#text_secondary" style_text_align="center"/>
+      </lv_obj>
+      <!-- ================================================================== -->
+      <!-- STATE: EMPTY (state=1) -->
+      <!-- ================================================================== -->
       <lv_obj name="empty_state"
               width="100%" flex_grow="1" flex_flow="column" style_flex_main_place="center"
               style_flex_cross_place="center" style_flex_gap_row="#space_md" style_pad_all="#space_xl" style_bg_opa="0"
               style_border_width="0">
-        <!-- Bind hidden state to history_list_has_jobs subject -->
-        <lv_obj-bind_flag_if_eq subject="history_list_has_jobs" value="1" flag="hidden"/>
+        <lv_obj-bind_flag_if_not_eq subject="history_list_panel_state" flag="hidden" ref_value="1"/>
         <!-- Empty state icon (clock/history icon F0150) -->
         <lv_label name="empty_icon" text="󰅐" style_text_font="mdi_icons_48" style_text_color="#text_secondary"/>
         <!-- Empty state message -->
@@ -52,6 +60,15 @@
                    style_text_align="center"/>
         <text_small name="empty_hint" bind_text="history_empty_hint" style_text_color="#text_secondary"
                     style_text_align="center"/>
+      </lv_obj>
+      <!-- ================================================================== -->
+      <!-- STATE: HAS_JOBS (state=2) - List rows container -->
+      <!-- ================================================================== -->
+      <!-- clickable="false" ensures clicks pass through to row children -->
+      <lv_obj name="list_rows"
+              width="100%" height="content" flex_flow="column" style_flex_gap_row="#space_sm" style_pad_all="0"
+              style_bg_opa="0" style_border_width="0" clickable="false">
+        <lv_obj-bind_flag_if_not_eq subject="history_list_panel_state" flag="hidden" ref_value="2"/>
       </lv_obj>
     </lv_obj>
   </view>

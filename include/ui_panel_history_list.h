@@ -93,7 +93,7 @@ class HistoryListPanel : public PanelBase {
      * @brief Initialize subjects for reactive bindings
      *
      * Creates:
-     * - history_list_has_jobs: 0 = no history, 1 = has history (for empty state)
+     * - history_list_panel_state: 0 = LOADING, 1 = EMPTY, 2 = HAS_JOBS
      */
     void init_subjects() override;
 
@@ -248,10 +248,10 @@ class HistoryListPanel : public PanelBase {
     lv_timer_t* search_timer_ = nullptr; ///< Timer for debounced search (300ms)
 
     //
-    // === Subject for empty state binding ===
+    // === Subject for panel state binding ===
     //
 
-    lv_subject_t subject_has_jobs_; ///< 0 = no jobs (show empty), 1 = has jobs (hide empty)
+    lv_subject_t subject_panel_state_; ///< 0 = LOADING, 1 = EMPTY, 2 = HAS_JOBS
 
     // Empty state message subjects (for dynamic text based on filter state)
     lv_subject_t subject_empty_message_; ///< Empty state message text

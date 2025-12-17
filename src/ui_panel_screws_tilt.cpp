@@ -146,10 +146,10 @@ void ScrewsTiltPanel::init_subjects() {
     // Initialize status label subjects
     probe_count_buf_[0] = '\0';
     error_message_buf_[0] = '\0';
-    lv_subject_init_string(&probe_count_subject_, probe_count_buf_, nullptr,
-                           PROBE_COUNT_BUF_SIZE, "");
-    lv_subject_init_string(&error_message_subject_, error_message_buf_, nullptr,
-                           ERROR_MSG_BUF_SIZE, "");
+    lv_subject_init_string(&probe_count_subject_, probe_count_buf_, nullptr, PROBE_COUNT_BUF_SIZE,
+                           "");
+    lv_subject_init_string(&error_message_subject_, error_message_buf_, nullptr, ERROR_MSG_BUF_SIZE,
+                           "");
     lv_xml_register_subject(nullptr, "probe_count_text", &probe_count_subject_);
     lv_xml_register_subject(nullptr, "error_message_text", &error_message_subject_);
 

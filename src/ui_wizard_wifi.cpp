@@ -72,7 +72,7 @@ struct NetworkItemData {
     lv_subject_t* is_secured;
     lv_subject_t* signal_icon_state; // Combined state 1-8 for icon visibility binding
     char ssid_buffer[64];
-    WizardWifiStep* parent; // Back-reference for callbacks
+    WizardWifiStep* parent;                 // Back-reference for callbacks
     lv_observer_t* ssid_observer = nullptr; // Track observer for cleanup
 
     NetworkItemData(const WiFiNetwork& net, WizardWifiStep* p) : network(net), parent(p) {

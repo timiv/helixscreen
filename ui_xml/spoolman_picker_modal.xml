@@ -34,7 +34,8 @@
       <!-- Loading state -->
       <lv_obj name="loading_container"
               width="100%" height="80" style_bg_opa="0" style_border_width="0" flex_flow="column"
-              style_flex_main_place="center" style_flex_cross_place="center" scrollable="false" hidden="true">
+              style_flex_main_place="center" style_flex_cross_place="center" scrollable="false">
+        <bind_flag_if_not_eq subject="ams_picker_state" flag="hidden" ref_value="0"/>
         <lv_spinner width="32"
                     height="32" style_arc_width_indicator="#input_border_width" style_arc_color="#primary_color" style_arc_opa_main="0"/>
         <text_small text="Loading spools..." style_text_color="#text_secondary"/>
@@ -42,7 +43,8 @@
       <!-- Empty state -->
       <lv_obj name="empty_container"
               width="100%" height="80" style_bg_opa="0" style_border_width="0" flex_flow="column"
-              style_flex_main_place="center" style_flex_cross_place="center" scrollable="false" hidden="true">
+              style_flex_main_place="center" style_flex_cross_place="center" scrollable="false">
+        <bind_flag_if_not_eq subject="ams_picker_state" flag="hidden" ref_value="1"/>
         <icon src="spoolman" size="lg" variant="secondary"/>
         <text_small text="No spools available" style_text_color="#text_secondary"/>
       </lv_obj>
@@ -51,6 +53,7 @@
               width="100%" height="content" style_max_height="#list_max_height" style_bg_opa="0" style_border_width="0"
               style_pad_all="0" style_pad_gap="#space_xs" flex_flow="column" style_flex_main_place="start"
               style_flex_cross_place="stretch" scrollable="true" scroll_direction="y" overflow="scroll">
+        <bind_flag_if_not_eq subject="ams_picker_state" flag="hidden" ref_value="2"/>
         <!-- Spool items populated dynamically by C++ -->
       </lv_obj>
       <!-- Unlink button (for clearing assignment) -->
