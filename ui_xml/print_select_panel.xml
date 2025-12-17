@@ -74,6 +74,7 @@
                    height="100%" style_bg_opa="0" style_border_width="0" style_shadow_width="0"
                    style_pad_all="#list_header_padding" flex_grow="1" flex_flow="row" style_flex_main_place="start"
                    style_flex_cross_place="center">
+          <event_cb trigger="clicked" callback="on_print_select_header_filename"/>
           <text_body name="header_filename_label" text="Filename" style_text_align="left"/>
           <icon name="header_filename_icon_up" src="arrow_up" size="xs" variant="primary" hidden="true"/>
           <icon name="header_filename_icon_down" src="arrow_down" size="xs" variant="primary" hidden="true"/>
@@ -83,6 +84,7 @@
                    width="#col_size_width" height="100%" style_bg_opa="0" style_border_width="0" style_shadow_width="0"
                    style_pad_all="#list_header_padding" flex_flow="row" style_flex_main_place="start"
                    style_flex_cross_place="center">
+          <event_cb trigger="clicked" callback="on_print_select_header_size"/>
           <text_body name="header_size_label" text="Size" style_text_align="left"/>
           <icon name="header_size_icon_up" src="arrow_up" size="xs" variant="primary" hidden="true"/>
           <icon name="header_size_icon_down" src="arrow_down" size="xs" variant="primary" hidden="true"/>
@@ -92,6 +94,7 @@
                    width="#col_modified_width" height="100%" style_bg_opa="0" style_border_width="0"
                    style_shadow_width="0" style_pad_all="#list_header_padding" flex_flow="row"
                    style_flex_main_place="start" style_flex_cross_place="center">
+          <event_cb trigger="clicked" callback="on_print_select_header_modified"/>
           <text_body name="header_modified_label" text="Modified" style_text_align="left"/>
           <icon name="header_modified_icon_up" src="arrow_up" size="xs" variant="primary" hidden="true"/>
           <icon name="header_modified_icon_down" src="arrow_down" size="xs" variant="primary" hidden="true"/>
@@ -101,6 +104,7 @@
                    width="#col_time_width" height="100%" style_bg_opa="0" style_border_width="0" style_shadow_width="0"
                    style_pad_all="#list_header_padding" flex_flow="row" style_flex_main_place="start"
                    style_flex_cross_place="center">
+          <event_cb trigger="clicked" callback="on_print_select_header_print_time"/>
           <text_body name="header_print_time_label" text="Time" style_text_align="left"/>
           <icon name="header_print_time_icon_up" src="arrow_up" size="xs" variant="primary" hidden="true"/>
           <icon name="header_print_time_icon_down" src="arrow_down" size="xs" variant="primary" hidden="true"/>

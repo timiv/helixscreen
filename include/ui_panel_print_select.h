@@ -342,6 +342,21 @@ class PrintSelectPanel : public PanelBase {
      */
     void on_usb_drive_removed();
 
+    /**
+     * @brief Start print of currently selected file
+     */
+    void start_print();
+
+    /**
+     * @brief Delete currently selected file
+     */
+    void delete_file();
+
+    /**
+     * @brief Hide delete confirmation dialog
+     */
+    void hide_delete_confirmation();
+
   private:
     //
     // === Constants ===
@@ -614,11 +629,6 @@ class PrintSelectPanel : public PanelBase {
     void create_detail_view();
 
     /**
-     * @brief Hide delete confirmation dialog
-     */
-    void hide_delete_confirmation();
-
-    /**
      * @brief Handle resize event for responsive card layout
      */
     void handle_resize();
@@ -645,16 +655,6 @@ class PrintSelectPanel : public PanelBase {
      * @param file_index Index of clicked file in file_list_
      */
     void handle_file_click(size_t file_index);
-
-    /**
-     * @brief Start print of currently selected file
-     */
-    void start_print();
-
-    /**
-     * @brief Delete currently selected file
-     */
-    void delete_file();
 
     /**
      * @brief Scan G-code file for embedded operations (async)
@@ -730,15 +730,7 @@ class PrintSelectPanel : public PanelBase {
 
     static void on_resize_static(void* user_data);
     static void on_scroll_static(lv_event_t* e);
-    static void on_view_toggle_clicked_static(lv_event_t* e);
-    static void on_header_clicked_static(lv_event_t* e);
     static void on_file_clicked_static(lv_event_t* e);
-    static void on_back_button_clicked_static(lv_event_t* e);
-    static void on_delete_button_clicked_static(lv_event_t* e);
-    static void on_print_button_clicked_static(lv_event_t* e);
-    static void on_detail_backdrop_clicked_static(lv_event_t* e);
-    static void on_confirm_delete_static(lv_event_t* e);
-    static void on_cancel_delete_static(lv_event_t* e);
     static void on_source_button_clicked_static(lv_event_t* e);
 };
 

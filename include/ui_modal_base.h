@@ -207,13 +207,18 @@ class ModalBase {
      */
     void wire_cancel_button(const char* name = "btn_cancel");
 
+    //
+    // === Public Static Event Handlers (for XML registration) ===
+    //
+
+    static void ok_button_cb(lv_event_t* e);
+    static void cancel_button_cb(lv_event_t* e);
+
   private:
     //
-    // === Static Event Handlers ===
+    // === Private Static Event Handlers ===
     //
 
     static void backdrop_click_cb(lv_event_t* e);
     static void esc_key_cb(lv_event_t* e);
-    static void ok_button_cb(lv_event_t* e);
-    static void cancel_button_cb(lv_event_t* e);
 };

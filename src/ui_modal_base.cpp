@@ -78,6 +78,10 @@ bool ModalBase::show(lv_obj_t* parent, const char** attrs) {
 
     spdlog::info("[{}] Showing modal", get_name());
 
+    // Register event callbacks for XML components
+    lv_xml_register_event_cb(nullptr, "on_modal_ok_clicked", ok_button_cb);
+    lv_xml_register_event_cb(nullptr, "on_modal_cancel_clicked", cancel_button_cb);
+
     // Create modal from XML
     modal_ = static_cast<lv_obj_t*>(lv_xml_create(parent_, get_xml_component_name(), attrs));
 
@@ -153,7 +157,8 @@ lv_obj_t* ModalBase::find_widget(const char* name) {
 void ModalBase::wire_ok_button(const char* name) {
     lv_obj_t* btn = find_widget(name);
     if (btn) {
-        lv_obj_add_event_cb(btn, ok_button_cb, LV_EVENT_CLICKED, this);
+        // Event callback now wired via XML - just set user_data for callback
+        lv_obj_set_user_data(btn, this);
         spdlog::trace("[{}] Wired Ok button '{}'", get_name(), name);
     } else {
         spdlog::warn("[{}] Ok button '{}' not found", get_name(), name);
@@ -163,7 +168,8 @@ void ModalBase::wire_ok_button(const char* name) {
 void ModalBase::wire_cancel_button(const char* name) {
     lv_obj_t* btn = find_widget(name);
     if (btn) {
-        lv_obj_add_event_cb(btn, cancel_button_cb, LV_EVENT_CLICKED, this);
+        // Event callback now wired via XML - just set user_data for callback
+        lv_obj_set_user_data(btn, this);
         spdlog::trace("[{}] Wired Cancel button '{}'", get_name(), name);
     } else {
         spdlog::warn("[{}] Cancel button '{}' not found", get_name(), name);

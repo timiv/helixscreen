@@ -7,6 +7,7 @@
   <view name="detail_view_root"
         extends="lv_obj" width="#overlay_panel_width_large" height="100%" align="right_mid" style_bg_opa="255"
         style_border_width="0" style_pad_all="0" flex_flow="column" clickable="true">
+    <event_cb trigger="clicked" callback="on_print_select_detail_backdrop"/>
     <!-- HEADER BAR (full width at top) -->
     <header_bar name="detail_header" title="Print File"/>
     <!-- CONTENT AREA (two columns) -->
@@ -108,10 +109,12 @@
                 style_pad_gap="#button_padding" flex_flow="row">
           <!-- Delete button -->
           <lv_button name="delete_button" height="#button_height" flex_grow="1">
+            <event_cb trigger="clicked" callback="on_print_select_delete_button"/>
             <text_body text="Delete" align="center"/>
           </lv_button>
           <!-- Print button (disabled when print in progress) -->
           <lv_button name="print_button" height="#button_height" flex_grow="1">
+            <event_cb trigger="clicked" callback="on_print_select_print_button"/>
             <text_body text="Print" align="center"/>
             <lv_obj-bind_flag_if_eq subject="print_select_can_print" flag="disabled" ref_value="0"/>
           </lv_button>

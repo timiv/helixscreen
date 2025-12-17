@@ -433,22 +433,17 @@ void init_zoffset_event_callbacks() {
                              ZOffsetCalibrationPanel::on_retry_clicked);
 
     // Z adjustment buttons
-    lv_xml_register_event_cb(nullptr, "on_zoffset_z_down_1",
-                             ZOffsetCalibrationPanel::on_z_down_1);
+    lv_xml_register_event_cb(nullptr, "on_zoffset_z_down_1", ZOffsetCalibrationPanel::on_z_down_1);
     lv_xml_register_event_cb(nullptr, "on_zoffset_z_down_01",
                              ZOffsetCalibrationPanel::on_z_down_01);
     lv_xml_register_event_cb(nullptr, "on_zoffset_z_down_005",
                              ZOffsetCalibrationPanel::on_z_down_005);
     lv_xml_register_event_cb(nullptr, "on_zoffset_z_down_001",
                              ZOffsetCalibrationPanel::on_z_down_001);
-    lv_xml_register_event_cb(nullptr, "on_zoffset_z_up_001",
-                             ZOffsetCalibrationPanel::on_z_up_001);
-    lv_xml_register_event_cb(nullptr, "on_zoffset_z_up_005",
-                             ZOffsetCalibrationPanel::on_z_up_005);
-    lv_xml_register_event_cb(nullptr, "on_zoffset_z_up_01",
-                             ZOffsetCalibrationPanel::on_z_up_01);
-    lv_xml_register_event_cb(nullptr, "on_zoffset_z_up_1",
-                             ZOffsetCalibrationPanel::on_z_up_1);
+    lv_xml_register_event_cb(nullptr, "on_zoffset_z_up_001", ZOffsetCalibrationPanel::on_z_up_001);
+    lv_xml_register_event_cb(nullptr, "on_zoffset_z_up_005", ZOffsetCalibrationPanel::on_z_up_005);
+    lv_xml_register_event_cb(nullptr, "on_zoffset_z_up_01", ZOffsetCalibrationPanel::on_z_up_01);
+    lv_xml_register_event_cb(nullptr, "on_zoffset_z_up_1", ZOffsetCalibrationPanel::on_z_up_1);
 
     spdlog::debug("[ZOffsetCal] Event callbacks registered");
 }

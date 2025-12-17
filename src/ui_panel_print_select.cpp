@@ -77,6 +77,67 @@ static void on_print_select_source_usb(lv_event_t* e) {
     get_global_print_select_panel().on_source_usb_clicked();
 }
 
+// Header column sort callbacks
+static void on_print_select_header_filename(lv_event_t* e) {
+    (void)e;
+    get_global_print_select_panel().sort_by(PrintSelectSortColumn::FILENAME);
+}
+
+static void on_print_select_header_size(lv_event_t* e) {
+    (void)e;
+    get_global_print_select_panel().sort_by(PrintSelectSortColumn::SIZE);
+}
+
+static void on_print_select_header_modified(lv_event_t* e) {
+    (void)e;
+    get_global_print_select_panel().sort_by(PrintSelectSortColumn::MODIFIED);
+}
+
+static void on_print_select_header_print_time(lv_event_t* e) {
+    (void)e;
+    get_global_print_select_panel().sort_by(PrintSelectSortColumn::PRINT_TIME);
+}
+
+// Detail view callbacks
+static void on_print_select_print_button(lv_event_t* e) {
+    (void)e;
+    get_global_print_select_panel().start_print();
+}
+
+static void on_print_select_delete_button(lv_event_t* e) {
+    (void)e;
+    get_global_print_select_panel().show_delete_confirmation();
+}
+
+static void on_print_select_detail_backdrop(lv_event_t* e) {
+    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    auto* current_target = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+    // Only close if clicking the backdrop itself, not child widgets
+    if (target == current_target) {
+        get_global_print_select_panel().hide_detail_view();
+    }
+}
+
+static void on_header_back_clicked(lv_event_t* e) {
+    (void)e;
+    get_global_print_select_panel().hide_detail_view();
+}
+
+// Confirmation dialog callbacks (for dynamically created modal)
+static void on_print_select_confirm_delete(lv_event_t* e) {
+    auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
+    if (self) {
+        self->delete_file();
+    }
+}
+
+static void on_print_select_cancel_delete(lv_event_t* e) {
+    auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
+    if (self) {
+        self->hide_delete_confirmation();
+    }
+}
+
 // ============================================================================
 // Constructor / Destructor
 // ============================================================================
@@ -179,6 +240,24 @@ void PrintSelectPanel::init_subjects() {
                              on_print_select_source_printer);
     lv_xml_register_event_cb(nullptr, "on_print_select_source_usb", on_print_select_source_usb);
 
+    // Register list header sort callbacks
+    lv_xml_register_event_cb(nullptr, "on_print_select_header_filename",
+                             on_print_select_header_filename);
+    lv_xml_register_event_cb(nullptr, "on_print_select_header_size", on_print_select_header_size);
+    lv_xml_register_event_cb(nullptr, "on_print_select_header_modified",
+                             on_print_select_header_modified);
+    lv_xml_register_event_cb(nullptr, "on_print_select_header_print_time",
+                             on_print_select_header_print_time);
+
+    // Register detail view callbacks
+    lv_xml_register_event_cb(nullptr, "on_print_select_print_button",
+                             on_print_select_print_button);
+    lv_xml_register_event_cb(nullptr, "on_print_select_delete_button",
+                             on_print_select_delete_button);
+    lv_xml_register_event_cb(nullptr, "on_print_select_detail_backdrop",
+                             on_print_select_detail_backdrop);
+    lv_xml_register_event_cb(nullptr, "on_header_back_clicked", on_header_back_clicked);
+
     subjects_initialized_ = true;
     spdlog::debug("[{}] Subjects initialized", get_name());
 }
@@ -209,35 +288,10 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     lv_obj_add_event_cb(card_view_container_, on_scroll_static, LV_EVENT_SCROLL, this);
     lv_obj_add_event_cb(list_rows_container_, on_scroll_static, LV_EVENT_SCROLL, this);
 
-    // Note: view_toggle_btn click handler is now in XML via <event_cb>
+    // Note: view_toggle_btn, source buttons, and header click handlers are now in XML via <event_cb>
 
     // Setup source selector buttons (Printer/USB)
     setup_source_buttons();
-
-    // Wire up column header click handlers
-    // We need to pack both 'this' and column index into user_data
-    // Use a simple encoding: store column index in the low bits of a pointer-sized int
-    struct HeaderBinding {
-        const char* name;
-        PrintSelectSortColumn column;
-    };
-    static const HeaderBinding headers[] = {
-        {"header_filename", PrintSelectSortColumn::FILENAME},
-        {"header_size", PrintSelectSortColumn::SIZE},
-        {"header_modified", PrintSelectSortColumn::MODIFIED},
-        {"header_print_time", PrintSelectSortColumn::PRINT_TIME}};
-
-    for (const auto& binding : headers) {
-        lv_obj_t* header = lv_obj_find_by_name(panel_, binding.name);
-        if (header) {
-            // Encode column in user_data: we'll use the address of the static array entry
-            // The callback will recover the column from the difference
-            lv_obj_add_event_cb(header, on_header_clicked_static, LV_EVENT_CLICKED, this);
-            // Store column index in the object's user_data for recovery
-            lv_obj_set_user_data(header,
-                                 reinterpret_cast<void*>(static_cast<intptr_t>(binding.column)));
-        }
-    }
 
     // Create detail view (confirmation dialog created on-demand)
     create_detail_view();
@@ -971,13 +1025,13 @@ void PrintSelectPanel::show_delete_confirmation() {
     // Wire up cancel button
     lv_obj_t* cancel_btn = lv_obj_find_by_name(confirmation_dialog_widget_, "btn_secondary");
     if (cancel_btn) {
-        lv_obj_add_event_cb(cancel_btn, on_cancel_delete_static, LV_EVENT_CLICKED, this);
+        lv_obj_add_event_cb(cancel_btn, on_print_select_cancel_delete, LV_EVENT_CLICKED, this);
     }
 
     // Wire up confirm button
     lv_obj_t* confirm_btn = lv_obj_find_by_name(confirmation_dialog_widget_, "btn_primary");
     if (confirm_btn) {
-        lv_obj_add_event_cb(confirm_btn, on_confirm_delete_static, LV_EVENT_CLICKED, this);
+        lv_obj_add_event_cb(confirm_btn, on_print_select_confirm_delete, LV_EVENT_CLICKED, this);
     }
 
     spdlog::info("[{}] Delete confirmation dialog shown", get_name());
@@ -1878,27 +1932,10 @@ void PrintSelectPanel::create_detail_view() {
 
     lv_obj_add_flag(detail_view_widget_, LV_OBJ_FLAG_HIDDEN);
 
-    // Wire up back button
-    lv_obj_t* back_button = lv_obj_find_by_name(detail_view_widget_, "back_button");
-    if (back_button) {
-        lv_obj_add_event_cb(back_button, on_back_button_clicked_static, LV_EVENT_CLICKED, this);
-    }
+    // Note: Back button, delete/print buttons, and backdrop click handlers are now in XML via <event_cb>
 
-    // Wire up delete button
-    lv_obj_t* delete_button = lv_obj_find_by_name(detail_view_widget_, "delete_button");
-    if (delete_button) {
-        lv_obj_add_event_cb(delete_button, on_delete_button_clicked_static, LV_EVENT_CLICKED, this);
-    }
-
-    // Wire up print button and store reference for enable/disable
+    // Store reference to print button for enable/disable state management
     print_button_ = lv_obj_find_by_name(detail_view_widget_, "print_button");
-    if (print_button_) {
-        lv_obj_add_event_cb(print_button_, on_print_button_clicked_static, LV_EVENT_CLICKED, this);
-    }
-
-    // Click backdrop to close
-    lv_obj_add_event_cb(detail_view_widget_, on_detail_backdrop_clicked_static, LV_EVENT_CLICKED,
-                        this);
 
     // Look up pre-print option checkboxes
     bed_leveling_checkbox_ = lv_obj_find_by_name(detail_view_widget_, "bed_leveling_checkbox");
@@ -2176,75 +2213,12 @@ void PrintSelectPanel::on_scroll_static(lv_event_t* e) {
     }
 }
 
-void PrintSelectPanel::on_view_toggle_clicked_static(lv_event_t* e) {
-    auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        self->toggle_view();
-    }
-}
-
-void PrintSelectPanel::on_header_clicked_static(lv_event_t* e) {
-    auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
-    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
-    if (self && target) {
-        // Recover column from widget's user_data
-        auto column = static_cast<PrintSelectSortColumn>(
-            reinterpret_cast<intptr_t>(lv_obj_get_user_data(target)));
-        self->sort_by(column);
-    }
-}
-
 void PrintSelectPanel::on_file_clicked_static(lv_event_t* e) {
     auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
     auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
     if (self && target) {
         size_t file_index = reinterpret_cast<size_t>(lv_obj_get_user_data(target));
         self->handle_file_click(file_index);
-    }
-}
-
-void PrintSelectPanel::on_back_button_clicked_static(lv_event_t* e) {
-    auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        self->hide_detail_view();
-    }
-}
-
-void PrintSelectPanel::on_delete_button_clicked_static(lv_event_t* e) {
-    auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        self->show_delete_confirmation();
-    }
-}
-
-void PrintSelectPanel::on_print_button_clicked_static(lv_event_t* e) {
-    auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        self->start_print();
-    }
-}
-
-void PrintSelectPanel::on_detail_backdrop_clicked_static(lv_event_t* e) {
-    auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
-    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
-    auto* current_target = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    // Only close if clicking the backdrop itself, not child widgets
-    if (self && target == current_target) {
-        self->hide_detail_view();
-    }
-}
-
-void PrintSelectPanel::on_confirm_delete_static(lv_event_t* e) {
-    auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        self->delete_file();
-    }
-}
-
-void PrintSelectPanel::on_cancel_delete_static(lv_event_t* e) {
-    auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        self->hide_delete_confirmation();
     }
 }
 
