@@ -79,7 +79,7 @@ void RetractionSettingsOverlay::init_subjects() {
     lv_xml_register_subject(nullptr, "unretract_speed_display", &unretract_speed_display_);
 
     // Register the row click callback for opening this overlay from settings panel
-    spdlog::info("[RetractionSettings] Registering on_retraction_row_clicked callback");
+    spdlog::debug("[RetractionSettings] Registering callbacks");
     lv_xml_register_event_cb(nullptr, "on_retraction_row_clicked", on_retraction_row_clicked);
 
     // Register slider/toggle callbacks
@@ -219,7 +219,7 @@ void RetractionSettingsOverlay::send_retraction_settings() {
              "UNRETRACT_EXTRA_LENGTH=%.2f UNRETRACT_SPEED=%d",
              length_mm, retract_speed, extra_mm, unretract_spd);
 
-    spdlog::info("[{}] Sending: {}", get_name(), gcode);
+    spdlog::debug("[{}] Sending: {}", get_name(), gcode);
     client_->gcode_script(gcode);
 }
 
@@ -294,28 +294,17 @@ void RetractionSettingsOverlay::on_unretract_speed_changed(lv_event_t* /*e*/) {
 // =============================================================================
 
 static void on_retraction_row_clicked(lv_event_t* /*e*/) {
-    spdlog::info("[Retraction Settings] Row clicked, opening overlay");
-
     // Create overlay if not exists
     if (!g_retraction_settings_panel) {
-        spdlog::info("[Retraction Settings] Creating overlay from XML...");
         g_retraction_settings_panel = static_cast<lv_obj_t*>(
             lv_xml_create(lv_screen_active(), "retraction_settings_overlay", nullptr));
-        if (g_retraction_settings_panel) {
-            spdlog::info("[Retraction Settings] Overlay created successfully, calling setup()");
-            get_global_retraction_settings().setup(g_retraction_settings_panel, lv_screen_active());
-        } else {
-            spdlog::error("[Retraction Settings] FAILED to create overlay from XML!");
+        if (!g_retraction_settings_panel) {
+            spdlog::error("[Retraction Settings] Failed to create overlay");
             return;
         }
+        get_global_retraction_settings().setup(g_retraction_settings_panel, lv_screen_active());
     }
 
-    if (g_retraction_settings_panel) {
-        spdlog::info("[Retraction Settings] Calling ui_nav_push_overlay...");
-        ui_nav_push_overlay(g_retraction_settings_panel);
-        get_global_retraction_settings().on_activate();
-        spdlog::info("[Retraction Settings] Overlay should be visible now");
-    } else {
-        spdlog::error("[Retraction Settings] Panel is NULL!");
-    }
+    ui_nav_push_overlay(g_retraction_settings_panel);
+    get_global_retraction_settings().on_activate();
 }
