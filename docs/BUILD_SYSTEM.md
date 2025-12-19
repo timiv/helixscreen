@@ -1061,6 +1061,23 @@ git -C lvgl apply ../patches/lvgl_sdl_window_position.patch
 - Check CPU usage during build (should be near 100% with parallel builds)
 - Use `make build` for optimized clean builds with timing
 
+### Clang Standard Library Issues (Arch Linux)
+
+**Symptom**: `fatal error: 'stdlib.h' file not found` at `#include_next <stdlib.h>`
+
+**Cause**: Clang can't find GCC's libstdc++ headers on bleeding-edge distros (Arch with GCC 15+).
+
+**Automatic Fix**: The build system detects this and auto-falls back to g++. You'll see:
+```
+Note: clang++ has stdlib issues on this system, using g++ instead
+```
+
+**Manual Override**: Force a specific compiler:
+```bash
+CXX=g++ CC=gcc make -j     # Use GCC
+CXX=clang++ make -j        # Force Clang (may fail)
+```
+
 ### SDL2 Not Found
 
 **Symptom**: `sdl2-config: command not found`
