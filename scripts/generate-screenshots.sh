@@ -22,7 +22,7 @@ cd "$PROJECT_ROOT"
 mkdir -p docs/images
 
 info "Generating documentation screenshots..."
-info "This will take ~30 seconds (6 screenshots × 5 seconds each)"
+info "This will take ~40 seconds (8 screenshots × 5 seconds each)"
 echo
 
 # Define all screenshots to capture
@@ -32,6 +32,8 @@ SCREENSHOTS=(
     "print-select-card:print-select:--test"
     "controls-panel:controls:--test"
     "motion-panel:motion:--test"
+    "bed-mesh-panel:bed-mesh:--test"
+    "settings-panel:settings:--test"
     "gcode-viewer:gcode-test:--test"
     "wizard-wifi::--wizard --test"
 )

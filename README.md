@@ -20,20 +20,15 @@ HelixScreen is a next-generation printer control interface built from the ground
 
 > ## 🎉 We're Getting Close!
 >
-> **Status: Early Beta — Seeking Brave Testers**
+> **Status: Beta — Seeking Testers**
 >
-> HelixScreen is approaching its first public release. We haven't had outside testers yet, so please set expectations accordingly — you'll be among the first!
+> Core features are complete and tested. We're looking for early adopters to help find edge cases before wider release.
 >
-> **What's been tested:**
+> **Tested on:**
 > - Raspberry Pi 5 with 5" touchscreen
-> - FlashForge Adventurer 5M Pro (with [Forge-X](https://github.com/DrA1ex/ff5m) or similar Klipper firmware)
-> - Automated and manual testing during development
+> - FlashForge Adventurer 5M Pro ([Forge-X](https://github.com/DrA1ex/ff5m) firmware)
 >
-> **Our Vision:** The best Klipper touchscreen experience available — period. Low memory footprint, beautiful modern UI, and the full functionality you'd expect from premium commercial printer displays. But open source and community-driven.
->
-> We want HelixScreen to look as polished and work as smoothly as the best commercial touchscreens out there, while remaining lightweight enough to run on resource-constrained hardware and open enough for the community to extend and improve.
->
-> **Ready to help?** See [Getting Started](#quick-start) and [Documentation](docs/user/INSTALL.md). Issues and feedback welcome!
+> **Ready to help?** See [Getting Started](#quick-start). Issues and feedback welcome!
 
 ---
 
@@ -42,47 +37,37 @@ HelixScreen is a next-generation printer control interface built from the ground
 ---
 
 **Built on proven foundations:**
-- Based on [GuppyScreen](https://github.com/ballaswag/guppyscreen) architecture and design patterns
-- Potential integration with [KlipperScreen](https://github.com/KlipperScreen/KlipperScreen) features
+- Architecture inspired by [GuppyScreen](https://github.com/ballaswag/guppyscreen) with modern C++17 rewrite
 - Modern XML-based UI with reactive data binding (LVGL 9.4)
 
 ## Why HelixScreen?
 
-**Unique Advantages:**
-- 🎯 **Declarative XML UI** - First printer interface with complete XML-based layout definition (unique in 3D printing space)
-- ⚡ **No Recompilation** - Change UI layouts and themes without rebuilding
-- 🔄 **Modern Reactive Patterns** - Subject-Observer data binding for automatic UI updates
-- 💾 **Resource Efficient** - Designed for embedded hardware with ~50-80MB memory footprint
-- 🏗️ **Built on Modern C++17** - Type-safe architecture with RAII memory management
-- 🔌 **Pluggable Backends** - Clean abstraction layer for platform-specific implementations
-
-**Key Goals:**
-- 🚀 **More features** - Unlock Klipper's full potential beyond vendor limitations
-- 💻 **Better hardware support** - Run on limited embedded devices (Pi, BTT Pad, vendor displays)
-- 🎨 **Modern UI** - Clean, responsive touch interface with visual polish
-- 📦 **Lightweight** - Minimal resource footprint for constrained hardware
+- 🎯 **Declarative XML UI** - Complete UI in XML files, change layouts without recompiling
+- 🔄 **Reactive Data Binding** - Subject-Observer pattern for automatic UI updates
+- 💾 **Resource Efficient** - ~50-80MB footprint, runs on constrained hardware
+- 🏗️ **Modern C++17** - Type-safe architecture with RAII memory management
 
 ### Feature Comparison
 
 | Feature | HelixScreen | GuppyScreen | KlipperScreen |
 |---------|-------------|-------------|---------------|
-| **UI Framework** | LVGL 9 XML | LVGL 8 C++ | Gtk (Python) |
-| **Declarative UI** | ✅ Full XML | ❌ C++ only | ❌ Python only |
+| **UI Framework** | LVGL 9 XML | LVGL 8 C | GTK 3 (Python) |
+| **Declarative UI** | ✅ Full XML | ❌ C only | ❌ Python only |
 | **No Recompile Changes** | ✅ XML edits | ❌ Need rebuild | ✅ Python edits |
-| **Memory Footprint** | ~50-80MB | ~80-100MB | ~150-200MB |
+| **Memory Footprint** | ~50-80MB | ~60-80MB | ~150-200MB |
 | **Reactive Data Binding** | ✅ Built-in | ⚠️ Manual | ⚠️ Manual |
-| **Theme System** | ✅ XML globals | ⚠️ Limited | ✅ CSS-like |
-| **Embedded Target** | ✅ Optimized | ✅ Yes | ⚠️ Heavy |
-| **Touch Optimization** | ✅ Native | ✅ Yes | ⚠️ Desktop-first |
-| **Responsive Design** | ✅ Breakpoints | ⚠️ Limited | ⚠️ Fixed layouts |
+| **Theme System** | ✅ XML globals | ✅ Built-in themes | ✅ CSS-like |
+| **Embedded Target** | ✅ Optimized | ✅ Optimized | ⚠️ Heavy |
+| **Touch Optimization** | ✅ Native | ✅ Native | ⚠️ Desktop-first |
+| **Responsive Design** | ✅ Breakpoints | ✅ Multi-resolution | ⚠️ Fixed layouts |
 | **Development Status** | 🚧 Beta | ✅ Stable | ✅ Mature |
-| **Backend** | libhv WebSocket | libhv WebSocket | Python Websocket |
-| **Language** | C++17 | C++11 | Python 3 |
+| **Backend** | libhv WebSocket | libhv WebSocket | Python WebSocket |
+| **Language** | C++17 | C | Python 3 |
 | **Build Time** | ~30s clean | ~25s clean | N/A (interpreted) |
 | **First-Run Setup** | ✅ Auto-wizard | ⚠️ Manual config | ⚠️ Manual config |
-| **G-code Preview** | ✅ 3D viewer | ❌ Not yet | ✅ 2D layers |
-| **Bed Mesh Visual** | ✅ 3D gradient | ✅ 2D heatmap | ✅ 2D heatmap |
-| **Multi-Fan Control** | ✅ All fans | ⚠️ Part fan | ✅ All fans |
+| **G-code Preview** | ✅ Layer view | ⚠️ Thumbnails | ⚠️ Thumbnails |
+| **Bed Mesh Visual** | ✅ 3D gradient | ✅ Color-coded | ✅ 2D heatmap |
+| **Multi-Fan Control** | ✅ All fans | ✅ Configurable | ✅ All fans |
 
 **Legend:** ✅ Full support | ⚠️ Partial/Limited | ❌ Not available | 🚧 In development
 
@@ -126,32 +111,51 @@ HelixScreen is a next-generation printer control interface built from the ground
 ### G-Code Viewer
 <img src="docs/images/screenshot-gcode-viewer.png" alt="G-Code Viewer" width="800"/>
 
-*3D G-code preview with layer slider, view presets, ghost modes, and touch rotation*
+*G-code layer preview with slider navigation and print progress visualization*
 
 > 📸 **Note:** Screenshots auto-generated with `./scripts/screenshot.sh` - regenerate after UI changes
 
 ## Key Features
 
-### ✅ Complete & Production-Ready
-- **15+ Production Panels** - Home, Controls, Motion, Temps, Extrusion, Filament, Print Select, Print Status, Bed Mesh, Settings, Advanced, and more
-- **18 Settings** - Theme, display, sound, network, safety, calibration options
-- **First-Run Wizard** - 7-step guided setup with auto-discovery
-- **Full Moonraker Integration** - 30+ API methods with WebSocket auto-reconnect
-- **Print Job Control** - Start, pause, resume, cancel with live progress and Z-offset baby stepping
-- **Motion Controls** - XYZ jog pad, homing, bed leveling with safety checks
-- **Temperature Controls** - Presets, custom temps, live graphs, animated heating indicator
-- **Multi-Fan Cooling** - Support for part fan, hotend fan, controller fan, and auxiliary fans
-- **AMS Status Widget** - Visual filament slot status display on home panel
-- **3D Visualizations** - G-code preview and bed mesh analysis with touch rotation
-- **Connection-Aware UI** - Graceful handling of disconnects with auto-recovery toasts
-- **Declarative XML UI** - Complete UI defined in XML with reactive data binding
-- **Responsive Design** - Multiple screen sizes (480×320 to 1024×800+)
-- **Light/Dark Themes** - Runtime theme switching with global color system
-- **Reusable UI Components** - temp_display widget, card layouts, and modular panels
+### Printer Control
+- **Print Management** - Start, pause, resume, cancel with live progress tracking
+- **Motion Controls** - XYZ jog pad, homing, emergency stop with safety confirmation
+- **Temperature Control** - Nozzle/bed presets, custom targets, live graphs, heating animations
+- **Fan Control** - Part fan, hotend fan, controller fan, and auxiliary fans
+- **Z-Offset** - Baby stepping during prints with real-time adjustment
 
-### 🚧 In Development
-- **AMS/Multi-Material Support** - Happy Hare and AFC-Klipper integration (AMS status widget complete, full control WIP)
-- See [ROADMAP.md](docs/ROADMAP.md) for complete feature timeline
+### Multi-Material Support (5 Backends)
+- **AFC (Box Turtle)** - Full Aero Filament Changer integration
+- **Happy Hare** - ERCF, 3MS, Tradrack, Night Owl support
+- **Tool Changer** - Prusa/Bambu-style multi-nozzle systems
+- **ValgACE** - REST API integration
+- **Slot Management** - Color picker, load/unload, Spoolman linking
+
+### Visualization
+- **G-code Layer View** - 2D isometric preview with layer slider
+- **3D Bed Mesh** - Gradient-colored surface visualization with profiles
+- **Print Thumbnails** - Cached previews from slicer metadata
+
+### Calibration & Tuning
+- **Input Shaper** - Resonance testing with ADXL375 support
+- **Bed Mesh** - Profile management, calibration, visualization
+- **Screws Tilt Adjust** - Guided bed leveling assistance
+- **PID Tuning** - Heater calibration interface
+- **Firmware Retraction** - Retraction/Z-hop configuration
+
+### Integrations
+- **Spoolman** - Spool tracking and management
+- **Power Devices** - Smart relay/PSU control
+- **Print History** - Statistics, filtering, job logs
+- **Timelapse** - Recording configuration (plugin required)
+- **Exclude Objects** - Skip objects mid-print
+
+### System
+- **First-Run Wizard** - 8-step guided setup with auto-discovery
+- **20+ Panels** - Home, Controls, Motion, Temps, Filament, Settings, Advanced, and more
+- **Light/Dark Themes** - Runtime switching with design token system
+- **Responsive Design** - 480×320 to 1024×600+ screen sizes
+- **Connection-Aware** - Graceful disconnect handling with auto-reconnect
 
 ## Target Hardware
 
@@ -244,159 +248,46 @@ Docker images are **automatically built** on first use. See [BUILD_SYSTEM.md](do
 
 ### Test Mode
 
-The prototype includes a comprehensive test mode for development without hardware:
+Development without hardware:
 
-**Modes:**
-- **Production Mode** (default): Never uses mocks, requires real hardware
-- **Test Mode** (`--test`): Uses mock implementations for all components
-- **Hybrid Mode**: Combine `--test` with `--real-*` flags to selectively enable real components
-
-**Use Cases:**
-| Scenario | Command | Purpose |
-|----------|---------|---------|
-| UI Development | `--test` | Work on layouts without any hardware |
-| Frontend Testing | `--test --real-moonraker` | Test UI with real printer, mock network |
-| Network Testing | `--test --real-wifi` | Test WiFi without printer connected |
-| Integration Testing | `--test --real-moonraker --real-files` | Test file operations with real backend |
-| Screenshot Automation | `--test` | Generate consistent screenshots for docs |
-| CI/CD | `--test` | Run automated tests without hardware |
-
-**Available `--real-*` Flags:**
-- `--real-wifi` - Use real WiFi hardware (requires system WiFi support)
-- `--real-ethernet` - Use real Ethernet hardware
-- `--real-moonraker` - Connect to real Moonraker/printer (requires network access)
-- `--real-files` - Use real file system operations (requires printer connection)
-
-Test mode displays a banner showing which components are mocked vs real. This makes it easy to develop and test UI features without needing a physical 3D printer.
-
-## Technical Highlights
-
-### Declarative XML UI System
-
-Complete UI defined in XML files - no C++ layout code needed:
-
-```xml
-<!-- Define a panel in XML -->
-<component>
-  <view extends="lv_obj" style_bg_color="#bg_dark" style_pad_all="20">
-    <lv_label text="Nozzle Temperature" style_text_color="#text_primary"/>
-    <lv_label bind_text="temp_text" style_text_font="montserrat_28"/>
-  </view>
-</component>
+```bash
+./build/bin/helix-screen --test                    # All components mocked
+./build/bin/helix-screen --test --real-moonraker   # Real printer, mock WiFi
 ```
 
-```cpp
-// C++ is pure logic - zero layout code
-ui_panel_nozzle_init_subjects();
-lv_xml_create(screen, "nozzle_panel", NULL);
-ui_panel_nozzle_update(210);  // All bound widgets update automatically
-```
-
-### Reactive Data Binding
-
-LVGL 9's Subject-Observer pattern enables automatic UI updates:
-- **No manual widget management** - XML bindings handle everything
-- **Type-safe updates** - One data change updates multiple UI elements instantly
-- **Clean separation** - UI structure and business logic are independent
-
-### Global Theme System
-
-Change the entire UI appearance by editing one file (`ui_xml/globals.xml`):
-```xml
-<consts>
-  <color name="primary_color" value="0xff4444"/>
-  <color name="bg_dark" value="0x1a1a1a"/>
-</consts>
-```
+Flags: `--real-wifi`, `--real-ethernet`, `--real-moonraker`, `--real-files`
 
 ## Project Status
 
-**Current Development Phase:** Beta
-
-**What's Complete:**
-- ✅ 15+ production panels covering all core printer operations
-- ✅ 18 settings across 8 categories
-- ✅ 7-step first-run wizard with auto-discovery
-- ✅ Full Moonraker API integration (30+ methods)
-- ✅ Connection-aware navigation with graceful error recovery
-- ✅ Cross-platform builds (macOS, Linux, Pi, Adventurer 5M)
-- ✅ Multi-fan cooling support with live controls
-- ✅ Z-offset baby stepping during prints
-- ✅ AMS status widget on home panel
-
-**In Active Development:**
-- 🚧 AMS/Multi-Material full control (Happy Hare, AFC-Klipper integration)
-- 🚧 Production hardening (structured logging, edge case testing)
-
-**What This Means:**
-- Core functionality is complete and tested
-- Ready for real-world testing on supported hardware
-- API is stabilizing, minimal breaking changes expected
-- Suitable for enthusiasts willing to provide feedback
-
-See [ROADMAP.md](docs/ROADMAP.md) for detailed feature status.
-
-**Performance Metrics** (Current benchmarks):
-- G-code Viewer: 99ms first render, 10.85MB memory, 30+ FPS
-- Bed Mesh Renderer: 30+ FPS with gradient shading and touch rotation
-- Memory Footprint: ~50-80MB typical usage
+Beta — core features complete, ~50-80MB memory footprint. See [ROADMAP.md](docs/ROADMAP.md) for feature timeline.
 
 ## FAQ
 
 **Q: Is HelixScreen production-ready?**
-A: It's in beta. Core functionality is complete with 14 panels and full Moonraker integration. Ready for testing on real hardware by enthusiasts willing to provide feedback.
+A: Beta status. Core features work, but we're seeking testers to find edge cases. Suitable for enthusiasts willing to provide feedback.
 
-**Q: How is this different from GuppyScreen and KlipperScreen?**
-A: HelixScreen uses LVGL 9's declarative XML system for complete UI definition, enabling changes without recompilation. It's built specifically for resource-constrained embedded devices with a modern reactive architecture. GuppyScreen uses LVGL 8 with C++ layouts. KlipperScreen uses Gtk which has higher resource requirements.
+**Q: How is this different from GuppyScreen/KlipperScreen?**
+A: HelixScreen uses LVGL 9's declarative XML for UI definition—change layouts without recompiling. Lower memory footprint than KlipperScreen (~50-80MB vs ~150-200MB). See [comparison table](#feature-comparison).
 
 **Q: Which printers are supported?**
-A: Any 3D printer running Klipper + Moonraker. HelixScreen connects to your Moonraker instance and auto-discovers printer components.
+A: Any printer running Klipper + Moonraker. The wizard auto-discovers your printer's capabilities.
 
-**Q: Can I run this on a Raspberry Pi?**
-A: Yes! Target hardware includes Pi 3/4/5, Zero 2 W, BTT Pad 7, and various vendor displays. Development currently uses SDL2 simulator; production framebuffer support is planned.
+**Q: What multi-material systems work?**
+A: AFC (Box Turtle), Happy Hare (ERCF, 3MS, Tradrack), tool changers, and ValgACE. See [Key Features](#multi-material-support-5-backends).
 
 **Q: How do I contribute?**
-A: See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for code standards, testing guidelines, and PR process. Contributions welcome!
-
-**Q: Where can I report bugs or request features?**
-A: Open an issue on [GitHub Issues](https://github.com/prestonbrown/helixscreen/issues). Please include steps to reproduce and your system info.
-
-**Q: What's the difference between test mode and production mode?**
-A: Production mode requires real hardware (printer, network). Test mode (`--test`) uses mock implementations for development without hardware. Use `--real-*` flags for hybrid testing.
-
-## Community & Support
-
-- **Issues & Bug Reports:** [GitHub Issues](https://github.com/prestonbrown/helixscreen/issues)
-- **Feature Requests:** [GitHub Issues](https://github.com/prestonbrown/helixscreen/issues) (use "enhancement" label)
-- **Contributing:** [CONTRIBUTING.md](docs/CONTRIBUTING.md) - Code standards and PR workflow
-- **Discussions:** [GitHub Discussions](https://github.com/prestonbrown/helixscreen/discussions) (if enabled)
-
-**Getting Help:**
-1. Check [FAQ](#faq) above for common questions
-2. Review [Documentation](#documentation) for technical details
-3. Search [existing issues](https://github.com/prestonbrown/helixscreen/issues) for similar problems
-4. Open a new issue with detailed information (system specs, logs, steps to reproduce)
+A: See [CONTRIBUTING.md](docs/CONTRIBUTING.md). Issues and PRs welcome!
 
 ## Troubleshooting
 
-**Build Issues:**
-- **"CMake not found"** → Install CMake 3.15+ via package manager
-- **"SDL2 not found"** → Let it auto-build from submodules, or install manually: `brew install sdl2` (macOS) / `sudo apt install libsdl2-dev` (Linux)
-- **Compiler errors** → Ensure C++17 support: GCC 8+, Clang 10+, or MSVC 2019+
-- **"lvgl submodule empty"** → Run `git submodule update --init --recursive`
+| Issue | Solution |
+|-------|----------|
+| CMake/SDL2 not found | Run `make install-deps` or see [Quick Start](#install-dependencies) |
+| Submodule empty | `git submodule update --init --recursive` |
+| Can't connect to Moonraker | Check IP/port in helixconfig.json, verify Moonraker is running |
+| Wizard not showing | Delete helixconfig.json to trigger it |
 
-**Runtime Issues:**
-- **Black screen** → Check SDL2 initialization logs, verify display drivers
-- **Cannot connect to Moonraker** → Verify Moonraker is running, check IP/port in helixconfig.json, test with curl
-- **Touch not working** → SDL2 simulator uses mouse, verify mouse input device created
-- **Slow performance** → Check debug logging level (use `-v` only when needed), verify GPU acceleration
-
-**Configuration:**
-- **First-run wizard not showing** → Delete helixconfig.json to trigger wizard
-- **Themes not switching** → Verify globals.xml loaded, check theme registration logs
-- **Subjects not updating** → Check subject initialization order, verify bindings in XML
-
-For detailed troubleshooting, see [DEVELOPMENT.md](docs/DEVELOPMENT.md) or open a [GitHub issue](https://github.com/prestonbrown/helixscreen/issues).
+For more, see [DEVELOPMENT.md](docs/DEVELOPMENT.md) or open a [GitHub issue](https://github.com/prestonbrown/helixscreen/issues).
 
 ## Architecture
 
