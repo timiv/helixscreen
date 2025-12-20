@@ -18,6 +18,14 @@
  * - <text_xs>:      Extra-small text (10/12/14 + text_secondary) for compact metadata
  *
  * All widgets inherit standard lv_label attributes (text, width, align, etc.)
+ *
+ * Text stroke/outline attributes (supported on all text_* widgets):
+ * - stroke_width:  Outline thickness in pixels (e.g., "2")
+ * - stroke_color:  Outline color as hex (e.g., "0x000000" or "#000000")
+ * - stroke_opa:    Outline opacity 0-255 or percentage (e.g., "255" or "50%")
+ *
+ * Example:
+ *   <text_heading text="Title" stroke_width="2" stroke_color="#000000"/>
  */
 
 /**
@@ -27,3 +35,16 @@
  * Call this after globals.xml is registered but before creating UI.
  */
 void ui_text_init();
+
+/**
+ * Apply text stroke/outline effect to a label
+ *
+ * Creates an outline around text glyphs for improved readability on
+ * complex backgrounds.
+ *
+ * @param label  Label widget to apply stroke to
+ * @param width  Stroke width in pixels (0 to disable)
+ * @param color  Stroke color
+ * @param opa    Stroke opacity (0-255, use LV_OPA_COVER for full opacity)
+ */
+void ui_text_set_stroke(lv_obj_t* label, int32_t width, lv_color_t color, lv_opa_t opa);

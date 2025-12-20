@@ -16,6 +16,7 @@
 #include <spdlog/spdlog.h>
 
 #include <cstdlib>
+#include <cstring>
 
 /**
  * Helper function to apply semantic font and color to a label
@@ -76,100 +77,126 @@ static void apply_semantic_style(lv_obj_t* label, const char* font_const_name,
 }
 
 /**
- * XML create callback for <text_heading> widget
- * Creates a label with heading font (montserrat_20) and header color
+ * Helper function to apply text stroke attributes from XML
+ *
+ * Parses and applies stroke_width, stroke_color, and stroke_opa attributes
+ * to enable text outline effects on labels.
+ *
+ * @param label Label widget to apply stroke styling to
+ * @param attrs XML attribute array (name/value pairs, NULL terminated)
+ *
+ * Usage in XML:
+ *   <text_heading text="Title" stroke_width="2" stroke_color="0x000000" stroke_opa="255"/>
+ *   <text_body text="Body" stroke_width="1" stroke_color="#000000"/>
  */
+static void apply_stroke_attrs(lv_obj_t* label, const char** attrs) {
+    if (!attrs) return;
+
+    const char* stroke_width = lv_xml_get_value_of(attrs, "stroke_width");
+    const char* stroke_color = lv_xml_get_value_of(attrs, "stroke_color");
+    const char* stroke_opa = lv_xml_get_value_of(attrs, "stroke_opa");
+
+    // Apply stroke width (required for stroke to be visible)
+    if (stroke_width) {
+        int32_t width = lv_xml_atoi(stroke_width);
+        lv_obj_set_style_text_outline_stroke_width(label, width, 0);
+
+        // Default to full opacity if width is set but opacity is not
+        if (!stroke_opa) {
+            lv_obj_set_style_text_outline_stroke_opa(label, LV_OPA_COVER, 0);
+        }
+
+        // Default to black stroke if width is set but color is not
+        if (!stroke_color) {
+            lv_obj_set_style_text_outline_stroke_color(label, lv_color_black(), 0);
+        }
+
+        spdlog::trace("[ui_text] Applied text stroke: width={}", width);
+    }
+
+    // Apply stroke color
+    if (stroke_color) {
+        lv_color_t color = lv_xml_to_color(stroke_color);
+        lv_obj_set_style_text_outline_stroke_color(label, color, 0);
+    }
+
+    // Apply stroke opacity
+    if (stroke_opa) {
+        lv_opa_t opa = lv_xml_to_opa(stroke_opa);
+        lv_obj_set_style_text_outline_stroke_opa(label, opa, 0);
+    }
+}
+
+/**
+ * Shared XML apply callback for all text_* widgets
+ *
+ * Applies standard label properties plus custom stroke attributes.
+ * All semantic text widgets use this same apply function.
+ */
+static void ui_text_apply(lv_xml_parser_state_t* state, const char** attrs) {
+    // Apply label properties (text, long_mode, etc.) and base object properties
+    lv_xml_label_apply(state, attrs);
+
+    // Apply stroke attributes (stroke_width, stroke_color, stroke_opa)
+    lv_obj_t* label = static_cast<lv_obj_t*>(lv_xml_state_get_item(state));
+    apply_stroke_attrs(label, attrs);
+}
+
+/**
+ * Helper to create a semantic text label with specified font and color
+ */
+static lv_obj_t* create_semantic_label(lv_xml_parser_state_t* state, const char** attrs,
+                                       const char* font_const, const char* color_const) {
+    LV_UNUSED(attrs);
+    lv_obj_t* parent = static_cast<lv_obj_t*>(lv_xml_state_get_parent(state));
+    lv_obj_t* label = lv_label_create(parent);
+    apply_semantic_style(label, font_const, color_const);
+    return label;
+}
+
+// XML create callbacks - each variant just specifies font/color constants
+
 static void* ui_text_heading_create(lv_xml_parser_state_t* state, const char** attrs) {
-    LV_UNUSED(attrs);
-    lv_obj_t* parent = (lv_obj_t*)lv_xml_state_get_parent(state);
-    lv_obj_t* label = lv_label_create(parent);
-    apply_semantic_style(label, "font_heading", "header_text");
-    return label;
+    return create_semantic_label(state, attrs, "font_heading", "header_text");
 }
 
-/**
- * XML apply callback for <text_heading> widget
- * Delegates to standard label parser (inherits all label attributes)
- */
-static void ui_text_heading_apply(lv_xml_parser_state_t* state, const char** attrs) {
-    // Apply label properties (text, long_mode, etc.) and base object properties
-    lv_xml_label_apply(state, attrs);
-}
-
-/**
- * XML create callback for <text_body> widget
- * Creates a label with body font (montserrat_16) and primary text color
- */
 static void* ui_text_body_create(lv_xml_parser_state_t* state, const char** attrs) {
-    LV_UNUSED(attrs);
-    lv_obj_t* parent = (lv_obj_t*)lv_xml_state_get_parent(state);
-    lv_obj_t* label = lv_label_create(parent);
-    apply_semantic_style(label, "font_body", "text_primary");
-    return label;
+    return create_semantic_label(state, attrs, "font_body", "text_primary");
 }
 
-/**
- * XML apply callback for <text_body> widget
- * Delegates to standard label parser (inherits all label attributes)
- */
-static void ui_text_body_apply(lv_xml_parser_state_t* state, const char** attrs) {
-    // Apply label properties (text, long_mode, etc.) and base object properties
-    lv_xml_label_apply(state, attrs);
-}
-
-/**
- * XML create callback for <text_small> widget
- * Creates a label with small font (montserrat_10) and secondary text color
- */
 static void* ui_text_small_create(lv_xml_parser_state_t* state, const char** attrs) {
-    LV_UNUSED(attrs);
-    lv_obj_t* parent = (lv_obj_t*)lv_xml_state_get_parent(state);
-    lv_obj_t* label = lv_label_create(parent);
-    apply_semantic_style(label, "font_small", "text_secondary");
-    return label;
+    return create_semantic_label(state, attrs, "font_small", "text_secondary");
 }
 
-/**
- * XML apply callback for <text_small> widget
- * Delegates to standard label parser (inherits all label attributes)
- */
-static void ui_text_small_apply(lv_xml_parser_state_t* state, const char** attrs) {
-    // Apply label properties (text, long_mode, etc.) and base object properties
-    lv_xml_label_apply(state, attrs);
-}
-
-/**
- * XML create callback for <text_xs> widget
- * Creates a label with extra-small font (10/12/14 for small/medium/large) and secondary color
- * Used for compact metadata, card overlays, badges
- */
 static void* ui_text_xs_create(lv_xml_parser_state_t* state, const char** attrs) {
-    LV_UNUSED(attrs);
-    lv_obj_t* parent = (lv_obj_t*)lv_xml_state_get_parent(state);
-    lv_obj_t* label = lv_label_create(parent);
-    apply_semantic_style(label, "font_xs", "text_secondary");
-    return label;
-}
-
-/**
- * XML apply callback for <text_xs> widget
- * Delegates to standard label parser (inherits all label attributes)
- */
-static void ui_text_xs_apply(lv_xml_parser_state_t* state, const char** attrs) {
-    // Apply label properties (text, long_mode, etc.) and base object properties
-    lv_xml_label_apply(state, attrs);
+    return create_semantic_label(state, attrs, "font_xs", "text_secondary");
 }
 
 void ui_text_init() {
     // Register custom text widgets for XML usage
-    lv_xml_register_widget("text_heading", ui_text_heading_create, ui_text_heading_apply);
-    lv_xml_register_widget("text_body", ui_text_body_create, ui_text_body_apply);
-    lv_xml_register_widget("text_small", ui_text_small_create, ui_text_small_apply);
-    lv_xml_register_widget("text_xs", ui_text_xs_create, ui_text_xs_apply);
+    // All widgets share the same apply function (ui_text_apply) which handles
+    // standard label attributes plus custom stroke_* attributes
+    lv_xml_register_widget("text_heading", ui_text_heading_create, ui_text_apply);
+    lv_xml_register_widget("text_body", ui_text_body_create, ui_text_apply);
+    lv_xml_register_widget("text_small", ui_text_small_create, ui_text_apply);
+    lv_xml_register_widget("text_xs", ui_text_xs_create, ui_text_apply);
     // text_tiny is an alias for text_xs (same size, just a more intuitive name)
-    lv_xml_register_widget("text_tiny", ui_text_xs_create, ui_text_xs_apply);
+    lv_xml_register_widget("text_tiny", ui_text_xs_create, ui_text_apply);
 
     spdlog::debug(
         "[ui_text] Registered semantic text widgets: text_heading, text_body, text_small, "
         "text_xs, text_tiny");
+}
+
+void ui_text_set_stroke(lv_obj_t* label, int32_t width, lv_color_t color, lv_opa_t opa) {
+    if (!label) {
+        spdlog::warn("[ui_text] ui_text_set_stroke called with NULL label");
+        return;
+    }
+
+    lv_obj_set_style_text_outline_stroke_width(label, width, 0);
+    lv_obj_set_style_text_outline_stroke_color(label, color, 0);
+    lv_obj_set_style_text_outline_stroke_opa(label, opa, 0);
+
+    spdlog::trace("[ui_text] Applied text stroke: width={}, opa={}", width, opa);
 }
