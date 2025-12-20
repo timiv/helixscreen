@@ -15,7 +15,7 @@ using Catch::Approx;
 // mesh_col_to_world_x() Tests
 // ============================================================================
 
-TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - center column", "[bed_mesh][transform]") {
+TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - center column", "[calibration][transform]") {
     SECTION("3x3 mesh, center column") {
         // Column 1 is center of 3 columns (0, 1, 2)
         double x = mesh_col_to_world_x(1, 3, 10.0);
@@ -35,7 +35,7 @@ TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - center column", "[bed_mesh]
     }
 }
 
-TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - left columns", "[bed_mesh][transform]") {
+TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - left columns", "[calibration][transform]") {
     SECTION("3x3 mesh, leftmost column") {
         double x = mesh_col_to_world_x(0, 3, 10.0);
         REQUIRE(x == Approx(-10.0));
@@ -52,7 +52,7 @@ TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - left columns", "[bed_mesh][
     }
 }
 
-TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - right columns", "[bed_mesh][transform]") {
+TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - right columns", "[calibration][transform]") {
     SECTION("3x3 mesh, rightmost column") {
         double x = mesh_col_to_world_x(2, 3, 10.0);
         REQUIRE(x == Approx(10.0));
@@ -69,7 +69,8 @@ TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - right columns", "[bed_mesh]
     }
 }
 
-TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - different scales", "[bed_mesh][transform]") {
+TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - different scales",
+          "[calibration][transform]") {
     SECTION("Scale 5.0") {
         double x = mesh_col_to_world_x(0, 3, 5.0);
         REQUIRE(x == Approx(-5.0));
@@ -86,7 +87,8 @@ TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - different scales", "[bed_me
     }
 }
 
-TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - edge cases", "[bed_mesh][transform][edge]") {
+TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - edge cases",
+          "[calibration][transform][edge]") {
     SECTION("Single column mesh") {
         double x = mesh_col_to_world_x(0, 1, 10.0);
         REQUIRE(x == Approx(0.0));
@@ -110,7 +112,7 @@ TEST_CASE("Bed Mesh Transform: mesh_col_to_world_x - edge cases", "[bed_mesh][tr
 // mesh_row_to_world_y() Tests
 // ============================================================================
 
-TEST_CASE("Bed Mesh Transform: mesh_row_to_world_y - center row", "[bed_mesh][transform]") {
+TEST_CASE("Bed Mesh Transform: mesh_row_to_world_y - center row", "[calibration][transform]") {
     SECTION("3x3 mesh, center row") {
         // Row 1 is center, but y-axis is inverted
         double y = mesh_row_to_world_y(1, 3, 10.0);
@@ -124,7 +126,7 @@ TEST_CASE("Bed Mesh Transform: mesh_row_to_world_y - center row", "[bed_mesh][tr
 }
 
 TEST_CASE("Bed Mesh Transform: mesh_row_to_world_y - top rows (inverted)",
-          "[bed_mesh][transform]") {
+          "[calibration][transform]") {
     SECTION("3x3 mesh, top row (row 0)") {
         // Top row in mesh -> positive Y in world (inverted)
         double y = mesh_row_to_world_y(0, 3, 10.0);
@@ -143,7 +145,7 @@ TEST_CASE("Bed Mesh Transform: mesh_row_to_world_y - top rows (inverted)",
 }
 
 TEST_CASE("Bed Mesh Transform: mesh_row_to_world_y - bottom rows (inverted)",
-          "[bed_mesh][transform]") {
+          "[calibration][transform]") {
     SECTION("3x3 mesh, bottom row (row 2)") {
         // Bottom row in mesh -> negative Y in world (inverted)
         double y = mesh_row_to_world_y(2, 3, 10.0);
@@ -161,7 +163,8 @@ TEST_CASE("Bed Mesh Transform: mesh_row_to_world_y - bottom rows (inverted)",
     }
 }
 
-TEST_CASE("Bed Mesh Transform: mesh_row_to_world_y - different scales", "[bed_mesh][transform]") {
+TEST_CASE("Bed Mesh Transform: mesh_row_to_world_y - different scales",
+          "[calibration][transform]") {
     SECTION("Scale 5.0") {
         double y = mesh_row_to_world_y(0, 3, 5.0);
         REQUIRE(y == Approx(5.0));
@@ -178,7 +181,8 @@ TEST_CASE("Bed Mesh Transform: mesh_row_to_world_y - different scales", "[bed_me
     }
 }
 
-TEST_CASE("Bed Mesh Transform: mesh_row_to_world_y - edge cases", "[bed_mesh][transform][edge]") {
+TEST_CASE("Bed Mesh Transform: mesh_row_to_world_y - edge cases",
+          "[calibration][transform][edge]") {
     SECTION("Single row mesh") {
         double y = mesh_row_to_world_y(0, 1, 10.0);
         REQUIRE(y == Approx(0.0));
@@ -202,7 +206,7 @@ TEST_CASE("Bed Mesh Transform: mesh_row_to_world_y - edge cases", "[bed_mesh][tr
 // mesh_z_to_world_z() Tests
 // ============================================================================
 
-TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - centered at zero", "[bed_mesh][transform]") {
+TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - centered at zero", "[calibration][transform]") {
     SECTION("Z height equals center") {
         double z = mesh_z_to_world_z(0.5, 0.5, 1.0);
         REQUIRE(z == Approx(0.0));
@@ -214,7 +218,7 @@ TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - centered at zero", "[bed_mesh
     }
 }
 
-TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - above center", "[bed_mesh][transform]") {
+TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - above center", "[calibration][transform]") {
     SECTION("0.1mm above center") {
         double z = mesh_z_to_world_z(0.6, 0.5, 1.0);
         REQUIRE(z == Approx(0.1));
@@ -226,7 +230,7 @@ TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - above center", "[bed_mesh][tr
     }
 }
 
-TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - below center", "[bed_mesh][transform]") {
+TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - below center", "[calibration][transform]") {
     SECTION("0.1mm below center") {
         double z = mesh_z_to_world_z(0.4, 0.5, 1.0);
         REQUIRE(z == Approx(-0.1));
@@ -238,7 +242,7 @@ TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - below center", "[bed_mesh][tr
     }
 }
 
-TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - different scales", "[bed_mesh][transform]") {
+TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - different scales", "[calibration][transform]") {
     SECTION("Scale 10.0 - amplify variations") {
         double z = mesh_z_to_world_z(0.6, 0.5, 10.0);
         REQUIRE(z == Approx(1.0)); // 0.1 * 10.0
@@ -255,7 +259,7 @@ TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - different scales", "[bed_mesh
     }
 }
 
-TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - edge cases", "[bed_mesh][transform][edge]") {
+TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - edge cases", "[calibration][transform][edge]") {
     SECTION("Zero scale") {
         double z = mesh_z_to_world_z(0.6, 0.5, 0.0);
         REQUIRE(z == Approx(0.0));
@@ -276,7 +280,7 @@ TEST_CASE("Bed Mesh Transform: mesh_z_to_world_z - edge cases", "[bed_mesh][tran
 // Integration Tests - Complete Mesh Transformation
 // ============================================================================
 
-TEST_CASE("Bed Mesh Transform: Integration - 3x3 mesh", "[bed_mesh][transform][integration]") {
+TEST_CASE("Bed Mesh Transform: Integration - 3x3 mesh", "[calibration][transform][integration]") {
     int cols = 3, rows = 3;
     double scale = 10.0;
 
@@ -315,7 +319,7 @@ TEST_CASE("Bed Mesh Transform: Integration - 3x3 mesh", "[bed_mesh][transform][i
 }
 
 TEST_CASE("Bed Mesh Transform: Integration - 5x5 mesh with Z values",
-          "[bed_mesh][transform][integration]") {
+          "[calibration][transform][integration]") {
     int cols = 5, rows = 5;
     double scale = 10.0;
     double z_center = 0.0;
@@ -353,7 +357,7 @@ TEST_CASE("Bed Mesh Transform: Integration - 5x5 mesh with Z values",
 }
 
 TEST_CASE("Bed Mesh Transform: Integration - Realistic printer mesh",
-          "[bed_mesh][transform][integration]") {
+          "[calibration][transform][integration]") {
     // Simulate 7x7 mesh for 220x220mm bed with probe points every 36mm
     int cols = 7, rows = 7;
     double scale = 36.0; // Spacing between probe points

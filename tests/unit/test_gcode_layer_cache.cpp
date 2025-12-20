@@ -43,7 +43,7 @@ auto tracking_loader(std::vector<size_t>& loaded_layers, size_t segments_per_lay
 
 } // namespace
 
-TEST_CASE("GCodeLayerCache basic operations", "[gcode][cache]") {
+TEST_CASE("GCodeLayerCache basic operations", "[slow][gcode][cache]") {
     // Small budget for testing: 10KB
     GCodeLayerCache cache(10 * 1024);
 
@@ -88,7 +88,7 @@ TEST_CASE("GCodeLayerCache basic operations", "[gcode][cache]") {
     }
 }
 
-TEST_CASE("GCodeLayerCache LRU eviction", "[gcode][cache]") {
+TEST_CASE("GCodeLayerCache LRU eviction", "[slow][gcode][cache]") {
     // Budget that fits ~2 layers of 50 segments each
     // 50 segments * 80 bytes = 4KB per layer + overhead
     // Budget of 10KB should fit ~2 layers
@@ -137,7 +137,7 @@ TEST_CASE("GCodeLayerCache LRU eviction", "[gcode][cache]") {
     }
 }
 
-TEST_CASE("GCodeLayerCache memory tracking", "[gcode][cache]") {
+TEST_CASE("GCodeLayerCache memory tracking", "[slow][gcode][cache]") {
     GCodeLayerCache cache(100 * 1024); // 100KB
 
     SECTION("memory usage increases with cached layers") {
@@ -179,7 +179,7 @@ TEST_CASE("GCodeLayerCache memory tracking", "[gcode][cache]") {
     }
 }
 
-TEST_CASE("GCodeLayerCache insert", "[gcode][cache]") {
+TEST_CASE("GCodeLayerCache insert", "[slow][gcode][cache]") {
     GCodeLayerCache cache(10 * 1024);
 
     SECTION("insert adds layer to cache") {
@@ -204,7 +204,7 @@ TEST_CASE("GCodeLayerCache insert", "[gcode][cache]") {
     }
 }
 
-TEST_CASE("GCodeLayerCache prefetch", "[gcode][cache]") {
+TEST_CASE("GCodeLayerCache prefetch", "[slow][gcode][cache]") {
     GCodeLayerCache cache(100 * 1024);
 
     std::vector<size_t> loaded;
@@ -245,7 +245,7 @@ TEST_CASE("GCodeLayerCache prefetch", "[gcode][cache]") {
     }
 }
 
-TEST_CASE("GCodeLayerCache adaptive mode", "[gcode][cache]") {
+TEST_CASE("GCodeLayerCache adaptive mode", "[slow][gcode][cache]") {
     GCodeLayerCache cache(100 * 1024);
 
     SECTION("adaptive mode can be enabled") {
@@ -284,7 +284,7 @@ TEST_CASE("GCodeLayerCache adaptive mode", "[gcode][cache]") {
     }
 }
 
-TEST_CASE("GCodeLayerCache thread safety", "[gcode][cache][thread]") {
+TEST_CASE("GCodeLayerCache thread safety", "[slow][gcode][cache][thread]") {
     GCodeLayerCache cache(100 * 1024);
 
     SECTION("concurrent reads don't crash") {

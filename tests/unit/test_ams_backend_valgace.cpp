@@ -47,18 +47,18 @@ class AmsBackendValgACETestHelper : public AmsBackendValgACE {
 // Type and Topology Tests
 // ============================================================================
 
-TEST_CASE("ValgACE returns correct type", "[valgace][type]") {
+TEST_CASE("ValgACE returns correct type", "[ams][valgace][type]") {
     AmsBackendValgACETestHelper helper;
     REQUIRE(helper.get_type() == AmsType::VALGACE);
 }
 
-TEST_CASE("ValgACE uses hub topology", "[valgace][topology]") {
+TEST_CASE("ValgACE uses hub topology", "[ams][valgace][topology]") {
     // ValgACE uses hub topology (4 slots merge to single output)
     AmsBackendValgACETestHelper helper;
     REQUIRE(helper.get_topology() == PathTopology::HUB);
 }
 
-TEST_CASE("ValgACE bypass not supported", "[valgace][bypass]") {
+TEST_CASE("ValgACE bypass not supported", "[ams][valgace][bypass]") {
     AmsBackendValgACETestHelper helper;
     REQUIRE(helper.is_bypass_active() == false);
 
@@ -75,7 +75,7 @@ TEST_CASE("ValgACE bypass not supported", "[valgace][bypass]") {
 // Dryer Default State Tests
 // ============================================================================
 
-TEST_CASE("ValgACE dryer defaults", "[valgace][dryer]") {
+TEST_CASE("ValgACE dryer defaults", "[ams][valgace][dryer]") {
     AmsBackendValgACETestHelper helper;
     DryerInfo dryer = helper.get_test_dryer_info();
 
@@ -97,7 +97,7 @@ TEST_CASE("ValgACE dryer defaults", "[valgace][dryer]") {
     REQUIRE(dryer.max_duration_min <= 1440); // At most 24 hours
 }
 
-TEST_CASE("ValgACE dryer progress calculation", "[valgace][dryer]") {
+TEST_CASE("ValgACE dryer progress calculation", "[ams][valgace][dryer]") {
     DryerInfo dryer;
     dryer.supported = true;
     dryer.active = true;
@@ -112,7 +112,7 @@ TEST_CASE("ValgACE dryer progress calculation", "[valgace][dryer]") {
     REQUIRE(dryer.get_progress_pct() == -1);
 }
 
-TEST_CASE("ValgACE drying presets available", "[valgace][dryer]") {
+TEST_CASE("ValgACE drying presets available", "[ams][valgace][dryer]") {
     AmsBackendValgACETestHelper helper;
     auto presets = helper.get_drying_presets();
 
@@ -137,7 +137,7 @@ TEST_CASE("ValgACE drying presets available", "[valgace][dryer]") {
 // Info Response Parsing Tests
 // ============================================================================
 
-TEST_CASE("ValgACE parse_info_response: valid response", "[valgace][parse]") {
+TEST_CASE("ValgACE parse_info_response: valid response", "[ams][valgace][parse]") {
     AmsBackendValgACETestHelper helper;
 
     json data = {{"model", "ACE Pro"}, {"version", "1.2.3"}, {"slot_count", 4}};
@@ -152,7 +152,7 @@ TEST_CASE("ValgACE parse_info_response: valid response", "[valgace][parse]") {
     REQUIRE(info.units[0].slots.size() == 4);
 }
 
-TEST_CASE("ValgACE parse_info_response: missing fields", "[valgace][parse]") {
+TEST_CASE("ValgACE parse_info_response: missing fields", "[ams][valgace][parse]") {
     AmsBackendValgACETestHelper helper;
 
     // Empty response should not crash
@@ -164,7 +164,7 @@ TEST_CASE("ValgACE parse_info_response: missing fields", "[valgace][parse]") {
     REQUIRE(info.type == AmsType::VALGACE);
 }
 
-TEST_CASE("ValgACE parse_info_response: wrong types ignored", "[valgace][parse]") {
+TEST_CASE("ValgACE parse_info_response: wrong types ignored", "[ams][valgace][parse]") {
     AmsBackendValgACETestHelper helper;
 
     // String where int expected should be ignored, not crash
@@ -178,7 +178,7 @@ TEST_CASE("ValgACE parse_info_response: wrong types ignored", "[valgace][parse]"
     REQUIRE_NOTHROW(helper.test_parse_info_response(data));
 }
 
-TEST_CASE("ValgACE parse_info_response: excessive slot count rejected", "[valgace][parse]") {
+TEST_CASE("ValgACE parse_info_response: excessive slot count rejected", "[ams][valgace][parse]") {
     AmsBackendValgACETestHelper helper;
 
     json data = {
@@ -196,7 +196,7 @@ TEST_CASE("ValgACE parse_info_response: excessive slot count rejected", "[valgac
 // Status Response Parsing Tests
 // ============================================================================
 
-TEST_CASE("ValgACE parse_status_response: loaded slot", "[valgace][parse]") {
+TEST_CASE("ValgACE parse_status_response: loaded slot", "[ams][valgace][parse]") {
     AmsBackendValgACETestHelper helper;
 
     json data = {{"loaded_slot", 2}, {"action", "idle"}};
@@ -210,7 +210,7 @@ TEST_CASE("ValgACE parse_status_response: loaded slot", "[valgace][parse]") {
     REQUIRE(info.filament_loaded == true);
 }
 
-TEST_CASE("ValgACE parse_status_response: no filament loaded", "[valgace][parse]") {
+TEST_CASE("ValgACE parse_status_response: no filament loaded", "[ams][valgace][parse]") {
     AmsBackendValgACETestHelper helper;
 
     json data = {{"loaded_slot", -1}};
@@ -222,7 +222,7 @@ TEST_CASE("ValgACE parse_status_response: no filament loaded", "[valgace][parse]
     REQUIRE(info.filament_loaded == false);
 }
 
-TEST_CASE("ValgACE parse_status_response: action states", "[valgace][parse]") {
+TEST_CASE("ValgACE parse_status_response: action states", "[ams][valgace][parse]") {
     AmsBackendValgACETestHelper helper;
 
     // Test loading action
@@ -246,7 +246,7 @@ TEST_CASE("ValgACE parse_status_response: action states", "[valgace][parse]") {
     REQUIRE(helper.get_test_system_info().action == AmsAction::IDLE);
 }
 
-TEST_CASE("ValgACE parse_status_response: dryer state", "[valgace][parse]") {
+TEST_CASE("ValgACE parse_status_response: dryer state", "[ams][valgace][parse]") {
     AmsBackendValgACETestHelper helper;
 
     json data = {{"dryer",
@@ -266,7 +266,7 @@ TEST_CASE("ValgACE parse_status_response: dryer state", "[valgace][parse]") {
     REQUIRE(dryer.duration_min == 240);
 }
 
-TEST_CASE("ValgACE parse_status_response: dryer not active", "[valgace][parse]") {
+TEST_CASE("ValgACE parse_status_response: dryer not active", "[ams][valgace][parse]") {
     AmsBackendValgACETestHelper helper;
 
     json data = {{"dryer", {{"active", false}, {"current_temp", 25.0}, {"target_temp", 0}}}};
@@ -282,7 +282,7 @@ TEST_CASE("ValgACE parse_status_response: dryer not active", "[valgace][parse]")
 // Slots Response Parsing Tests
 // ============================================================================
 
-TEST_CASE("ValgACE parse_slots_response: valid slots", "[valgace][parse]") {
+TEST_CASE("ValgACE parse_slots_response: valid slots", "[ams][valgace][parse]") {
     AmsBackendValgACETestHelper helper;
 
     // First initialize with info response to set slot count
@@ -316,7 +316,7 @@ TEST_CASE("ValgACE parse_slots_response: valid slots", "[valgace][parse]") {
     REQUIRE(slot2.status == SlotStatus::AVAILABLE);
 }
 
-TEST_CASE("ValgACE parse_slots_response: missing slots array", "[valgace][parse]") {
+TEST_CASE("ValgACE parse_slots_response: missing slots array", "[ams][valgace][parse]") {
     AmsBackendValgACETestHelper helper;
 
     json data = json::object(); // No "slots" key
@@ -325,7 +325,7 @@ TEST_CASE("ValgACE parse_slots_response: missing slots array", "[valgace][parse]
     REQUIRE(changed == false);
 }
 
-TEST_CASE("ValgACE parse_slots_response: excessive slots rejected", "[valgace][parse]") {
+TEST_CASE("ValgACE parse_slots_response: excessive slots rejected", "[ams][valgace][parse]") {
     AmsBackendValgACETestHelper helper;
 
     // Create an array with too many slots
@@ -344,7 +344,7 @@ TEST_CASE("ValgACE parse_slots_response: excessive slots rejected", "[valgace][p
 // Filament Segment Tests
 // ============================================================================
 
-TEST_CASE("ValgACE filament segment when nothing loaded", "[valgace][segment]") {
+TEST_CASE("ValgACE filament segment when nothing loaded", "[ams][valgace][segment]") {
     AmsBackendValgACETestHelper helper;
 
     // Initialize with slots
@@ -357,7 +357,7 @@ TEST_CASE("ValgACE filament segment when nothing loaded", "[valgace][segment]") 
     REQUIRE(helper.get_filament_segment() == PathSegment::NONE);
 }
 
-TEST_CASE("ValgACE filament segment when loaded", "[valgace][segment]") {
+TEST_CASE("ValgACE filament segment when loaded", "[ams][valgace][segment]") {
     AmsBackendValgACETestHelper helper;
 
     // Initialize with slots
@@ -380,7 +380,7 @@ TEST_CASE("ValgACE filament segment when loaded", "[valgace][segment]") {
     REQUIRE(helper.get_filament_segment() == PathSegment::NOZZLE);
 }
 
-TEST_CASE("ValgACE error segment inference", "[valgace][segment]") {
+TEST_CASE("ValgACE error segment inference", "[ams][valgace][segment]") {
     AmsBackendValgACETestHelper helper;
 
     // Set error state
@@ -395,12 +395,12 @@ TEST_CASE("ValgACE error segment inference", "[valgace][segment]") {
 // Not Running State Tests
 // ============================================================================
 
-TEST_CASE("ValgACE not running initially", "[valgace][state]") {
+TEST_CASE("ValgACE not running initially", "[ams][valgace][state]") {
     AmsBackendValgACETestHelper helper;
     REQUIRE(helper.is_running() == false);
 }
 
-TEST_CASE("ValgACE operations require API", "[valgace][preconditions]") {
+TEST_CASE("ValgACE operations require API", "[ams][valgace][preconditions]") {
     AmsBackendValgACETestHelper helper;
 
     // Without API, operations should fail

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Copyright (C) 2025 356C LLC
  * Author: Preston Brown <pbrown@brown-house.net>
@@ -46,13 +47,13 @@ class NavigationTestFixture {
     }
 };
 
-TEST_CASE_METHOD(NavigationTestFixture, "Navigation initialization", "[navigation]") {
+TEST_CASE_METHOD(NavigationTestFixture, "Navigation initialization", "[core][navigation]") {
     SECTION("Default active panel is HOME") {
         REQUIRE(ui_nav_get_active() == UI_PANEL_HOME);
     }
 }
 
-TEST_CASE_METHOD(NavigationTestFixture, "Panel switching", "[navigation]") {
+TEST_CASE_METHOD(NavigationTestFixture, "Panel switching", "[core][navigation]") {
     SECTION("Switch to CONTROLS panel") {
         ui_nav_set_active(UI_PANEL_CONTROLS);
         REQUIRE(ui_nav_get_active() == UI_PANEL_CONTROLS);
@@ -80,7 +81,7 @@ TEST_CASE_METHOD(NavigationTestFixture, "Panel switching", "[navigation]") {
     }
 }
 
-TEST_CASE_METHOD(NavigationTestFixture, "Invalid panel handling", "[navigation]") {
+TEST_CASE_METHOD(NavigationTestFixture, "Invalid panel handling", "[core][navigation]") {
     SECTION("Setting invalid panel ID does not change active panel") {
         ui_panel_id_t original = ui_nav_get_active();
         ui_nav_set_active((ui_panel_id_t)99); // Invalid panel ID
@@ -88,7 +89,7 @@ TEST_CASE_METHOD(NavigationTestFixture, "Invalid panel handling", "[navigation]"
     }
 }
 
-TEST_CASE_METHOD(NavigationTestFixture, "Repeated panel selection", "[navigation]") {
+TEST_CASE_METHOD(NavigationTestFixture, "Repeated panel selection", "[core][navigation]") {
     SECTION("Setting same panel multiple times is safe") {
         ui_nav_set_active(UI_PANEL_CONTROLS);
         ui_nav_set_active(UI_PANEL_CONTROLS);
@@ -97,7 +98,7 @@ TEST_CASE_METHOD(NavigationTestFixture, "Repeated panel selection", "[navigation
     }
 }
 
-TEST_CASE_METHOD(NavigationTestFixture, "All panels are accessible", "[navigation]") {
+TEST_CASE_METHOD(NavigationTestFixture, "All panels are accessible", "[core][navigation]") {
     for (int i = 0; i < UI_PANEL_COUNT; i++) {
         ui_nav_set_active((ui_panel_id_t)i);
         REQUIRE(ui_nav_get_active() == (ui_panel_id_t)i);

@@ -104,20 +104,20 @@ class InputShaperTestFixture {
 // TODO: Extend mock client to support G-code response subscriptions.
 
 TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test accepts X axis",
-                 "[moonraker][api][input_shaper][.needs_mock_extension]") {
+                 "[calibration][.needs_mock_extension]") {
     // DISABLED: Mock client doesn't support G-code response handlers
     // This test would verify the API accepts X axis calls
     SKIP("Mock client doesn't support register_gcode_response_handler");
 }
 
 TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test accepts Y axis",
-                 "[moonraker][api][input_shaper][.needs_mock_extension]") {
+                 "[calibration][.needs_mock_extension]") {
     // DISABLED: Mock client doesn't support G-code response handlers
     SKIP("Mock client doesn't support register_gcode_response_handler");
 }
 
 TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test sends correct G-code command for X",
-                 "[moonraker][api][input_shaper][.needs_mock_extension]") {
+                 "[calibration][.needs_mock_extension]") {
     // DISABLED: Mock client doesn't support G-code response handlers
     SKIP("Mock client doesn't support register_gcode_response_handler");
 }
@@ -130,17 +130,17 @@ TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test sends correct G-c
 // triggers the issue.
 
 TEST_CASE_METHOD(InputShaperTestFixture, "set_input_shaper sends command for X axis with mzv",
-                 "[moonraker][api][input_shaper][.needs_mock_extension]") {
+                 "[calibration][.needs_mock_extension]") {
     SKIP("Test fixture triggers mock client issue");
 }
 
 TEST_CASE_METHOD(InputShaperTestFixture, "set_input_shaper sends command for Y axis",
-                 "[moonraker][api][input_shaper][.needs_mock_extension]") {
+                 "[calibration][.needs_mock_extension]") {
     SKIP("Test fixture triggers mock client issue");
 }
 
 TEST_CASE_METHOD(InputShaperTestFixture, "set_input_shaper accepts all valid shaper types",
-                 "[moonraker][api][input_shaper][.needs_mock_extension]") {
+                 "[calibration][.needs_mock_extension]") {
     SKIP("Test fixture triggers mock client issue");
 }
 
@@ -148,7 +148,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "set_input_shaper accepts all valid sha
 // InputShaperResult Parsing Tests
 // ============================================================================
 
-TEST_CASE("InputShaperResult default construction", "[moonraker][api][input_shaper]") {
+TEST_CASE("InputShaperResult default construction", "[slow][calibration]") {
     InputShaperResult result;
 
     // Default axis is 'X' per struct definition
@@ -161,7 +161,7 @@ TEST_CASE("InputShaperResult default construction", "[moonraker][api][input_shap
     REQUIRE(result.freq_response.empty());
 }
 
-TEST_CASE("InputShaperResult is_valid check", "[moonraker][api][input_shaper]") {
+TEST_CASE("InputShaperResult is_valid check", "[slow][calibration]") {
     InputShaperResult result;
 
     // Empty result is not valid
@@ -178,7 +178,7 @@ TEST_CASE("InputShaperResult is_valid check", "[moonraker][api][input_shaper]") 
 // Response Parsing Simulation Tests
 // ============================================================================
 
-TEST_CASE("InputShaperResult can store calibration data", "[moonraker][api][input_shaper]") {
+TEST_CASE("InputShaperResult can store calibration data", "[slow][calibration]") {
     // Simulate building a result from parsed G-code responses
     InputShaperResult result;
     result.axis = 'X';
@@ -204,7 +204,7 @@ TEST_CASE("InputShaperResult can store calibration data", "[moonraker][api][inpu
     REQUIRE(result.freq_response.size() == 4);
 }
 
-TEST_CASE("InputShaperResult can represent incomplete state", "[moonraker][api][input_shaper]") {
+TEST_CASE("InputShaperResult can represent incomplete state", "[slow][calibration]") {
     InputShaperResult result;
     result.axis = 'Y';
     // Leave shaper_type empty to simulate error/incomplete
@@ -217,7 +217,7 @@ TEST_CASE("InputShaperResult can represent incomplete state", "[moonraker][api][
 // Shaper Type Validation Tests
 // ============================================================================
 
-TEST_CASE("Valid shaper type strings", "[moonraker][api][input_shaper][validation]") {
+TEST_CASE("Valid shaper type strings", "[slow][calibration][validation]") {
     // These are the official Klipper input shaper types
     std::vector<std::string> valid_types = {
         "zv",       // Zero Vibration
@@ -242,7 +242,7 @@ TEST_CASE("Valid shaper type strings", "[moonraker][api][input_shaper][validatio
 // ============================================================================
 
 TEST_CASE_METHOD(InputShaperTestFixture, "API handles null callbacks gracefully",
-                 "[moonraker][api][input_shaper][edge_case][.needs_mock_extension]") {
+                 "[calibration][edge_case][.needs_mock_extension]") {
     // DISABLED: Mock client doesn't support G-code response handlers
     SKIP("Mock client doesn't support register_gcode_response_handler");
 }

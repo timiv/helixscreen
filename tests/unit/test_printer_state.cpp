@@ -14,7 +14,7 @@ using Catch::Approx;
 // Singleton Behavior Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: Singleton returns same instance", "[printer_state][singleton]") {
+TEST_CASE("PrinterState: Singleton returns same instance", "[core][state][singleton]") {
     lv_init();
 
     PrinterState& instance1 = get_printer_state();
@@ -24,7 +24,7 @@ TEST_CASE("PrinterState: Singleton returns same instance", "[printer_state][sing
     REQUIRE(&instance1 == &instance2);
 }
 
-TEST_CASE("PrinterState: Singleton persists modifications", "[printer_state][singleton]") {
+TEST_CASE("PrinterState: Singleton persists modifications", "[core][state][singleton]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -40,7 +40,7 @@ TEST_CASE("PrinterState: Singleton persists modifications", "[printer_state][sin
 }
 
 TEST_CASE("PrinterState: Singleton subjects have consistent addresses",
-          "[printer_state][singleton]") {
+          "[core][state][singleton]") {
     lv_init();
 
     PrinterState& state1 = get_printer_state();
@@ -60,7 +60,7 @@ TEST_CASE("PrinterState: Singleton subjects have consistent addresses",
 // ============================================================================
 
 TEST_CASE("PrinterState: Observer fires when printer connection state changes",
-          "[printer_state][observer]") {
+          "[core][state][observer]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -99,7 +99,7 @@ TEST_CASE("PrinterState: Observer fires when printer connection state changes",
 }
 
 TEST_CASE("PrinterState: Observer fires when network status changes",
-          "[printer_state][observer][network]") {
+          "[state][observer][network]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -127,8 +127,7 @@ TEST_CASE("PrinterState: Observer fires when network status changes",
             static_cast<int>(NetworkStatus::DISCONNECTED));
 }
 
-TEST_CASE("PrinterState: Multiple observers on same subject all fire",
-          "[printer_state][observer]") {
+TEST_CASE("PrinterState: Multiple observers on same subject all fire", "[state][observer]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -164,7 +163,7 @@ TEST_CASE("PrinterState: Multiple observers on same subject all fire",
 // Initialization Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: Initialization sets default values", "[printer_state][init]") {
+TEST_CASE("PrinterState: Initialization sets default values", "[state][init]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.reset_for_testing(); // Reset singleton state from previous tests
@@ -209,7 +208,7 @@ TEST_CASE("PrinterState: Initialization sets default values", "[printer_state][i
 // Temperature Update Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: Update extruder temperature from notification", "[printer_state][temp]") {
+TEST_CASE("PrinterState: Update extruder temperature from notification", "[state][temp]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -227,7 +226,7 @@ TEST_CASE("PrinterState: Update extruder temperature from notification", "[print
     REQUIRE(lv_subject_get_int(state.get_extruder_target_subject()) == 210);
 }
 
-TEST_CASE("PrinterState: Update bed temperature from notification", "[printer_state][temp]") {
+TEST_CASE("PrinterState: Update bed temperature from notification", "[state][temp]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -242,7 +241,7 @@ TEST_CASE("PrinterState: Update bed temperature from notification", "[printer_st
     REQUIRE(lv_subject_get_int(state.get_bed_target_subject()) == 60);
 }
 
-TEST_CASE("PrinterState: Temperature rounding edge cases", "[printer_state][temp][edge]") {
+TEST_CASE("PrinterState: Temperature rounding edge cases", "[state][temp][edge]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -273,7 +272,7 @@ TEST_CASE("PrinterState: Temperature rounding edge cases", "[printer_state][temp
 // Print Progress Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: Update print progress from notification", "[printer_state][progress]") {
+TEST_CASE("PrinterState: Update print progress from notification", "[state][progress]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -286,7 +285,7 @@ TEST_CASE("PrinterState: Update print progress from notification", "[printer_sta
     REQUIRE(lv_subject_get_int(state.get_print_progress_subject()) == 45);
 }
 
-TEST_CASE("PrinterState: Update print state and filename", "[printer_state][progress]") {
+TEST_CASE("PrinterState: Update print state and filename", "[state][progress]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -305,7 +304,7 @@ TEST_CASE("PrinterState: Update print state and filename", "[printer_state][prog
     REQUIRE(std::string(filename) == "benchy.gcode");
 }
 
-TEST_CASE("PrinterState: Progress percentage edge cases", "[printer_state][progress][edge]") {
+TEST_CASE("PrinterState: Progress percentage edge cases", "[state][progress][edge]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -336,7 +335,7 @@ TEST_CASE("PrinterState: Progress percentage edge cases", "[printer_state][progr
 // Motion/Position Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: Update toolhead position", "[printer_state][motion]") {
+TEST_CASE("PrinterState: Update toolhead position", "[state][motion]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -357,7 +356,7 @@ TEST_CASE("PrinterState: Update toolhead position", "[printer_state][motion]") {
     REQUIRE(std::string(homed) == "xyz");
 }
 
-TEST_CASE("PrinterState: Homed axes variations", "[printer_state][motion]") {
+TEST_CASE("PrinterState: Homed axes variations", "[state][motion]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -383,7 +382,7 @@ TEST_CASE("PrinterState: Homed axes variations", "[printer_state][motion]") {
 // Speed/Flow Factor Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: Update speed and flow factors", "[printer_state][speed]") {
+TEST_CASE("PrinterState: Update speed and flow factors", "[state][speed]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -399,7 +398,7 @@ TEST_CASE("PrinterState: Update speed and flow factors", "[printer_state][speed]
     REQUIRE(lv_subject_get_int(state.get_flow_factor_subject()) == 95);
 }
 
-TEST_CASE("PrinterState: Update fan speed", "[printer_state][fan]") {
+TEST_CASE("PrinterState: Update fan speed", "[state][fan]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -416,7 +415,7 @@ TEST_CASE("PrinterState: Update fan speed", "[printer_state][fan]") {
 // Connection State Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: Set printer connection state", "[printer_state][connection]") {
+TEST_CASE("PrinterState: Set printer connection state", "[state][connection]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -430,7 +429,7 @@ TEST_CASE("PrinterState: Set printer connection state", "[printer_state][connect
     REQUIRE(std::string(message) == "Connected");
 }
 
-TEST_CASE("PrinterState: Connection state transitions", "[printer_state][connection]") {
+TEST_CASE("PrinterState: Connection state transitions", "[state][connection]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -472,7 +471,7 @@ TEST_CASE("PrinterState: Connection state transitions", "[printer_state][connect
 // Network Status Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: Network status initialization", "[printer_state][network]") {
+TEST_CASE("PrinterState: Network status initialization", "[state][network]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -485,7 +484,7 @@ TEST_CASE("PrinterState: Network status initialization", "[printer_state][networ
             static_cast<int>(NetworkStatus::CONNECTED));
 }
 
-TEST_CASE("PrinterState: Set network status updates subject", "[printer_state][network]") {
+TEST_CASE("PrinterState: Set network status updates subject", "[state][network]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -497,7 +496,7 @@ TEST_CASE("PrinterState: Set network status updates subject", "[printer_state][n
             static_cast<int>(NetworkStatus::CONNECTED));
 }
 
-TEST_CASE("PrinterState: Network status enum values", "[printer_state][network]") {
+TEST_CASE("PrinterState: Network status enum values", "[state][network]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -522,8 +521,7 @@ TEST_CASE("PrinterState: Network status enum values", "[printer_state][network]"
     }
 }
 
-TEST_CASE("PrinterState: Printer and network status are independent",
-          "[printer_state][integration]") {
+TEST_CASE("PrinterState: Printer and network status are independent", "[state][integration]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -553,7 +551,7 @@ TEST_CASE("PrinterState: Printer and network status are independent",
 // Invalid/Malformed Notification Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: Ignore invalid notification methods", "[printer_state][error]") {
+TEST_CASE("PrinterState: Ignore invalid notification methods", "[state][error]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.reset_for_testing(); // Reset singleton state from previous tests
@@ -568,7 +566,7 @@ TEST_CASE("PrinterState: Ignore invalid notification methods", "[printer_state][
     REQUIRE(lv_subject_get_int(state.get_extruder_temp_subject()) == 0);
 }
 
-TEST_CASE("PrinterState: Handle missing fields gracefully", "[printer_state][error]") {
+TEST_CASE("PrinterState: Handle missing fields gracefully", "[state][error]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.reset_for_testing(); // Reset singleton state from previous tests
@@ -597,7 +595,7 @@ TEST_CASE("PrinterState: Handle missing fields gracefully", "[printer_state][err
 // Comprehensive State Update Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: Complete printing state update", "[printer_state][integration]") {
+TEST_CASE("PrinterState: Complete printing state update", "[state][integration]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -638,8 +636,7 @@ TEST_CASE("PrinterState: Complete printing state update", "[printer_state][integ
 // PrintJobState Enum Tests
 // ============================================================================
 
-TEST_CASE("PrintJobState: parse_print_job_state parses Moonraker strings",
-          "[printer_state][enum]") {
+TEST_CASE("PrintJobState: parse_print_job_state parses Moonraker strings", "[state][enum]") {
     SECTION("Parses all standard Moonraker states") {
         REQUIRE(parse_print_job_state("standby") == PrintJobState::STANDBY);
         REQUIRE(parse_print_job_state("printing") == PrintJobState::PRINTING);
@@ -660,8 +657,7 @@ TEST_CASE("PrintJobState: parse_print_job_state parses Moonraker strings",
     }
 }
 
-TEST_CASE("PrintJobState: print_job_state_to_string converts to display strings",
-          "[printer_state][enum]") {
+TEST_CASE("PrintJobState: print_job_state_to_string converts to display strings", "[state][enum]") {
     REQUIRE(std::string(print_job_state_to_string(PrintJobState::STANDBY)) == "Standby");
     REQUIRE(std::string(print_job_state_to_string(PrintJobState::PRINTING)) == "Printing");
     REQUIRE(std::string(print_job_state_to_string(PrintJobState::PAUSED)) == "Paused");
@@ -670,7 +666,7 @@ TEST_CASE("PrintJobState: print_job_state_to_string converts to display strings"
     REQUIRE(std::string(print_job_state_to_string(PrintJobState::ERROR)) == "Error");
 }
 
-TEST_CASE("PrintJobState: Enum values match expected integers", "[printer_state][enum]") {
+TEST_CASE("PrintJobState: Enum values match expected integers", "[state][enum]") {
     // These values are documented and must not change for backward compatibility
     REQUIRE(static_cast<int>(PrintJobState::STANDBY) == 0);
     REQUIRE(static_cast<int>(PrintJobState::PRINTING) == 1);
@@ -680,8 +676,7 @@ TEST_CASE("PrintJobState: Enum values match expected integers", "[printer_state]
     REQUIRE(static_cast<int>(PrintJobState::ERROR) == 5);
 }
 
-TEST_CASE("PrinterState: Print state enum subject updates from notification",
-          "[printer_state][enum]") {
+TEST_CASE("PrinterState: Print state enum subject updates from notification", "[state][enum]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -721,7 +716,7 @@ TEST_CASE("PrinterState: Print state enum subject updates from notification",
     }
 }
 
-TEST_CASE("PrinterState: can_start_new_print logic", "[printer_state][enum]") {
+TEST_CASE("PrinterState: can_start_new_print logic", "[state][enum]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -769,8 +764,7 @@ TEST_CASE("PrinterState: can_start_new_print logic", "[printer_state][enum]") {
     }
 }
 
-TEST_CASE("PrinterState: Enum subject value reflects all state transitions",
-          "[printer_state][enum]") {
+TEST_CASE("PrinterState: Enum subject value reflects all state transitions", "[state][enum]") {
     lv_init();
     PrinterState& state = get_printer_state();
     state.init_subjects();
@@ -824,8 +818,7 @@ TEST_CASE("PrinterState: Enum subject value reflects all state transitions",
 // KlippyState Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: Klippy state initialization defaults to READY",
-          "[printer_state][klippy]") {
+TEST_CASE("PrinterState: Klippy state initialization defaults to READY", "[state][klippy]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -837,7 +830,7 @@ TEST_CASE("PrinterState: Klippy state initialization defaults to READY",
             static_cast<int>(KlippyState::READY));
 }
 
-TEST_CASE("PrinterState: set_klippy_state changes subject value", "[printer_state][klippy]") {
+TEST_CASE("PrinterState: set_klippy_state changes subject value", "[state][klippy]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -869,8 +862,7 @@ TEST_CASE("PrinterState: set_klippy_state changes subject value", "[printer_stat
             static_cast<int>(KlippyState::READY));
 }
 
-TEST_CASE("PrinterState: Observer fires when klippy state changes",
-          "[printer_state][klippy][observer]") {
+TEST_CASE("PrinterState: Observer fires when klippy state changes", "[state][klippy][observer]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -906,7 +898,7 @@ TEST_CASE("PrinterState: Observer fires when klippy state changes",
 }
 
 TEST_CASE("PrinterState: Update klippy state from webhooks notification",
-          "[printer_state][klippy][webhooks]") {
+          "[state][klippy][webhooks]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -950,8 +942,7 @@ TEST_CASE("PrinterState: Update klippy state from webhooks notification",
             static_cast<int>(KlippyState::ERROR));
 }
 
-TEST_CASE("PrinterState: Unknown webhooks state defaults to READY",
-          "[printer_state][klippy][webhooks]") {
+TEST_CASE("PrinterState: Unknown webhooks state defaults to READY", "[state][klippy][webhooks]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -975,8 +966,7 @@ TEST_CASE("PrinterState: Unknown webhooks state defaults to READY",
 // Kinematics / Bed Moves Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: set_kinematics detects cartesian as bed-moves",
-          "[printer_state][kinematics]") {
+TEST_CASE("PrinterState: set_kinematics detects cartesian as bed-moves", "[state][kinematics]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -991,8 +981,7 @@ TEST_CASE("PrinterState: set_kinematics detects cartesian as bed-moves",
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
 }
 
-TEST_CASE("PrinterState: set_kinematics detects corexy as gantry-moves",
-          "[printer_state][kinematics]") {
+TEST_CASE("PrinterState: set_kinematics detects corexy as gantry-moves", "[state][kinematics]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -1008,8 +997,7 @@ TEST_CASE("PrinterState: set_kinematics detects corexy as gantry-moves",
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
 }
 
-TEST_CASE("PrinterState: set_kinematics detects delta as gantry-moves",
-          "[printer_state][kinematics]") {
+TEST_CASE("PrinterState: set_kinematics detects delta as gantry-moves", "[state][kinematics]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -1021,8 +1009,7 @@ TEST_CASE("PrinterState: set_kinematics detects delta as gantry-moves",
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
 }
 
-TEST_CASE("PrinterState: set_kinematics handles variations of cartesian",
-          "[printer_state][kinematics]") {
+TEST_CASE("PrinterState: set_kinematics handles variations of cartesian", "[state][kinematics]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -1048,8 +1035,7 @@ TEST_CASE("PrinterState: set_kinematics handles variations of cartesian",
     }
 }
 
-TEST_CASE("PrinterState: Update kinematics from toolhead notification",
-          "[printer_state][kinematics][notification]") {
+TEST_CASE("PrinterState: Update kinematics from toolhead notification", "[state][kinematics][ui]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -1066,8 +1052,7 @@ TEST_CASE("PrinterState: Update kinematics from toolhead notification",
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
 }
 
-TEST_CASE("PrinterState: Kinematics update from corexy notification",
-          "[printer_state][kinematics][notification]") {
+TEST_CASE("PrinterState: Kinematics update from corexy notification", "[state][kinematics][ui]") {
     lv_init();
 
     PrinterState& state = get_printer_state();
@@ -1089,8 +1074,7 @@ TEST_CASE("PrinterState: Kinematics update from corexy notification",
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
 }
 
-TEST_CASE("PrinterState: Observer fires when bed_moves changes",
-          "[printer_state][kinematics][observer]") {
+TEST_CASE("PrinterState: Observer fires when bed_moves changes", "[state][kinematics][observer]") {
     lv_init();
 
     PrinterState& state = get_printer_state();

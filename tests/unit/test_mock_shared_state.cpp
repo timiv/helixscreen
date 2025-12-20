@@ -16,7 +16,6 @@
  * 5. Backward compatibility (mocks work without shared state)
  */
 
-#include "../catch_amalgamated.hpp"
 #include "../mocks/mock_printer_state.h"
 #include "moonraker_api_mock.h"
 #include "moonraker_client_mock.h"
@@ -25,11 +24,13 @@
 #include <memory>
 #include <thread>
 
+#include "../catch_amalgamated.hpp"
+
 // ============================================================================
 // MockPrinterState Unit Tests
 // ============================================================================
 
-TEST_CASE("MockPrinterState basic operations", "[mock][shared_state]") {
+TEST_CASE("MockPrinterState basic operations", "[slow][mock][shared_state]") {
     MockPrinterState state;
 
     SECTION("Initial state has no excluded objects") {
@@ -103,7 +104,7 @@ TEST_CASE("MockPrinterState basic operations", "[mock][shared_state]") {
     }
 }
 
-TEST_CASE("MockPrinterState thread safety", "[mock][shared_state][threading]") {
+TEST_CASE("MockPrinterState thread safety", "[slow][mock][shared_state][threading]") {
     MockPrinterState state;
 
     SECTION("Concurrent reads and writes to excluded objects") {
@@ -112,7 +113,8 @@ TEST_CASE("MockPrinterState thread safety", "[mock][shared_state][threading]") {
         for (int i = 0; i < 10; i++) {
             writers.emplace_back([&state, i]() {
                 for (int j = 0; j < 100; j++) {
-                    state.add_excluded_object("Part_" + std::to_string(i) + "_" + std::to_string(j));
+                    state.add_excluded_object("Part_" + std::to_string(i) + "_" +
+                                              std::to_string(j));
                 }
             });
         }
@@ -168,8 +170,7 @@ class SharedStateTestFixture {
     std::unique_ptr<MoonrakerAPIMock> api_;
 };
 
-TEST_CASE_METHOD(SharedStateTestFixture,
-                 "Excluded objects added via ClientMock appear in APIMock",
+TEST_CASE_METHOD(SharedStateTestFixture, "Excluded objects added via ClientMock appear in APIMock",
                  "[mock][shared_state]") {
     // Exclude an object via G-code (simulating Klipper command)
     client_.gcode_script("EXCLUDE_OBJECT NAME=Part_1");
@@ -185,8 +186,7 @@ TEST_CASE_METHOD(SharedStateTestFixture,
     REQUIRE(client_excluded.count("Part_1") == 1);
 }
 
-TEST_CASE_METHOD(SharedStateTestFixture,
-                 "Multiple excluded objects synchronize correctly",
+TEST_CASE_METHOD(SharedStateTestFixture, "Multiple excluded objects synchronize correctly",
                  "[mock][shared_state]") {
     // Exclude multiple objects via various command formats
     client_.gcode_script("EXCLUDE_OBJECT NAME=Part_1");
@@ -201,8 +201,7 @@ TEST_CASE_METHOD(SharedStateTestFixture,
     REQUIRE(excluded.count("Part With Spaces") == 1);
 }
 
-TEST_CASE_METHOD(SharedStateTestFixture,
-                 "Print start clears excluded objects in shared state",
+TEST_CASE_METHOD(SharedStateTestFixture, "Print start clears excluded objects in shared state",
                  "[mock][shared_state]") {
     // Add some excluded objects
     client_.gcode_script("EXCLUDE_OBJECT NAME=Part_1");
@@ -219,8 +218,7 @@ TEST_CASE_METHOD(SharedStateTestFixture,
     REQUIRE(excluded.empty());
 }
 
-TEST_CASE_METHOD(SharedStateTestFixture,
-                 "RESTART clears excluded objects in shared state",
+TEST_CASE_METHOD(SharedStateTestFixture, "RESTART clears excluded objects in shared state",
                  "[mock][shared_state]") {
     // Add some excluded objects
     client_.gcode_script("EXCLUDE_OBJECT NAME=Part_1");
@@ -239,8 +237,7 @@ TEST_CASE_METHOD(SharedStateTestFixture,
     REQUIRE(excluded.empty());
 }
 
-TEST_CASE_METHOD(SharedStateTestFixture,
-                 "FIRMWARE_RESTART clears excluded objects in shared state",
+TEST_CASE_METHOD(SharedStateTestFixture, "FIRMWARE_RESTART clears excluded objects in shared state",
                  "[mock][shared_state]") {
     // Add some excluded objects
     client_.gcode_script("EXCLUDE_OBJECT NAME=Part_1");
@@ -264,7 +261,8 @@ TEST_CASE_METHOD(SharedStateTestFixture,
 // Backward Compatibility Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock works without shared state", "[mock][shared_state][backward_compat]") {
+TEST_CASE("MoonrakerClientMock works without shared state",
+          "[slow][mock][shared_state][backward_compat]") {
     MoonrakerClientMock client(MoonrakerClientMock::PrinterType::VORON_24);
     // Note: NOT setting shared state
 
@@ -328,7 +326,7 @@ TEST_CASE_METHOD(SharedStateTestFixture,
 // Temperature State Tests
 // ============================================================================
 
-TEST_CASE("MockPrinterState temperature state", "[mock][shared_state]") {
+TEST_CASE("MockPrinterState temperature state", "[slow][mock][shared_state]") {
     MockPrinterState state;
 
     SECTION("Default temperatures are room temperature") {

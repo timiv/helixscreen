@@ -34,7 +34,6 @@
  *    - Preserves connection callbacks
  */
 
-#include "../catch_amalgamated.hpp"
 #include "../../include/moonraker_client.h"
 #include "../../include/moonraker_client_mock.h"
 
@@ -45,6 +44,8 @@
 #include <set>
 #include <thread>
 #include <vector>
+
+#include "../catch_amalgamated.hpp"
 
 // ============================================================================
 // Test Fixture Base
@@ -111,7 +112,7 @@ class NewFeaturesTestFixture {
 
 TEST_CASE_METHOD(NewFeaturesTestFixture,
                  "MoonrakerClient register_notify_update returns valid SubscriptionId",
-                 "[moonraker][subscription_api]") {
+                 "[connection]") {
     auto loop = std::make_shared<hv::EventLoop>();
     MoonrakerClient client(loop);
 
@@ -138,8 +139,7 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 }
 
 TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "MoonrakerClient unsubscribe_notify_update removes callback",
-                 "[moonraker][subscription_api]") {
+                 "MoonrakerClient unsubscribe_notify_update removes callback", "[connection]") {
     auto loop = std::make_shared<hv::EventLoop>();
     MoonrakerClient client(loop);
 
@@ -174,7 +174,7 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 
 TEST_CASE_METHOD(NewFeaturesTestFixture,
                  "MoonrakerClientMock subscription callbacks receive notifications",
-                 "[moonraker][subscription_api][mock]") {
+                 "[connection][mock]") {
     MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
 
     SECTION("Registered callback receives notifications after connect") {
@@ -201,12 +201,10 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
         std::atomic<int> callback1_count{0};
         std::atomic<int> callback2_count{0};
 
-        SubscriptionId id1 = mock.register_notify_update([&callback1_count](json) {
-            callback1_count++;
-        });
-        [[maybe_unused]] SubscriptionId id2 = mock.register_notify_update([&callback2_count](json) {
-            callback2_count++;
-        });
+        SubscriptionId id1 =
+            mock.register_notify_update([&callback1_count](json) { callback1_count++; });
+        [[maybe_unused]] SubscriptionId id2 =
+            mock.register_notify_update([&callback2_count](json) { callback2_count++; });
 
         // Unsubscribe callback 1 before connecting
         mock.unsubscribe_notify_update(id1);
@@ -230,15 +228,12 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
         std::atomic<int> callback2_count{0};
         std::atomic<int> callback3_count{0};
 
-        [[maybe_unused]] SubscriptionId id1 = mock.register_notify_update([&callback1_count](json) {
-            callback1_count++;
-        });
-        SubscriptionId id2 = mock.register_notify_update([&callback2_count](json) {
-            callback2_count++;
-        });
-        [[maybe_unused]] SubscriptionId id3 = mock.register_notify_update([&callback3_count](json) {
-            callback3_count++;
-        });
+        [[maybe_unused]] SubscriptionId id1 =
+            mock.register_notify_update([&callback1_count](json) { callback1_count++; });
+        SubscriptionId id2 =
+            mock.register_notify_update([&callback2_count](json) { callback2_count++; });
+        [[maybe_unused]] SubscriptionId id3 =
+            mock.register_notify_update([&callback3_count](json) { callback3_count++; });
 
         mock.connect("ws://mock/websocket", []() {}, []() {});
 
@@ -270,14 +265,14 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 
 TEST_CASE_METHOD(NewFeaturesTestFixture,
                  "MoonrakerClient method callback registration with handler names",
-                 "[moonraker][method_callbacks]") {
+                 "[connection]") {
     auto loop = std::make_shared<hv::EventLoop>();
     MoonrakerClient client(loop);
 
     SECTION("Register single handler for method") {
         bool called = false;
         client.register_method_callback("notify_gcode_response", "test_handler",
-                                         [&called](json) { called = true; });
+                                        [&called](json) { called = true; });
 
         // Unregister should succeed
         bool result = client.unregister_method_callback("notify_gcode_response", "test_handler");
@@ -289,9 +284,9 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
         bool handler2_called = false;
 
         client.register_method_callback("notify_gcode_response", "handler1",
-                                         [&handler1_called](json) { handler1_called = true; });
+                                        [&handler1_called](json) { handler1_called = true; });
         client.register_method_callback("notify_gcode_response", "handler2",
-                                         [&handler2_called](json) { handler2_called = true; });
+                                        [&handler2_called](json) { handler2_called = true; });
 
         // Both should be unregisterable independently
         bool result1 = client.unregister_method_callback("notify_gcode_response", "handler1");
@@ -319,7 +314,8 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
     }
 
     SECTION("Unregister non-existent handler is safe") {
-        bool result = client.unregister_method_callback("nonexistent_method", "nonexistent_handler");
+        bool result =
+            client.unregister_method_callback("nonexistent_method", "nonexistent_handler");
         REQUIRE(result == false);
     }
 
@@ -357,9 +353,8 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 // Request Cancellation API Tests
 // ============================================================================
 
-TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "MoonrakerClient send_jsonrpc returns valid RequestId",
-                 "[moonraker][request_cancel]") {
+TEST_CASE_METHOD(NewFeaturesTestFixture, "MoonrakerClient send_jsonrpc returns valid RequestId",
+                 "[connection]") {
     auto loop = std::make_shared<hv::EventLoop>();
     MoonrakerClient client(loop);
 
@@ -390,9 +385,8 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
     }
 }
 
-TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "MoonrakerClient cancel_request removes pending request",
-                 "[moonraker][request_cancel]") {
+TEST_CASE_METHOD(NewFeaturesTestFixture, "MoonrakerClient cancel_request removes pending request",
+                 "[connection]") {
     auto loop = std::make_shared<hv::EventLoop>();
     MoonrakerClient client(loop);
 
@@ -411,13 +405,12 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
         // Use direct manipulation of pending requests or skip this test
         // Since we can't easily test this without a connection that keeps
         // requests pending, we document the expected behavior.
-        REQUIRE(true);  // Placeholder - behavior documented
+        REQUIRE(true); // Placeholder - behavior documented
     }
 }
 
-TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "MoonrakerClient cancelled request callback not invoked",
-                 "[moonraker][request_cancel]") {
+TEST_CASE_METHOD(NewFeaturesTestFixture, "MoonrakerClient cancelled request callback not invoked",
+                 "[connection]") {
     auto loop = std::make_shared<hv::EventLoop>();
     auto loop_thread = std::make_shared<hv::EventLoopThread>();
     loop_thread->start();
@@ -435,7 +428,7 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
         //
         // The cancel_request implementation removes the request from pending_requests_
         // map, so when onmessage handler looks for the request ID, it won't find it.
-        REQUIRE(true);  // Behavior verified by code inspection
+        REQUIRE(true); // Behavior verified by code inspection
     }
 
     loop_thread->stop();
@@ -445,9 +438,8 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 // Mock Client Request ID Tests
 // ============================================================================
 
-TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "MoonrakerClientMock send_jsonrpc returns valid RequestId",
-                 "[moonraker][request_cancel][mock]") {
+TEST_CASE_METHOD(NewFeaturesTestFixture, "MoonrakerClientMock send_jsonrpc returns valid RequestId",
+                 "[connection][mock]") {
     MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
     mock.connect("ws://mock/websocket", []() {}, []() {});
 
@@ -458,8 +450,8 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
     }
 
     SECTION("send_jsonrpc with success/error callbacks returns valid ID") {
-        RequestId id = mock.send_jsonrpc("server.files.list", json(), [](json) {},
-                                          [](const MoonrakerError&) {});
+        RequestId id = mock.send_jsonrpc(
+            "server.files.list", json(), [](json) {}, [](const MoonrakerError&) {});
         REQUIRE(id >= 1);
         REQUIRE(id != INVALID_REQUEST_ID);
     }
@@ -485,9 +477,8 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 // force_reconnect() Method Tests
 // ============================================================================
 
-TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "MoonrakerClient force_reconnect when not connected",
-                 "[moonraker][force_reconnect]") {
+TEST_CASE_METHOD(NewFeaturesTestFixture, "MoonrakerClient force_reconnect when not connected",
+                 "[connection]") {
     auto loop = std::make_shared<hv::EventLoop>();
     MoonrakerClient client(loop);
 
@@ -497,9 +488,8 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
     }
 }
 
-TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "MoonrakerClientMock force_reconnect behavior",
-                 "[moonraker][force_reconnect][mock]") {
+TEST_CASE_METHOD(NewFeaturesTestFixture, "MoonrakerClientMock force_reconnect behavior",
+                 "[connection][mock]") {
     MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
 
     SECTION("force_reconnect without prior connect is safe (mock limitation)") {
@@ -509,9 +499,7 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 
         std::atomic<int> connected_count{0};
 
-        mock.connect("ws://mock/websocket",
-                     [&connected_count]() { connected_count++; },
-                     []() {});
+        mock.connect("ws://mock/websocket", [&connected_count]() { connected_count++; }, []() {});
 
         // Wait for initial connection
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -548,9 +536,8 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
     }
 }
 
-TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "MoonrakerClient force_reconnect state transitions",
-                 "[moonraker][force_reconnect]") {
+TEST_CASE_METHOD(NewFeaturesTestFixture, "MoonrakerClient force_reconnect state transitions",
+                 "[connection]") {
     auto loop = std::make_shared<hv::EventLoop>();
     auto loop_thread = std::make_shared<hv::EventLoopThread>();
     loop_thread->start();
@@ -563,7 +550,7 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 
         client.set_state_change_callback(
             [&state_history, &state_mutex]([[maybe_unused]] ConnectionState old_state,
-                                            ConnectionState new_state) {
+                                           ConnectionState new_state) {
                 std::lock_guard<std::mutex> lock(state_mutex);
                 state_history.push_back(new_state);
             });
@@ -608,7 +595,7 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 
 TEST_CASE_METHOD(NewFeaturesTestFixture,
                  "MoonrakerClient subscription ID generation is thread-safe",
-                 "[moonraker][subscription_api][thread_safety]") {
+                 "[connection][thread_safety]") {
     auto loop = std::make_shared<hv::EventLoop>();
     MoonrakerClient client(loop);
 
@@ -643,9 +630,8 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
     }
 }
 
-TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "MoonrakerClient concurrent subscribe/unsubscribe is safe",
-                 "[moonraker][subscription_api][thread_safety]") {
+TEST_CASE_METHOD(NewFeaturesTestFixture, "MoonrakerClient concurrent subscribe/unsubscribe is safe",
+                 "[connection][thread_safety]") {
     auto loop = std::make_shared<hv::EventLoop>();
     MoonrakerClient client(loop);
 
@@ -706,8 +692,7 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 // ============================================================================
 
 TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "MoonrakerClientMock subscription API matches MoonrakerClient",
-                 "[moonraker][mock_parity]") {
+                 "MoonrakerClientMock subscription API matches MoonrakerClient", "[connection]") {
     auto loop = std::make_shared<hv::EventLoop>();
     MoonrakerClient real_client(loop);
     MoonrakerClientMock mock_client(MoonrakerClientMock::PrinterType::VORON_24);
@@ -739,16 +724,16 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 
 TEST_CASE_METHOD(NewFeaturesTestFixture,
                  "MoonrakerClientMock method callback API matches MoonrakerClient",
-                 "[moonraker][mock_parity]") {
+                 "[connection]") {
     auto loop = std::make_shared<hv::EventLoop>();
     MoonrakerClient real_client(loop);
     MoonrakerClientMock mock_client(MoonrakerClientMock::PrinterType::VORON_24);
 
     SECTION("Both allow registering method callbacks") {
-        REQUIRE_NOTHROW(real_client.register_method_callback("test_method", "handler",
-                                                              [](json) {}));
-        REQUIRE_NOTHROW(mock_client.register_method_callback("test_method", "handler",
-                                                              [](json) {}));
+        REQUIRE_NOTHROW(
+            real_client.register_method_callback("test_method", "handler", [](json) {}));
+        REQUIRE_NOTHROW(
+            mock_client.register_method_callback("test_method", "handler", [](json) {}));
     }
 
     SECTION("Both return false for unregistering non-existent callback") {
@@ -761,8 +746,7 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 }
 
 TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "MoonrakerClientMock cancel_request API matches MoonrakerClient",
-                 "[moonraker][mock_parity]") {
+                 "MoonrakerClientMock cancel_request API matches MoonrakerClient", "[connection]") {
     auto loop = std::make_shared<hv::EventLoop>();
     MoonrakerClient real_client(loop);
     MoonrakerClientMock mock_client(MoonrakerClientMock::PrinterType::VORON_24);
@@ -788,9 +772,8 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 // Edge Cases and Error Handling
 // ============================================================================
 
-TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "MoonrakerClient handles subscription edge cases",
-                 "[moonraker][subscription_api][edge_cases]") {
+TEST_CASE_METHOD(NewFeaturesTestFixture, "MoonrakerClient handles subscription edge cases",
+                 "[connection][edge_cases]") {
     auto loop = std::make_shared<hv::EventLoop>();
     MoonrakerClient client(loop);
 
@@ -831,9 +814,8 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
     }
 }
 
-TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "MoonrakerClient handles method callback edge cases",
-                 "[moonraker][method_callbacks][edge_cases]") {
+TEST_CASE_METHOD(NewFeaturesTestFixture, "MoonrakerClient handles method callback edge cases",
+                 "[connection][edge_cases]") {
     auto loop = std::make_shared<hv::EventLoop>();
     MoonrakerClient client(loop);
 
@@ -854,9 +836,9 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
         std::atomic<int> callback2_count{0};
 
         client.register_method_callback("method", "handler",
-                                         [&callback1_count](json) { callback1_count++; });
+                                        [&callback1_count](json) { callback1_count++; });
         client.register_method_callback("method", "handler",
-                                         [&callback2_count](json) { callback2_count++; });
+                                        [&callback2_count](json) { callback2_count++; });
 
         // Unregister should only need one call
         bool result = client.unregister_method_callback("method", "handler");
@@ -870,8 +852,7 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 
 TEST_CASE_METHOD(NewFeaturesTestFixture,
                  "MoonrakerClient client destruction cleans up subscriptions",
-                 "[moonraker][subscription_api][cleanup]") {
-
+                 "[connection][cleanup]") {
     SECTION("Destroying client with active subscriptions is safe") {
         std::atomic<int> callback_count{0};
 
@@ -880,9 +861,7 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
             MoonrakerClient client(loop);
 
             for (int i = 0; i < 10; i++) {
-                client.register_notify_update([&callback_count](json) {
-                    callback_count++;
-                });
+                client.register_notify_update([&callback_count](json) { callback_count++; });
             }
             // Client destroyed here
         }
@@ -898,9 +877,7 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
             MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
 
             for (int i = 0; i < 10; i++) {
-                mock.register_notify_update([&callback_count](json) {
-                    callback_count++;
-                });
+                mock.register_notify_update([&callback_count](json) { callback_count++; });
             }
 
             mock.connect("ws://mock/websocket", []() {}, []() {});
@@ -918,9 +895,8 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 // Integration Test - Full Workflow
 // ============================================================================
 
-TEST_CASE_METHOD(NewFeaturesTestFixture,
-                 "Full subscription workflow with mock client",
-                 "[moonraker][lifecycle_integration]") {
+TEST_CASE_METHOD(NewFeaturesTestFixture, "Full subscription workflow with mock client",
+                 "[connection][integration]") {
     MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
 
     std::atomic<int> total_notifications{0};
@@ -929,9 +905,8 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
 
     // Register 5 subscriptions
     for (int i = 0; i < 5; i++) {
-        SubscriptionId id = mock.register_notify_update([&total_notifications](json) {
-            total_notifications++;
-        });
+        SubscriptionId id =
+            mock.register_notify_update([&total_notifications](json) { total_notifications++; });
         REQUIRE(id != INVALID_SUBSCRIPTION_ID);
         subscription_ids.push_back(id);
     }
@@ -940,7 +915,7 @@ TEST_CASE_METHOD(NewFeaturesTestFixture,
     mock.connect("ws://mock/websocket", []() {}, []() {});
 
     // Wait for initial notifications
-    REQUIRE(wait_for_count(total_notifications, 5, 1000));  // All 5 should get initial notification
+    REQUIRE(wait_for_count(total_notifications, 5, 1000)); // All 5 should get initial notification
 
     // Unsubscribe 2 of them
     mock.unsubscribe_notify_update(subscription_ids[0]);

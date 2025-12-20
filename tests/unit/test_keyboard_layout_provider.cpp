@@ -88,7 +88,7 @@ static bool has_flag(lv_buttonmatrix_ctrl_t ctrl, lv_buttonmatrix_ctrl_t flag) {
 // Lowercase Alphabet Layout Tests
 // ============================================================================
 
-TEST_CASE("Keyboard Layout: Lowercase alphabet - basic structure", "[keyboard][layout][alpha_lc]") {
+TEST_CASE("Keyboard Layout: Lowercase alphabet - basic structure", "[ui][layout][alpha_lc]") {
     const char* const* map = keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_LC, false);
     const lv_buttonmatrix_ctrl_t* ctrl_map = keyboard_layout_get_ctrl_map(KEYBOARD_LAYOUT_ALPHA_LC);
 
@@ -160,8 +160,7 @@ TEST_CASE("Keyboard Layout: Lowercase alphabet - basic structure", "[keyboard][l
     }
 }
 
-TEST_CASE("Keyboard Layout: Lowercase alphabet - control map flags",
-          "[keyboard][layout][alpha_lc]") {
+TEST_CASE("Keyboard Layout: Lowercase alphabet - control map flags", "[ui][layout][alpha_lc]") {
     const char* const* map = keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_LC, false);
     const lv_buttonmatrix_ctrl_t* ctrl_map = keyboard_layout_get_ctrl_map(KEYBOARD_LAYOUT_ALPHA_LC);
 
@@ -212,7 +211,7 @@ TEST_CASE("Keyboard Layout: Lowercase alphabet - control map flags",
 // Uppercase Alphabet Layout Tests
 // ============================================================================
 
-TEST_CASE("Keyboard Layout: Uppercase alphabet - basic structure", "[keyboard][layout][alpha_uc]") {
+TEST_CASE("Keyboard Layout: Uppercase alphabet - basic structure", "[ui][layout][alpha_uc]") {
     SECTION("Caps lock mode (caps symbol)") {
         const char* const* map = keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_UC, true);
         REQUIRE(map != nullptr);
@@ -260,8 +259,7 @@ TEST_CASE("Keyboard Layout: Uppercase alphabet - basic structure", "[keyboard][l
     }
 }
 
-TEST_CASE("Keyboard Layout: Uppercase vs lowercase - character mapping",
-          "[keyboard][layout][alpha]") {
+TEST_CASE("Keyboard Layout: Uppercase vs lowercase - character mapping", "[ui][layout][alpha]") {
     const char* const* lc_map = keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_LC, false);
     const char* const* uc_map = keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_UC, false);
 
@@ -287,7 +285,7 @@ TEST_CASE("Keyboard Layout: Uppercase vs lowercase - character mapping",
 // Numbers and Symbols Layout Tests
 // ============================================================================
 
-TEST_CASE("Keyboard Layout: Numbers and symbols - structure", "[keyboard][layout][numbers]") {
+TEST_CASE("Keyboard Layout: Numbers and symbols - structure", "[ui][layout][numbers]") {
     const char* const* map = keyboard_layout_get_map(KEYBOARD_LAYOUT_NUMBERS_SYMBOLS, false);
     const lv_buttonmatrix_ctrl_t* ctrl_map =
         keyboard_layout_get_ctrl_map(KEYBOARD_LAYOUT_NUMBERS_SYMBOLS);
@@ -343,7 +341,7 @@ TEST_CASE("Keyboard Layout: Numbers and symbols - structure", "[keyboard][layout
     }
 }
 
-TEST_CASE("Keyboard Layout: Numbers and symbols - control flags", "[keyboard][layout][numbers]") {
+TEST_CASE("Keyboard Layout: Numbers and symbols - control flags", "[ui][layout][numbers]") {
     const char* const* map = keyboard_layout_get_map(KEYBOARD_LAYOUT_NUMBERS_SYMBOLS, false);
     const lv_buttonmatrix_ctrl_t* ctrl_map =
         keyboard_layout_get_ctrl_map(KEYBOARD_LAYOUT_NUMBERS_SYMBOLS);
@@ -379,7 +377,7 @@ TEST_CASE("Keyboard Layout: Numbers and symbols - control flags", "[keyboard][la
 // Alternative Symbols Layout Tests
 // ============================================================================
 
-TEST_CASE("Keyboard Layout: Alternative symbols - structure", "[keyboard][layout][alt_symbols]") {
+TEST_CASE("Keyboard Layout: Alternative symbols - structure", "[ui][layout][alt_symbols]") {
     const char* const* map = keyboard_layout_get_map(KEYBOARD_LAYOUT_ALT_SYMBOLS, false);
     const lv_buttonmatrix_ctrl_t* ctrl_map =
         keyboard_layout_get_ctrl_map(KEYBOARD_LAYOUT_ALT_SYMBOLS);
@@ -418,8 +416,7 @@ TEST_CASE("Keyboard Layout: Alternative symbols - structure", "[keyboard][layout
     }
 }
 
-TEST_CASE("Keyboard Layout: Alternative symbols - control flags",
-          "[keyboard][layout][alt_symbols]") {
+TEST_CASE("Keyboard Layout: Alternative symbols - control flags", "[ui][layout][alt_symbols]") {
     const char* const* map = keyboard_layout_get_map(KEYBOARD_LAYOUT_ALT_SYMBOLS, false);
     const lv_buttonmatrix_ctrl_t* ctrl_map =
         keyboard_layout_get_ctrl_map(KEYBOARD_LAYOUT_ALT_SYMBOLS);
@@ -442,7 +439,7 @@ TEST_CASE("Keyboard Layout: Alternative symbols - control flags",
 // Spacebar Text Tests
 // ============================================================================
 
-TEST_CASE("Keyboard Layout: Spacebar text constant", "[keyboard][layout][spacebar]") {
+TEST_CASE("Keyboard Layout: Spacebar text constant", "[ui][layout][spacebar]") {
     const char* spacebar = keyboard_layout_get_spacebar_text();
 
     SECTION("Returns non-null pointer") {
@@ -467,7 +464,7 @@ TEST_CASE("Keyboard Layout: Spacebar text constant", "[keyboard][layout][spaceba
 // ============================================================================
 
 TEST_CASE("Keyboard Layout: All layouts have matching button and control counts",
-          "[keyboard][layout][consistency]") {
+          "[ui][layout][consistency]") {
     SECTION("Lowercase alphabet") {
         const char* const* map = keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_LC, false);
         size_t btn_count = count_buttons(map);
@@ -511,7 +508,7 @@ TEST_CASE("Keyboard Layout: All layouts have matching button and control counts"
 // Key Width Tests
 // ============================================================================
 
-TEST_CASE("Keyboard Layout: Key widths are valid", "[keyboard][layout][widths]") {
+TEST_CASE("Keyboard Layout: Key widths are valid", "[ui][layout][widths]") {
     SECTION("Lowercase alphabet - regular keys are width 4") {
         const char* const* map = keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_LC, false);
         const lv_buttonmatrix_ctrl_t* ctrl_map =
@@ -551,7 +548,7 @@ TEST_CASE("Keyboard Layout: Key widths are valid", "[keyboard][layout][widths]")
 // Fallback Behavior Tests
 // ============================================================================
 
-TEST_CASE("Keyboard Layout: Invalid mode falls back to lowercase", "[keyboard][layout][fallback]") {
+TEST_CASE("Keyboard Layout: Invalid mode falls back to lowercase", "[ui][layout][fallback]") {
     // Cast to invalid enum value
     keyboard_layout_mode_t invalid_mode = static_cast<keyboard_layout_mode_t>(999);
 
@@ -577,7 +574,7 @@ TEST_CASE("Keyboard Layout: Invalid mode falls back to lowercase", "[keyboard][l
 // Row Structure Tests
 // ============================================================================
 
-TEST_CASE("Keyboard Layout: Row structure validation", "[keyboard][layout][rows]") {
+TEST_CASE("Keyboard Layout: Row structure validation", "[ui][layout][rows]") {
     SECTION("Lowercase alphabet row 1 has 10 keys (q-p)") {
         const char* const* map = keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_LC, false);
 
@@ -628,8 +625,7 @@ TEST_CASE("Keyboard Layout: Row structure validation", "[keyboard][layout][rows]
 // Special Button Tests
 // ============================================================================
 
-TEST_CASE("Keyboard Layout: Special buttons present in all layouts",
-          "[keyboard][layout][special]") {
+TEST_CASE("Keyboard Layout: Special buttons present in all layouts", "[ui][layout][special]") {
     const char* const* layouts[] = {keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_LC, false),
                                     keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_UC, false),
                                     keyboard_layout_get_map(KEYBOARD_LAYOUT_NUMBERS_SYMBOLS, false),
@@ -655,7 +651,7 @@ TEST_CASE("Keyboard Layout: Special buttons present in all layouts",
 // Mode Switching Button Tests
 // ============================================================================
 
-TEST_CASE("Keyboard Layout: Mode switching buttons", "[keyboard][layout][mode_switch]") {
+TEST_CASE("Keyboard Layout: Mode switching buttons", "[ui][layout][mode_switch]") {
     SECTION("Alpha layouts have ?123 button") {
         const char* const* lc_map = keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_LC, false);
         const char* const* uc_map = keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_UC, false);
@@ -683,7 +679,7 @@ TEST_CASE("Keyboard Layout: Mode switching buttons", "[keyboard][layout][mode_sw
 // Control Map Flag Combination Tests
 // ============================================================================
 
-TEST_CASE("Keyboard Layout: Control flags are properly combined", "[keyboard][layout][flags]") {
+TEST_CASE("Keyboard Layout: Control flags are properly combined", "[ui][layout][flags]") {
     SECTION("Letter keys have POPOVER + NO_REPEAT + width") {
         const char* const* map = keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_LC, false);
         const lv_buttonmatrix_ctrl_t* ctrl = keyboard_layout_get_ctrl_map(KEYBOARD_LAYOUT_ALPHA_LC);
@@ -713,7 +709,7 @@ TEST_CASE("Keyboard Layout: Control flags are properly combined", "[keyboard][la
 // Layout Completeness Tests
 // ============================================================================
 
-TEST_CASE("Keyboard Layout: All printable ASCII available", "[keyboard][layout][completeness]") {
+TEST_CASE("Keyboard Layout: All printable ASCII available", "[ui][layout][completeness]") {
     // Collect all buttons from all layouts
     const char* const* layouts[] = {keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_LC, false),
                                     keyboard_layout_get_map(KEYBOARD_LAYOUT_ALPHA_UC, false),

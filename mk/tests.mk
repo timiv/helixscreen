@@ -108,9 +108,19 @@ test: $(TEST_BIN)
 	$(ECHO) "$(GREEN)✓ Test binary ready: $(TEST_BIN)$(RESET)"
 	$(ECHO) "$(CYAN)Run tests with: make test-run$(RESET)"
 
-# Run all non-hidden unit tests
+# Run unit tests (excludes hidden and slow tests for fast iteration)
+# Use 'make test-all' to run everything including slow tests
 test-run: $(TEST_BIN)
-	$(ECHO) "$(CYAN)$(BOLD)Running unit tests...$(RESET)"
+	$(ECHO) "$(CYAN)$(BOLD)Running unit tests (excluding slow)...$(RESET)"
+	@START_TIME=$$(date +%s); \
+	$(TEST_BIN) "~[.] ~[slow]" && \
+	END_TIME=$$(date +%s); \
+	DURATION=$$((END_TIME - START_TIME)); \
+	echo "$(GREEN)$(BOLD)✓ Tests passed in $${DURATION}s$(RESET)"
+
+# Run ALL tests including slow ones (for thorough validation)
+test-all: $(TEST_BIN)
+	$(ECHO) "$(CYAN)$(BOLD)Running ALL tests (including slow)...$(RESET)"
 	@START_TIME=$$(date +%s); \
 	$(TEST_BIN) "~[.]" && \
 	END_TIME=$$(date +%s); \
@@ -216,6 +226,16 @@ test-slow: $(TEST_BIN)
 	DURATION=$$((END_TIME - START_TIME)); \
 	echo "$(GREEN)$(BOLD)✓ Slow tests passed in $${DURATION}s$(RESET)"
 
+# Smoke test - minimal critical tests for quick validation (<30s)
+# Use during rapid iteration to catch obvious regressions
+test-smoke: $(TEST_BIN)
+	$(ECHO) "$(CYAN)$(BOLD)Running smoke tests (minimal critical subset)...$(RESET)"
+	@START_TIME=$$(date +%s); \
+	$(TEST_BIN) "[config],[navigation],[ui_theme],[parser]" "~[slow]" "~[.]" && \
+	END_TIME=$$(date +%s); \
+	DURATION=$$((END_TIME - START_TIME)); \
+	echo "$(GREEN)$(BOLD)✓ Smoke tests passed in $${DURATION}s$(RESET)"
+
 # Show test coverage summary by tag area
 test-summary: $(TEST_BIN)
 	$(ECHO) "$(CYAN)$(BOLD)=== Test Coverage by Tag (top 25) ===$(RESET)"
@@ -223,6 +243,21 @@ test-summary: $(TEST_BIN)
 	$(ECHO) ""
 	$(ECHO) "$(CYAN)$(BOLD)=== Test Count ===$(RESET)"
 	@echo -n "  "; $(TEST_BIN) --list-tests 2>&1 | grep -c "^  " || echo "0"
+
+# Generate timing report for major test categories
+# Updates docs/TEST_TIMING.md with current timings
+test-timing-report: $(TEST_BIN)
+	$(ECHO) "$(CYAN)$(BOLD)Generating test timing report...$(RESET)"
+	@echo "| Tag | Tests | Time |" > /tmp/test_timing.md
+	@echo "|-----|-------|------|" >> /tmp/test_timing.md
+	@for tag in moonraker gcode printer_detector config parser navigation ui_theme security afc wizard mock; do \
+		result=$$($(TEST_BIN) "[$$tag]" "~[.]" "~[slow]" --durations yes 2>&1); \
+		count=$$(echo "$$result" | grep "test cases" | grep -o "[0-9]* passed" | head -1 || echo "0"); \
+		time=$$(echo "$$result" | tail -1); \
+		echo "| [\$$tag] | $$count | - |" >> /tmp/test_timing.md; \
+	done
+	@cat /tmp/test_timing.md
+	$(ECHO) "$(GREEN)See docs/TEST_TIMING.md for full documentation$(RESET)"
 
 # ============================================================================
 # Slow Test Candidates (>500ms) - Tag with [slow] incrementally
@@ -250,6 +285,94 @@ test-config: $(TEST_BIN)
 		exit 1; \
 	}
 	$(ECHO) "$(GREEN)$(BOLD)✓ Config tests passed!$(RESET)"
+
+# ============================================================================
+# Feature-Based Test Targets (New Taxonomy)
+# ============================================================================
+# Tests are now tagged by FEATURE/IMPORTANCE rather than layer/speed.
+# Use these targets to test specific functional areas.
+
+# CORE tests - Critical functionality that MUST work (<15s, ~18 tests)
+# If these fail, the app is fundamentally broken.
+test-core: $(TEST_BIN)
+	$(ECHO) "$(CYAN)$(BOLD)Running core tests...$(RESET)"
+	@START_TIME=$$(date +%s); \
+	$(TEST_BIN) "[core]" && \
+	END_TIME=$$(date +%s); \
+	DURATION=$$((END_TIME - START_TIME)); \
+	echo "$(GREEN)$(BOLD)✓ Core tests passed in $${DURATION}s$(RESET)"
+
+# CONNECTION tests - Moonraker connection lifecycle, retry, robustness
+test-connection: $(TEST_BIN)
+	$(ECHO) "$(CYAN)$(BOLD)Running connection tests...$(RESET)"
+	@START_TIME=$$(date +%s); \
+	$(TEST_BIN) "[connection]" "~[slow]" && \
+	END_TIME=$$(date +%s); \
+	DURATION=$$((END_TIME - START_TIME)); \
+	echo "$(GREEN)✓ Connection tests passed in $${DURATION}s$(RESET)"
+
+# STATE tests - PrinterState, subjects, observers
+test-state: $(TEST_BIN)
+	$(ECHO) "$(CYAN)$(BOLD)Running state tests...$(RESET)"
+	@START_TIME=$$(date +%s); \
+	$(TEST_BIN) "[state]" && \
+	END_TIME=$$(date +%s); \
+	DURATION=$$((END_TIME - START_TIME)); \
+	echo "$(GREEN)✓ State tests passed in $${DURATION}s$(RESET)"
+
+# PRINT tests - Print workflow, start/pause/cancel, exclude object
+test-print: $(TEST_BIN)
+	$(ECHO) "$(CYAN)$(BOLD)Running print tests...$(RESET)"
+	@START_TIME=$$(date +%s); \
+	$(TEST_BIN) "[print]" "~[slow]" && \
+	END_TIME=$$(date +%s); \
+	DURATION=$$((END_TIME - START_TIME)); \
+	echo "$(GREEN)✓ Print tests passed in $${DURATION}s$(RESET)"
+
+# CALIBRATION tests - Bed mesh, input shaper
+test-calibration: $(TEST_BIN)
+	$(ECHO) "$(CYAN)$(BOLD)Running calibration tests...$(RESET)"
+	@START_TIME=$$(date +%s); \
+	$(TEST_BIN) "[calibration]" && \
+	END_TIME=$$(date +%s); \
+	DURATION=$$((END_TIME - START_TIME)); \
+	echo "$(GREEN)✓ Calibration tests passed in $${DURATION}s$(RESET)"
+
+# PRINTER tests - Printer detection, capabilities, hardware
+test-printer: $(TEST_BIN)
+	$(ECHO) "$(CYAN)$(BOLD)Running printer tests...$(RESET)"
+	@START_TIME=$$(date +%s); \
+	$(TEST_BIN) "[printer]" && \
+	END_TIME=$$(date +%s); \
+	DURATION=$$((END_TIME - START_TIME)); \
+	echo "$(GREEN)✓ Printer tests passed in $${DURATION}s$(RESET)"
+
+# AMS tests - All AMS/MMU backends (includes [afc], [valgace])
+test-ams: $(TEST_BIN)
+	$(ECHO) "$(CYAN)$(BOLD)Running AMS tests...$(RESET)"
+	@START_TIME=$$(date +%s); \
+	$(TEST_BIN) "[ams]" && \
+	END_TIME=$$(date +%s); \
+	DURATION=$$((END_TIME - START_TIME)); \
+	echo "$(GREEN)✓ AMS tests passed in $${DURATION}s$(RESET)"
+
+# FILAMENT tests - Spoolman, filament sensors
+test-filament: $(TEST_BIN)
+	$(ECHO) "$(CYAN)$(BOLD)Running filament tests...$(RESET)"
+	@START_TIME=$$(date +%s); \
+	$(TEST_BIN) "[filament]" && \
+	END_TIME=$$(date +%s); \
+	DURATION=$$((END_TIME - START_TIME)); \
+	echo "$(GREEN)✓ Filament tests passed in $${DURATION}s$(RESET)"
+
+# ASSETS tests - Thumbnails, prerendered images
+test-assets: $(TEST_BIN)
+	$(ECHO) "$(CYAN)$(BOLD)Running assets tests...$(RESET)"
+	@START_TIME=$$(date +%s); \
+	$(TEST_BIN) "[assets]" && \
+	END_TIME=$$(date +%s); \
+	DURATION=$$((END_TIME - START_TIME)); \
+	echo "$(GREEN)✓ Assets tests passed in $${DURATION}s$(RESET)"
 
 # Unified test binary - uses automatic app object discovery
 # No more manual dependency lists! New source files are automatically included.
@@ -654,11 +777,11 @@ help-test:
 	echo ""; \
 	echo "$${C}Main Test Targets:$${X}"; \
 	echo "  $${G}test$${X}                 - Build tests (does not run)"; \
-	echo "  $${G}test-run$${X}             - Run all unit tests (excludes hidden/slow)"; \
-	echo "  $${G}test-fast$${X}            - Run fast tests only (skip [slow] tagged)"; \
-	echo "  $${G}test-slow$${X}            - Run only slow tests"; \
+	echo "  $${G}test-smoke$${X}           - Quick smoke test (~30s) for rapid iteration"; \
+	echo "  $${G}test-run$${X}             - Run unit tests (excludes hidden/slow)"; \
+	echo "  $${G}test-all$${X}             - Run ALL tests including slow ones"; \
+	echo "  $${G}test-slow$${X}            - Run only [slow] tagged tests"; \
 	echo "  $${G}test-verbose$${X}         - Run with per-test timing"; \
-	echo "  $${G}test-build$${X}           - Build tests without running (alias for test)"; \
 	echo ""; \
 	echo "$${C}Component Tests:$${X}"; \
 	echo "  $${G}test-gcode$${X}           - G-code parsing and geometry tests"; \

@@ -51,24 +51,24 @@ static bool is_error_message(const std::string& message) {
 // Error Message Detection Tests
 // ============================================================================
 
-TEST_CASE("Console: is_error_message() with empty string", "[console][error_detection]") {
+TEST_CASE("Console: is_error_message() with empty string", "[ui][error_detection]") {
     REQUIRE(is_error_message("") == false);
 }
 
-TEST_CASE("Console: is_error_message() with !! prefix", "[console][error_detection]") {
+TEST_CASE("Console: is_error_message() with !! prefix", "[ui][error_detection]") {
     REQUIRE(is_error_message("!! Error: Heater not responding") == true);
     REQUIRE(is_error_message("!!Thermistor disconnected") == true);
     REQUIRE(is_error_message("!! ") == true);
 }
 
-TEST_CASE("Console: is_error_message() with Error prefix", "[console][error_detection]") {
+TEST_CASE("Console: is_error_message() with Error prefix", "[ui][error_detection]") {
     REQUIRE(is_error_message("Error: Command failed") == true);
     REQUIRE(is_error_message("ERROR: Unknown G-code") == true);
     REQUIRE(is_error_message("error: invalid parameter") == true);
     REQUIRE(is_error_message("ErRoR: mixed case") == true);
 }
 
-TEST_CASE("Console: is_error_message() with normal responses", "[console][error_detection]") {
+TEST_CASE("Console: is_error_message() with normal responses", "[ui][error_detection]") {
     // Normal OK responses
     REQUIRE(is_error_message("ok") == false);
     REQUIRE(is_error_message("// Klipper state: Ready") == false);
@@ -79,12 +79,12 @@ TEST_CASE("Console: is_error_message() with normal responses", "[console][error_
     REQUIRE(is_error_message("G-code M112 for error stop") == false);
 }
 
-TEST_CASE("Console: is_error_message() with single character", "[console][error_detection]") {
+TEST_CASE("Console: is_error_message() with single character", "[ui][error_detection]") {
     REQUIRE(is_error_message("!") == false); // Only one !, not two
     REQUIRE(is_error_message("E") == false); // Not enough characters for "Error"
 }
 
-TEST_CASE("Console: is_error_message() with boundary cases", "[console][error_detection]") {
+TEST_CASE("Console: is_error_message() with boundary cases", "[ui][error_detection]") {
     REQUIRE(is_error_message("Err") == false);   // Too short for "Error"
     REQUIRE(is_error_message("Erro") == false);  // Still too short
     REQUIRE(is_error_message("Error") == true);  // Exactly "Error"
@@ -95,7 +95,7 @@ TEST_CASE("Console: is_error_message() with boundary cases", "[console][error_de
 // Entry Type Classification Tests
 // ============================================================================
 
-TEST_CASE("Console: command vs response type classification", "[console][entry_type]") {
+TEST_CASE("Console: command vs response type classification", "[ui][entry_type]") {
     // These would come from MoonrakerClient::GcodeStoreEntry.type field
 
     // Commands are user input
@@ -109,7 +109,7 @@ TEST_CASE("Console: command vs response type classification", "[console][entry_t
 // Message Content Tests
 // ============================================================================
 
-TEST_CASE("Console: typical Klipper error messages", "[console][error_detection]") {
+TEST_CASE("Console: typical Klipper error messages", "[ui][error_detection]") {
     // Real Klipper error message patterns
     REQUIRE(is_error_message("!! Move out of range: 0.000 250.000 0.500 [0.000]") == true);
     REQUIRE(is_error_message("!! Timer too close") == true);
@@ -117,7 +117,7 @@ TEST_CASE("Console: typical Klipper error messages", "[console][error_detection]
     REQUIRE(is_error_message("Error: Bed heater not responding") == true);
 }
 
-TEST_CASE("Console: typical Klipper info messages", "[console][error_detection]") {
+TEST_CASE("Console: typical Klipper info messages", "[ui][error_detection]") {
     // Normal Klipper messages that should NOT be flagged as errors
     REQUIRE(is_error_message("// Klipper state: Ready") == false);
     REQUIRE(is_error_message("// probe at 150.000,150.000 is z=1.234567") == false);
@@ -162,11 +162,11 @@ static bool is_temp_message(const std::string& message) {
 // Temperature Message Detection Tests
 // ============================================================================
 
-TEST_CASE("Console: is_temp_message() with empty string", "[console][temp_filter]") {
+TEST_CASE("Console: is_temp_message() with empty string", "[ui][temp_filter]") {
     REQUIRE(is_temp_message("") == false);
 }
 
-TEST_CASE("Console: is_temp_message() with standard temp reports", "[console][temp_filter]") {
+TEST_CASE("Console: is_temp_message() with standard temp reports", "[ui][temp_filter]") {
     // Standard Klipper temperature reports
     REQUIRE(is_temp_message("T:210.0 /210.0 B:60.0 /60.0") == true);
     REQUIRE(is_temp_message("ok T:210.5 /210.0 B:60.2 /60.0") == true);
@@ -174,13 +174,13 @@ TEST_CASE("Console: is_temp_message() with standard temp reports", "[console][te
     REQUIRE(is_temp_message("T0:200.0 /200.0 T1:0.0 /0.0 B:55.0 /55.0") == true);
 }
 
-TEST_CASE("Console: is_temp_message() with partial temp formats", "[console][temp_filter]") {
+TEST_CASE("Console: is_temp_message() with partial temp formats", "[ui][temp_filter]") {
     // Partial formats that should still be detected
     REQUIRE(is_temp_message("T:25.0 /0.0") == true); // Cold extruder
     REQUIRE(is_temp_message("B:22.0 /0.0") == true); // Cold bed
 }
 
-TEST_CASE("Console: is_temp_message() with non-temp messages", "[console][temp_filter]") {
+TEST_CASE("Console: is_temp_message() with non-temp messages", "[ui][temp_filter]") {
     // These should NOT be flagged as temperature messages
     REQUIRE(is_temp_message("ok") == false);
     REQUIRE(is_temp_message("// Klipper state: Ready") == false);
@@ -190,7 +190,7 @@ TEST_CASE("Console: is_temp_message() with non-temp messages", "[console][temp_f
     REQUIRE(is_temp_message("G28 X Y") == false);
 }
 
-TEST_CASE("Console: is_temp_message() edge cases", "[console][temp_filter]") {
+TEST_CASE("Console: is_temp_message() edge cases", "[ui][temp_filter]") {
     // Edge cases that look like temps but aren't
     REQUIRE(is_temp_message("T:") == false);               // No value or slash
     REQUIRE(is_temp_message("B:60") == false);             // No slash

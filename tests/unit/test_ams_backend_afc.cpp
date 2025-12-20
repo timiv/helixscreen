@@ -131,70 +131,70 @@ class AmsBackendAfcTestHelper : public AmsBackendAfc {
 // version_at_least() - Semantic Version Comparison Tests
 // ============================================================================
 
-TEST_CASE("AFC version_at_least: equal versions", "[afc][version]") {
+TEST_CASE("AFC version_at_least: equal versions", "[ams][afc][version]") {
     AmsBackendAfcTestHelper helper;
     helper.set_afc_version("1.0.32");
 
     REQUIRE(helper.test_version_at_least("1.0.32") == true);
 }
 
-TEST_CASE("AFC version_at_least: greater patch version", "[afc][version]") {
+TEST_CASE("AFC version_at_least: greater patch version", "[ams][afc][version]") {
     AmsBackendAfcTestHelper helper;
     helper.set_afc_version("1.0.33");
 
     REQUIRE(helper.test_version_at_least("1.0.32") == true);
 }
 
-TEST_CASE("AFC version_at_least: greater minor version", "[afc][version]") {
+TEST_CASE("AFC version_at_least: greater minor version", "[ams][afc][version]") {
     AmsBackendAfcTestHelper helper;
     helper.set_afc_version("1.1.0");
 
     REQUIRE(helper.test_version_at_least("1.0.32") == true);
 }
 
-TEST_CASE("AFC version_at_least: greater major version", "[afc][version]") {
+TEST_CASE("AFC version_at_least: greater major version", "[ams][afc][version]") {
     AmsBackendAfcTestHelper helper;
     helper.set_afc_version("2.0.0");
 
     REQUIRE(helper.test_version_at_least("1.0.32") == true);
 }
 
-TEST_CASE("AFC version_at_least: lesser patch version fails", "[afc][version]") {
+TEST_CASE("AFC version_at_least: lesser patch version fails", "[ams][afc][version]") {
     AmsBackendAfcTestHelper helper;
     helper.set_afc_version("1.0.31");
 
     REQUIRE(helper.test_version_at_least("1.0.32") == false);
 }
 
-TEST_CASE("AFC version_at_least: unknown version fails", "[afc][version]") {
+TEST_CASE("AFC version_at_least: unknown version fails", "[ams][afc][version]") {
     AmsBackendAfcTestHelper helper;
     helper.set_afc_version("unknown");
 
     REQUIRE(helper.test_version_at_least("1.0.32") == false);
 }
 
-TEST_CASE("AFC version_at_least: empty version fails", "[afc][version]") {
+TEST_CASE("AFC version_at_least: empty version fails", "[ams][afc][version]") {
     AmsBackendAfcTestHelper helper;
     helper.set_afc_version("");
 
     REQUIRE(helper.test_version_at_least("1.0.32") == false);
 }
 
-TEST_CASE("AFC version_at_least: lesser minor version fails", "[afc][version]") {
+TEST_CASE("AFC version_at_least: lesser minor version fails", "[ams][afc][version]") {
     AmsBackendAfcTestHelper helper;
     helper.set_afc_version("1.0.0");
 
     REQUIRE(helper.test_version_at_least("1.1.0") == false);
 }
 
-TEST_CASE("AFC version_at_least: lesser major version fails", "[afc][version]") {
+TEST_CASE("AFC version_at_least: lesser major version fails", "[ams][afc][version]") {
     AmsBackendAfcTestHelper helper;
     helper.set_afc_version("1.99.99");
 
     REQUIRE(helper.test_version_at_least("2.0.0") == false);
 }
 
-TEST_CASE("AFC version_at_least: high patch vs low minor", "[afc][version]") {
+TEST_CASE("AFC version_at_least: high patch vs low minor", "[ams][afc][version]") {
     AmsBackendAfcTestHelper helper;
     helper.set_afc_version("1.0.100");
 
@@ -202,7 +202,7 @@ TEST_CASE("AFC version_at_least: high patch vs low minor", "[afc][version]") {
     REQUIRE(helper.test_version_at_least("1.1.0") == false);
 }
 
-TEST_CASE("AFC version_at_least: handles two-part version", "[afc][version]") {
+TEST_CASE("AFC version_at_least: handles two-part version", "[ams][afc][version]") {
     AmsBackendAfcTestHelper helper;
     // Version parsing uses istringstream which may handle partial versions
     helper.set_afc_version("1.0");
@@ -215,7 +215,7 @@ TEST_CASE("AFC version_at_least: handles two-part version", "[afc][version]") {
 // compute_filament_segment_unlocked() - Sensor-to-Segment Mapping Tests
 // ============================================================================
 
-TEST_CASE("AFC segment: no sensors triggered returns NONE", "[afc][segment]") {
+TEST_CASE("AFC segment: no sensors triggered returns NONE", "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
 
@@ -223,7 +223,8 @@ TEST_CASE("AFC segment: no sensors triggered returns NONE", "[afc][segment]") {
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::NONE);
 }
 
-TEST_CASE("AFC segment: filament loaded flag returns SPOOL when no sensors", "[afc][segment]") {
+TEST_CASE("AFC segment: filament loaded flag returns SPOOL when no sensors",
+          "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     helper.set_filament_loaded(true);
@@ -232,7 +233,7 @@ TEST_CASE("AFC segment: filament loaded flag returns SPOOL when no sensors", "[a
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::SPOOL);
 }
 
-TEST_CASE("AFC segment: current slot set returns SPOOL when no sensors", "[afc][segment]") {
+TEST_CASE("AFC segment: current slot set returns SPOOL when no sensors", "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     helper.set_current_slot(0);
@@ -241,7 +242,7 @@ TEST_CASE("AFC segment: current slot set returns SPOOL when no sensors", "[afc][
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::SPOOL);
 }
 
-TEST_CASE("AFC segment: prep sensor triggered returns PREP", "[afc][segment]") {
+TEST_CASE("AFC segment: prep sensor triggered returns PREP", "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     helper.set_current_lane("lane1");
@@ -250,7 +251,7 @@ TEST_CASE("AFC segment: prep sensor triggered returns PREP", "[afc][segment]") {
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::PREP);
 }
 
-TEST_CASE("AFC segment: prep and load sensors return LANE", "[afc][segment]") {
+TEST_CASE("AFC segment: prep and load sensors return LANE", "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     helper.set_current_lane("lane1");
@@ -260,7 +261,7 @@ TEST_CASE("AFC segment: prep and load sensors return LANE", "[afc][segment]") {
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::LANE);
 }
 
-TEST_CASE("AFC segment: loaded_to_hub returns HUB", "[afc][segment]") {
+TEST_CASE("AFC segment: loaded_to_hub returns HUB", "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     helper.set_current_lane("lane1");
@@ -271,7 +272,7 @@ TEST_CASE("AFC segment: loaded_to_hub returns HUB", "[afc][segment]") {
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::HUB);
 }
 
-TEST_CASE("AFC segment: hub_sensor returns OUTPUT", "[afc][segment]") {
+TEST_CASE("AFC segment: hub_sensor returns OUTPUT", "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     helper.set_current_lane("lane1");
@@ -282,7 +283,7 @@ TEST_CASE("AFC segment: hub_sensor returns OUTPUT", "[afc][segment]") {
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::OUTPUT);
 }
 
-TEST_CASE("AFC segment: tool_start_sensor returns TOOLHEAD", "[afc][segment]") {
+TEST_CASE("AFC segment: tool_start_sensor returns TOOLHEAD", "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     helper.set_hub_sensor(true);
@@ -291,7 +292,7 @@ TEST_CASE("AFC segment: tool_start_sensor returns TOOLHEAD", "[afc][segment]") {
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::TOOLHEAD);
 }
 
-TEST_CASE("AFC segment: tool_end_sensor returns NOZZLE", "[afc][segment]") {
+TEST_CASE("AFC segment: tool_end_sensor returns NOZZLE", "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     helper.set_hub_sensor(true);
@@ -301,7 +302,8 @@ TEST_CASE("AFC segment: tool_end_sensor returns NOZZLE", "[afc][segment]") {
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::NOZZLE);
 }
 
-TEST_CASE("AFC segment: tool_end_sensor alone returns NOZZLE (overrides all)", "[afc][segment]") {
+TEST_CASE("AFC segment: tool_end_sensor alone returns NOZZLE (overrides all)",
+          "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     // Only end sensor, no others - still returns NOZZLE as it's furthest
@@ -310,7 +312,7 @@ TEST_CASE("AFC segment: tool_end_sensor alone returns NOZZLE (overrides all)", "
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::NOZZLE);
 }
 
-TEST_CASE("AFC segment: fallback scans all lanes for prep sensor", "[afc][segment]") {
+TEST_CASE("AFC segment: fallback scans all lanes for prep sensor", "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     // No current lane set, but lane3 has prep sensor triggered
@@ -319,7 +321,7 @@ TEST_CASE("AFC segment: fallback scans all lanes for prep sensor", "[afc][segmen
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::PREP);
 }
 
-TEST_CASE("AFC segment: fallback scans all lanes for load sensor", "[afc][segment]") {
+TEST_CASE("AFC segment: fallback scans all lanes for load sensor", "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     // No current lane set, but lane2 has load sensor triggered
@@ -328,7 +330,7 @@ TEST_CASE("AFC segment: fallback scans all lanes for load sensor", "[afc][segmen
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::LANE);
 }
 
-TEST_CASE("AFC segment: fallback scans all lanes for loaded_to_hub", "[afc][segment]") {
+TEST_CASE("AFC segment: fallback scans all lanes for loaded_to_hub", "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     // No current lane set, but lane4 has loaded_to_hub
@@ -337,7 +339,7 @@ TEST_CASE("AFC segment: fallback scans all lanes for loaded_to_hub", "[afc][segm
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::HUB);
 }
 
-TEST_CASE("AFC segment: hub sensor takes priority over lane sensors", "[afc][segment]") {
+TEST_CASE("AFC segment: hub sensor takes priority over lane sensors", "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     helper.set_current_lane("lane1");
@@ -350,7 +352,7 @@ TEST_CASE("AFC segment: hub sensor takes priority over lane sensors", "[afc][seg
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::OUTPUT);
 }
 
-TEST_CASE("AFC segment: toolhead sensors take priority over hub", "[afc][segment]") {
+TEST_CASE("AFC segment: toolhead sensors take priority over hub", "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     helper.set_hub_sensor(true);
@@ -364,14 +366,14 @@ TEST_CASE("AFC segment: toolhead sensors take priority over hub", "[afc][segment
 // Edge Cases
 // ============================================================================
 
-TEST_CASE("AFC segment: no lanes initialized returns NONE", "[afc][segment][edge]") {
+TEST_CASE("AFC segment: no lanes initialized returns NONE", "[ams][afc][segment][edge]") {
     AmsBackendAfcTestHelper helper;
     // Don't call initialize_test_lanes - lane_names_ is empty
 
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::NONE);
 }
 
-TEST_CASE("AFC segment: current lane not in map uses fallback scan", "[afc][segment][edge]") {
+TEST_CASE("AFC segment: current lane not in map uses fallback scan", "[ams][afc][segment][edge]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     // Set a lane name that doesn't exist in the map
@@ -382,7 +384,7 @@ TEST_CASE("AFC segment: current lane not in map uses fallback scan", "[afc][segm
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::PREP);
 }
 
-TEST_CASE("AFC version_at_least: dev version string", "[afc][version][edge]") {
+TEST_CASE("AFC version_at_least: dev version string", "[ams][afc][version][edge]") {
     AmsBackendAfcTestHelper helper;
     // Some systems may have dev/beta suffixes, but our parser ignores them
     // "1.0.32-dev" will parse as 1.0.32 (istringstream stops at non-digit)
@@ -392,7 +394,8 @@ TEST_CASE("AFC version_at_least: dev version string", "[afc][version][edge]") {
     REQUIRE(helper.test_version_at_least("1.0.32") == true);
 }
 
-TEST_CASE("AFC segment: multiple lanes with sensors uses first match in order", "[afc][segment]") {
+TEST_CASE("AFC segment: multiple lanes with sensors uses first match in order",
+          "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     // Multiple lanes have sensors triggered, but no current lane set
@@ -407,7 +410,8 @@ TEST_CASE("AFC segment: multiple lanes with sensors uses first match in order", 
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::PREP);
 }
 
-TEST_CASE("AFC segment: fallback prioritizes hub over lane sensors per-lane", "[afc][segment]") {
+TEST_CASE("AFC segment: fallback prioritizes hub over lane sensors per-lane",
+          "[ams][afc][segment]") {
     AmsBackendAfcTestHelper helper;
     helper.initialize_test_lanes(4);
     // Lane 2 has all sensors including loaded_to_hub, lane 0 only has prep
@@ -425,7 +429,7 @@ TEST_CASE("AFC segment: fallback prioritizes hub over lane sensors per-lane", "[
 // set_discovered_lanes() - Lane Discovery from PrinterCapabilities Tests
 // ============================================================================
 
-TEST_CASE("AFC set_discovered_lanes: sets lane names correctly", "[afc][discovery]") {
+TEST_CASE("AFC set_discovered_lanes: sets lane names correctly", "[ams][afc][discovery]") {
     AmsBackendAfcTestHelper helper;
 
     std::vector<std::string> lanes = {"lane1", "lane2", "lane3", "lane4"};
@@ -439,7 +443,7 @@ TEST_CASE("AFC set_discovered_lanes: sets lane names correctly", "[afc][discover
     REQUIRE(helper.get_lane_names()[3] == "lane4");
 }
 
-TEST_CASE("AFC set_discovered_lanes: sets hub names correctly", "[afc][discovery]") {
+TEST_CASE("AFC set_discovered_lanes: sets hub names correctly", "[ams][afc][discovery]") {
     AmsBackendAfcTestHelper helper;
 
     std::vector<std::string> lanes = {"lane1", "lane2"};
@@ -451,7 +455,8 @@ TEST_CASE("AFC set_discovered_lanes: sets hub names correctly", "[afc][discovery
     REQUIRE(helper.get_hub_names()[0] == "Turtle_1");
 }
 
-TEST_CASE("AFC set_discovered_lanes: empty lanes doesn't overwrite existing", "[afc][discovery]") {
+TEST_CASE("AFC set_discovered_lanes: empty lanes doesn't overwrite existing",
+          "[ams][afc][discovery]") {
     AmsBackendAfcTestHelper helper;
 
     // First set some lanes
@@ -471,7 +476,7 @@ TEST_CASE("AFC set_discovered_lanes: empty lanes doesn't overwrite existing", "[
     REQUIRE(helper.get_hub_names()[0] == "NewHub");
 }
 
-TEST_CASE("AFC segment: works with discovered lanes", "[afc][discovery][segment]") {
+TEST_CASE("AFC segment: works with discovered lanes", "[ams][afc][discovery][segment]") {
     AmsBackendAfcTestHelper helper;
 
     // Set lanes via discovery (like PrinterCapabilities would)

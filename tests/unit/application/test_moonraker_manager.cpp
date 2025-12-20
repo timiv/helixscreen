@@ -21,8 +21,7 @@
 // RuntimeConfig Tests (MoonrakerManager dependency)
 // ============================================================================
 
-TEST_CASE("MoonrakerManager uses RuntimeConfig for mock decisions",
-          "[application][moonraker][config]") {
+TEST_CASE("MoonrakerManager uses RuntimeConfig for mock decisions", "[application][config]") {
     RuntimeConfig config;
 
     SECTION("Default is not mock mode") {
@@ -52,7 +51,7 @@ TEST_CASE("MoonrakerManager uses RuntimeConfig for mock decisions",
     }
 }
 
-TEST_CASE("RuntimeConfig simulation speedup", "[application][moonraker][config]") {
+TEST_CASE("RuntimeConfig simulation speedup", "[application][config]") {
     RuntimeConfig config;
 
     REQUIRE(config.sim_speedup == 1.0);
@@ -64,7 +63,7 @@ TEST_CASE("RuntimeConfig simulation speedup", "[application][moonraker][config]"
     REQUIRE(config.sim_speedup == 0.5);
 }
 
-TEST_CASE("RuntimeConfig mock_auto_start_print flag", "[application][moonraker][config]") {
+TEST_CASE("RuntimeConfig mock_auto_start_print flag", "[application][config]") {
     RuntimeConfig config;
 
     REQUIRE_FALSE(config.mock_auto_start_print);
@@ -73,7 +72,7 @@ TEST_CASE("RuntimeConfig mock_auto_start_print flag", "[application][moonraker][
     REQUIRE(config.mock_auto_start_print);
 }
 
-TEST_CASE("RuntimeConfig mock_auto_history flag", "[application][moonraker][config]") {
+TEST_CASE("RuntimeConfig mock_auto_history flag", "[application][config]") {
     RuntimeConfig config;
 
     REQUIRE_FALSE(config.mock_auto_history);
@@ -82,7 +81,7 @@ TEST_CASE("RuntimeConfig mock_auto_history flag", "[application][moonraker][conf
     REQUIRE(config.mock_auto_history);
 }
 
-TEST_CASE("RuntimeConfig mock_ams_gate_count", "[application][moonraker][config]") {
+TEST_CASE("RuntimeConfig mock_ams_gate_count", "[application][config]") {
     RuntimeConfig config;
 
     // Default is 4 gates
@@ -98,68 +97,63 @@ TEST_CASE("RuntimeConfig mock_ams_gate_count", "[application][moonraker][config]
 // The following tests document expected behavior. They are marked .integration
 // since they require the full LVGL and Moonraker environment.
 
-TEST_CASE("MoonrakerManager creates mock client in test mode",
-          "[application][moonraker][.integration]") {
+TEST_CASE("MoonrakerManager creates mock client in test mode", "[.][application][integration]") {
     // Expected: When runtime_config.should_mock_moonraker() is true,
     // MoonrakerManager creates MoonrakerClientMock instead of MoonrakerClient
     REQUIRE(true);
 }
 
-TEST_CASE("MoonrakerManager creates mock API with test files",
-          "[application][moonraker][.integration]") {
+TEST_CASE("MoonrakerManager creates mock API with test files", "[.][application][integration]") {
     // Expected: When runtime_config.should_use_test_files() is true,
     // MoonrakerManager creates MoonrakerAPIMock instead of MoonrakerAPI
     REQUIRE(true);
 }
 
-TEST_CASE("MoonrakerManager registers with app_globals", "[application][moonraker][.integration]") {
+TEST_CASE("MoonrakerManager registers with app_globals", "[.][application][integration]") {
     // Expected: After init(), get_moonraker_client() and get_moonraker_api()
     // return non-null pointers matching manager.client() and manager.api()
     REQUIRE(true);
 }
 
-TEST_CASE("MoonrakerManager configures timeouts from Config",
-          "[application][moonraker][.integration]") {
+TEST_CASE("MoonrakerManager configures timeouts from Config", "[.][application][integration]") {
     // Expected: Timeout values from Config are passed to client->configure_timeouts()
     // Default values: connection=10000ms, request=30000ms, keepalive=10000ms
     REQUIRE(true);
 }
 
-TEST_CASE("MoonrakerManager notification queue is thread-safe",
-          "[application][moonraker][.integration]") {
+TEST_CASE("MoonrakerManager notification queue is thread-safe", "[.][application][integration]") {
     // Expected: Notifications pushed from Moonraker thread are safely
     // queued and processed on main thread via process_notifications()
     REQUIRE(true);
 }
 
 TEST_CASE("MoonrakerManager connection state changes update PrinterState",
-          "[application][moonraker][.integration]") {
+          "[.][application][integration]") {
     // Expected: When connection state changes, process_notifications() updates
     // PrinterState via set_printer_connection_state()
     REQUIRE(true);
 }
 
-TEST_CASE("MoonrakerManager shutdown clears resources", "[application][moonraker][.integration]") {
+TEST_CASE("MoonrakerManager shutdown clears resources", "[.][application][integration]") {
     // Expected: After shutdown(), client() and api() return nullptr,
     // notification queue is empty
     REQUIRE(true);
 }
 
-TEST_CASE("MoonrakerManager initializes E-Stop overlay", "[application][moonraker][.integration]") {
+TEST_CASE("MoonrakerManager initializes E-Stop overlay", "[.][application][integration]") {
     // Expected: After init(), EmergencyStopOverlay::instance() is initialized
     // with PrinterState and MoonrakerAPI references
     REQUIRE(true);
 }
 
 TEST_CASE("MoonrakerManager respects HELIX_MOCK_SPOOLMAN env var",
-          "[application][moonraker][.integration]") {
+          "[.][application][integration]") {
     // Expected: When HELIX_MOCK_SPOOLMAN=0 or "off", mock API has
     // Spoolman support disabled
     REQUIRE(true);
 }
 
-TEST_CASE("MoonrakerManager initializes print_start_collector",
-          "[application][moonraker][.integration]") {
+TEST_CASE("MoonrakerManager initializes print_start_collector", "[.][application][integration]") {
     // Expected: After init_print_start_collector(), observers are set up
     // to monitor print startup phases (PRINT_START macro progress)
     REQUIRE(true);

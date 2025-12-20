@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Copyright (C) 2025 356C LLC
  * Author: Preston Brown <pbrown@brown-house.net>
@@ -18,16 +19,18 @@
  * along with HelixScreen. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../catch_amalgamated.hpp"
 #include "../../include/moonraker_client.h"
 #include "../../include/moonraker_error.h"
 #include "hv/EventLoopThread.h"
-#include <thread>
-#include <chrono>
+
 #include <atomic>
-#include <mutex>
-#include <vector>
+#include <chrono>
 #include <future>
+#include <mutex>
+#include <thread>
+#include <vector>
+
+#include "../catch_amalgamated.hpp"
 
 /**
  * MoonrakerClient Robustness Tests
@@ -58,7 +61,7 @@ using namespace std::chrono;
 // ============================================================================
 
 class MoonrakerRobustnessFixture {
-public:
+  public:
     MoonrakerRobustnessFixture() {
         loop_thread_ = std::make_shared<hv::EventLoopThread>();
         loop_thread_->start();
@@ -94,10 +97,9 @@ public:
 // See: test_moonraker_client_robustness.cpp:95
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient handles concurrent send_jsonrpc calls",
-                 "[.][moonraker][robustness][concurrent][priority1]") {
-
+                 "[.][connection][edge][concurrent][priority1]") {
     SECTION("10 threads × 100 requests = 1000 total (no race conditions)") {
-#if 0  // FIXME: Disabled - see comment above TEST_CASE
+#if 0 // FIXME: Disabled - see comment above TEST_CASE
         constexpr int NUM_THREADS = 10;
         constexpr int REQUESTS_PER_THREAD = 100;
         constexpr int TOTAL_REQUESTS = NUM_THREADS * REQUESTS_PER_THREAD;
@@ -165,23 +167,15 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
     SECTION("Concurrent send_jsonrpc with different methods") {
         std::atomic<int> completed{0};
-        std::vector<std::string> methods = {
-            "printer.info",
-            "server.info",
-            "printer.objects.list",
-            "printer.gcode.script",
-            "machine.update.status"
-        };
+        std::vector<std::string> methods = {"printer.info", "server.info", "printer.objects.list",
+                                            "printer.gcode.script", "machine.update.status"};
 
         auto send_mixed = [&]() {
             for (int i = 0; i < 50; i++) {
                 const auto& method = methods[i % methods.size()];
                 client_->send_jsonrpc(
-                    method,
-                    json(),
-                    [&completed](json) { completed++; },
-                    [&completed](const MoonrakerError&) { completed++; }
-                );
+                    method, json(), [&completed](json) { completed++; },
+                    [&completed](const MoonrakerError&) { completed++; });
             }
         };
 
@@ -206,8 +200,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient handles concurrent connect/disconnect",
-                 "[moonraker][robustness][concurrent][priority1]") {
-
+                 "[connection][edge][concurrent][priority1]") {
     SECTION("Multiple threads calling connect() simultaneously") {
         constexpr int NUM_THREADS = 5;
         std::atomic<int> connect_attempts{0};
@@ -217,10 +210,9 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
         auto attempt_connect = [&]() {
             connect_attempts++;
             int result = client_->connect(
-                "ws://192.0.2.1:7125/websocket",  // TEST-NET-1
+                "ws://192.0.2.1:7125/websocket", // TEST-NET-1
                 [&connect_successes]() { connect_successes++; },
-                [&disconnects]() { disconnects++; }
-            );
+                [&disconnects]() { disconnects++; });
         };
 
         std::vector<std::thread> threads;
@@ -237,7 +229,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
         // Key: no crashes with concurrent connects
         CHECK(connect_attempts == NUM_THREADS);
-        CHECK(connect_successes == 0);  // Invalid address shouldn't connect
+        CHECK(connect_successes == 0); // Invalid address shouldn't connect
     }
 
     SECTION("Connect and disconnect from different threads") {
@@ -246,11 +238,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
         auto connector = [&]() {
             while (!stop) {
-                client_->connect(
-                    "ws://192.0.2.1:7125/websocket",
-                    []() {},
-                    []() {}
-                );
+                client_->connect("ws://192.0.2.1:7125/websocket", []() {}, []() {});
                 std::this_thread::sleep_for(milliseconds(50));
             }
         };
@@ -279,8 +267,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient handles concurrent callback registration",
-                 "[moonraker][robustness][concurrent][priority1]") {
-
+                 "[connection][edge][concurrent][priority1]") {
     SECTION("Multiple threads registering notify callbacks") {
         constexpr int NUM_THREADS = 10;
         std::atomic<int> registered{0};
@@ -310,14 +297,10 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
         auto register_method_callbacks = [&](int thread_id) {
             for (int i = 0; i < 50; i++) {
-                std::string handler_name = "handler_" +
-                                          std::to_string(thread_id) + "_" +
-                                          std::to_string(i);
-                client_->register_method_callback(
-                    "notify_gcode_response",
-                    handler_name,
-                    [](json) {}
-                );
+                std::string handler_name =
+                    "handler_" + std::to_string(thread_id) + "_" + std::to_string(i);
+                client_->register_method_callback("notify_gcode_response", handler_name,
+                                                  [](json) {});
                 registered++;
             }
         };
@@ -340,8 +323,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 // ============================================================================
 
 TEST_CASE("MoonrakerClient handles malformed JSON gracefully",
-          "[moonraker][robustness][parsing][priority2]") {
-
+          "[connection][edge][parsing][priority2]") {
     // Note: These tests document expected behavior when receiving
     // malformed messages. Actual testing requires simulating server
     // responses, which is done via code inspection and manual testing.
@@ -349,31 +331,31 @@ TEST_CASE("MoonrakerClient handles malformed JSON gracefully",
     SECTION("Not JSON at all") {
         // Input: "not json at all"
         // Expected: Parse error logged, message ignored, no crash
-        REQUIRE(true);  // Verified via code inspection (line 143-147)
+        REQUIRE(true); // Verified via code inspection (line 143-147)
     }
 
     SECTION("Incomplete JSON") {
         // Input: "{\"id\": 1"
         // Expected: Parse error logged, message ignored, no crash
-        REQUIRE(true);  // Verified via code inspection
+        REQUIRE(true); // Verified via code inspection
     }
 
     SECTION("Wrong type for 'id' field") {
         // Input: "{\"id\": \"string\"}"
         // Expected: Type validation logged, message ignored, no crash
-        REQUIRE(true);  // Verified via code inspection (line 153-156)
+        REQUIRE(true); // Verified via code inspection (line 153-156)
     }
 
     SECTION("Wrong type for 'method' field") {
         // Input: "{\"method\": 123}"
         // Expected: Type validation logged, message ignored, no crash
-        REQUIRE(true);  // Verified via code inspection (line 201-205)
+        REQUIRE(true); // Verified via code inspection (line 201-205)
     }
 
     SECTION("Missing required fields") {
         // Input: "{\"jsonrpc\": \"2.0\"}"
         // Expected: No 'id' or 'method', message ignored gracefully
-        REQUIRE(true);  // Verified via code inspection
+        REQUIRE(true); // Verified via code inspection
     }
 
     SECTION("Deeply nested JSON") {
@@ -392,9 +374,7 @@ TEST_CASE("MoonrakerClient handles malformed JSON gracefully",
     }
 }
 
-TEST_CASE("MoonrakerClient rejects oversized messages",
-          "[moonraker][robustness][parsing][priority2]") {
-
+TEST_CASE("MoonrakerClient rejects oversized messages", "[connection][edge][parsing][priority2]") {
     SECTION("Message > 1 MB triggers disconnect") {
         // Verified via code inspection (line 130-135)
         // onmessage handler checks msg.size() > MAX_MESSAGE_SIZE
@@ -419,27 +399,23 @@ TEST_CASE("MoonrakerClient rejects oversized messages",
 }
 
 TEST_CASE("MoonrakerClient handles invalid field types robustly",
-          "[moonraker][robustness][parsing][priority2]") {
-
+          "[connection][edge][parsing][priority2]") {
     SECTION("Response 'id' as string instead of integer") {
         // Server sends: {"id": "not_an_int", "result": {}}
         // Expected: Type check fails (line 153), warning logged, ignored
-        REQUIRE(true);  // Verified via code inspection
+        REQUIRE(true); // Verified via code inspection
     }
 
     SECTION("Notification 'method' as number instead of string") {
         // Server sends: {"method": 123, "params": {}}
         // Expected: Type check fails (line 202), warning logged, ignored
-        REQUIRE(true);  // Verified via code inspection
+        REQUIRE(true); // Verified via code inspection
     }
 
     SECTION("Response 'result' field missing") {
         // Server sends: {"id": 1, "jsonrpc": "2.0"}
         // Expected: No error, no result, callback receives full response
-        json response = {
-            {"id", 1},
-            {"jsonrpc", "2.0"}
-        };
+        json response = {{"id", 1}, {"jsonrpc", "2.0"}};
         REQUIRE(response.contains("id"));
         REQUIRE_FALSE(response.contains("result"));
     }
@@ -447,12 +423,10 @@ TEST_CASE("MoonrakerClient handles invalid field types robustly",
     SECTION("Response with both 'result' and 'error'") {
         // Invalid per JSON-RPC spec, but server might send
         // Expected: Error takes precedence (line 176-182)
-        json response = {
-            {"id", 1},
-            {"jsonrpc", "2.0"},
-            {"result", {"data", "value"}},
-            {"error", {{"code", -1}, {"message", "error"}}}
-        };
+        json response = {{"id", 1},
+                         {"jsonrpc", "2.0"},
+                         {"result", {"data", "value"}},
+                         {"error", {{"code", -1}, {"message", "error"}}}};
         REQUIRE(response.contains("error"));
         // Error callback would be invoked
     }
@@ -464,8 +438,7 @@ TEST_CASE("MoonrakerClient handles invalid field types robustly",
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient times out requests after configured duration",
-                 "[moonraker][robustness][timeout][priority3]") {
-
+                 "[connection][edge][timeout][priority3]") {
     SECTION("Request with 100ms timeout times out correctly") {
         bool error_occurred = false;
         bool callback_invoked = false;
@@ -476,11 +449,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
         auto start = steady_clock::now();
 
         client_->send_jsonrpc(
-            "printer.info",
-            json(),
-            [](json) {
-                FAIL("Success callback should not be called");
-            },
+            "printer.info", json(), [](json) { FAIL("Success callback should not be called"); },
             [&](const MoonrakerError& err) {
                 callback_invoked = true;
                 // Accept either TIMEOUT (if send succeeded) or CONNECTION_LOST (if send failed)
@@ -489,8 +458,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                 REQUIRE((err.type == MoonrakerErrorType::TIMEOUT ||
                          err.type == MoonrakerErrorType::CONNECTION_LOST));
                 REQUIRE(err.method == "printer.info");
-            }
-        );
+            });
 
         // Wait for timeout + margin (if send succeeded, it would timeout)
         std::this_thread::sleep_for(milliseconds(timeout_ms + 100));
@@ -511,9 +479,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
         for (auto timeout : timeouts) {
             client_->send_jsonrpc(
-                "printer.info",
-                json(),
-                [](json) { FAIL("Should fail"); },
+                "printer.info", json(), [](json) { FAIL("Should fail"); },
                 [&error_count](const MoonrakerError& err) {
                     // Accept either TIMEOUT (if send succeeded) or CONNECTION_LOST (if send failed)
                     if (err.type == MoonrakerErrorType::TIMEOUT ||
@@ -521,8 +487,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                         error_count++;
                     }
                 },
-                timeout
-            );
+                timeout);
         }
 
         // Wait for all to timeout (if sends succeeded)
@@ -540,8 +505,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient cleans up multiple timed out requests",
-                 "[moonraker][robustness][timeout][priority3]") {
-
+                 "[connection][edge][timeout][priority3]") {
     SECTION("10 requests all timeout and get cleaned up") {
         std::atomic<int> error_callbacks{0};
         constexpr int NUM_REQUESTS = 10;
@@ -551,16 +515,13 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
         for (int i = 0; i < NUM_REQUESTS; i++) {
             client_->send_jsonrpc(
-                "printer.info",
-                json(),
-                [](json) { FAIL("Should fail"); },
+                "printer.info", json(), [](json) { FAIL("Should fail"); },
                 [&error_callbacks](const MoonrakerError& err) {
                     // Accept either TIMEOUT (if send succeeded) or CONNECTION_LOST (if send failed)
                     REQUIRE((err.type == MoonrakerErrorType::TIMEOUT ||
                              err.type == MoonrakerErrorType::CONNECTION_LOST));
                     error_callbacks++;
-                }
-            );
+                });
         }
 
         // Wait for timeouts (if sends succeeded)
@@ -581,13 +542,8 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
         client_->set_default_request_timeout(50);
 
         client_->send_jsonrpc(
-            "printer.info",
-            json(),
-            [](json) {},
-            [&timeout_occurred](const MoonrakerError& err) {
-                timeout_occurred = true;
-            }
-        );
+            "printer.info", json(), [](json) {},
+            [&timeout_occurred](const MoonrakerError& err) { timeout_occurred = true; });
 
         std::this_thread::sleep_for(milliseconds(100));
 
@@ -612,13 +568,11 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 // but it's returning -1, indicating the implementation may have changed or
 // there's an issue with the WebSocket send() function when not connected
 // See: test_moonraker_client_robustness.cpp:611
-TEST_CASE_METHOD(MoonrakerRobustnessFixture,
-                 "MoonrakerClient state machine transitions correctly",
-                 "[.][moonraker][robustness][state][priority4]") {
-
+TEST_CASE_METHOD(MoonrakerRobustnessFixture, "MoonrakerClient state machine transitions correctly",
+                 "[.][connection][edge][state][priority4]") {
     SECTION("Cannot send requests while disconnected") {
-#if 0  // FIXME: Disabled - see comment above TEST_CASE
-        // Verify state is DISCONNECTED
+#if 0 // FIXME: Disabled - see comment above TEST_CASE
+      // Verify state is DISCONNECTED
         REQUIRE(client_->get_connection_state() == ConnectionState::DISCONNECTED);
 
         // Send request
@@ -638,14 +592,9 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
             [&](ConnectionState old_state, ConnectionState new_state) {
                 std::lock_guard<std::mutex> lock(states_mutex);
                 states.push_back(new_state);
-            }
-        );
+            });
 
-        client_->connect(
-            "ws://192.0.2.1:7125/websocket",
-            []() {},
-            []() {}
-        );
+        client_->connect("ws://192.0.2.1:7125/websocket", []() {}, []() {});
 
         // Wait for connection to fail
         std::this_thread::sleep_for(milliseconds(2000));
@@ -659,24 +608,19 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
     }
 }
 
-TEST_CASE_METHOD(MoonrakerRobustnessFixture,
-                 "MoonrakerClient disconnect clears pending requests",
-                 "[moonraker][robustness][state][priority4]") {
-
+TEST_CASE_METHOD(MoonrakerRobustnessFixture, "MoonrakerClient disconnect clears pending requests",
+                 "[connection][edge][state][priority4]") {
     SECTION("Disconnect invokes error callbacks for pending requests") {
         std::atomic<int> error_callbacks{0};
         constexpr int NUM_REQUESTS = 5;
 
         for (int i = 0; i < NUM_REQUESTS; i++) {
             client_->send_jsonrpc(
-                "printer.info",
-                json(),
-                [](json) { FAIL("Should not succeed"); },
+                "printer.info", json(), [](json) { FAIL("Should not succeed"); },
                 [&error_callbacks](const MoonrakerError& err) {
                     REQUIRE(err.type == MoonrakerErrorType::CONNECTION_LOST);
                     error_callbacks++;
-                }
-            );
+                });
         }
 
         // Disconnect should trigger cleanup
@@ -695,20 +639,16 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient handles disconnect during active requests",
-                 "[moonraker][robustness][state][priority4]") {
-
+                 "[connection][edge][state][priority4]") {
     SECTION("Send request then immediately disconnect") {
         bool error_callback_invoked = false;
 
         client_->send_jsonrpc(
-            "printer.info",
-            json(),
-            [](json) { FAIL("Should not succeed"); },
+            "printer.info", json(), [](json) { FAIL("Should not succeed"); },
             [&error_callback_invoked](const MoonrakerError& err) {
                 error_callback_invoked = true;
                 REQUIRE(err.type == MoonrakerErrorType::CONNECTION_LOST);
-            }
-        );
+            });
 
         // Immediate disconnect
         client_->disconnect();
@@ -721,13 +661,8 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
         std::atomic<int> error_count{0};
 
         client_->send_jsonrpc(
-            "printer.info",
-            json(),
-            [](json) {},
-            [&error_count](const MoonrakerError& err) {
-                error_count++;
-            }
-        );
+            "printer.info", json(), [](json) {},
+            [&error_count](const MoonrakerError& err) { error_count++; });
 
         // Multiple disconnects
         client_->disconnect();
@@ -744,8 +679,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 // ============================================================================
 
 TEST_CASE("MoonrakerClient callbacks not invoked after disconnect",
-          "[moonraker][robustness][lifecycle][priority5]") {
-
+          "[connection][edge][lifecycle][priority5][slow]") {
     SECTION("Disconnect clears connection callbacks") {
         auto loop = std::make_shared<hv::EventLoopThread>();
         loop->start();
@@ -757,10 +691,8 @@ TEST_CASE("MoonrakerClient callbacks not invoked after disconnect",
         std::atomic<bool> disconnected{false};
 
         client->connect(
-            "ws://192.0.2.1:7125/websocket",
-            [&connected]() { connected = true; },
-            [&disconnected]() { disconnected = true; }
-        );
+            "ws://192.0.2.1:7125/websocket", [&connected]() { connected = true; },
+            [&disconnected]() { disconnected = true; });
 
         // Wait a bit
         std::this_thread::sleep_for(milliseconds(100));
@@ -783,10 +715,8 @@ TEST_CASE("MoonrakerClient callbacks not invoked after disconnect",
     }
 }
 
-TEST_CASE_METHOD(MoonrakerRobustnessFixture,
-                 "MoonrakerClient handles exceptions in user callbacks",
-                 "[moonraker][robustness][lifecycle][priority5]") {
-
+TEST_CASE_METHOD(MoonrakerRobustnessFixture, "MoonrakerClient handles exceptions in user callbacks",
+                 "[connection][edge][lifecycle][priority5]") {
     SECTION("Exception in success callback is caught") {
         // Verified via code inspection - no try/catch in response handling
         // Callbacks run in libhv event loop context
@@ -800,14 +730,11 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
         client_->set_default_request_timeout(50);
 
         client_->send_jsonrpc(
-            "printer.info",
-            json(),
-            [](json) {},
+            "printer.info", json(), [](json) {},
             [&exception_thrown](const MoonrakerError& err) {
                 exception_thrown = true;
                 throw std::runtime_error("Test exception");
-            }
-        );
+            });
 
         std::this_thread::sleep_for(milliseconds(100));
 
@@ -822,15 +749,12 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
         for (int i = 0; i < 5; i++) {
             client_->send_jsonrpc(
-                "printer.info",
-                json(),
-                [](json) {},
+                "printer.info", json(), [](json) {},
                 [&exceptions_thrown](const MoonrakerError& err) {
                     exceptions_thrown++;
                     throw std::runtime_error("Test exception " +
-                                            std::to_string(exceptions_thrown.load()));
-                }
-            );
+                                             std::to_string(exceptions_thrown.load()));
+                });
         }
 
         // Disconnect triggers cleanup
@@ -843,22 +767,18 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient callback invocation order is consistent",
-                 "[moonraker][robustness][lifecycle][priority5]") {
-
+                 "[connection][edge][lifecycle][priority5]") {
     SECTION("Multiple pending requests cleaned up in order") {
         std::mutex order_mutex;
         std::vector<int> cleanup_order;
 
         for (int i = 0; i < 10; i++) {
             client_->send_jsonrpc(
-                "printer.info",
-                json(),
-                [](json) {},
+                "printer.info", json(), [](json) {},
                 [&order_mutex, &cleanup_order, i](const MoonrakerError& err) {
                     std::lock_guard<std::mutex> lock(order_mutex);
                     cleanup_order.push_back(i);
-                }
-            );
+                });
         }
 
         // Disconnect triggers cleanup
@@ -872,8 +792,8 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
         // Order depends on map iteration (no guaranteed order)
         // but all should be present
         for (int i = 0; i < 10; i++) {
-            bool found = std::find(cleanup_order.begin(),
-                                  cleanup_order.end(), i) != cleanup_order.end();
+            bool found =
+                std::find(cleanup_order.begin(), cleanup_order.end(), i) != cleanup_order.end();
             REQUIRE(found);
         }
     }
@@ -883,15 +803,13 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 // Stress Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClient stress test - sustained load",
-          "[moonraker][robustness][stress][.slow]") {
-
+TEST_CASE("MoonrakerClient stress test - sustained load", "[connection][edge][stress][.slow]") {
     SECTION("1000 rapid-fire requests") {
         auto loop = std::make_shared<hv::EventLoopThread>();
         loop->start();
 
         auto client = std::make_unique<MoonrakerClient>(loop->loop());
-        client->set_default_request_timeout(5000);  // 5s timeout
+        client->set_default_request_timeout(5000); // 5s timeout
         client->setReconnect(nullptr);
 
         std::atomic<int> completed{0};
@@ -899,11 +817,8 @@ TEST_CASE("MoonrakerClient stress test - sustained load",
 
         for (int i = 0; i < NUM_REQUESTS; i++) {
             client->send_jsonrpc(
-                "printer.info",
-                json(),
-                [&completed](json) { completed++; },
-                [&completed](const MoonrakerError&) { completed++; }
-            );
+                "printer.info", json(), [&completed](json) { completed++; },
+                [&completed](const MoonrakerError&) { completed++; });
         }
 
         // Wait for timeouts/completions
@@ -916,7 +831,7 @@ TEST_CASE("MoonrakerClient stress test - sustained load",
 
         // All requests should complete or timeout
         INFO("Completed: " << completed.load() << "/" << NUM_REQUESTS);
-        CHECK(completed >= NUM_REQUESTS * 0.95);  // At least 95% complete
+        CHECK(completed >= NUM_REQUESTS * 0.95); // At least 95% complete
 
         client->disconnect();
         client.reset();
@@ -929,9 +844,7 @@ TEST_CASE("MoonrakerClient stress test - sustained load",
 // Memory Safety Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClient memory safety",
-          "[moonraker][robustness][memory]") {
-
+TEST_CASE("MoonrakerClient memory safety", "[connection][edge][memory][slow]") {
     SECTION("Rapid create/destroy cycles") {
         for (int i = 0; i < 50; i++) {
             auto loop = std::make_shared<hv::EventLoopThread>();

@@ -59,14 +59,14 @@ class MacroManagerTestFixture {
 
 TEST_CASE_METHOD(MacroManagerTestFixture,
                  "MacroManager - is_installed returns false when no macros",
-                 "[helix_macros][status][.]") {
+                 "[config][status][.]") {
     set_no_helix_macros();
 
     REQUIRE_FALSE(manager_.is_installed());
 }
 
 TEST_CASE_METHOD(MacroManagerTestFixture, "MacroManager - is_installed returns true when installed",
-                 "[helix_macros][status][.]") {
+                 "[config][status][.]") {
     set_helix_macros_installed();
 
     REQUIRE(manager_.is_installed());
@@ -74,7 +74,7 @@ TEST_CASE_METHOD(MacroManagerTestFixture, "MacroManager - is_installed returns t
 
 TEST_CASE_METHOD(MacroManagerTestFixture,
                  "MacroManager - get_status returns NOT_INSTALLED when no macros",
-                 "[helix_macros][status][.]") {
+                 "[config][status][.]") {
     set_no_helix_macros();
 
     REQUIRE(manager_.get_status() == MacroInstallStatus::NOT_INSTALLED);
@@ -82,7 +82,7 @@ TEST_CASE_METHOD(MacroManagerTestFixture,
 
 TEST_CASE_METHOD(MacroManagerTestFixture,
                  "MacroManager - get_status returns INSTALLED when current version",
-                 "[helix_macros][status][.]") {
+                 "[config][status][.]") {
     set_helix_macros_installed();
 
     REQUIRE(manager_.get_status() == MacroInstallStatus::INSTALLED);
@@ -92,8 +92,7 @@ TEST_CASE_METHOD(MacroManagerTestFixture,
 // Macro Content Tests
 // ============================================================================
 
-TEST_CASE("MacroManager - get_macro_content returns valid Klipper config",
-          "[helix_macros][content]") {
+TEST_CASE("MacroManager - get_macro_content returns valid Klipper config", "[config][content]") {
     std::string content = MacroManager::get_macro_content();
 
     // Should contain version header
@@ -113,8 +112,7 @@ TEST_CASE("MacroManager - get_macro_content returns valid Klipper config",
     REQUIRE(content.find("{% if") != std::string::npos);
 }
 
-TEST_CASE("MacroManager - get_macro_content contains parameter handling",
-          "[helix_macros][content]") {
+TEST_CASE("MacroManager - get_macro_content contains parameter handling", "[config][content]") {
     std::string content = MacroManager::get_macro_content();
 
     // HELIX_START_PRINT should accept temperature parameters
@@ -128,8 +126,7 @@ TEST_CASE("MacroManager - get_macro_content contains parameter handling",
     REQUIRE(content.find("DO_NOZZLE_CLEAN") != std::string::npos);
 }
 
-TEST_CASE("MacroManager - get_macro_content includes conditional operations",
-          "[helix_macros][content]") {
+TEST_CASE("MacroManager - get_macro_content includes conditional operations", "[config][content]") {
     std::string content = MacroManager::get_macro_content();
 
     // Should check for QGL availability
@@ -144,7 +141,7 @@ TEST_CASE("MacroManager - get_macro_content includes conditional operations",
     REQUIRE(content.find("Z_TILT_ADJUST") != std::string::npos);
 }
 
-TEST_CASE("MacroManager - get_macro_names returns expected macros", "[helix_macros][content]") {
+TEST_CASE("MacroManager - get_macro_names returns expected macros", "[slow][config][content]") {
     auto names = MacroManager::get_macro_names();
 
     REQUIRE(names.size() == 4);
@@ -159,7 +156,7 @@ TEST_CASE("MacroManager - get_macro_names returns expected macros", "[helix_macr
 // ============================================================================
 
 TEST_CASE("MacroManager - HELIX_CLEAN_NOZZLE has configurable brush position",
-          "[helix_macros][content]") {
+          "[config][content]") {
     std::string content = MacroManager::get_macro_content();
 
     // Should have configurable variables
@@ -173,8 +170,7 @@ TEST_CASE("MacroManager - HELIX_CLEAN_NOZZLE has configurable brush position",
 // HELIX_BED_LEVEL_IF_NEEDED Macro Tests
 // ============================================================================
 
-TEST_CASE("MacroManager - HELIX_BED_LEVEL_IF_NEEDED has age-based logic",
-          "[helix_macros][content]") {
+TEST_CASE("MacroManager - HELIX_BED_LEVEL_IF_NEEDED has age-based logic", "[config][content]") {
     std::string content = MacroManager::get_macro_content();
 
     // Should have MAX_AGE parameter
@@ -191,7 +187,7 @@ TEST_CASE("MacroManager - HELIX_BED_LEVEL_IF_NEEDED has age-based logic",
 // Version Constants Tests
 // ============================================================================
 
-TEST_CASE("MacroManager - version constant is valid semver", "[helix_macros][version]") {
+TEST_CASE("MacroManager - version constant is valid semver", "[slow][config][version]") {
     std::string version = HELIX_MACROS_VERSION;
 
     // Should match semver pattern (major.minor.patch)
@@ -201,7 +197,7 @@ TEST_CASE("MacroManager - version constant is valid semver", "[helix_macros][ver
     REQUIRE(version >= "1.0.0");
 }
 
-TEST_CASE("MacroManager - filename constant is valid", "[helix_macros][constants]") {
+TEST_CASE("MacroManager - filename constant is valid", "[slow][config][constants]") {
     std::string filename = HELIX_MACROS_FILENAME;
 
     REQUIRE(filename == "helix_macros.cfg");
@@ -217,7 +213,7 @@ TEST_CASE("MacroManager - filename constant is valid", "[helix_macros][constants
 // is implemented, these tests should be updated to verify actual success.
 
 TEST_CASE_METHOD(MacroManagerTestFixture, "MacroManager - install initiates sequence",
-                 "[helix_macros][install][.]") {
+                 "[config][install][.]") {
     set_no_helix_macros();
 
     bool callback_received = false;
@@ -234,7 +230,7 @@ TEST_CASE_METHOD(MacroManagerTestFixture, "MacroManager - install initiates sequ
 }
 
 TEST_CASE_METHOD(MacroManagerTestFixture, "MacroManager - update initiates sequence",
-                 "[helix_macros][install][.]") {
+                 "[config][install][.]") {
     set_helix_macros_installed();
 
     bool callback_received = false;

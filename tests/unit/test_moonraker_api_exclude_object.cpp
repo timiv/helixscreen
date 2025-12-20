@@ -166,7 +166,7 @@ class ExcludeObjectMockTestFixture {
 // DEFERRED: Crashes with SIGABRT during fixture destruction - pre-existing issue
 TEST_CASE_METHOD(ExcludeObjectTestFixture,
                  "exclude_object rejects newline injection in object name",
-                 "[moonraker][security][injection][exclude_object][.]") {
+                 "[security][injection][print][.]") {
     SECTION("Newline at end of object name") {
         api->exclude_object(
             "Part_1\nG28\n", [this]() { this->success_callback(); },
@@ -204,7 +204,7 @@ TEST_CASE_METHOD(ExcludeObjectTestFixture,
 
 TEST_CASE_METHOD(ExcludeObjectTestFixture,
                  "exclude_object rejects semicolon injection in object name",
-                 "[moonraker][security][injection][exclude_object]") {
+                 "[security][injection][print]") {
     SECTION("Semicolon command separator") {
         api->exclude_object(
             "Part_1 ; G28 ;", [this]() { this->success_callback(); },
@@ -219,7 +219,7 @@ TEST_CASE_METHOD(ExcludeObjectTestFixture,
 
 TEST_CASE_METHOD(ExcludeObjectTestFixture,
                  "exclude_object rejects other malicious characters in object name",
-                 "[moonraker][security][injection][exclude_object]") {
+                 "[security][injection][print]") {
     SECTION("Null byte injection") {
         std::string name_with_null = "Part_1";
         name_with_null += '\0';
@@ -310,7 +310,7 @@ TEST_CASE_METHOD(ExcludeObjectTestFixture,
 // ============================================================================
 
 TEST_CASE_METHOD(ExcludeObjectTestFixture, "exclude_object accepts valid object names",
-                 "[moonraker][security][valid][exclude_object]") {
+                 "[security][valid][print]") {
     // Note: These tests use a disconnected client. Validation errors are caught
     // synchronously, but network errors occur when trying to send. We verify
     // validation passed by checking error type is NOT VALIDATION_ERROR.
@@ -370,7 +370,7 @@ TEST_CASE_METHOD(ExcludeObjectTestFixture, "exclude_object accepts valid object 
 // ============================================================================
 
 TEST_CASE_METHOD(ExcludeObjectTestFixture, "exclude_object handles edge cases",
-                 "[moonraker][security][edge][exclude_object]") {
+                 "[security][edge][print]") {
     SECTION("Empty object name rejected") {
         api->exclude_object(
             "", [this]() { this->success_callback(); },
@@ -425,7 +425,7 @@ TEST_CASE_METHOD(ExcludeObjectTestFixture, "exclude_object handles edge cases",
 
 TEST_CASE_METHOD(ExcludeObjectTestFixture,
                  "exclude_object validation errors provide descriptive messages",
-                 "[moonraker][security][errors][exclude_object]") {
+                 "[security][errors][print]") {
     SECTION("Invalid identifier error explains character restriction") {
         api->exclude_object(
             "Part\n1", [this]() { this->success_callback(); },
@@ -451,8 +451,7 @@ TEST_CASE_METHOD(ExcludeObjectTestFixture,
 // ============================================================================
 
 TEST_CASE_METHOD(ExcludeObjectMockTestFixture,
-                 "exclude_object sends correct G-code via mock client",
-                 "[moonraker][mock][exclude_object]") {
+                 "exclude_object sends correct G-code via mock client", "[mock][print]") {
     SECTION("Valid object name sends EXCLUDE_OBJECT command") {
         api->exclude_object(
             "Part_1", [this]() { this->success_callback(); },
@@ -493,8 +492,7 @@ TEST_CASE_METHOD(ExcludeObjectMockTestFixture,
 // ============================================================================
 
 TEST_CASE_METHOD(ExcludeObjectTestFixture,
-                 "exclude_object generates correct EXCLUDE_OBJECT command",
-                 "[moonraker][gcode][exclude_object]") {
+                 "exclude_object generates correct EXCLUDE_OBJECT command", "[gcode][print]") {
     // These tests verify the expected G-code format:
     // EXCLUDE_OBJECT NAME=<object_name>
 
@@ -530,7 +528,7 @@ TEST_CASE_METHOD(ExcludeObjectTestFixture,
 // ============================================================================
 
 TEST_CASE_METHOD(ExcludeObjectTestFixture, "exclude_object handles null callbacks gracefully",
-                 "[moonraker][callbacks][exclude_object]") {
+                 "[callbacks][print]") {
     SECTION("Valid object with null callbacks - no crash") {
         // Should not crash with null callbacks
         api->exclude_object("Part_1", nullptr, nullptr);

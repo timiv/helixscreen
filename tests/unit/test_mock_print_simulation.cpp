@@ -155,7 +155,7 @@ class MockPrintTestFixture {
                     }
                 }
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));  // Fast polling for tests
+            std::this_thread::sleep_for(std::chrono::milliseconds(5)); // Fast polling for tests
         }
         return false;
     }
@@ -174,7 +174,7 @@ class MockPrintTestFixture {
             if (mock->get_print_phase() == expected_phase) {
                 return true;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));  // Fast polling for tests
+            std::this_thread::sleep_for(std::chrono::milliseconds(5)); // Fast polling for tests
         }
         return false;
     }
@@ -204,7 +204,7 @@ class MockPrintTestFixture {
                     }
                 }
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));  // Fast polling for tests
+            std::this_thread::sleep_for(std::chrono::milliseconds(5)); // Fast polling for tests
         }
         return false;
     }
@@ -246,12 +246,12 @@ static std::string get_print_state_from_notification(const json& n) {
 }
 
 // ============================================================================
-// Phase State Machine Tests [mock_print][phase]
+// Phase State Machine Tests [print][phase]
 // ============================================================================
 
 // DEFERRED: Mock print tests crash with SIGSEGV during fixture destruction
 // Similar to CommandSequencer - mock lifecycle management issue
-TEST_CASE("Mock print phase state machine transitions", "[mock_print][phase][.]") {
+TEST_CASE("Mock print phase state machine transitions", "[print][phase][.]") {
     MockPrintTestFixture fixture;
 
     SECTION("initial phase is IDLE") {
@@ -390,10 +390,10 @@ TEST_CASE("Mock print phase state machine transitions", "[mock_print][phase][.]"
 }
 
 // ============================================================================
-// Speedup Factor Tests [mock_print][speedup]
+// Speedup Factor Tests [print][speedup]
 // ============================================================================
 
-TEST_CASE("Mock print speedup factor behavior", "[mock_print][speedup][.]") {
+TEST_CASE("Mock print speedup factor behavior", "[print][speedup][.]") {
     MockPrintTestFixture fixture;
 
     SECTION("default constructor has speedup factor 1.0") {
@@ -457,10 +457,10 @@ TEST_CASE("Mock print speedup factor behavior", "[mock_print][speedup][.]") {
 }
 
 // ============================================================================
-// Metadata Extraction Tests [mock_print][metadata]
+// Metadata Extraction Tests [print][metadata]
 // ============================================================================
 
-TEST_CASE("Mock print metadata extraction from G-code", "[mock_print][metadata]") {
+TEST_CASE("Mock print metadata extraction from G-code", "[print][metadata][slow]") {
     MockPrintTestFixture fixture;
 
     SECTION("starting print extracts total layers") {
@@ -528,10 +528,10 @@ TEST_CASE("Mock print metadata extraction from G-code", "[mock_print][metadata]"
 }
 
 // ============================================================================
-// Unified Handler Tests [mock_print][handlers]
+// Unified Handler Tests [print][handlers]
 // ============================================================================
 
-TEST_CASE("Mock print G-code and API produce identical behavior", "[mock_print][handlers]") {
+TEST_CASE("Mock print G-code and API produce identical behavior", "[print][handlers][slow]") {
     MockPrintTestFixture fixture1;
     MockPrintTestFixture fixture2;
 
@@ -600,10 +600,10 @@ TEST_CASE("Mock print G-code and API produce identical behavior", "[mock_print][
 }
 
 // ============================================================================
-// Progress and Layer Tracking Tests [mock_print][progress]
+// Progress and Layer Tracking Tests [print][progress]
 // ============================================================================
 
-TEST_CASE("Mock print progress and layer tracking", "[mock_print][progress]") {
+TEST_CASE("Mock print progress and layer tracking", "[print][progress][slow]") {
     MockPrintTestFixture fixture;
 
     SECTION("progress starts at 0 when print begins") {
@@ -738,10 +738,10 @@ TEST_CASE("Mock print progress and layer tracking", "[mock_print][progress]") {
 }
 
 // ============================================================================
-// Thermal Phase Tests [mock_print][thermal]
+// Thermal Phase Tests [print][thermal]
 // ============================================================================
 
-TEST_CASE("Mock print thermal phase behavior", "[mock_print][thermal]") {
+TEST_CASE("Mock print thermal phase behavior", "[print][thermal]") {
     MockPrintTestFixture fixture;
 
     SECTION("preheat sets temperature targets from metadata") {
@@ -856,10 +856,10 @@ TEST_CASE("Mock print thermal phase behavior", "[mock_print][thermal]") {
 }
 
 // ============================================================================
-// Status Notification Tests [mock_print][notifications]
+// Status Notification Tests [print][notifications]
 // ============================================================================
 
-TEST_CASE("Mock print status notifications match Moonraker format", "[mock_print][notifications]") {
+TEST_CASE("Mock print status notifications match Moonraker format", "[print][notifications]") {
     MockPrintTestFixture fixture;
 
     SECTION("notifications include print_stats object") {
@@ -984,10 +984,10 @@ TEST_CASE("Mock print status notifications match Moonraker format", "[mock_print
 }
 
 // ============================================================================
-// Edge Cases and Error Handling Tests [mock_print][edge_cases]
+// Edge Cases and Error Handling Tests [print][edge_cases]
 // ============================================================================
 
-TEST_CASE("Mock print edge cases and error handling", "[mock_print][edge_cases]") {
+TEST_CASE("Mock print edge cases and error handling", "[print][edge_cases][slow]") {
     MockPrintTestFixture fixture;
 
     SECTION("starting new print cancels previous") {
@@ -1110,10 +1110,10 @@ TEST_CASE("Mock print edge cases and error handling", "[mock_print][edge_cases]"
 }
 
 // ============================================================================
-// Pause/Resume Behavior Tests [mock_print][pause_resume]
+// Pause/Resume Behavior Tests [print][pause_resume]
 // ============================================================================
 
-TEST_CASE("Mock print pause/resume detailed behavior", "[mock_print][pause_resume]") {
+TEST_CASE("Mock print pause/resume detailed behavior", "[print][pause_resume]") {
     MockPrintTestFixture fixture;
 
     SECTION("pause from PREHEAT succeeds") {

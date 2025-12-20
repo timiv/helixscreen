@@ -60,8 +60,8 @@ class SizeContentTestFixture {
         lv_obj_update_layout(screen);
     }
 
-    lv_obj_t* create_flex_container(lv_obj_t* parent, lv_flex_flow_t flow,
-                                    bool width_content, bool height_content) {
+    lv_obj_t* create_flex_container(lv_obj_t* parent, lv_flex_flow_t flow, bool width_content,
+                                    bool height_content) {
         lv_obj_t* cont = lv_obj_create(parent);
         lv_obj_remove_style_all(cont);
         lv_obj_set_flex_flow(cont, flow);
@@ -90,9 +90,7 @@ class SizeContentTestFixture {
 // Basic SIZE_CONTENT Tests
 // ============================================================================
 
-TEST_CASE_METHOD(SizeContentTestFixture,
-                 "Label has intrinsic SIZE_CONTENT",
-                 "[size_content][basic]") {
+TEST_CASE_METHOD(SizeContentTestFixture, "Label has intrinsic SIZE_CONTENT", "[ui][basic]") {
     lv_obj_t* label = create_label(screen, "Hello World");
     update_layout();
 
@@ -100,9 +98,7 @@ TEST_CASE_METHOD(SizeContentTestFixture,
     REQUIRE(lv_obj_get_height(label) > 0);
 }
 
-TEST_CASE_METHOD(SizeContentTestFixture,
-                 "Flex container sizes to child",
-                 "[size_content][basic]") {
+TEST_CASE_METHOD(SizeContentTestFixture, "Flex container sizes to child", "[ui][basic]") {
     lv_obj_t* parent = create_flex_container(screen, LV_FLEX_FLOW_COLUMN, true, true);
     lv_obj_t* child = create_fixed_box(parent, 100, 50);
 
@@ -116,9 +112,7 @@ TEST_CASE_METHOD(SizeContentTestFixture,
 // Nested SIZE_CONTENT Tests (The Key Scenarios)
 // ============================================================================
 
-TEST_CASE_METHOD(SizeContentTestFixture,
-                 "Two levels of nested SIZE_CONTENT",
-                 "[size_content][nested]") {
+TEST_CASE_METHOD(SizeContentTestFixture, "Two levels of nested SIZE_CONTENT", "[ui][nested]") {
     // grandparent -> parent -> child (fixed 100x50)
     lv_obj_t* grandparent = create_flex_container(screen, LV_FLEX_FLOW_COLUMN, false, true);
     lv_obj_t* parent = create_flex_container(grandparent, LV_FLEX_FLOW_COLUMN, false, true);
@@ -135,9 +129,7 @@ TEST_CASE_METHOD(SizeContentTestFixture,
     REQUIRE(gp_h >= 50);
 }
 
-TEST_CASE_METHOD(SizeContentTestFixture,
-                 "Three levels of nested SIZE_CONTENT",
-                 "[size_content][nested]") {
+TEST_CASE_METHOD(SizeContentTestFixture, "Three levels of nested SIZE_CONTENT", "[ui][nested]") {
     lv_obj_t* ggp = create_flex_container(screen, LV_FLEX_FLOW_COLUMN, false, true);
     lv_obj_t* gp = create_flex_container(ggp, LV_FLEX_FLOW_COLUMN, false, true);
     lv_obj_t* p = create_flex_container(gp, LV_FLEX_FLOW_COLUMN, false, true);
@@ -145,8 +137,8 @@ TEST_CASE_METHOD(SizeContentTestFixture,
 
     update_layout();
 
-    spdlog::info("[Test] Nested 3-level: GGP={}, GP={}, P={}",
-                 lv_obj_get_height(ggp), lv_obj_get_height(gp), lv_obj_get_height(p));
+    spdlog::info("[Test] Nested 3-level: GGP={}, GP={}, P={}", lv_obj_get_height(ggp),
+                 lv_obj_get_height(gp), lv_obj_get_height(p));
 
     REQUIRE(lv_obj_get_height(p) >= 40);
     REQUIRE(lv_obj_get_height(gp) >= 40);
@@ -157,9 +149,7 @@ TEST_CASE_METHOD(SizeContentTestFixture,
 // Dynamic Content Tests
 // ============================================================================
 
-TEST_CASE_METHOD(SizeContentTestFixture,
-                 "Adding children updates parent size",
-                 "[size_content][dynamic]") {
+TEST_CASE_METHOD(SizeContentTestFixture, "Adding children updates parent size", "[ui][dynamic]") {
     lv_obj_t* gp = create_flex_container(screen, LV_FLEX_FLOW_COLUMN, false, true);
     lv_obj_t* p = create_flex_container(gp, LV_FLEX_FLOW_COLUMN, false, true);
     (void)create_fixed_box(p, 100, 30);
@@ -182,9 +172,7 @@ TEST_CASE_METHOD(SizeContentTestFixture,
 // Real-World Pattern Tests
 // ============================================================================
 
-TEST_CASE_METHOD(SizeContentTestFixture,
-                 "Card with header and content",
-                 "[size_content][real]") {
+TEST_CASE_METHOD(SizeContentTestFixture, "Card with header and content", "[ui][real]") {
     lv_obj_t* card = create_flex_container(screen, LV_FLEX_FLOW_COLUMN, false, true);
     lv_obj_set_width(card, 300);
     lv_obj_set_style_pad_all(card, 8, 0);
@@ -208,12 +196,10 @@ TEST_CASE_METHOD(SizeContentTestFixture,
 
     REQUIRE(header_h >= 24);
     REQUIRE(content_h > 0);
-    REQUIRE(card_h > header_h + content_h);  // Includes padding
+    REQUIRE(card_h > header_h + content_h); // Includes padding
 }
 
-TEST_CASE_METHOD(SizeContentTestFixture,
-                 "Button row sizes to content",
-                 "[size_content][real]") {
+TEST_CASE_METHOD(SizeContentTestFixture, "Button row sizes to content", "[ui][real]") {
     lv_obj_t* row = create_flex_container(screen, LV_FLEX_FLOW_ROW, true, true);
     lv_obj_set_style_pad_column(row, 8, 0);
 
@@ -234,9 +220,7 @@ TEST_CASE_METHOD(SizeContentTestFixture,
 // Edge Cases
 // ============================================================================
 
-TEST_CASE_METHOD(SizeContentTestFixture,
-                 "Empty container has zero size",
-                 "[size_content][edge]") {
+TEST_CASE_METHOD(SizeContentTestFixture, "Empty container has zero size", "[ui][edge]") {
     lv_obj_t* empty = create_flex_container(screen, LV_FLEX_FLOW_COLUMN, true, true);
     update_layout();
 
@@ -245,17 +229,15 @@ TEST_CASE_METHOD(SizeContentTestFixture,
     REQUIRE(lv_obj_get_width(empty) >= 0);
 }
 
-TEST_CASE_METHOD(SizeContentTestFixture,
-                 "Mixed fixed and SIZE_CONTENT children",
-                 "[size_content][edge]") {
+TEST_CASE_METHOD(SizeContentTestFixture, "Mixed fixed and SIZE_CONTENT children", "[ui][edge]") {
     lv_obj_t* parent = create_flex_container(screen, LV_FLEX_FLOW_COLUMN, false, true);
 
-    (void)create_fixed_box(parent, 100, 30);  // Fixed
+    (void)create_fixed_box(parent, 100, 30); // Fixed
 
     lv_obj_t* nested = create_flex_container(parent, LV_FLEX_FLOW_COLUMN, false, true);
-    (void)create_fixed_box(nested, 80, 20);  // Nested SIZE_CONTENT
+    (void)create_fixed_box(nested, 80, 20); // Nested SIZE_CONTENT
 
-    (void)create_fixed_box(parent, 100, 25);  // Fixed
+    (void)create_fixed_box(parent, 100, 25); // Fixed
 
     update_layout();
 
@@ -266,9 +248,7 @@ TEST_CASE_METHOD(SizeContentTestFixture,
     REQUIRE(parent_h >= 75);
 }
 
-TEST_CASE_METHOD(SizeContentTestFixture,
-                 "Row with SIZE_CONTENT width",
-                 "[size_content][edge]") {
+TEST_CASE_METHOD(SizeContentTestFixture, "Row with SIZE_CONTENT width", "[ui][edge]") {
     lv_obj_t* row = create_flex_container(screen, LV_FLEX_FLOW_ROW, true, false);
 
     create_fixed_box(row, 50, 30);

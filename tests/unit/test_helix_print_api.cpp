@@ -79,14 +79,13 @@ class HelixPrintAPITestFixture {
 // ============================================================================
 
 TEST_CASE_METHOD(HelixPrintAPITestFixture, "HelixPrint API - has_helix_plugin initial state",
-                 "[helix_print][api]") {
+                 "[print][api]") {
     // Initially, plugin should not be detected (no check performed yet)
     REQUIRE(api->has_helix_plugin() == false);
 }
 
 TEST_CASE_METHOD(HelixPrintAPITestFixture,
-                 "HelixPrint API - check_helix_plugin with disconnected client",
-                 "[helix_print][api]") {
+                 "HelixPrint API - check_helix_plugin with disconnected client", "[print][api]") {
     // With disconnected client, check should report plugin unavailable
     // (error callback path returns false, not error)
 
@@ -115,12 +114,11 @@ TEST_CASE_METHOD(HelixPrintAPITestFixture,
 
 TEST_CASE_METHOD(HelixPrintAPITestFixture,
                  "HelixPrint API - start_modified_print validates filename",
-                 "[helix_print][api][security]") {
+                 "[print][api][security]") {
     SECTION("Rejects path traversal in filename") {
         api->start_modified_print(
             "../../../etc/passwd", // Malicious path
-            "G28\n", {"test_mod"},
-            [this](const ModifiedPrintResult&) { success_called = true; },
+            "G28\n", {"test_mod"}, [this](const ModifiedPrintResult&) { success_called = true; },
             [this](const MoonrakerError& err) {
                 error_message = err.message;
                 error_called = true;
@@ -136,8 +134,7 @@ TEST_CASE_METHOD(HelixPrintAPITestFixture,
     SECTION("Rejects filename with newlines") {
         api->start_modified_print(
             "test\nfile.gcode", // Newline injection
-            "G28\n", {"test_mod"},
-            [this](const ModifiedPrintResult&) { success_called = true; },
+            "G28\n", {"test_mod"}, [this](const ModifiedPrintResult&) { success_called = true; },
             [this](const MoonrakerError& err) {
                 error_message = err.message;
                 error_called = true;
@@ -175,8 +172,7 @@ TEST_CASE_METHOD(HelixPrintAPITestFixture,
     SECTION("Accepts filename with subdirectory") {
         api->start_modified_print(
             "prints/2024/benchy.gcode", // Valid subdirectory path
-            "G28\n", {"test_mod"},
-            [this](const ModifiedPrintResult&) { success_called = true; },
+            "G28\n", {"test_mod"}, [this](const ModifiedPrintResult&) { success_called = true; },
             [this](const MoonrakerError& err) {
                 error_message = err.message;
                 error_called = true;
@@ -195,7 +191,7 @@ TEST_CASE_METHOD(HelixPrintAPITestFixture,
 // ModifiedPrintResult Structure Tests
 // ============================================================================
 
-TEST_CASE("HelixPrint API - ModifiedPrintResult structure", "[helix_print][api]") {
+TEST_CASE("HelixPrint API - ModifiedPrintResult structure", "[slow][print][api]") {
     ModifiedPrintResult result;
 
     SECTION("Default values are empty") {
@@ -223,7 +219,7 @@ TEST_CASE("HelixPrint API - ModifiedPrintResult structure", "[helix_print][api]"
 // ============================================================================
 
 TEST_CASE_METHOD(HelixPrintAPITestFixture, "HelixPrint API - handles empty modifications list",
-                 "[helix_print][api]") {
+                 "[print][api]") {
     // Empty modifications list should be valid
     api->start_modified_print(
         "benchy.gcode", "G28\n", {}, // Empty modifications
@@ -242,7 +238,7 @@ TEST_CASE_METHOD(HelixPrintAPITestFixture, "HelixPrint API - handles empty modif
 }
 
 TEST_CASE_METHOD(HelixPrintAPITestFixture, "HelixPrint API - handles multiple modifications",
-                 "[helix_print][api]") {
+                 "[print][api]") {
     std::vector<std::string> mods = {"bed_leveling_disabled", "z_tilt_disabled", "qgl_disabled",
                                      "nozzle_clean_disabled"};
 
@@ -267,7 +263,7 @@ TEST_CASE_METHOD(HelixPrintAPITestFixture, "HelixPrint API - handles multiple mo
 // ============================================================================
 
 TEST_CASE_METHOD(HelixPrintAPITestFixture, "HelixPrint API - handles large G-code content",
-                 "[helix_print][api]") {
+                 "[print][api]") {
     // Generate large G-code content (simulating a real print file)
     std::string large_content = "G28\n";
     for (int i = 0; i < 10000; i++) {

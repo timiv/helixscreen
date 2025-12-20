@@ -46,7 +46,7 @@ class MoonrakerAPIMockTestFixture {
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock download_file finds existing test file",
-                 "[moonraker][mock][api][download]") {
+                 "[mock][api][download]") {
     std::atomic<bool> success_called{false};
     std::atomic<bool> error_called{false};
     std::string downloaded_content;
@@ -68,7 +68,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock download_file returns FILE_NOT_FOUND for missing file",
-                 "[moonraker][mock][api][download]") {
+                 "[mock][api][download]") {
     std::atomic<bool> success_called{false};
     std::atomic<bool> error_called{false};
     MoonrakerError captured_error;
@@ -89,7 +89,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock download_file strips directory from path",
-                 "[moonraker][mock][api][download]") {
+                 "[mock][api][download]") {
     // Test that paths like "subdir/file.gcode" still find "file.gcode" in test assets
     std::atomic<bool> success_called{false};
     std::atomic<bool> error_called{false};
@@ -109,7 +109,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock download_file works regardless of CWD",
-                 "[moonraker][mock][api][download]") {
+                 "[mock][api][download]") {
     // This test verifies the fallback path search works
     // The implementation should try multiple paths:
     // - assets/test_gcodes/
@@ -134,7 +134,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock upload_file always succeeds",
-                 "[moonraker][mock][api][upload]") {
+                 "[mock][api][upload]") {
     std::atomic<bool> success_called{false};
     std::atomic<bool> error_called{false};
 
@@ -148,8 +148,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock upload_file alwa
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
-                 "MoonrakerAPIMock upload_file_with_name always succeeds",
-                 "[moonraker][mock][api][upload]") {
+                 "MoonrakerAPIMock upload_file_with_name always succeeds", "[mock][api][upload]") {
     std::atomic<bool> success_called{false};
     std::atomic<bool> error_called{false};
 
@@ -163,7 +162,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock upload_file handles large content",
-                 "[moonraker][mock][api][upload]") {
+                 "[mock][api][upload]") {
     std::atomic<bool> success_called{false};
 
     // Generate a large G-code content (simulate realistic file)
@@ -187,7 +186,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock upload_file hand
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock download_file handles null success callback",
-                 "[moonraker][mock][api][download]") {
+                 "[mock][api][download]") {
     // Should not crash when success callback is null
     REQUIRE_NOTHROW(
         api_->download_file("gcodes", "3DBenchy.gcode", nullptr, [](const MoonrakerError&) {}));
@@ -195,7 +194,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock download_file handles null error callback",
-                 "[moonraker][mock][api][download]") {
+                 "[mock][api][download]") {
     // Should not crash when error callback is null (for missing file)
     REQUIRE_NOTHROW(
         api_->download_file("gcodes", "nonexistent.gcode", [](const std::string&) {}, nullptr));
@@ -203,7 +202,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock upload_file handles null success callback",
-                 "[moonraker][mock][api][upload]") {
+                 "[mock][api][upload]") {
     // Should not crash when success callback is null
     REQUIRE_NOTHROW(
         api_->upload_file("gcodes", "test.gcode", "G28", nullptr, [](const MoonrakerError&) {}));
@@ -214,8 +213,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
-                 "MoonrakerAPIMock slot-spool mapping is empty initially",
-                 "[moonraker][mock][spoolman]") {
+                 "MoonrakerAPIMock slot-spool mapping is empty initially", "[mock][filament]") {
     // No spools should be assigned to slots initially
     REQUIRE(api_->get_spool_for_slot(0) == 0);
     REQUIRE(api_->get_spool_for_slot(1) == 0);
@@ -224,7 +222,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock can assign spool to slot",
-                 "[moonraker][mock][spoolman]") {
+                 "[mock][filament]") {
     // Spool 1 exists in mock data (Polymaker Jet Black PLA)
     api_->assign_spool_to_slot(0, 1);
 
@@ -239,7 +237,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock can assign spool
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock can assign multiple spools to different slots",
-                 "[moonraker][mock][spoolman]") {
+                 "[mock][filament]") {
     api_->assign_spool_to_slot(0, 1); // Polymaker PLA
     api_->assign_spool_to_slot(1, 3); // Elegoo ASA
     api_->assign_spool_to_slot(2, 6); // Overture TPU
@@ -259,7 +257,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock can unassign spool from slot",
-                 "[moonraker][mock][spoolman]") {
+                 "[mock][filament]") {
     api_->assign_spool_to_slot(0, 1);
     REQUIRE(api_->get_spool_for_slot(0) == 1);
 
@@ -269,8 +267,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock can unassign spo
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
-                 "MoonrakerAPIMock reassigning spool replaces previous",
-                 "[moonraker][mock][spoolman]") {
+                 "MoonrakerAPIMock reassigning spool replaces previous", "[mock][filament]") {
     api_->assign_spool_to_slot(0, 1);
     REQUIRE(api_->get_spool_for_slot(0) == 1);
 
@@ -283,7 +280,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock assigning spool_id 0 unassigns",
-                 "[moonraker][mock][spoolman]") {
+                 "[mock][filament]") {
     api_->assign_spool_to_slot(0, 1);
     REQUIRE(api_->get_spool_for_slot(0) == 1);
 
@@ -292,8 +289,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock assigning spool_
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
-                 "MoonrakerAPIMock ignores assignment of nonexistent spool",
-                 "[moonraker][mock][spoolman]") {
+                 "MoonrakerAPIMock ignores assignment of nonexistent spool", "[mock][filament]") {
     api_->assign_spool_to_slot(0, 9999); // Doesn't exist
     REQUIRE(api_->get_spool_for_slot(0) == 0);
 }
@@ -304,7 +300,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock consume_filament decrements active spool weight",
-                 "[moonraker][mock][spoolman]") {
+                 "[mock][filament]") {
     // Get initial weight of active spool (spool 1 by default)
     auto& spools = api_->get_mock_spools();
     float initial_weight = spools[0].remaining_weight_g; // Spool 1 is first
@@ -316,7 +312,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock consume_filament uses slot's assigned spool",
-                 "[moonraker][mock][spoolman]") {
+                 "[mock][filament]") {
     // Assign spool 5 (Kingroon PETG, 1000g) to slot 2
     api_->assign_spool_to_slot(2, 5);
 
@@ -339,8 +335,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
-                 "MoonrakerAPIMock consume_filament doesn't go negative",
-                 "[moonraker][mock][spoolman]") {
+                 "MoonrakerAPIMock consume_filament doesn't go negative", "[mock][filament]") {
     // Spool 4 has only 100g remaining
     api_->set_active_spool(4, []() {}, nullptr);
 
@@ -360,8 +355,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
-                 "MoonrakerAPIMock consume_filament updates remaining length",
-                 "[moonraker][mock][spoolman]") {
+                 "MoonrakerAPIMock consume_filament updates remaining length", "[mock][filament]") {
     auto& spools = api_->get_mock_spools();
     float initial_length = spools[0].remaining_length_m;
 
@@ -372,8 +366,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
-                 "MoonrakerAPIMock set_active_spool updates is_active flag",
-                 "[moonraker][mock][spoolman]") {
+                 "MoonrakerAPIMock set_active_spool updates is_active flag", "[mock][filament]") {
     auto& spools = api_->get_mock_spools();
 
     // Initially spool 1 is active

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Copyright (C) 2025 356C LLC
  * Author: Preston Brown <pbrown@brown-house.net>
@@ -125,7 +126,7 @@ class MoonrakerAPITestFixture {
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture,
                  "set_temperature rejects newline injection in heater name",
-                 "[moonraker][security][injection]") {
+                 "[api][security][injection]") {
     SECTION("Newline at end of heater name") {
         api->set_temperature(
             "extruder\nM104 S999\n", 200, [this]() { this->success_callback(); },
@@ -163,7 +164,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture,
                  "set_temperature rejects semicolon injection in heater name",
-                 "[moonraker][security][injection]") {
+                 "[api][security][injection]") {
     SECTION("Semicolon command separator") {
         api->set_temperature(
             "extruder ; M104 S999 ;", 200, [this]() { this->success_callback(); },
@@ -178,7 +179,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture,
                  "set_temperature rejects other malicious characters in heater name",
-                 "[moonraker][security][injection]") {
+                 "[api][security][injection]") {
     SECTION("Null byte injection") {
         std::string heater_with_null = "extruder";
         heater_with_null += '\0';
@@ -219,7 +220,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture,
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_fan_speed rejects injection in fan name",
-                 "[moonraker][security][injection]") {
+                 "[api][security][injection]") {
     SECTION("Newline injection in fan name") {
         api->set_fan_speed(
             "fan\nM106 S255\n", 50, [this]() { this->success_callback(); },
@@ -247,7 +248,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_fan_speed rejects injection in fa
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "home_axes rejects invalid axis characters",
-                 "[moonraker][security][injection]") {
+                 "[api][security][injection]") {
     SECTION("Newline in axes parameter") {
         api->home_axes(
             "X\nG28 Z\n", [this]() { this->success_callback(); },
@@ -293,7 +294,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "home_axes rejects invalid axis charac
 }
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis rejects invalid axis characters",
-                 "[moonraker][security][injection]") {
+                 "[api][security][injection]") {
     SECTION("Invalid axis character") {
         api->move_axis(
             'A', 10.0, 3000.0, [this]() { this->success_callback(); },
@@ -321,7 +322,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis rejects invalid axis charac
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_temperature validates temperature range",
-                 "[moonraker][security][range]") {
+                 "[api][security][range]") {
     SECTION("Negative temperature rejected") {
         api->set_temperature(
             "extruder", -10.0, [this]() { this->success_callback(); },
@@ -388,7 +389,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_temperature validates temperature
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_fan_speed validates speed range",
-                 "[moonraker][security][range]") {
+                 "[api][security][range]") {
     SECTION("Negative speed rejected") {
         api->set_fan_speed(
             "fan", -10.0, [this]() { this->success_callback(); },
@@ -444,7 +445,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_fan_speed validates speed range",
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis validates feedrate range",
-                 "[moonraker][security][range]") {
+                 "[api][security][range]") {
     SECTION("Negative feedrate rejected") {
         api->move_axis(
             'X', 10.0, -1000.0, [this]() { this->success_callback(); },
@@ -500,7 +501,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis validates feedrate range",
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis validates distance range",
-                 "[moonraker][security][range]") {
+                 "[api][security][range]") {
     SECTION("Under minimum distance rejected (-2000mm)") {
         api->move_axis(
             'X', -2000.0, 3000.0, [this]() { this->success_callback(); },
@@ -565,7 +566,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis validates distance range",
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_to_position validates position range",
-                 "[moonraker][security][range]") {
+                 "[api][security][range]") {
     SECTION("Negative position rejected") {
         api->move_to_position(
             'X', -10.0, 3000.0, [this]() { this->success_callback(); },
@@ -621,7 +622,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_to_position validates position r
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_temperature accepts valid heater names",
-                 "[moonraker][security][valid]") {
+                 "[api][security][valid]") {
     SECTION("Standard extruder name") {
         api->set_temperature(
             "extruder", 200.0, [this]() { this->success_callback(); },
@@ -659,7 +660,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_temperature accepts valid heater 
 }
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_fan_speed accepts valid fan names",
-                 "[moonraker][security][valid]") {
+                 "[api][security][valid]") {
     SECTION("Standard fan name") {
         api->set_fan_speed(
             "fan", 50.0, [this]() { this->success_callback(); },
@@ -692,7 +693,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "set_fan_speed accepts valid fan names
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "home_axes accepts valid axis specifications",
-                 "[moonraker][security][valid]") {
+                 "[api][security][valid]") {
     SECTION("Single uppercase axis") {
         api->home_axes(
             "X", [this]() { this->success_callback(); },
@@ -748,7 +749,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "home_axes accepts valid axis specific
 }
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis accepts valid axis characters",
-                 "[moonraker][security][valid]") {
+                 "[api][security][valid]") {
     SECTION("X axis uppercase") {
         api->move_axis(
             'X', 10.0, 3000.0, [this]() { this->success_callback(); },
@@ -790,7 +791,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "move_axis accepts valid axis characte
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "Validation errors provide descriptive messages",
-                 "[moonraker][security][errors]") {
+                 "[api][security][errors]") {
     SECTION("Temperature range error includes range") {
         api->set_temperature(
             "extruder", 500.0, [this]() { this->success_callback(); },
@@ -843,7 +844,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "Validation errors provide descriptive
 }
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "Validation errors include method name",
-                 "[moonraker][security][errors]") {
+                 "[api][security][errors]") {
     SECTION("set_temperature method name") {
         api->set_temperature(
             "extruder", -10.0, [this]() { this->success_callback(); },
@@ -899,7 +900,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "Validation errors include method name
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "Validation handles edge cases",
-                 "[moonraker][security][edge]") {
+                 "[api][security][edge]") {
     SECTION("Empty heater name rejected") {
         api->set_temperature(
             "", 200.0, [this]() { this->success_callback(); },
@@ -954,7 +955,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "Validation handles edge cases",
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPITestFixture, "No G-code sent when validation fails",
-                 "[moonraker][security][gcode]") {
+                 "[api][security][gcode]") {
     SECTION("Invalid temperature - no RPC call") {
         api->set_temperature(
             "extruder", 500.0, [this]() { this->success_callback(); },
@@ -1018,7 +1019,7 @@ TEST_CASE_METHOD(MoonrakerAPITestFixture, "No G-code sent when validation fails"
 // Lifecycle Safety Tests - Issue #4: Callback Cleanup on Destruction
 // ============================================================================
 
-TEST_CASE("MoonrakerClient destructor clears callbacks", "[moonraker][security][lifecycle]") {
+TEST_CASE("MoonrakerClient destructor clears callbacks", "[slow][api][security][lifecycle]") {
     SECTION("Destroy client before connection completes") {
         // Create event loop
         auto loop = std::make_shared<hv::EventLoop>();
@@ -1107,7 +1108,7 @@ TEST_CASE("MoonrakerClient destructor clears callbacks", "[moonraker][security][
 }
 
 TEST_CASE("MoonrakerClient cleanup_pending_requests is exception-safe",
-          "[moonraker][security][lifecycle]") {
+          "[api][security][lifecycle]") {
     SECTION("Cleanup with error callbacks that throw exceptions") {
         auto loop = std::make_shared<hv::EventLoop>();
         auto client = std::make_unique<MoonrakerClient>(loop);

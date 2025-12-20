@@ -121,7 +121,7 @@ class FullStackTestFixture {
 // ============================================================================
 
 TEST_CASE_METHOD(FullStackTestFixture, "Full stack: Print workflow with object exclusion",
-                 "[integration][moonraker][exclude]") {
+                 "[connection][integration][exclude]") {
     SECTION("Excluded objects sync from client to API") {
         // 1. Verify initial state is clean
         REQUIRE(api_->get_excluded_objects_from_mock().empty());
@@ -201,7 +201,7 @@ TEST_CASE_METHOD(FullStackTestFixture, "Full stack: Print workflow with object e
 // ============================================================================
 
 TEST_CASE_METHOD(FullStackTestFixture, "Full stack: Temperature control cycle",
-                 "[integration][moonraker][temperature]") {
+                 "[connection][integration][temperature]") {
     SECTION("API set_temperature sends G-code command") {
         // Set bed target via API - this sends a G-code command
         bool success_called = false;
@@ -249,7 +249,7 @@ TEST_CASE_METHOD(FullStackTestFixture, "Full stack: Temperature control cycle",
 // ============================================================================
 
 TEST_CASE_METHOD(FullStackTestFixture, "Full stack: Bed mesh access through API",
-                 "[integration][moonraker][bedmesh]") {
+                 "[connection][integration][bedmesh]") {
     SECTION("API reports bed mesh state correctly") {
         // Check bed mesh availability through API
         bool api_has_mesh = api_->has_bed_mesh();
@@ -369,7 +369,7 @@ class EventIntegrationFixture {
 };
 
 TEST_CASE_METHOD(EventIntegrationFixture, "Full stack: Event emission and handling",
-                 "[integration][moonraker][events]") {
+                 "[integration][state][integration]") {
     SECTION("Registered handler receives events") {
         client_.register_event_handler(create_capture_handler());
 
@@ -432,7 +432,7 @@ TEST_CASE_METHOD(EventIntegrationFixture, "Full stack: Event emission and handli
 // ============================================================================
 
 TEST_CASE_METHOD(FullStackTestFixture, "Full stack: PrinterHardware guessing",
-                 "[integration][moonraker][hardware]") {
+                 "[integration][printer]") {
     // Create PrinterHardware from the mock client's discovered hardware
     PrinterHardware hw(client_.get_heaters(), client_.get_sensors(), client_.get_fans(),
                        client_.get_leds());
@@ -468,7 +468,7 @@ TEST_CASE_METHOD(FullStackTestFixture, "Full stack: PrinterHardware guessing",
 // ============================================================================
 
 TEST_CASE("Full stack: All printer types work correctly",
-          "[integration][moonraker][all_printers]") {
+          "[connection][integration][all_printers]") {
     PrinterState state;
     state.init_subjects(false);
 
@@ -523,7 +523,7 @@ TEST_CASE("Full stack: All printer types work correctly",
 // ============================================================================
 
 TEST_CASE_METHOD(FullStackTestFixture, "Full stack: Concurrent access to shared state",
-                 "[integration][moonraker][threading]") {
+                 "[connection][integration][threading]") {
     SECTION("Concurrent excluded object operations are thread-safe") {
         std::atomic<bool> stop_flag{false};
         std::atomic<int> add_count{0};
@@ -611,7 +611,7 @@ TEST_CASE_METHOD(FullStackTestFixture, "Full stack: Concurrent access to shared 
 // ============================================================================
 
 TEST_CASE_METHOD(FullStackTestFixture, "Full stack: State reset and cleanup",
-                 "[integration][moonraker][lifecycle]") {
+                 "[integration][connection]") {
     SECTION("MockPrinterState reset clears all state") {
         // Set up various state
         shared_state_->extruder_temp = 200.0;
@@ -652,7 +652,8 @@ TEST_CASE_METHOD(FullStackTestFixture, "Full stack: State reset and cleanup",
 // Test Case 9: API Error Handling Integration
 // ============================================================================
 
-TEST_CASE("Full stack: API error callbacks work correctly", "[integration][moonraker][errors]") {
+TEST_CASE("Full stack: API error callbacks work correctly",
+          "[slow][connection][integration][errors]") {
     PrinterState state;
     state.init_subjects(false);
 

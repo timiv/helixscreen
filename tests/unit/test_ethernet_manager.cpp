@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Copyright (C) 2025 356C LLC
  * Author: Preston Brown <pbrown@brown-house.net>
@@ -10,15 +11,16 @@
  * (at your option) any later version.
  */
 
-#include "../catch_amalgamated.hpp"
-#include "ethernet_manager.h"
 #include "ethernet_backend.h"
+#include "ethernet_manager.h"
+
+#include "../catch_amalgamated.hpp"
 
 // ============================================================================
 // Initialization Tests
 // ============================================================================
 
-TEST_CASE("Ethernet Manager: Initialization creates backend", "[ethernet][init]") {
+TEST_CASE("Ethernet Manager: Initialization creates backend", "[network][init]") {
     EthernetManager manager;
 
     // Manager should initialize without crashing
@@ -30,7 +32,7 @@ TEST_CASE("Ethernet Manager: Initialization creates backend", "[ethernet][init]"
 // Interface Detection Tests
 // ============================================================================
 
-TEST_CASE("Ethernet Manager: has_interface returns bool", "[ethernet][interface]") {
+TEST_CASE("Ethernet Manager: has_interface returns bool", "[network][interface]") {
     EthernetManager manager;
 
     bool has_interface = manager.has_interface();
@@ -44,13 +46,13 @@ TEST_CASE("Ethernet Manager: has_interface returns bool", "[ethernet][interface]
 // Info Retrieval Tests
 // ============================================================================
 
-TEST_CASE("Ethernet Manager: get_info returns valid struct", "[ethernet][info]") {
+TEST_CASE("Ethernet Manager: get_info returns valid struct", "[network][info]") {
     EthernetManager manager;
 
     EthernetInfo info = manager.get_info();
 
     // Should return a valid info struct
-    REQUIRE(!info.status.empty());  // Status should not be empty
+    REQUIRE(!info.status.empty()); // Status should not be empty
 
     // If connected, should have valid IP
     if (info.connected) {
@@ -63,7 +65,7 @@ TEST_CASE("Ethernet Manager: get_info returns valid struct", "[ethernet][info]")
 // IP Address Retrieval Tests
 // ============================================================================
 
-TEST_CASE("Ethernet Manager: get_ip_address behavior", "[ethernet][ip]") {
+TEST_CASE("Ethernet Manager: get_ip_address behavior", "[network][ip]") {
     EthernetManager manager;
 
     std::string ip = manager.get_ip_address();
@@ -94,7 +96,7 @@ TEST_CASE("Ethernet Manager: get_ip_address behavior", "[ethernet][ip]") {
 // ============================================================================
 
 #ifdef USE_MOCK_ETHERNET
-TEST_CASE("Ethernet Manager: Mock backend returns expected values", "[ethernet][mock]") {
+TEST_CASE("Ethernet Manager: Mock backend returns expected values", "[network][mock]") {
     EthernetManager manager;
 
     SECTION("Mock has interface") {
@@ -119,7 +121,7 @@ TEST_CASE("Ethernet Manager: Mock backend returns expected values", "[ethernet][
 // Edge Cases and Error Handling
 // ============================================================================
 
-TEST_CASE("Ethernet Manager: Multiple info queries", "[ethernet][info]") {
+TEST_CASE("Ethernet Manager: Multiple info queries", "[network][info]") {
     EthernetManager manager;
 
     // Should handle multiple queries without issues
@@ -137,7 +139,7 @@ TEST_CASE("Ethernet Manager: Multiple info queries", "[ethernet][info]") {
     }
 }
 
-TEST_CASE("Ethernet Manager: Repeated interface checks", "[ethernet][interface]") {
+TEST_CASE("Ethernet Manager: Repeated interface checks", "[network][interface]") {
     EthernetManager manager;
 
     bool result1 = manager.has_interface();
@@ -153,7 +155,7 @@ TEST_CASE("Ethernet Manager: Repeated interface checks", "[ethernet][interface]"
 // Integration Tests
 // ============================================================================
 
-TEST_CASE("Ethernet Manager: Interface and info consistency", "[ethernet][integration]") {
+TEST_CASE("Ethernet Manager: Interface and info consistency", "[network][integration]") {
     EthernetManager manager;
 
     bool has_interface = manager.has_interface();
@@ -165,7 +167,7 @@ TEST_CASE("Ethernet Manager: Interface and info consistency", "[ethernet][integr
     }
 }
 
-TEST_CASE("Ethernet Manager: IP address and info consistency", "[ethernet][integration]") {
+TEST_CASE("Ethernet Manager: IP address and info consistency", "[network][integration]") {
     EthernetManager manager;
 
     std::string ip = manager.get_ip_address();

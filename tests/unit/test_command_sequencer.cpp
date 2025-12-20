@@ -84,7 +84,7 @@ class SequencerTestFixture {
 
 // DEFERRED: Test crashes with SIGILL during fixture destruction
 // Likely memory corruption or mock cleanup issue - needs investigation
-TEST_CASE("CommandSequencer - Queue management", "[sequencer][.]") {
+TEST_CASE("CommandSequencer - Queue management", "[api][.]") {
     SequencerTestFixture f;
 
     SECTION("Initially empty") {
@@ -136,7 +136,7 @@ TEST_CASE("CommandSequencer - Queue management", "[sequencer][.]") {
 // DEFERRED: Test crashes with SIGSEGV during fixture destruction
 // Likely memory corruption in PrinterState lv_subject_t / unordered_set layout - needs
 // investigation
-TEST_CASE("CommandSequencer - Start conditions", "[sequencer][.]") {
+TEST_CASE("CommandSequencer - Start conditions", "[api][.]") {
     SequencerTestFixture f;
 
     SECTION("Cannot start with empty queue") {
@@ -186,7 +186,7 @@ TEST_CASE("CommandSequencer - Start conditions", "[sequencer][.]") {
 // Completion Condition Tests
 // ============================================================================
 
-TEST_CASE("CommandSequencer - Completion conditions", "[sequencer]") {
+TEST_CASE("CommandSequencer - Completion conditions", "[api][slow]") {
     SECTION("Homing completion - xyz homed") {
         auto cond = CommandSequencer::get_completion_condition(OperationType::HOMING);
 
@@ -252,7 +252,7 @@ TEST_CASE("CommandSequencer - Completion conditions", "[sequencer]") {
 // State Update Processing Tests
 // ============================================================================
 
-TEST_CASE("CommandSequencer - State update processing", "[sequencer]") {
+TEST_CASE("CommandSequencer - State update processing", "[api][slow]") {
     SequencerTestFixture f;
 
     SECTION("Homing completes on xyz homed") {
@@ -325,7 +325,7 @@ TEST_CASE("CommandSequencer - State update processing", "[sequencer]") {
 // Multi-Operation Sequence Tests
 // ============================================================================
 
-TEST_CASE("CommandSequencer - Multi-operation sequences", "[sequencer]") {
+TEST_CASE("CommandSequencer - Multi-operation sequences", "[api][slow]") {
     SequencerTestFixture f;
 
     SECTION("Three operation sequence") {
@@ -384,7 +384,7 @@ TEST_CASE("CommandSequencer - Multi-operation sequences", "[sequencer]") {
 // Cancellation Tests
 // ============================================================================
 
-TEST_CASE("CommandSequencer - Cancellation", "[sequencer]") {
+TEST_CASE("CommandSequencer - Cancellation", "[api][slow]") {
     SequencerTestFixture f;
 
     SECTION("Cancel not running returns false") {
@@ -425,7 +425,7 @@ TEST_CASE("CommandSequencer - Cancellation", "[sequencer]") {
 // G-code Generation Tests
 // ============================================================================
 
-TEST_CASE("CommandSequencer - G-code generation", "[sequencer]") {
+TEST_CASE("CommandSequencer - G-code generation", "[api][slow]") {
     // We can't directly test generate_gcode since it's private,
     // but we can verify the expected commands are sent via the API
 
@@ -459,7 +459,7 @@ TEST_CASE("CommandSequencer - G-code generation", "[sequencer]") {
 // State Enum Tests
 // ============================================================================
 
-TEST_CASE("CommandSequencer - State names", "[sequencer]") {
+TEST_CASE("CommandSequencer - State names", "[api][slow]") {
     REQUIRE(sequencer_state_name(SequencerState::IDLE) == "idle");
     REQUIRE(sequencer_state_name(SequencerState::RUNNING) == "running");
     REQUIRE(sequencer_state_name(SequencerState::WAITING) == "waiting");
@@ -473,7 +473,7 @@ TEST_CASE("CommandSequencer - State names", "[sequencer]") {
 // Edge Cases
 // ============================================================================
 
-TEST_CASE("CommandSequencer - Edge cases", "[sequencer]") {
+TEST_CASE("CommandSequencer - Edge cases", "[api][slow]") {
     SequencerTestFixture f;
 
     SECTION("State update when not running is ignored") {
@@ -514,7 +514,7 @@ TEST_CASE("CommandSequencer - Edge cases", "[sequencer]") {
 // Real-world Sequence Tests
 // ============================================================================
 
-TEST_CASE("CommandSequencer - Real-world sequences", "[sequencer]") {
+TEST_CASE("CommandSequencer - Real-world sequences", "[api][slow]") {
     SequencerTestFixture f;
 
     SECTION("Voron pre-print sequence") {

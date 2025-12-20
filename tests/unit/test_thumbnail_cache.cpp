@@ -20,7 +20,7 @@
 // ThumbnailCache Directory Tests
 // ============================================================================
 
-TEST_CASE("ThumbnailCache cache directory initialization", "[thumbnail][cache]") {
+TEST_CASE("ThumbnailCache cache directory initialization", "[assets][cache]") {
     // Get the singleton - this will initialize with the determined directory
     ThumbnailCache& cache = get_thumbnail_cache();
 
@@ -56,7 +56,7 @@ TEST_CASE("ThumbnailCache cache directory initialization", "[thumbnail][cache]")
     }
 }
 
-TEST_CASE("ThumbnailCache path generation", "[thumbnail][cache]") {
+TEST_CASE("ThumbnailCache path generation", "[assets][cache]") {
     ThumbnailCache& cache = get_thumbnail_cache();
 
     SECTION("get_cache_path returns path in cache directory") {
@@ -84,7 +84,7 @@ TEST_CASE("ThumbnailCache path generation", "[thumbnail][cache]") {
     }
 }
 
-TEST_CASE("ThumbnailCache LVGL path helpers", "[thumbnail][cache]") {
+TEST_CASE("ThumbnailCache LVGL path helpers", "[assets][cache]") {
     SECTION("is_lvgl_path detects A: prefix") {
         REQUIRE(ThumbnailCache::is_lvgl_path("A:/path/to/file.png"));
         REQUIRE(ThumbnailCache::is_lvgl_path("A:relative/path.bin"));
@@ -108,7 +108,7 @@ TEST_CASE("ThumbnailCache LVGL path helpers", "[thumbnail][cache]") {
     }
 }
 
-TEST_CASE("ThumbnailCache disk pressure monitoring", "[thumbnail][cache]") {
+TEST_CASE("ThumbnailCache disk pressure monitoring", "[assets][cache]") {
     ThumbnailCache& cache = get_thumbnail_cache();
 
     SECTION("get_available_disk_space returns non-zero on normal systems") {
@@ -131,7 +131,7 @@ TEST_CASE("ThumbnailCache disk pressure monitoring", "[thumbnail][cache]") {
     }
 }
 
-TEST_CASE("ThumbnailCache size management", "[thumbnail][cache]") {
+TEST_CASE("ThumbnailCache size management", "[assets][cache]") {
     ThumbnailCache& cache = get_thumbnail_cache();
 
     SECTION("get_max_size returns positive value") {
@@ -160,7 +160,7 @@ TEST_CASE("ThumbnailCache size management", "[thumbnail][cache]") {
 // ThumbnailCache Thread Safety Tests
 // ============================================================================
 
-TEST_CASE("ThumbnailCache get_cache_dir is thread-safe", "[thumbnail][cache][thread]") {
+TEST_CASE("ThumbnailCache get_cache_dir is thread-safe", "[assets][cache][thread]") {
     ThumbnailCache& cache = get_thumbnail_cache();
 
     SECTION("Multiple calls return consistent result") {
@@ -177,7 +177,7 @@ TEST_CASE("ThumbnailCache get_cache_dir is thread-safe", "[thumbnail][cache][thr
 // Cache Path Edge Cases
 // ============================================================================
 
-TEST_CASE("ThumbnailCache path edge cases", "[thumbnail][cache]") {
+TEST_CASE("ThumbnailCache path edge cases", "[assets][cache]") {
     ThumbnailCache& cache = get_thumbnail_cache();
 
     SECTION("Paths with spaces are handled") {

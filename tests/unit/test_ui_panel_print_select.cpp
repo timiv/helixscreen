@@ -76,7 +76,7 @@ PrintFileData create_test_file(const std::string& name, size_t size_bytes, int d
 // File Sorting Tests
 // ============================================================================
 
-TEST_CASE("Print Select: Sort by filename - ascending", "[print_select][sort]") {
+TEST_CASE("Print Select: Sort by filename - ascending", "[ui][sort]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("zebra.gcode", 1024, 1, 100, 50.0f));
     files.push_back(create_test_file("apple.gcode", 1024, 2, 100, 50.0f));
@@ -92,7 +92,7 @@ TEST_CASE("Print Select: Sort by filename - ascending", "[print_select][sort]") 
     REQUIRE(files[2].filename == "zebra.gcode");
 }
 
-TEST_CASE("Print Select: Sort by filename - descending", "[print_select][sort]") {
+TEST_CASE("Print Select: Sort by filename - descending", "[ui][sort]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("apple.gcode", 1024, 1, 100, 50.0f));
     files.push_back(create_test_file("zebra.gcode", 1024, 2, 100, 50.0f));
@@ -108,7 +108,7 @@ TEST_CASE("Print Select: Sort by filename - descending", "[print_select][sort]")
     REQUIRE(files[2].filename == "apple.gcode");
 }
 
-TEST_CASE("Print Select: Sort by file size - ascending", "[print_select][sort]") {
+TEST_CASE("Print Select: Sort by file size - ascending", "[ui][sort]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("large.gcode", 1024 * 1024 * 5, 1, 100, 50.0f));
     files.push_back(create_test_file("small.gcode", 1024 * 10, 2, 100, 50.0f));
@@ -124,7 +124,7 @@ TEST_CASE("Print Select: Sort by file size - ascending", "[print_select][sort]")
     REQUIRE(files[2].filename == "large.gcode");
 }
 
-TEST_CASE("Print Select: Sort by file size - descending", "[print_select][sort]") {
+TEST_CASE("Print Select: Sort by file size - descending", "[ui][sort]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("small.gcode", 1024 * 10, 1, 100, 50.0f));
     files.push_back(create_test_file("large.gcode", 1024 * 1024 * 5, 2, 100, 50.0f));
@@ -140,8 +140,7 @@ TEST_CASE("Print Select: Sort by file size - descending", "[print_select][sort]"
     REQUIRE(files[2].filename == "small.gcode");
 }
 
-TEST_CASE("Print Select: Sort by modified date - ascending (oldest first)",
-          "[print_select][sort]") {
+TEST_CASE("Print Select: Sort by modified date - ascending (oldest first)", "[ui][sort]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("recent.gcode", 1024, 1, 100, 50.0f));  // 1 day ago
     files.push_back(create_test_file("oldest.gcode", 1024, 30, 100, 50.0f)); // 30 days ago
@@ -157,8 +156,7 @@ TEST_CASE("Print Select: Sort by modified date - ascending (oldest first)",
     REQUIRE(files[2].filename == "recent.gcode");
 }
 
-TEST_CASE("Print Select: Sort by modified date - descending (newest first)",
-          "[print_select][sort]") {
+TEST_CASE("Print Select: Sort by modified date - descending (newest first)", "[ui][sort]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("oldest.gcode", 1024, 30, 100, 50.0f));
     files.push_back(create_test_file("recent.gcode", 1024, 1, 100, 50.0f));
@@ -174,7 +172,7 @@ TEST_CASE("Print Select: Sort by modified date - descending (newest first)",
     REQUIRE(files[2].filename == "oldest.gcode");
 }
 
-TEST_CASE("Print Select: Sort by print time - ascending", "[print_select][sort]") {
+TEST_CASE("Print Select: Sort by print time - ascending", "[ui][sort]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("long.gcode", 1024, 1, 480, 50.0f));   // 8 hours
     files.push_back(create_test_file("short.gcode", 1024, 2, 30, 50.0f));   // 30 mins
@@ -190,7 +188,7 @@ TEST_CASE("Print Select: Sort by print time - ascending", "[print_select][sort]"
     REQUIRE(files[2].filename == "long.gcode");
 }
 
-TEST_CASE("Print Select: Sort by print time - descending", "[print_select][sort]") {
+TEST_CASE("Print Select: Sort by print time - descending", "[ui][sort]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("short.gcode", 1024, 1, 30, 50.0f));
     files.push_back(create_test_file("long.gcode", 1024, 2, 480, 50.0f));
@@ -206,7 +204,7 @@ TEST_CASE("Print Select: Sort by print time - descending", "[print_select][sort]
     REQUIRE(files[2].filename == "short.gcode");
 }
 
-TEST_CASE("Print Select: Sort by filament weight - ascending", "[print_select][sort]") {
+TEST_CASE("Print Select: Sort by filament weight - ascending", "[ui][sort]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("heavy.gcode", 1024, 1, 100, 250.0f));
     files.push_back(create_test_file("light.gcode", 1024, 2, 100, 15.0f));
@@ -222,7 +220,7 @@ TEST_CASE("Print Select: Sort by filament weight - ascending", "[print_select][s
     REQUIRE(files[2].filename == "heavy.gcode");
 }
 
-TEST_CASE("Print Select: Sort by filament weight - descending", "[print_select][sort]") {
+TEST_CASE("Print Select: Sort by filament weight - descending", "[ui][sort]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("light.gcode", 1024, 1, 100, 15.0f));
     files.push_back(create_test_file("heavy.gcode", 1024, 2, 100, 250.0f));
@@ -242,7 +240,7 @@ TEST_CASE("Print Select: Sort by filament weight - descending", "[print_select][
 // Edge Cases - Sorting
 // ============================================================================
 
-TEST_CASE("Print Select: Sort - empty file list", "[print_select][sort][edge]") {
+TEST_CASE("Print Select: Sort - empty file list", "[ui][sort][edge]") {
     std::vector<PrintFileData> files;
 
     SECTION("Sort by filename") {
@@ -262,7 +260,7 @@ TEST_CASE("Print Select: Sort - empty file list", "[print_select][sort][edge]") 
     }
 }
 
-TEST_CASE("Print Select: Sort - single file", "[print_select][sort][edge]") {
+TEST_CASE("Print Select: Sort - single file", "[ui][sort][edge]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("only.gcode", 1024, 1, 100, 50.0f));
 
@@ -275,7 +273,7 @@ TEST_CASE("Print Select: Sort - single file", "[print_select][sort][edge]") {
     REQUIRE(files[0].filename == "only.gcode");
 }
 
-TEST_CASE("Print Select: Sort - identical filenames", "[print_select][sort][edge]") {
+TEST_CASE("Print Select: Sort - identical filenames", "[ui][sort][edge]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("test.gcode", 2048, 1, 100, 50.0f));
     files.push_back(create_test_file("test.gcode", 1024, 2, 200, 75.0f));
@@ -290,7 +288,7 @@ TEST_CASE("Print Select: Sort - identical filenames", "[print_select][sort][edge
     REQUIRE(files[1].file_size_bytes == 1024);
 }
 
-TEST_CASE("Print Select: Sort - identical file sizes", "[print_select][sort][edge]") {
+TEST_CASE("Print Select: Sort - identical file sizes", "[ui][sort][edge]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("zebra.gcode", 1024, 1, 100, 50.0f));
     files.push_back(create_test_file("apple.gcode", 1024, 2, 200, 75.0f));
@@ -305,7 +303,7 @@ TEST_CASE("Print Select: Sort - identical file sizes", "[print_select][sort][edg
     REQUIRE(files.size() == 3);
 }
 
-TEST_CASE("Print Select: Sort - zero values", "[print_select][sort][edge]") {
+TEST_CASE("Print Select: Sort - zero values", "[ui][sort][edge]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("normal.gcode", 1024, 1, 100, 50.0f));
     files.push_back(create_test_file("zero_time.gcode", 1024, 2, 0, 50.0f));
@@ -328,7 +326,7 @@ TEST_CASE("Print Select: Sort - zero values", "[print_select][sort][edge]") {
     }
 }
 
-TEST_CASE("Print Select: Sort - very large values", "[print_select][sort][edge]") {
+TEST_CASE("Print Select: Sort - very large values", "[ui][sort][edge]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("huge.gcode", SIZE_MAX, 1, 10000, 10000.0f));
     files.push_back(create_test_file("normal.gcode", 1024, 2, 100, 50.0f));
@@ -352,7 +350,7 @@ TEST_CASE("Print Select: Sort - very large values", "[print_select][sort][edge]"
     }
 }
 
-TEST_CASE("Print Select: Sort - case sensitivity in filenames", "[print_select][sort]") {
+TEST_CASE("Print Select: Sort - case sensitivity in filenames", "[ui][sort]") {
     std::vector<PrintFileData> files;
     files.push_back(create_test_file("ZEBRA.gcode", 1024, 1, 100, 50.0f));
     files.push_back(create_test_file("apple.gcode", 1024, 2, 100, 50.0f));
@@ -373,7 +371,7 @@ TEST_CASE("Print Select: Sort - case sensitivity in filenames", "[print_select][
 // Filename Handling Tests
 // ============================================================================
 
-TEST_CASE("Print Select: Filename - very long filename", "[print_select][filename][edge]") {
+TEST_CASE("Print Select: Filename - very long filename", "[ui][filename][edge]") {
     std::string long_name(300, 'a');
     long_name += ".gcode";
 
@@ -383,7 +381,7 @@ TEST_CASE("Print Select: Filename - very long filename", "[print_select][filenam
     REQUIRE(file.filename.find(".gcode") != std::string::npos);
 }
 
-TEST_CASE("Print Select: Filename - special characters", "[print_select][filename]") {
+TEST_CASE("Print Select: Filename - special characters", "[ui][filename]") {
     std::vector<std::string> special_names = {
         "file with spaces.gcode",   "file-with-dashes.gcode", "file_with_underscores.gcode",
         "file.multiple.dots.gcode", "file(with)parens.gcode", "file[with]brackets.gcode"};
@@ -394,7 +392,7 @@ TEST_CASE("Print Select: Filename - special characters", "[print_select][filenam
     }
 }
 
-TEST_CASE("Print Select: Filename - different extensions", "[print_select][filename]") {
+TEST_CASE("Print Select: Filename - different extensions", "[ui][filename]") {
     SECTION(".gcode extension") {
         PrintFileData file = create_test_file("test.gcode", 1024, 1, 100, 50.0f);
         REQUIRE(file.filename.find(".gcode") != std::string::npos);
@@ -416,12 +414,12 @@ TEST_CASE("Print Select: Filename - different extensions", "[print_select][filen
     }
 }
 
-TEST_CASE("Print Select: Filename - no extension", "[print_select][filename][edge]") {
+TEST_CASE("Print Select: Filename - no extension", "[ui][filename][edge]") {
     PrintFileData file = create_test_file("noextension", 1024, 1, 100, 50.0f);
     REQUIRE(file.filename == "noextension");
 }
 
-TEST_CASE("Print Select: Filename - empty filename", "[print_select][filename][edge]") {
+TEST_CASE("Print Select: Filename - empty filename", "[ui][filename][edge]") {
     PrintFileData file = create_test_file("", 1024, 1, 100, 50.0f);
     REQUIRE(file.filename.empty());
 }
@@ -430,7 +428,7 @@ TEST_CASE("Print Select: Filename - empty filename", "[print_select][filename][e
 // File Metadata Tests
 // ============================================================================
 
-TEST_CASE("Print Select: Metadata - print time formatting", "[print_select][metadata]") {
+TEST_CASE("Print Select: Metadata - print time formatting", "[ui][metadata]") {
     SECTION("Zero minutes") {
         PrintFileData file = create_test_file("test.gcode", 1024, 1, 0, 50.0f);
         REQUIRE(file.print_time_str == "0m");
@@ -457,7 +455,7 @@ TEST_CASE("Print Select: Metadata - print time formatting", "[print_select][meta
     }
 }
 
-TEST_CASE("Print Select: Metadata - filament weight formatting", "[print_select][metadata]") {
+TEST_CASE("Print Select: Metadata - filament weight formatting", "[ui][metadata]") {
     SECTION("Zero grams") {
         PrintFileData file = create_test_file("test.gcode", 1024, 1, 100, 0.0f);
         REQUIRE(file.filament_str == "0.0g");
@@ -479,7 +477,7 @@ TEST_CASE("Print Select: Metadata - filament weight formatting", "[print_select]
     }
 }
 
-TEST_CASE("Print Select: Metadata - file size formatting", "[print_select][metadata]") {
+TEST_CASE("Print Select: Metadata - file size formatting", "[ui][metadata]") {
     SECTION("Bytes") {
         PrintFileData file = create_test_file("test.gcode", 512, 1, 100, 50.0f);
         REQUIRE(file.size_str == "512 B");
@@ -502,7 +500,7 @@ TEST_CASE("Print Select: Metadata - file size formatting", "[print_select][metad
     }
 }
 
-TEST_CASE("Print Select: Metadata - modified date formatting", "[print_select][metadata]") {
+TEST_CASE("Print Select: Metadata - modified date formatting", "[ui][metadata]") {
     time_t now = time(nullptr);
 
     SECTION("Recent file") {
@@ -520,7 +518,7 @@ TEST_CASE("Print Select: Metadata - modified date formatting", "[print_select][m
 // Large File List Tests
 // ============================================================================
 
-TEST_CASE("Print Select: Large file list - 100 files", "[print_select][performance]") {
+TEST_CASE("Print Select: Large file list - 100 files", "[ui][performance]") {
     std::vector<PrintFileData> files;
 
     for (int i = 0; i < 100; i++) {
@@ -550,7 +548,7 @@ TEST_CASE("Print Select: Large file list - 100 files", "[print_select][performan
     }
 }
 
-TEST_CASE("Print Select: Large file list - 500 files", "[print_select][performance]") {
+TEST_CASE("Print Select: Large file list - 500 files", "[ui][performance]") {
     std::vector<PrintFileData> files;
 
     for (int i = 0; i < 500; i++) {
@@ -573,7 +571,7 @@ TEST_CASE("Print Select: Large file list - 500 files", "[print_select][performan
 // Multi-criteria Sorting Tests (Realistic Scenarios)
 // ============================================================================
 
-TEST_CASE("Print Select: Realistic file list - mixed content", "[print_select][integration]") {
+TEST_CASE("Print Select: Realistic file list - mixed content", "[ui][integration]") {
     std::vector<PrintFileData> files;
 
     // Realistic file list with various sizes and properties
@@ -613,8 +611,7 @@ TEST_CASE("Print Select: Realistic file list - mixed content", "[print_select][i
 // Stability Tests
 // ============================================================================
 
-TEST_CASE("Print Select: Sort stability - equal elements maintain order",
-          "[print_select][stability]") {
+TEST_CASE("Print Select: Sort stability - equal elements maintain order", "[ui][stability]") {
     std::vector<PrintFileData> files;
 
     // Create files with same sort key but different filenames

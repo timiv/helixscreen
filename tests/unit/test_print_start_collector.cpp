@@ -72,7 +72,7 @@ static bool matches(const std::regex& pattern, const std::string& line) {
 // PRINT_START Marker Tests
 // ============================================================================
 
-TEST_CASE("PrintStart: PRINT_START marker detection", "[print_start][marker]") {
+TEST_CASE("PrintStart: PRINT_START marker detection", "[core][print][marker]") {
     // Should match
     REQUIRE(matches(print_start_pattern, "PRINT_START") == true);
     REQUIRE(matches(print_start_pattern, "START_PRINT") == true);
@@ -94,7 +94,7 @@ TEST_CASE("PrintStart: PRINT_START marker detection", "[print_start][marker]") {
 // Completion Marker Tests
 // ============================================================================
 
-TEST_CASE("PrintStart: completion marker detection", "[print_start][completion]") {
+TEST_CASE("PrintStart: completion marker detection", "[core][print][completion]") {
     // Should match
     REQUIRE(matches(completion_pattern, "SET_PRINT_STATS_INFO CURRENT_LAYER=1") == true);
     REQUIRE(matches(completion_pattern, "LAYER: 1") == true);
@@ -113,7 +113,7 @@ TEST_CASE("PrintStart: completion marker detection", "[print_start][completion]"
 // Homing Phase Tests
 // ============================================================================
 
-TEST_CASE("PrintStart: homing phase detection", "[print_start][homing]") {
+TEST_CASE("PrintStart: homing phase detection", "[core][print][homing]") {
     // Should match
     REQUIRE(matches(homing_pattern, "G28") == true);
     REQUIRE(matches(homing_pattern, "G28 X Y Z") == true);
@@ -134,7 +134,7 @@ TEST_CASE("PrintStart: homing phase detection", "[print_start][homing]") {
 // Heating Phase Tests
 // ============================================================================
 
-TEST_CASE("PrintStart: heating bed phase detection", "[print_start][heating]") {
+TEST_CASE("PrintStart: heating bed phase detection", "[core][print][heating]") {
     // Should match
     REQUIRE(matches(heating_bed_pattern, "M190 S60") == true); // Wait for bed
     REQUIRE(matches(heating_bed_pattern, "M140 S60") == true); // Set bed
@@ -151,7 +151,7 @@ TEST_CASE("PrintStart: heating bed phase detection", "[print_start][heating]") {
     REQUIRE(matches(heating_bed_pattern, "M104 S200") == false); // Nozzle temp
 }
 
-TEST_CASE("PrintStart: heating nozzle phase detection", "[print_start][heating]") {
+TEST_CASE("PrintStart: heating nozzle phase detection", "[print][heating]") {
     // Should match
     REQUIRE(matches(heating_nozzle_pattern, "M109 S200") == true); // Wait for nozzle
     REQUIRE(matches(heating_nozzle_pattern, "M104 S200") == true); // Set nozzle
@@ -176,7 +176,7 @@ TEST_CASE("PrintStart: heating nozzle phase detection", "[print_start][heating]"
 // Leveling Phase Tests
 // ============================================================================
 
-TEST_CASE("PrintStart: QGL phase detection", "[print_start][leveling]") {
+TEST_CASE("PrintStart: QGL phase detection", "[print][leveling]") {
     // Should match
     REQUIRE(matches(qgl_pattern, "QUAD_GANTRY_LEVEL") == true);
     REQUIRE(matches(qgl_pattern, "quad gantry level") == true);
@@ -191,7 +191,7 @@ TEST_CASE("PrintStart: QGL phase detection", "[print_start][leveling]") {
     REQUIRE(matches(qgl_pattern, "G28") == false);
 }
 
-TEST_CASE("PrintStart: Z_TILT phase detection", "[print_start][leveling]") {
+TEST_CASE("PrintStart: Z_TILT phase detection", "[print][leveling]") {
     // Should match
     REQUIRE(matches(z_tilt_pattern, "Z_TILT_ADJUST") == true);
     REQUIRE(matches(z_tilt_pattern, "z_tilt_adjust") == true);
@@ -205,7 +205,7 @@ TEST_CASE("PrintStart: Z_TILT phase detection", "[print_start][leveling]") {
 // Bed Mesh Phase Tests
 // ============================================================================
 
-TEST_CASE("PrintStart: bed mesh phase detection", "[print_start][mesh]") {
+TEST_CASE("PrintStart: bed mesh phase detection", "[print][mesh]") {
     // Should match
     REQUIRE(matches(bed_mesh_pattern, "BED_MESH_CALIBRATE") == true);
     REQUIRE(matches(bed_mesh_pattern, "BED_MESH_PROFILE LOAD=default") == true);
@@ -225,7 +225,7 @@ TEST_CASE("PrintStart: bed mesh phase detection", "[print_start][mesh]") {
 // Cleaning Phase Tests
 // ============================================================================
 
-TEST_CASE("PrintStart: cleaning phase detection", "[print_start][cleaning]") {
+TEST_CASE("PrintStart: cleaning phase detection", "[print][cleaning]") {
     // Should match
     REQUIRE(matches(cleaning_pattern, "CLEAN_NOZZLE") == true);
     REQUIRE(matches(cleaning_pattern, "NOZZLE_CLEAN") == true);
@@ -246,7 +246,7 @@ TEST_CASE("PrintStart: cleaning phase detection", "[print_start][cleaning]") {
 // Purging Phase Tests
 // ============================================================================
 
-TEST_CASE("PrintStart: purging phase detection", "[print_start][purging]") {
+TEST_CASE("PrintStart: purging phase detection", "[print][purging]") {
     // Should match
     REQUIRE(matches(purging_pattern, "VORON_PURGE") == true);
     REQUIRE(matches(purging_pattern, "LINE_PURGE") == true);
@@ -282,8 +282,7 @@ TEST_CASE("PrintStart: purging phase detection", "[print_start][purging]") {
  *   - M109 S{EXTRUDER_TEMP}   -> heating nozzle (wait)
  *   - VORON_PURGE             -> purging
  */
-TEST_CASE("PrintStart: real Voron V2 START_PRINT macro lines",
-          "[print_start][voron][integration]") {
+TEST_CASE("PrintStart: real Voron V2 START_PRINT macro lines", "[print][voron][integration]") {
     // Lines from actual Voron V2 START_PRINT macro
     struct TestCase {
         std::string line;
@@ -311,7 +310,7 @@ TEST_CASE("PrintStart: real Voron V2 START_PRINT macro lines",
     }
 }
 
-TEST_CASE("PrintStart: Voron V2 SET_DISPLAY_TEXT messages", "[print_start][voron]") {
+TEST_CASE("PrintStart: Voron V2 SET_DISPLAY_TEXT messages", "[print][voron]") {
     // These are the display messages from the macro
     REQUIRE(matches(homing_pattern, "SET_DISPLAY_TEXT MSG=\"Homing\"") == true);
 
@@ -345,7 +344,7 @@ TEST_CASE("PrintStart: Voron V2 SET_DISPLAY_TEXT messages", "[print_start][voron
  *   - Has CHECK_MD5 verification step
  *   - Uses _PRINT_STATUS S="..." for display
  */
-TEST_CASE("PrintStart: real AD5M Pro START_PRINT macro lines", "[print_start][ad5m][integration]") {
+TEST_CASE("PrintStart: real AD5M Pro START_PRINT macro lines", "[print][ad5m][integration]") {
     struct TestCase {
         std::string line;
         const std::regex* expected_pattern;
@@ -370,7 +369,7 @@ TEST_CASE("PrintStart: real AD5M Pro START_PRINT macro lines", "[print_start][ad
     }
 }
 
-TEST_CASE("PrintStart: AD5M Pro _PRINT_STATUS messages", "[print_start][ad5m]") {
+TEST_CASE("PrintStart: AD5M Pro _PRINT_STATUS messages", "[print][ad5m]") {
     // These are unique to AD5M Pro mod firmware
     REQUIRE(matches(homing_pattern, "_PRINT_STATUS S=\"HOMING...\"") == true);
 
@@ -379,7 +378,7 @@ TEST_CASE("PrintStart: AD5M Pro _PRINT_STATUS messages", "[print_start][ad5m]") 
     REQUIRE(matches(bed_mesh_pattern, "_PRINT_STATUS S=\"MESH CHECKING...\"") == false);
 }
 
-TEST_CASE("PrintStart: AD5M Pro KAMP-specific patterns", "[print_start][ad5m][kamp]") {
+TEST_CASE("PrintStart: AD5M Pro KAMP-specific patterns", "[print][ad5m][kamp]") {
     // KAMP adaptive purge patterns
     REQUIRE(matches(purging_pattern, "KAMP_ADAPTIVE_PURGE") == true);
     REQUIRE(matches(purging_pattern, "_LINE_PURGE") == true);
@@ -398,7 +397,7 @@ TEST_CASE("PrintStart: AD5M Pro KAMP-specific patterns", "[print_start][ad5m][ka
 // ============================================================================
 
 TEST_CASE("PrintStart: Voron status_* LED macros are valid phase indicators",
-          "[print_start][voron][status]") {
+          "[print][voron][status]") {
     // These LED macros are called at the START of each phase in Voron configs
     REQUIRE(matches(homing_pattern, "status_homing") == true);
     REQUIRE(matches(heating_bed_pattern, "status_heating") == true);
@@ -416,7 +415,7 @@ TEST_CASE("PrintStart: Voron status_* LED macros are valid phase indicators",
 // Noise Rejection Tests
 // ============================================================================
 
-TEST_CASE("PrintStart: typical noise lines should not match phases", "[print_start][negative]") {
+TEST_CASE("PrintStart: typical noise lines should not match phases", "[print][negative]") {
     // These are common Klipper output lines that should NOT trigger phase detection
     std::vector<std::string> noise_lines = {
         "ok",

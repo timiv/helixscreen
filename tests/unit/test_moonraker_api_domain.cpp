@@ -87,7 +87,7 @@ class MoonrakerAPIDomainTestFixture {
 
 TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
                  "PrinterHardware::guess_bed_heater returns correct heater",
-                 "[hardware][guessing]") {
+                 "[printer][guessing]") {
     // VORON_24 mock should have heater_bed
     PrinterHardware hw(mock_client.get_heaters(), mock_client.get_sensors(), mock_client.get_fans(),
                        mock_client.get_leds());
@@ -97,7 +97,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
                  "PrinterHardware::guess_hotend_heater returns correct heater",
-                 "[hardware][guessing]") {
+                 "[printer][guessing]") {
     // VORON_24 mock should have extruder
     PrinterHardware hw(mock_client.get_heaters(), mock_client.get_sensors(), mock_client.get_fans(),
                        mock_client.get_leds());
@@ -107,7 +107,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
                  "PrinterHardware::guess_bed_sensor returns correct sensor",
-                 "[hardware][guessing]") {
+                 "[printer][guessing]") {
     // Bed sensor should return heater_bed (heaters have built-in sensors)
     PrinterHardware hw(mock_client.get_heaters(), mock_client.get_sensors(), mock_client.get_fans(),
                        mock_client.get_leds());
@@ -117,7 +117,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
                  "PrinterHardware::guess_hotend_sensor returns correct sensor",
-                 "[hardware][guessing]") {
+                 "[printer][guessing]") {
     // Hotend sensor should return extruder (heaters have built-in sensors)
     PrinterHardware hw(mock_client.get_heaters(), mock_client.get_sensors(), mock_client.get_fans(),
                        mock_client.get_leds());
@@ -127,7 +127,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
                  "PrinterHardware::guess_part_cooling_fan returns correct fan",
-                 "[hardware][guessing]") {
+                 "[printer][guessing]") {
     // VORON_24 should have canonical "fan" for part cooling
     PrinterHardware hw(mock_client.get_heaters(), mock_client.get_sensors(), mock_client.get_fans(),
                        mock_client.get_leds());
@@ -137,7 +137,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
 }
 
 TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture, "PrinterHardware::guess_main_led_strip returns LED",
-                 "[hardware][guessing]") {
+                 "[printer][guessing]") {
     PrinterHardware hw(mock_client.get_heaters(), mock_client.get_sensors(), mock_client.get_fans(),
                        mock_client.get_leds());
     std::string led = hw.guess_main_led_strip();
@@ -151,7 +151,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture, "PrinterHardware::guess_main_led
 // ============================================================================
 
 TEST_CASE("PrinterHardware guessing works for multiple printer types",
-          "[hardware][guessing][printers]") {
+          "[printer][guessing][printers]") {
     PrinterState state;
     state.init_subjects();
 
@@ -210,7 +210,7 @@ TEST_CASE("PrinterHardware guessing works for multiple printer types",
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture, "MoonrakerAPI::has_bed_mesh returns correct state",
-                 "[moonraker][api][domain][bedmesh]") {
+                 "[api][bedmesh]") {
     // Initially the mock client may or may not have bed mesh data
     // This tests that the API method delegates correctly
     // API method should return consistent state
@@ -219,7 +219,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture, "MoonrakerAPI::has_bed_mesh retu
 
 TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
                  "MoonrakerAPI::get_active_bed_mesh returns nullptr when no mesh",
-                 "[moonraker][api][domain][bedmesh]") {
+                 "[api][bedmesh]") {
     // Check current state
     const BedMeshProfile* mesh = api->get_active_bed_mesh();
 
@@ -236,8 +236,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
 }
 
 TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
-                 "MoonrakerAPI::get_bed_mesh_profiles returns profile list",
-                 "[moonraker][api][domain][bedmesh]") {
+                 "MoonrakerAPI::get_bed_mesh_profiles returns profile list", "[api][bedmesh]") {
     std::vector<std::string> profiles = api->get_bed_mesh_profiles();
 
     // Verify profiles list is reasonable
@@ -253,8 +252,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
-                 "MoonrakerAPI::get_excluded_objects handles empty response",
-                 "[moonraker][api][domain][exclude]") {
+                 "MoonrakerAPI::get_excluded_objects handles empty response", "[api][exclude]") {
     bool callback_called = false;
     std::set<std::string> result;
 
@@ -272,8 +270,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
 }
 
 TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
-                 "MoonrakerAPI::get_available_objects handles empty response",
-                 "[moonraker][api][domain][exclude]") {
+                 "MoonrakerAPI::get_available_objects handles empty response", "[api][exclude]") {
     bool callback_called = false;
     std::vector<std::string> result;
 
@@ -294,7 +291,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
 // Domain Service Interface Compliance Tests
 // ============================================================================
 
-TEST_CASE("BedMeshProfile struct initialization", "[moonraker][api][domain][bedmesh]") {
+TEST_CASE("BedMeshProfile struct initialization", "[slow][api][bedmesh]") {
     BedMeshProfile profile;
 
     SECTION("Default values are correct") {
@@ -341,7 +338,7 @@ TEST_CASE("BedMeshProfile struct initialization", "[moonraker][api][domain][bedm
 // ============================================================================
 
 TEST_CASE("PrinterHardware and MoonrakerAPI domain methods work for all printer types",
-          "[hardware][api][domain][all_printers]") {
+          "[printer][api][domain][all_printers]") {
     PrinterState state;
     state.init_subjects();
 

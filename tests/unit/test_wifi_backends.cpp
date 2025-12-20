@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Copyright (C) 2025 356C LLC
  * Author: Preston Brown <pbrown@brown-house.net>
@@ -18,12 +19,15 @@
  * along with HelixScreen. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "../catch_amalgamated.hpp"
 #include "../../include/wifi_backend.h"
 #include "../../include/wifi_backend_mock.h"
+
 #include <spdlog/spdlog.h>
-#include <thread>
+
 #include <chrono>
+#include <thread>
+
+#include "../catch_amalgamated.hpp"
 
 /**
  * WiFi Backend Unit Tests
@@ -51,7 +55,7 @@
 // ============================================================================
 
 class WiFiBackendTestFixture {
-public:
+  public:
     WiFiBackendTestFixture() {
         // Create mock backend directly for testing
         backend = std::make_unique<WifiBackendMock>();
@@ -94,7 +98,7 @@ public:
 // Backend Lifecycle Tests
 // ============================================================================
 
-TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend lifecycle", "[wifi][backend][lifecycle]") {
+TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend lifecycle", "[network][backend][lifecycle]") {
     SECTION("Backend created but not running by default") {
         // CRITICAL: This catches the auto-start bug
         REQUIRE_FALSE(backend->is_running());
@@ -157,7 +161,7 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend lifecycle", "[wifi][backend][l
 // Event System Tests
 // ============================================================================
 
-TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend event system", "[wifi][backend][events]") {
+TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend event system", "[network][backend][events]") {
     SECTION("Event callback registration") {
         int callback_count = 0;
         backend->register_event_callback("TEST_EVENT", [&callback_count](const std::string& data) {
@@ -166,7 +170,7 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend event system", "[wifi][backend
         });
 
         // Callback registered (can't directly test until event fires)
-        REQUIRE(callback_count == 0);  // Not fired yet
+        REQUIRE(callback_count == 0); // Not fired yet
     }
 
     SECTION("SCAN_COMPLETE event fires after scan") {
@@ -174,11 +178,12 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend event system", "[wifi][backend
         spdlog::info("[Test] Backend started");
 
         int scan_complete_count = 0;
-        backend->register_event_callback("SCAN_COMPLETE", [&scan_complete_count](const std::string& data) {
-            (void)data;
-            scan_complete_count++;
-            spdlog::info("[Test] SCAN_COMPLETE callback fired! count={}", scan_complete_count);
-        });
+        backend->register_event_callback(
+            "SCAN_COMPLETE", [&scan_complete_count](const std::string& data) {
+                (void)data;
+                scan_complete_count++;
+                spdlog::info("[Test] SCAN_COMPLETE callback fired! count={}", scan_complete_count);
+            });
 
         // Trigger scan
         spdlog::info("[Test] Triggering scan...");
@@ -188,7 +193,7 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend event system", "[wifi][backend
 
         // Wait for SCAN_COMPLETE event (mock backend fires after 2s)
         spdlog::info("[Test] Waiting 2100ms for SCAN_COMPLETE event...");
-        wait_for_events(2100);  // Mock scan delay is 2000ms
+        wait_for_events(2100); // Mock scan delay is 2000ms
 
         spdlog::info("[Test] Timer wait complete (count={})", scan_complete_count);
         REQUIRE(scan_complete_count == 1);
@@ -232,7 +237,7 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend event system", "[wifi][backend
         backend->trigger_scan();
 
         // Wait for scan to complete
-        wait_for_events(2100);  // Mock scan delay is 2000ms
+        wait_for_events(2100); // Mock scan delay is 2000ms
 
         // Callback should still work after restart
         REQUIRE(event_count > 0);
@@ -243,7 +248,8 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend event system", "[wifi][backend
 // Mock Backend Scan Tests
 // ============================================================================
 
-TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend scan behavior", "[wifi][backend][mock][scan]") {
+TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend scan behavior",
+                 "[network][backend][mock][scan]") {
     SECTION("trigger_scan() fails when backend not running") {
         // Backend not started
         REQUIRE_FALSE(backend->is_running());
@@ -265,22 +271,23 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend scan behavior", "[wifi][b
         backend->start();
 
         int scan_complete_count = 0;
-        backend->register_event_callback("SCAN_COMPLETE", [&scan_complete_count](const std::string& data) {
-            (void)data;
-            scan_complete_count++;
-        });
+        backend->register_event_callback("SCAN_COMPLETE",
+                                         [&scan_complete_count](const std::string& data) {
+                                             (void)data;
+                                             scan_complete_count++;
+                                         });
 
         backend->trigger_scan();
 
         // Wait for scan to complete
-        wait_for_events(2100);  // Mock scan delay is 2000ms
+        wait_for_events(2100); // Mock scan delay is 2000ms
         REQUIRE(scan_complete_count > 0);
 
         // Get scan results
         std::vector<WiFiNetwork> networks;
         WiFiError result = backend->get_scan_results(networks);
         REQUIRE(result.success());
-        REQUIRE(networks.size() == 10);  // Mock backend has 10 networks
+        REQUIRE(networks.size() == 10); // Mock backend has 10 networks
     }
 
     SECTION("get_scan_results() fails when backend not running") {
@@ -298,7 +305,7 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend scan behavior", "[wifi][b
         backend->trigger_scan();
 
         // Wait for scan
-        wait_for_events(2100);  // Mock scan delay is 2000ms
+        wait_for_events(2100); // Mock scan delay is 2000ms
 
         std::vector<WiFiNetwork> networks;
         backend->get_scan_results(networks);
@@ -324,14 +331,14 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend scan behavior", "[wifi][b
         backend->start();
         backend->trigger_scan();
 
-        wait_for_events(2100);  // Mock scan delay is 2000ms
+        wait_for_events(2100); // Mock scan delay is 2000ms
 
         std::vector<WiFiNetwork> networks;
         backend->get_scan_results(networks);
 
         // Mock backend sorts by signal strength (strongest first)
         for (size_t i = 1; i < networks.size(); i++) {
-            REQUIRE(networks[i-1].signal_strength >= networks[i].signal_strength);
+            REQUIRE(networks[i - 1].signal_strength >= networks[i].signal_strength);
         }
     }
 
@@ -340,14 +347,14 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend scan behavior", "[wifi][b
 
         // First scan
         backend->trigger_scan();
-        wait_for_events(2100);  // Mock scan delay is 2000ms
+        wait_for_events(2100); // Mock scan delay is 2000ms
 
         std::vector<WiFiNetwork> scan1;
         backend->get_scan_results(scan1);
 
         // Second scan
         backend->trigger_scan();
-        wait_for_events(2100);  // Mock scan delay is 2000ms
+        wait_for_events(2100); // Mock scan delay is 2000ms
 
         std::vector<WiFiNetwork> scan2;
         backend->get_scan_results(scan2);
@@ -370,7 +377,8 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend scan behavior", "[wifi][b
 // Mock Backend Connection Tests
 // ============================================================================
 
-TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend connection behavior", "[wifi][backend][mock][connect]") {
+TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend connection behavior",
+                 "[network][backend][mock][connect][slow]") {
     SECTION("connect_network() fails when backend not running") {
         REQUIRE_FALSE(backend->is_running());
 
@@ -392,13 +400,13 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend connection behavior", "[w
 
         // Get a secured network
         backend->trigger_scan();
-        wait_for_events(2100);  // Mock scan delay is 2000ms
+        wait_for_events(2100); // Mock scan delay is 2000ms
 
         std::vector<WiFiNetwork> networks;
         backend->get_scan_results(networks);
 
         auto secured = std::find_if(networks.begin(), networks.end(),
-                                   [](const WiFiNetwork& n) { return n.is_secured; });
+                                    [](const WiFiNetwork& n) { return n.is_secured; });
         REQUIRE(secured != networks.end());
 
         // Try connecting without password
@@ -412,7 +420,7 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend connection behavior", "[w
 
         // Get available networks
         backend->trigger_scan();
-        wait_for_events(2100);  // Mock scan delay is 2000ms
+        wait_for_events(2100); // Mock scan delay is 2000ms
 
         std::vector<WiFiNetwork> networks;
         backend->get_scan_results(networks);
@@ -427,7 +435,7 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend connection behavior", "[w
 
         // Connect to first network (mock backend simulates 2-3s delay)
         WiFiError result = backend->connect_network(networks[0].ssid, "test_password");
-        REQUIRE(result.success());  // Connection initiated
+        REQUIRE(result.success()); // Connection initiated
 
         // Wait for CONNECTED event (mock connect delay is 2000-3000ms)
         wait_for_events(3100);
@@ -440,7 +448,7 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend connection behavior", "[w
         backend->start();
 
         WiFiError result = backend->disconnect_network();
-        REQUIRE(result.success());  // Idempotent operation
+        REQUIRE(result.success()); // Idempotent operation
     }
 
     SECTION("Connection status updated after connect") {
@@ -452,7 +460,7 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend connection behavior", "[w
 
         // Get networks and connect
         backend->trigger_scan();
-        wait_for_events(2100);  // Mock scan delay is 2000ms
+        wait_for_events(2100); // Mock scan delay is 2000ms
 
         std::vector<WiFiNetwork> networks;
         backend->get_scan_results(networks);
@@ -481,7 +489,8 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Mock backend connection behavior", "[w
 // Timer Cleanup Tests
 // ============================================================================
 
-TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend timer cleanup", "[wifi][backend][cleanup]") {
+TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend timer cleanup",
+                 "[network][backend][cleanup][slow]") {
     SECTION("stop() cleans up scan timer") {
         backend->start();
         backend->trigger_scan();
@@ -498,7 +507,7 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend timer cleanup", "[wifi][backen
 
         // Get networks
         backend->trigger_scan();
-        wait_for_events(2100);  // Mock scan delay is 2000ms
+        wait_for_events(2100); // Mock scan delay is 2000ms
 
         std::vector<WiFiNetwork> networks;
         backend->get_scan_results(networks);
@@ -548,7 +557,7 @@ TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend timer cleanup", "[wifi][backen
 // Edge Cases
 // ============================================================================
 
-TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend edge cases", "[wifi][backend][edge-cases]") {
+TEST_CASE_METHOD(WiFiBackendTestFixture, "Backend edge cases", "[network][backend][edge-cases]") {
     SECTION("Rapid start/stop cycles") {
         for (int i = 0; i < 5; i++) {
             backend->start();

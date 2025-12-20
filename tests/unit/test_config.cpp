@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Copyright (C) 2025 356C LLC
  * Author: Preston Brown <pbrown@brown-house.net>
@@ -10,12 +11,13 @@
  * (at your option) any later version.
  */
 
-#include "../catch_amalgamated.hpp"
 #include "config.h"
+
+#include "../catch_amalgamated.hpp"
 
 // Test fixture for Config class testing
 class ConfigTestFixture {
-protected:
+  protected:
     Config config;
 
     // Helper methods to access protected members
@@ -32,18 +34,12 @@ protected:
         // Manually populate config.data with realistic test JSON
         config.data = {
             {"default_printer", "test_printer"},
-            {"printers", {
-                {"test_printer", {
-                    {"moonraker_host", "192.168.1.100"},
-                    {"moonraker_port", 7125},
-                    {"log_level", "debug"},
-                    {"hardware_map", {
-                        {"heated_bed", "heater_bed"},
-                        {"hotend", "extruder"}
-                    }}
-                }}
-            }}
-        };
+            {"printers",
+             {{"test_printer",
+               {{"moonraker_host", "192.168.1.100"},
+                {"moonraker_port", 7125},
+                {"log_level", "debug"},
+                {"hardware_map", {{"heated_bed", "heater_bed"}, {"hotend", "extruder"}}}}}}}};
         config.default_printer = "/printers/test_printer/";
     }
 
@@ -51,27 +47,17 @@ protected:
         // Minimal config for wizard testing (default host)
         config.data = {
             {"default_printer", "default_printer"},
-            {"printers", {
-                {"default_printer", {
-                    {"moonraker_host", "127.0.0.1"},
-                    {"moonraker_port", 7125}
-                }}
-            }}
-        };
+            {"printers",
+             {{"default_printer", {{"moonraker_host", "127.0.0.1"}, {"moonraker_port", 7125}}}}}};
         config.default_printer = "/printers/default_printer/";
     }
 
     void setup_incomplete_config() {
         // Config missing hardware_map (should trigger wizard)
-        config.data = {
-            {"default_printer", "default_printer"},
-            {"printers", {
-                {"default_printer", {
-                    {"moonraker_host", "192.168.1.50"},
-                    {"moonraker_port", 7125}
-                }}
-            }}
-        };
+        config.data = {{"default_printer", "default_printer"},
+                       {"printers",
+                        {{"default_printer",
+                          {{"moonraker_host", "192.168.1.50"}, {"moonraker_port", 7125}}}}}};
         config.default_printer = "/printers/default_printer/";
     }
 };
@@ -80,56 +66,64 @@ protected:
 // get() without default parameter - Existing behavior
 // ============================================================================
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() returns existing string value", "[config][get]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: get() returns existing string value",
+                 "[core][config][get]") {
     setup_default_config();
 
     std::string host = config.get<std::string>("/printers/test_printer/moonraker_host");
     REQUIRE(host == "192.168.1.100");
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() returns existing int value", "[config][get]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: get() returns existing int value",
+                 "[core][config][get]") {
     setup_default_config();
 
     int port = config.get<int>("/printers/test_printer/moonraker_port");
     REQUIRE(port == 7125);
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() returns existing nested value", "[config][get]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: get() returns existing nested value",
+                 "[config][get]") {
     setup_default_config();
 
     std::string bed = config.get<std::string>("/printers/test_printer/hardware_map/heated_bed");
     REQUIRE(bed == "heater_bed");
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with df() prefix returns value", "[config][get]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with df() prefix returns value",
+                 "[config][get]") {
     setup_default_config();
 
     std::string host = config.get<std::string>(config.df() + "moonraker_host");
     REQUIRE(host == "192.168.1.100");
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with missing key throws exception", "[config][get]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with missing key throws exception",
+                 "[core][config][get]") {
     setup_default_config();
 
     REQUIRE_THROWS_AS(config.get<std::string>("/printers/test_printer/nonexistent_key"),
                       nlohmann::detail::type_error);
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with missing nested key throws exception", "[config][get]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with missing nested key throws exception",
+                 "[config][get]") {
     setup_default_config();
 
     REQUIRE_THROWS_AS(config.get<std::string>("/printers/test_printer/hardware_map/missing"),
                       nlohmann::detail::type_error);
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with type mismatch throws exception", "[config][get]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with type mismatch throws exception",
+                 "[config][get]") {
     setup_default_config();
 
     // Try to get string value as int
     REQUIRE_THROWS(config.get<int>("/printers/test_printer/moonraker_host"));
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with object returns nested structure", "[config][get]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with object returns nested structure",
+                 "[config][get]") {
     setup_default_config();
 
     auto hardware_map = config.get<json>("/printers/test_printer/hardware_map");
@@ -142,70 +136,89 @@ TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with object returns nested st
 // get() with default parameter - NEW behavior
 // ============================================================================
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default returns value when key exists (string)", "[config][get][default]") {
+TEST_CASE_METHOD(ConfigTestFixture,
+                 "Config: get() with default returns value when key exists (string)",
+                 "[config][get][default]") {
     setup_default_config();
 
-    std::string host = config.get<std::string>("/printers/test_printer/moonraker_host", "default.local");
-    REQUIRE(host == "192.168.1.100");  // Ignores default
+    std::string host =
+        config.get<std::string>("/printers/test_printer/moonraker_host", "default.local");
+    REQUIRE(host == "192.168.1.100"); // Ignores default
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default returns value when key exists (int)", "[config][get][default]") {
+TEST_CASE_METHOD(ConfigTestFixture,
+                 "Config: get() with default returns value when key exists (int)",
+                 "[config][get][default]") {
     setup_default_config();
 
     int port = config.get<int>("/printers/test_printer/moonraker_port", 9999);
-    REQUIRE(port == 7125);  // Ignores default
+    REQUIRE(port == 7125); // Ignores default
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default returns default when key missing (string)", "[config][get][default]") {
+TEST_CASE_METHOD(ConfigTestFixture,
+                 "Config: get() with default returns default when key missing (string)",
+                 "[core][config][get][default]") {
     setup_default_config();
 
-    std::string printer_name = config.get<std::string>("/printers/test_printer/printer_name", "My Printer");
+    std::string printer_name =
+        config.get<std::string>("/printers/test_printer/printer_name", "My Printer");
     REQUIRE(printer_name == "My Printer");
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default returns default when key missing (int)", "[config][get][default]") {
+TEST_CASE_METHOD(ConfigTestFixture,
+                 "Config: get() with default returns default when key missing (int)",
+                 "[config][get][default]") {
     setup_default_config();
 
     int timeout = config.get<int>("/printers/test_printer/timeout", 30);
     REQUIRE(timeout == 30);
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default returns default when key missing (bool)", "[config][get][default]") {
+TEST_CASE_METHOD(ConfigTestFixture,
+                 "Config: get() with default returns default when key missing (bool)",
+                 "[config][get][default]") {
     setup_default_config();
 
     bool api_key = config.get<bool>("/printers/test_printer/moonraker_api_key", false);
     REQUIRE(api_key == false);
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default handles nested missing path", "[config][get][default]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default handles nested missing path",
+                 "[config][get][default]") {
     setup_default_config();
 
-    std::string led = config.get<std::string>("/printers/test_printer/hardware_map/main_led", "none");
+    std::string led =
+        config.get<std::string>("/printers/test_printer/hardware_map/main_led", "none");
     REQUIRE(led == "none");
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with empty string default", "[config][get][default]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with empty string default",
+                 "[config][get][default]") {
     setup_default_config();
 
     std::string empty = config.get<std::string>("/printers/test_printer/empty_field", "");
     REQUIRE(empty == "");
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default using df() prefix", "[config][get][default]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default using df() prefix",
+                 "[config][get][default]") {
     setup_default_config();
 
     std::string printer_name = config.get<std::string>(config.df() + "printer_name", "");
     REQUIRE(printer_name == "");
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default handles completely missing parent path", "[config][get][default]") {
+TEST_CASE_METHOD(ConfigTestFixture,
+                 "Config: get() with default handles completely missing parent path",
+                 "[config][get][default]") {
     setup_default_config();
 
     std::string missing = config.get<std::string>("/nonexistent/path/key", "fallback");
     REQUIRE(missing == "fallback");
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default prevents crashes on null keys", "[config][get][default]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default prevents crashes on null keys",
+                 "[config][get][default]") {
     setup_minimal_config();
 
     // This is the bug we fixed - printer_name doesn't exist, should return default not throw
@@ -257,7 +270,8 @@ TEST_CASE_METHOD(ConfigTestFixture, "Config: set() handles different types", "[c
     REQUIRE(config.get<std::string>("/printers/test_printer/new_string") == "test");
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: set() overwrites value of different type", "[config][set]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: set() overwrites value of different type",
+                 "[config][set]") {
     setup_default_config();
 
     config.set<int>("/printers/test_printer/moonraker_port", 8080);
@@ -272,7 +286,9 @@ TEST_CASE_METHOD(ConfigTestFixture, "Config: set() overwrites value of different
 // is_wizard_required() logic - NEW: wizard_completed flag
 // ============================================================================
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns false when wizard_completed is true", "[config][wizard]") {
+TEST_CASE_METHOD(ConfigTestFixture,
+                 "Config: is_wizard_required() returns false when wizard_completed is true",
+                 "[config][wizard]") {
     setup_minimal_config();
 
     // Set wizard_completed flag
@@ -281,7 +297,9 @@ TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns false 
     REQUIRE(config.is_wizard_required() == false);
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns true when wizard_completed is false", "[config][wizard]") {
+TEST_CASE_METHOD(ConfigTestFixture,
+                 "Config: is_wizard_required() returns true when wizard_completed is false",
+                 "[config][wizard]") {
     setup_default_config();
 
     // Explicitly set wizard_completed to false
@@ -290,14 +308,17 @@ TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns true w
     REQUIRE(config.is_wizard_required() == true);
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns true when wizard_completed flag missing", "[config][wizard]") {
+TEST_CASE_METHOD(ConfigTestFixture,
+                 "Config: is_wizard_required() returns true when wizard_completed flag missing",
+                 "[config][wizard]") {
     setup_minimal_config();
 
     // No wizard_completed flag set
     REQUIRE(config.is_wizard_required() == true);
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: wizard_completed flag overrides hardware config", "[config][wizard]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: wizard_completed flag overrides hardware config",
+                 "[config][wizard]") {
     setup_default_config();
 
     // Even with full hardware config, if wizard_completed is false, wizard should run
@@ -306,7 +327,9 @@ TEST_CASE_METHOD(ConfigTestFixture, "Config: wizard_completed flag overrides har
     REQUIRE(config.is_wizard_required() == true);
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: wizard_completed=true skips wizard even with minimal config", "[config][wizard]") {
+TEST_CASE_METHOD(ConfigTestFixture,
+                 "Config: wizard_completed=true skips wizard even with minimal config",
+                 "[config][wizard]") {
     setup_minimal_config();
 
     // Even with minimal config (127.0.0.1 host), wizard_completed=true should skip wizard
@@ -315,7 +338,9 @@ TEST_CASE_METHOD(ConfigTestFixture, "Config: wizard_completed=true skips wizard 
     REQUIRE(config.is_wizard_required() == false);
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() handles invalid wizard_completed type", "[config][wizard]") {
+TEST_CASE_METHOD(ConfigTestFixture,
+                 "Config: is_wizard_required() handles invalid wizard_completed type",
+                 "[config][wizard]") {
     setup_default_config();
 
     // Set wizard_completed to invalid type (string instead of bool)
@@ -325,7 +350,8 @@ TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() handles invali
     REQUIRE(config.is_wizard_required() == true);
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() handles null wizard_completed", "[config][wizard]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() handles null wizard_completed",
+                 "[config][wizard]") {
     setup_default_config();
 
     // Set wizard_completed to null
@@ -343,11 +369,13 @@ TEST_CASE_METHOD(ConfigTestFixture, "Config: handles deeply nested structures", 
     setup_default_config();
 
     config.set<std::string>("/printers/test_printer/nested/level1/level2/level3", "deep");
-    std::string deep = config.get<std::string>("/printers/test_printer/nested/level1/level2/level3");
+    std::string deep =
+        config.get<std::string>("/printers/test_printer/nested/level1/level2/level3");
     REQUIRE(deep == "deep");
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default handles empty config", "[config][edge]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: get() with default handles empty config",
+                 "[config][edge]") {
     // Empty config
     set_data_empty();
 

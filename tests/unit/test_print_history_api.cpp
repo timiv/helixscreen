@@ -75,8 +75,7 @@ class PrintHistoryTestFixture {
 // get_history_list Tests
 // ============================================================================
 
-TEST_CASE_METHOD(PrintHistoryTestFixture, "get_history_list returns mock jobs",
-                 "[moonraker][history][api]") {
+TEST_CASE_METHOD(PrintHistoryTestFixture, "get_history_list returns mock jobs", "[history][api]") {
     std::atomic<bool> success_called{false};
     std::atomic<bool> error_called{false};
     std::vector<PrintHistoryJob> captured_jobs;
@@ -111,7 +110,7 @@ TEST_CASE_METHOD(PrintHistoryTestFixture, "get_history_list returns mock jobs",
 }
 
 TEST_CASE_METHOD(PrintHistoryTestFixture, "get_history_list jobs have valid status",
-                 "[moonraker][history][api]") {
+                 "[history][api]") {
     std::atomic<bool> done{false};
     std::vector<PrintHistoryJob> captured_jobs;
 
@@ -145,7 +144,7 @@ TEST_CASE_METHOD(PrintHistoryTestFixture, "get_history_list jobs have valid stat
 // ============================================================================
 
 TEST_CASE_METHOD(PrintHistoryTestFixture, "get_history_totals returns statistics",
-                 "[moonraker][history][api]") {
+                 "[history][api]") {
     std::atomic<bool> success_called{false};
     std::atomic<bool> error_called{false};
     PrintHistoryTotals captured_totals;
@@ -180,7 +179,7 @@ TEST_CASE_METHOD(PrintHistoryTestFixture, "get_history_totals returns statistics
 // ============================================================================
 
 TEST_CASE_METHOD(PrintHistoryTestFixture, "delete_history_job calls success callback",
-                 "[moonraker][history][api]") {
+                 "[history][api]") {
     std::atomic<bool> success_called{false};
     std::atomic<bool> error_called{false};
 
@@ -297,7 +296,7 @@ static const char* REAL_MOONRAKER_HISTORY_RESPONSE = R"({
     }
 })";
 
-TEST_CASE("Parse real Moonraker history response with nulls", "[moonraker][history][parsing]") {
+TEST_CASE("Parse real Moonraker history response with nulls", "[slow][history][parsing]") {
     // This tests that our JSON parsing handles real-world responses
     // including null values in auxiliary_data
 
@@ -311,7 +310,7 @@ TEST_CASE("Parse real Moonraker history response with nulls", "[moonraker][histo
     REQUIRE(j["result"]["jobs"].size() == 3);
 }
 
-TEST_CASE("Parse history job with null auxiliary_data values", "[moonraker][history][parsing]") {
+TEST_CASE("Parse history job with null auxiliary_data values", "[slow][history][parsing]") {
     auto j = nlohmann::json::parse(REAL_MOONRAKER_HISTORY_RESPONSE);
     const auto& jobs = j["result"]["jobs"];
 
@@ -328,7 +327,7 @@ TEST_CASE("Parse history job with null auxiliary_data values", "[moonraker][hist
     REQUIRE(job0["filament_used"].get<double>() > 6000.0);
 }
 
-TEST_CASE("Parse history job with empty metadata", "[moonraker][history][parsing]") {
+TEST_CASE("Parse history job with empty metadata", "[slow][history][parsing]") {
     auto j = nlohmann::json::parse(REAL_MOONRAKER_HISTORY_RESPONSE);
     const auto& jobs = j["result"]["jobs"];
 
@@ -341,7 +340,7 @@ TEST_CASE("Parse history job with empty metadata", "[moonraker][history][parsing
     REQUIRE(job1["print_duration"].get<double>() > 200.0);
 }
 
-TEST_CASE("Parse history job with klippy_shutdown status", "[moonraker][history][parsing]") {
+TEST_CASE("Parse history job with klippy_shutdown status", "[slow][history][parsing]") {
     auto j = nlohmann::json::parse(REAL_MOONRAKER_HISTORY_RESPONSE);
     const auto& jobs = j["result"]["jobs"];
 
@@ -352,7 +351,7 @@ TEST_CASE("Parse history job with klippy_shutdown status", "[moonraker][history]
     REQUIRE(job2["filament_used"].get<double>() == 0.0);
 }
 
-TEST_CASE("json::value() handles missing keys with defaults", "[moonraker][history][parsing]") {
+TEST_CASE("json::value() handles missing keys with defaults", "[history][parsing]") {
     // Test that nlohmann::json's value() function returns defaults for missing keys
     auto j = nlohmann::json::parse(R"({"name": "test"})");
 
@@ -363,7 +362,7 @@ TEST_CASE("json::value() handles missing keys with defaults", "[moonraker][histo
     REQUIRE(j.value("missing_bool", true) == true);
 }
 
-TEST_CASE("json::value() handles null values", "[moonraker][history][parsing]") {
+TEST_CASE("json::value() handles null values", "[history][parsing]") {
     // Test how value() handles explicit null values
     auto j = nlohmann::json::parse(R"({"value": null, "number": 42, "obj": {"nested": "yes"}})");
 
@@ -423,7 +422,7 @@ static PrintHistoryJob parse_history_job(const nlohmann::json& job_json) {
     return job;
 }
 
-TEST_CASE("Parse completed job correctly", "[moonraker][history][parsing]") {
+TEST_CASE("Parse completed job correctly", "[slow][history][parsing]") {
     auto job_json = nlohmann::json::parse(R"({
         "job_id": "000313",
         "filename": "Body744_ASA_1h40m.gcode",
@@ -459,7 +458,7 @@ TEST_CASE("Parse completed job correctly", "[moonraker][history][parsing]") {
     REQUIRE(job.exists == true);
 }
 
-TEST_CASE("Parse cancelled job correctly", "[moonraker][history][parsing]") {
+TEST_CASE("Parse cancelled job correctly", "[slow][history][parsing]") {
     auto job_json = nlohmann::json::parse(R"({
         "job_id": "000312",
         "filename": "Body744_ASA_1h40m.gcode",
@@ -482,7 +481,7 @@ TEST_CASE("Parse cancelled job correctly", "[moonraker][history][parsing]") {
     REQUIRE(job.layer_count == 0);
 }
 
-TEST_CASE("Parse klippy_shutdown as error status", "[moonraker][history][parsing]") {
+TEST_CASE("Parse klippy_shutdown as error status", "[slow][history][parsing]") {
     auto job_json = nlohmann::json::parse(R"({
         "job_id": "000311",
         "filename": "Belt_bracket.gcode",
@@ -510,7 +509,7 @@ TEST_CASE("Parse klippy_shutdown as error status", "[moonraker][history][parsing
     REQUIRE(job.filament_type == "ASA");
 }
 
-TEST_CASE("Parse job with missing optional fields", "[moonraker][history][parsing]") {
+TEST_CASE("Parse job with missing optional fields", "[slow][history][parsing]") {
     // Minimal job - only required fields
     auto job_json = nlohmann::json::parse(R"({
         "job_id": "000001",
@@ -577,7 +576,7 @@ static HistoryStats calculate_stats(const std::vector<PrintHistoryJob>& jobs) {
     return stats;
 }
 
-TEST_CASE("Calculate statistics from job list", "[moonraker][history][stats]") {
+TEST_CASE("Calculate statistics from job list", "[slow][history][stats]") {
     std::vector<PrintHistoryJob> jobs;
 
     // 2 completed jobs
@@ -618,7 +617,7 @@ TEST_CASE("Calculate statistics from job list", "[moonraker][history][stats]") {
     REQUIRE(stats.success_rate == 50.0);        // 2/4 = 50%
 }
 
-TEST_CASE("Calculate statistics from empty job list", "[moonraker][history][stats]") {
+TEST_CASE("Calculate statistics from empty job list", "[slow][history][stats]") {
     std::vector<PrintHistoryJob> jobs;
 
     HistoryStats stats = calculate_stats(jobs);
@@ -630,7 +629,7 @@ TEST_CASE("Calculate statistics from empty job list", "[moonraker][history][stat
     REQUIRE(stats.total_filament == 0.0);
 }
 
-TEST_CASE("Success rate calculation with all completed", "[moonraker][history][stats]") {
+TEST_CASE("Success rate calculation with all completed", "[slow][history][stats]") {
     std::vector<PrintHistoryJob> jobs;
 
     for (int i = 0; i < 10; i++) {
@@ -669,7 +668,7 @@ static std::vector<std::string> parse_filament_types(const std::string& filament
     return types;
 }
 
-TEST_CASE("Parse multi-extruder filament types", "[moonraker][history][parsing]") {
+TEST_CASE("Parse multi-extruder filament types", "[slow][history][parsing]") {
     std::string filament_str = "ASA;ASA;ASA;ASA";
     auto types = parse_filament_types(filament_str);
 
@@ -679,7 +678,7 @@ TEST_CASE("Parse multi-extruder filament types", "[moonraker][history][parsing]"
     }
 }
 
-TEST_CASE("Parse single filament type", "[moonraker][history][parsing]") {
+TEST_CASE("Parse single filament type", "[slow][history][parsing]") {
     std::string filament_str = "PLA";
     auto types = parse_filament_types(filament_str);
 
@@ -687,14 +686,14 @@ TEST_CASE("Parse single filament type", "[moonraker][history][parsing]") {
     REQUIRE(types[0] == "PLA");
 }
 
-TEST_CASE("Parse empty filament type", "[moonraker][history][parsing]") {
+TEST_CASE("Parse empty filament type", "[slow][history][parsing]") {
     std::string filament_str = "";
     auto types = parse_filament_types(filament_str);
 
     REQUIRE(types.empty());
 }
 
-TEST_CASE("Parse mixed filament types with whitespace", "[moonraker][history][parsing]") {
+TEST_CASE("Parse mixed filament types with whitespace", "[slow][history][parsing]") {
     std::string filament_str = "PLA ; PETG ; ABS";
     auto types = parse_filament_types(filament_str);
 
@@ -781,7 +780,7 @@ static const char* REAL_VORON_HISTORY_5_JOBS = R"({
     }
 })";
 
-TEST_CASE("Parse real Voron printer history data", "[moonraker][history][parsing][voron]") {
+TEST_CASE("Parse real Voron printer history data", "[slow][history][parsing][voron]") {
     auto j = nlohmann::json::parse(REAL_VORON_HISTORY_5_JOBS);
 
     REQUIRE(j["result"]["count"].get<int>() == 5);
@@ -821,7 +820,7 @@ TEST_CASE("Parse real Voron printer history data", "[moonraker][history][parsing
     REQUIRE(jobs[4].filament_used > 63000.0); // 63m of filament!
 }
 
-TEST_CASE("Calculate stats from real Voron data", "[moonraker][history][stats][voron]") {
+TEST_CASE("Calculate stats from real Voron data", "[slow][history][stats][voron]") {
     auto j = nlohmann::json::parse(REAL_VORON_HISTORY_5_JOBS);
 
     std::vector<PrintHistoryJob> jobs;
@@ -848,8 +847,7 @@ TEST_CASE("Calculate stats from real Voron data", "[moonraker][history][stats][v
 // Large Response Handling Tests
 // ============================================================================
 
-TEST_CASE("Handle large history response (simulating 200+ jobs)",
-          "[moonraker][history][parsing][large]") {
+TEST_CASE("Handle large history response (simulating 200+ jobs)", "[history][parsing][large]") {
     // Build a large JSON response similar to what Moonraker returns for printers with lots of
     // history This tests that our parsing can handle responses in the 300KB+ range
 

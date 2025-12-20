@@ -13,7 +13,7 @@ using json = nlohmann::json;
 // Hardware Capability Detection Tests
 // ============================================================================
 
-TEST_CASE("PrinterCapabilities - Hardware detection", "[moonraker][capabilities]") {
+TEST_CASE("PrinterCapabilities - Hardware detection", "[slow][printer]") {
     PrinterCapabilities caps;
 
     SECTION("Detects quad_gantry_level") {
@@ -132,7 +132,7 @@ TEST_CASE("PrinterCapabilities - Hardware detection", "[moonraker][capabilities]
 // Macro Detection Tests
 // ============================================================================
 
-TEST_CASE("PrinterCapabilities - Macro detection", "[moonraker][capabilities]") {
+TEST_CASE("PrinterCapabilities - Macro detection", "[slow][printer]") {
     PrinterCapabilities caps;
 
     SECTION("Detects macros from gcode_macro prefix") {
@@ -155,8 +155,7 @@ TEST_CASE("PrinterCapabilities - Macro detection", "[moonraker][capabilities]") 
     }
 
     SECTION("Detects HelixScreen macros") {
-        json objects = {"gcode_macro HELIX_BED_LEVEL_IF_NEEDED",
-                        "gcode_macro HELIX_PREPARE",
+        json objects = {"gcode_macro HELIX_BED_LEVEL_IF_NEEDED", "gcode_macro HELIX_PREPARE",
                         "gcode_macro START_PRINT"};
         caps.parse_objects(objects);
 
@@ -269,7 +268,7 @@ TEST_CASE("PrinterCapabilities - Macro detection", "[moonraker][capabilities]") 
 // HelixScreen Macro Detection Tests
 // ============================================================================
 
-TEST_CASE("PrinterCapabilities - Helix macro detection", "[moonraker][capabilities][helix_macros]") {
+TEST_CASE("PrinterCapabilities - Helix macro detection", "[slow][printer][config]") {
     PrinterCapabilities caps;
 
     SECTION("No Helix macros when only standard macros present") {
@@ -282,10 +281,8 @@ TEST_CASE("PrinterCapabilities - Helix macro detection", "[moonraker][capabiliti
 
     SECTION("Detects complete Helix macro set") {
         // All four macros from helix_macros.cfg
-        json objects = {"gcode_macro HELIX_START_PRINT",
-                        "gcode_macro HELIX_CLEAN_NOZZLE",
-                        "gcode_macro HELIX_BED_LEVEL_IF_NEEDED",
-                        "gcode_macro HELIX_VERSION"};
+        json objects = {"gcode_macro HELIX_START_PRINT", "gcode_macro HELIX_CLEAN_NOZZLE",
+                        "gcode_macro HELIX_BED_LEVEL_IF_NEEDED", "gcode_macro HELIX_VERSION"};
         caps.parse_objects(objects);
 
         REQUIRE(caps.has_helix_macros());
@@ -317,9 +314,9 @@ TEST_CASE("PrinterCapabilities - Helix macro detection", "[moonraker][capabiliti
     }
 
     SECTION("Distinguishes HELIX_ prefix from similar names") {
-        json objects = {"gcode_macro HELIX_START_PRINT",  // Valid Helix macro
-                        "gcode_macro HELIXSCREEN_UTIL",   // Not a Helix macro (wrong prefix)
-                        "gcode_macro MY_HELIX_MACRO"};    // Not a Helix macro (prefix not at start)
+        json objects = {"gcode_macro HELIX_START_PRINT", // Valid Helix macro
+                        "gcode_macro HELIXSCREEN_UTIL",  // Not a Helix macro (wrong prefix)
+                        "gcode_macro MY_HELIX_MACRO"};   // Not a Helix macro (prefix not at start)
         caps.parse_objects(objects);
 
         REQUIRE(caps.helix_macros().size() == 1);
@@ -327,12 +324,9 @@ TEST_CASE("PrinterCapabilities - Helix macro detection", "[moonraker][capabiliti
     }
 
     SECTION("Mixed Helix and standard macros") {
-        json objects = {"gcode_macro START_PRINT",
-                        "gcode_macro HELIX_START_PRINT",
-                        "gcode_macro END_PRINT",
-                        "gcode_macro HELIX_VERSION",
-                        "gcode_macro CLEAN_NOZZLE",
-                        "gcode_macro HELIX_CLEAN_NOZZLE"};
+        json objects = {"gcode_macro START_PRINT",  "gcode_macro HELIX_START_PRINT",
+                        "gcode_macro END_PRINT",    "gcode_macro HELIX_VERSION",
+                        "gcode_macro CLEAN_NOZZLE", "gcode_macro HELIX_CLEAN_NOZZLE"};
         caps.parse_objects(objects);
 
         REQUIRE(caps.macro_count() == 6);
@@ -349,7 +343,7 @@ TEST_CASE("PrinterCapabilities - Helix macro detection", "[moonraker][capabiliti
 // Clear and Reset Tests
 // ============================================================================
 
-TEST_CASE("PrinterCapabilities - Clear", "[moonraker][capabilities]") {
+TEST_CASE("PrinterCapabilities - Clear", "[slow][printer]") {
     PrinterCapabilities caps;
 
     // First parse some capabilities
@@ -371,7 +365,7 @@ TEST_CASE("PrinterCapabilities - Clear", "[moonraker][capabilities]") {
     REQUIRE_FALSE(caps.has_nozzle_clean_macro());
 }
 
-TEST_CASE("PrinterCapabilities - Re-parse replaces old data", "[moonraker][capabilities]") {
+TEST_CASE("PrinterCapabilities - Re-parse replaces old data", "[slow][printer]") {
     PrinterCapabilities caps;
 
     // First parse
@@ -386,8 +380,8 @@ TEST_CASE("PrinterCapabilities - Re-parse replaces old data", "[moonraker][capab
     json objects2 = {"z_tilt", "gcode_macro MACRO_B"};
     caps.parse_objects(objects2);
 
-    REQUIRE_FALSE(caps.has_qgl());  // No longer present
-    REQUIRE(caps.has_z_tilt());     // Now present
+    REQUIRE_FALSE(caps.has_qgl()); // No longer present
+    REQUIRE(caps.has_z_tilt());    // Now present
     REQUIRE_FALSE(caps.has_macro("MACRO_A"));
     REQUIRE(caps.has_macro("MACRO_B"));
 }
@@ -396,7 +390,7 @@ TEST_CASE("PrinterCapabilities - Re-parse replaces old data", "[moonraker][capab
 // Edge Cases
 // ============================================================================
 
-TEST_CASE("PrinterCapabilities - Edge cases", "[moonraker][capabilities]") {
+TEST_CASE("PrinterCapabilities - Edge cases", "[slow][printer]") {
     PrinterCapabilities caps;
 
     SECTION("Empty objects array") {
@@ -423,7 +417,7 @@ TEST_CASE("PrinterCapabilities - Edge cases", "[moonraker][capabilities]") {
     }
 
     SECTION("Handles empty macro name") {
-        json objects = {"gcode_macro "};  // Just "gcode_macro " with trailing space
+        json objects = {"gcode_macro "}; // Just "gcode_macro " with trailing space
         caps.parse_objects(objects);
 
         // Should handle gracefully (empty string macro)
@@ -435,7 +429,7 @@ TEST_CASE("PrinterCapabilities - Edge cases", "[moonraker][capabilities]") {
 // Summary Output Tests
 // ============================================================================
 
-TEST_CASE("PrinterCapabilities - Summary", "[moonraker][capabilities]") {
+TEST_CASE("PrinterCapabilities - Summary", "[slow][printer]") {
     PrinterCapabilities caps;
 
     SECTION("Summary includes all detected capabilities") {
@@ -467,7 +461,7 @@ TEST_CASE("PrinterCapabilities - Summary", "[moonraker][capabilities]") {
 // Real-world Printer Configurations
 // ============================================================================
 
-TEST_CASE("PrinterCapabilities - Real printer configs", "[moonraker][capabilities]") {
+TEST_CASE("PrinterCapabilities - Real printer configs", "[slow][printer]") {
     PrinterCapabilities caps;
 
     SECTION("Voron 2.4 with full configuration") {
@@ -518,8 +512,11 @@ TEST_CASE("PrinterCapabilities - Real printer configs", "[moonraker][capabilitie
     }
 
     SECTION("Voron Trident with z_tilt") {
-        json objects = {"extruder",     "heater_bed",          "z_tilt",
-                        "bed_mesh",     "gcode_macro Z_TILT_ADJUST_WRAPPER",
+        json objects = {"extruder",
+                        "heater_bed",
+                        "z_tilt",
+                        "bed_mesh",
+                        "gcode_macro Z_TILT_ADJUST_WRAPPER",
                         "gcode_macro PRINT_START"};
         caps.parse_objects(objects);
 

@@ -12,7 +12,7 @@
 // SpoolInfo Struct Tests
 // ============================================================================
 
-TEST_CASE("SpoolInfo - remaining_percent calculation", "[spoolman]") {
+TEST_CASE("SpoolInfo - remaining_percent calculation", "[slow][filament]") {
     SpoolInfo spool;
 
     SECTION("Full spool returns 100%") {
@@ -58,7 +58,7 @@ TEST_CASE("SpoolInfo - remaining_percent calculation", "[spoolman]") {
     }
 }
 
-TEST_CASE("SpoolInfo - is_low threshold detection", "[spoolman]") {
+TEST_CASE("SpoolInfo - is_low threshold detection", "[slow][filament]") {
     SpoolInfo spool;
 
     SECTION("Default threshold is 100g") {
@@ -93,7 +93,7 @@ TEST_CASE("SpoolInfo - is_low threshold detection", "[spoolman]") {
     }
 }
 
-TEST_CASE("SpoolInfo - display_name formatting", "[spoolman]") {
+TEST_CASE("SpoolInfo - display_name formatting", "[slow][filament]") {
     SpoolInfo spool;
 
     SECTION("Full info formats correctly") {
@@ -146,7 +146,7 @@ TEST_CASE("SpoolInfo - display_name formatting", "[spoolman]") {
     }
 }
 
-TEST_CASE("SpoolInfo - default initialization", "[spoolman]") {
+TEST_CASE("SpoolInfo - default initialization", "[slow][filament]") {
     SpoolInfo spool;
 
     SECTION("All numeric fields default to 0") {
@@ -179,7 +179,7 @@ TEST_CASE("SpoolInfo - default initialization", "[spoolman]") {
 // FilamentUsageRecord Tests
 // ============================================================================
 
-TEST_CASE("FilamentUsageRecord - default initialization", "[spoolman]") {
+TEST_CASE("FilamentUsageRecord - default initialization", "[slow][filament]") {
     FilamentUsageRecord record;
 
     SECTION("All fields default correctly") {
@@ -195,7 +195,7 @@ TEST_CASE("FilamentUsageRecord - default initialization", "[spoolman]") {
 // MoonrakerAPIMock Spoolman Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerAPIMock - get_spoolman_status", "[spoolman][mock]") {
+TEST_CASE("MoonrakerAPIMock - get_spoolman_status", "[slow][filament][mock]") {
     // Create mock client and state
     PrinterState state;
     MoonrakerClientMock client;
@@ -230,7 +230,7 @@ TEST_CASE("MoonrakerAPIMock - get_spoolman_status", "[spoolman][mock]") {
     }
 }
 
-TEST_CASE("MoonrakerAPIMock - get_spoolman_spools", "[spoolman][mock]") {
+TEST_CASE("MoonrakerAPIMock - get_spoolman_spools", "[slow][filament][mock]") {
     PrinterState state;
     MoonrakerClientMock client;
     MoonrakerAPIMock api(client, state);
@@ -292,7 +292,7 @@ TEST_CASE("MoonrakerAPIMock - get_spoolman_spools", "[spoolman][mock]") {
     }
 }
 
-TEST_CASE("MoonrakerAPIMock - set_active_spool", "[spoolman][mock]") {
+TEST_CASE("MoonrakerAPIMock - set_active_spool", "[slow][filament][mock]") {
     PrinterState state;
     MoonrakerClientMock client;
     MoonrakerAPIMock api(client, state);
@@ -342,7 +342,7 @@ TEST_CASE("MoonrakerAPIMock - set_active_spool", "[spoolman][mock]") {
 // Integration-style Tests
 // ============================================================================
 
-TEST_CASE("SpoolInfo - realistic spool scenarios", "[spoolman][integration]") {
+TEST_CASE("SpoolInfo - realistic spool scenarios", "[slow][filament][integration]") {
     SECTION("Typical PLA spool usage") {
         SpoolInfo spool;
         spool.vendor = "Polymaker";

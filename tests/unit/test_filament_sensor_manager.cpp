@@ -99,7 +99,7 @@ bool FilamentSensorTestFixture::display_created_ = false;
 // Type Helper Tests (filament_sensor_types.h)
 // ============================================================================
 
-TEST_CASE("FilamentSensorTypes - role string conversion", "[filament_sensor][types]") {
+TEST_CASE("FilamentSensorTypes - role string conversion", "[filament][types]") {
     SECTION("role_to_display_string") {
         REQUIRE(std::string(role_to_display_string(FilamentSensorRole::NONE)) == "Unassigned");
         REQUIRE(std::string(role_to_display_string(FilamentSensorRole::RUNOUT)) == "Runout Sensor");
@@ -125,7 +125,7 @@ TEST_CASE("FilamentSensorTypes - role string conversion", "[filament_sensor][typ
     }
 }
 
-TEST_CASE("FilamentSensorTypes - type string conversion", "[filament_sensor][types]") {
+TEST_CASE("FilamentSensorTypes - type string conversion", "[filament][types]") {
     SECTION("type_to_config_string") {
         REQUIRE(std::string(type_to_config_string(FilamentSensorType::SWITCH)) == "switch");
         REQUIRE(std::string(type_to_config_string(FilamentSensorType::MOTION)) == "motion");
@@ -144,7 +144,7 @@ TEST_CASE("FilamentSensorTypes - type string conversion", "[filament_sensor][typ
 // ============================================================================
 
 TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - discovery",
-                 "[filament_sensor][discovery]") {
+                 "[filament][discovery]") {
     SECTION("Discovers switch sensors") {
         std::vector<std::string> sensors = {"filament_switch_sensor fsensor"};
         mgr().discover_sensors(sensors);
@@ -238,7 +238,7 @@ TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - discovery",
 // ============================================================================
 
 TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - role assignment",
-                 "[filament_sensor][roles]") {
+                 "[filament][roles]") {
     discover_test_sensors();
 
     SECTION("Assign role to sensor") {
@@ -303,7 +303,7 @@ TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - role assign
 // ============================================================================
 
 TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - enable/disable",
-                 "[filament_sensor][enable]") {
+                 "[filament][enable]") {
     discover_test_sensors();
 
     SECTION("Sensors start enabled by default") {
@@ -355,7 +355,7 @@ TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - enable/disa
 // ============================================================================
 
 TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - state updates",
-                 "[filament_sensor][state]") {
+                 "[filament][state]") {
     discover_test_sensors();
     mgr().set_sensor_role("filament_switch_sensor runout", FilamentSensorRole::RUNOUT);
 
@@ -433,7 +433,7 @@ TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - state updat
 // ============================================================================
 
 TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - state queries",
-                 "[filament_sensor][queries]") {
+                 "[filament][queries]") {
     discover_test_sensors();
     mgr().set_sensor_role("filament_switch_sensor runout", FilamentSensorRole::RUNOUT);
     update_sensor_state("filament_switch_sensor runout", true);
@@ -507,7 +507,7 @@ TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - state queri
 // ============================================================================
 
 TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - subject values",
-                 "[filament_sensor][subjects]") {
+                 "[filament][subjects]") {
     discover_test_sensors();
 
     SECTION("Role subjects show -1 when no sensor assigned") {
@@ -563,7 +563,7 @@ TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - subject val
 // ============================================================================
 
 TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - motion sensors",
-                 "[filament_sensor][motion]") {
+                 "[filament][motion]") {
     discover_test_sensors();
     mgr().set_sensor_role("filament_motion_sensor encoder", FilamentSensorRole::ENTRY);
 
@@ -607,7 +607,7 @@ TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - motion sens
 // ============================================================================
 
 TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - edge cases",
-                 "[filament_sensor][edge]") {
+                 "[filament][edge]") {
     SECTION("Handles sensors with spaces in names") {
         std::vector<std::string> sensors = {"filament_switch_sensor my runout sensor"};
         mgr().discover_sensors(sensors);
@@ -660,7 +660,7 @@ TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - edge cases"
 // ============================================================================
 
 TEST_CASE_METHOD(FilamentSensorTestFixture, "FilamentSensorManager - thread safety basics",
-                 "[filament_sensor][threading]") {
+                 "[filament][threading]") {
     discover_test_sensors();
 
     SECTION("Concurrent get_sensors returns consistent copy") {

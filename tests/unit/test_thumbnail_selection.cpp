@@ -17,7 +17,7 @@
 // ThumbnailInfo Tests
 // ============================================================================
 
-TEST_CASE("ThumbnailInfo pixel_count calculation", "[thumbnail]") {
+TEST_CASE("ThumbnailInfo pixel_count calculation", "[assets]") {
     SECTION("Calculates correct pixel count for standard dimensions") {
         ThumbnailInfo info;
         info.width = 300;
@@ -49,7 +49,7 @@ TEST_CASE("ThumbnailInfo pixel_count calculation", "[thumbnail]") {
 // FileMetadata::get_largest_thumbnail Tests
 // ============================================================================
 
-TEST_CASE("FileMetadata get_largest_thumbnail", "[thumbnail]") {
+TEST_CASE("FileMetadata get_largest_thumbnail", "[assets]") {
     SECTION("Returns empty string when no thumbnails") {
         FileMetadata metadata;
         REQUIRE(metadata.get_largest_thumbnail().empty());
@@ -184,7 +184,7 @@ TEST_CASE("FileMetadata get_largest_thumbnail", "[thumbnail]") {
 using helix::ThumbnailProcessor;
 using helix::ThumbnailTarget;
 
-TEST_CASE("ThumbnailProcessor breakpoint selection", "[thumbnail][processor]") {
+TEST_CASE("ThumbnailProcessor breakpoint selection", "[assets][processor]") {
     SECTION("SMALL breakpoint: 480x320 → 120x120") {
         auto target = ThumbnailProcessor::get_target_for_resolution(480, 320);
         REQUIRE(target.width == 120);
@@ -242,7 +242,7 @@ TEST_CASE("ThumbnailProcessor breakpoint selection", "[thumbnail][processor]") {
     }
 }
 
-TEST_CASE("ThumbnailProcessor color format selection", "[thumbnail][processor]") {
+TEST_CASE("ThumbnailProcessor color format selection", "[assets][processor]") {
     SECTION("Default is ARGB8888 (0x10)") {
         auto target = ThumbnailProcessor::get_target_for_resolution(800, 480);
         REQUIRE(target.color_format == 0x10);
@@ -259,7 +259,7 @@ TEST_CASE("ThumbnailProcessor color format selection", "[thumbnail][processor]")
     }
 }
 
-TEST_CASE("ThumbnailProcessor uses max(width, height) for breakpoint", "[thumbnail][processor]") {
+TEST_CASE("ThumbnailProcessor uses max(width, height) for breakpoint", "[assets][processor]") {
     SECTION("Portrait 600x1024 uses 1024 → LARGE") {
         auto target = ThumbnailProcessor::get_target_for_resolution(600, 1024);
         REQUIRE(target.width == 220);
@@ -276,7 +276,7 @@ TEST_CASE("ThumbnailProcessor uses max(width, height) for breakpoint", "[thumbna
     }
 }
 
-TEST_CASE("ThumbnailProcessor edge cases", "[thumbnail][processor]") {
+TEST_CASE("ThumbnailProcessor edge cases", "[assets][processor]") {
     SECTION("Zero dimensions → SMALL fallback") {
         auto target = ThumbnailProcessor::get_target_for_resolution(0, 0);
         REQUIRE(target.width == 120);

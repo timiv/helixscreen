@@ -21,7 +21,7 @@ using namespace helix;
 // Splash Screen Size Selection Tests
 // ============================================================================
 
-TEST_CASE("get_splash_size_name returns correct size category", "[prerendered][splash]") {
+TEST_CASE("get_splash_size_name returns correct size category", "[assets][splash]") {
     SECTION("Tiny displays (< 600px width)") {
         REQUIRE(std::string(get_splash_size_name(480)) == "tiny");
         REQUIRE(std::string(get_splash_size_name(320)) == "tiny");
@@ -57,7 +57,7 @@ TEST_CASE("get_splash_size_name returns correct size category", "[prerendered][s
     }
 }
 
-TEST_CASE("get_prerendered_splash_path generates correct paths", "[prerendered][splash]") {
+TEST_CASE("get_prerendered_splash_path generates correct paths", "[assets][splash]") {
     SECTION("Path format includes size name") {
         // Note: These tests check path format, not file existence
         // The function will fall back to PNG if .bin doesn't exist
@@ -89,7 +89,7 @@ TEST_CASE("get_prerendered_splash_path generates correct paths", "[prerendered][
 // Printer Image Size Selection Tests
 // ============================================================================
 
-TEST_CASE("get_printer_image_size returns correct target size", "[prerendered][printer]") {
+TEST_CASE("get_printer_image_size returns correct target size", "[assets][printer]") {
     SECTION("Small displays (< 600px) get 150px images") {
         REQUIRE(get_printer_image_size(480) == 150);
         REQUIRE(get_printer_image_size(320) == 150);
@@ -109,7 +109,7 @@ TEST_CASE("get_printer_image_size returns correct target size", "[prerendered][p
     }
 }
 
-TEST_CASE("get_prerendered_printer_path generates correct paths", "[prerendered][printer]") {
+TEST_CASE("get_prerendered_printer_path generates correct paths", "[assets][printer]") {
     SECTION("Path format is correct") {
         std::string path = get_prerendered_printer_path("creality-k1", 800);
 
@@ -158,7 +158,7 @@ TEST_CASE("get_prerendered_printer_path generates correct paths", "[prerendered]
 // Fallback Behavior Tests
 // ============================================================================
 
-TEST_CASE("Prerendered paths fall back to PNG when .bin missing", "[prerendered][fallback]") {
+TEST_CASE("Prerendered paths fall back to PNG when .bin missing", "[assets][fallback]") {
     SECTION("Splash fallback is PNG") {
         // Since we're testing without pre-rendered files, should get PNG fallback
         std::string path = get_prerendered_splash_path(800);
@@ -184,7 +184,7 @@ TEST_CASE("Prerendered paths fall back to PNG when .bin missing", "[prerendered]
 // Edge Cases
 // ============================================================================
 
-TEST_CASE("Prerendered image edge cases", "[prerendered][edge]") {
+TEST_CASE("Prerendered image edge cases", "[assets][edge]") {
     SECTION("Zero width defaults sensibly") {
         // Should not crash, pick smallest size
         REQUIRE(get_printer_image_size(0) == 150);

@@ -133,7 +133,8 @@ class WiFiManagerTestFixture {
 // Instance Creation Tests
 // ============================================================================
 
-TEST_CASE_METHOD(WiFiManagerTestFixture, "WiFiManager instance creation", "[wifi][instance]") {
+TEST_CASE_METHOD(WiFiManagerTestFixture, "WiFiManager instance creation",
+                 "[slow][network][instance]") {
     SECTION("Instance created successfully") {
         REQUIRE(wifi_manager != nullptr);
     }
@@ -165,7 +166,8 @@ TEST_CASE_METHOD(WiFiManagerTestFixture, "WiFiManager instance creation", "[wifi
 // Backend Initialization Tests
 // ============================================================================
 
-TEST_CASE_METHOD(WiFiManagerTestFixture, "Backend initialization state", "[wifi][backend][init]") {
+TEST_CASE_METHOD(WiFiManagerTestFixture, "Backend initialization state",
+                 "[slow][network][backend][init]") {
     SECTION("Backend starts disabled by default") {
 // CRITICAL: This catches the bug where mock backend was auto-started
 #ifdef __APPLE__
@@ -228,7 +230,8 @@ TEST_CASE_METHOD(WiFiManagerTestFixture, "Backend initialization state", "[wifi]
 // Scan Callback Preservation Tests (CRITICAL)
 // ============================================================================
 
-TEST_CASE_METHOD(WiFiManagerTestFixture, "Scan callback preservation", "[wifi][scan][callback]") {
+TEST_CASE_METHOD(WiFiManagerTestFixture, "Scan callback preservation",
+                 "[slow][network][scan][callback]") {
     SECTION("start_scan registers callback") {
         wifi_manager->set_enabled(true);
 
@@ -341,7 +344,7 @@ TEST_CASE_METHOD(WiFiManagerTestFixture, "Scan callback preservation", "[wifi][s
 // Scan Lifecycle Tests
 // ============================================================================
 
-TEST_CASE_METHOD(WiFiManagerTestFixture, "Network scanning lifecycle", "[wifi][scan]") {
+TEST_CASE_METHOD(WiFiManagerTestFixture, "Network scanning lifecycle", "[slow][network][scan]") {
     SECTION("Synchronous scan returns networks") {
         if (!wifi_manager->has_hardware()) {
             SKIP("No WiFi hardware available");
@@ -406,7 +409,8 @@ TEST_CASE_METHOD(WiFiManagerTestFixture, "Network scanning lifecycle", "[wifi][s
 // Connection Management Tests
 // ============================================================================
 
-TEST_CASE_METHOD(WiFiManagerTestFixture, "WiFi connection management", "[wifi][connection]") {
+TEST_CASE_METHOD(WiFiManagerTestFixture, "WiFi connection management",
+                 "[slow][network][connection]") {
     SECTION("Initial connection state is disconnected") {
         REQUIRE_FALSE(wifi_manager->is_connected());
         REQUIRE(wifi_manager->get_connected_ssid().empty());
@@ -447,7 +451,7 @@ TEST_CASE_METHOD(WiFiManagerTestFixture, "WiFi connection management", "[wifi][c
 // Status Query Tests
 // ============================================================================
 
-TEST_CASE_METHOD(WiFiManagerTestFixture, "WiFi status queries", "[wifi][status]") {
+TEST_CASE_METHOD(WiFiManagerTestFixture, "WiFi status queries", "[slow][network][status]") {
     SECTION("Hardware detection") {
         bool has_wifi = wifi_manager->has_hardware();
 
@@ -487,7 +491,7 @@ TEST_CASE_METHOD(WiFiManagerTestFixture, "WiFi status queries", "[wifi][status]"
 // Edge Cases & Error Handling
 // ============================================================================
 
-TEST_CASE_METHOD(WiFiManagerTestFixture, "WiFi edge cases", "[wifi][edge-cases]") {
+TEST_CASE_METHOD(WiFiManagerTestFixture, "WiFi edge cases", "[slow][network][edge-cases]") {
     SECTION("Rapid enable/disable cycles") {
         for (int i = 0; i < 5; i++) {
             wifi_manager->set_enabled(true);
@@ -553,7 +557,7 @@ TEST_CASE_METHOD(WiFiManagerTestFixture, "WiFi edge cases", "[wifi][edge-cases]"
 // DISABLED: scan_once() doesn't wait for scan completion - needs to be rewritten to use
 // async scan with callback or explicitly wait for thread completion (2s delay)
 TEST_CASE_METHOD(WiFiManagerTestFixture, "WiFi network information",
-                 "[wifi][networks][.disabled]") {
+                 "[network][networks][.disabled]") {
     SECTION("Network data validity") {
 #ifdef __APPLE__
         wifi_manager->set_enabled(true);

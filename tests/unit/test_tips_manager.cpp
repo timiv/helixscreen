@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Copyright (C) 2025 356C LLC
  * Author: Preston Brown <pbrown@brown-house.net>
@@ -10,15 +11,17 @@
  * (at your option) any later version.
  */
 
-#include "../catch_amalgamated.hpp"
 #include "tips_manager.h"
+
 #include <fstream>
 #include <thread>
 #include <vector>
 
+#include "../catch_amalgamated.hpp"
+
 // Test fixture for TipsManager testing
 class TipsManagerTestFixture {
-protected:
+  protected:
     const std::string test_tips_file = "/tmp/test_printing_tips.json";
     const std::string invalid_tips_file = "/tmp/test_invalid_tips.json";
     const std::string empty_tips_file = "/tmp/test_empty_tips.json";
@@ -128,7 +131,8 @@ protected:
 // Initialization and Loading
 // ============================================================================
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: init() loads valid JSON file", "[tips_manager][init]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: init() loads valid JSON file",
+                 "[ui][init]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -141,14 +145,16 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: init() loads valid JSON f
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: init() fails on missing file", "[tips_manager][init]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: init() fails on missing file",
+                 "[ui][init]") {
     TipsManager* mgr = TipsManager::get_instance();
     bool result = mgr->init("/tmp/nonexistent_tips.json");
 
     REQUIRE(result == false);
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: init() fails on invalid JSON", "[tips_manager][init]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: init() fails on invalid JSON",
+                 "[ui][init]") {
     SetUp();
     create_invalid_json();
 
@@ -160,7 +166,7 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: init() fails on invalid J
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: handles empty categories", "[tips_manager][init]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: handles empty categories", "[ui][init]") {
     SetUp();
     create_empty_tips();
 
@@ -177,7 +183,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: handles empty categories"
 // Random Tip Selection
 // ============================================================================
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_random_tip() returns valid tip", "[tips_manager][random]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_random_tip() returns valid tip",
+                 "[ui][random]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -192,7 +199,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_random_tip() returns 
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_random_tip() returns empty on empty database", "[tips_manager][random]") {
+TEST_CASE_METHOD(TipsManagerTestFixture,
+                 "TipsManager: get_random_tip() returns empty on empty database", "[ui][random]") {
     SetUp();
     create_empty_tips();
 
@@ -211,7 +219,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_random_tip() returns 
 // Unique Tip Selection (Session Tracking)
 // ============================================================================
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_random_unique_tip() returns different tips", "[tips_manager][unique]") {
+TEST_CASE_METHOD(TipsManagerTestFixture,
+                 "TipsManager: get_random_unique_tip() returns different tips", "[ui][unique]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -227,7 +236,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_random_unique_tip() r
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_random_unique_tip() resets after exhaustion", "[tips_manager][unique]") {
+TEST_CASE_METHOD(TipsManagerTestFixture,
+                 "TipsManager: get_random_unique_tip() resets after exhaustion", "[ui][unique]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -253,7 +263,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_random_unique_tip() r
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: reset_viewed_tips() clears session", "[tips_manager][unique]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: reset_viewed_tips() clears session",
+                 "[ui][unique]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -288,7 +299,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: reset_viewed_tips() clear
 // Category Filtering
 // ============================================================================
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_category() returns correct tips", "[tips_manager][category]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_category() returns correct tips",
+                 "[ui][category]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -302,7 +314,9 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_category() re
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_category() returns empty for invalid category", "[tips_manager][category]") {
+TEST_CASE_METHOD(TipsManagerTestFixture,
+                 "TipsManager: get_tips_by_category() returns empty for invalid category",
+                 "[ui][category]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -315,7 +329,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_category() re
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_all_categories() returns correct count", "[tips_manager][category]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_all_categories() returns correct count",
+                 "[ui][category]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -332,7 +347,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_all_categories() retu
 // Tag Filtering
 // ============================================================================
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_tag() returns matching tips", "[tips_manager][tag]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_tag() returns matching tips",
+                 "[ui][tag]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -340,12 +356,13 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_tag() returns
 
     auto tips = mgr->get_tips_by_tag("calibration");
 
-    REQUIRE(tips.size() == 2);  // tip-001 and tip-004 have "calibration" tag
+    REQUIRE(tips.size() == 2); // tip-001 and tip-004 have "calibration" tag
 
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_tag() is case-insensitive", "[tips_manager][tag]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_tag() is case-insensitive",
+                 "[ui][tag]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -361,7 +378,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_tag() is case
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_all_tags() returns unique tags", "[tips_manager][tag]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_all_tags() returns unique tags",
+                 "[ui][tag]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -382,7 +400,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_all_tags() returns un
 // Difficulty Filtering
 // ============================================================================
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_difficulty() filters correctly", "[tips_manager][difficulty]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_difficulty() filters correctly",
+                 "[ui][difficulty]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -392,14 +411,15 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_difficulty() 
     auto intermediate_tips = mgr->get_tips_by_difficulty("intermediate");
     auto advanced_tips = mgr->get_tips_by_difficulty("advanced");
 
-    REQUIRE(beginner_tips.size() == 3);    // tip-001, tip-004, tip-005
+    REQUIRE(beginner_tips.size() == 3);     // tip-001, tip-004, tip-005
     REQUIRE(intermediate_tips.size() == 1); // tip-002
     REQUIRE(advanced_tips.size() == 1);     // tip-003
 
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_difficulty() is case-insensitive", "[tips_manager][difficulty]") {
+TEST_CASE_METHOD(TipsManagerTestFixture,
+                 "TipsManager: get_tips_by_difficulty() is case-insensitive", "[ui][difficulty]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -417,7 +437,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_difficulty() 
 // Priority Filtering
 // ============================================================================
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_priority() filters correctly", "[tips_manager][priority]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_priority() filters correctly",
+                 "[ui][priority]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -427,9 +448,9 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_priority() fi
     auto medium_tips = mgr->get_tips_by_priority("medium");
     auto low_tips = mgr->get_tips_by_priority("low");
 
-    REQUIRE(high_tips.size() == 2);     // tip-001, tip-004
-    REQUIRE(medium_tips.size() == 2);   // tip-002, tip-005
-    REQUIRE(low_tips.size() == 1);      // tip-003
+    REQUIRE(high_tips.size() == 2);   // tip-001, tip-004
+    REQUIRE(medium_tips.size() == 2); // tip-002, tip-005
+    REQUIRE(low_tips.size() == 1);    // tip-003
 
     TearDown();
 }
@@ -438,7 +459,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tips_by_priority() fi
 // Keyword Search
 // ============================================================================
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() finds in title", "[tips_manager][search]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() finds in title",
+                 "[ui][search]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -452,7 +474,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() finds
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() finds in content", "[tips_manager][search]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() finds in content",
+                 "[ui][search]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -473,7 +496,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() finds
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() finds in tags", "[tips_manager][search]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() finds in tags",
+                 "[ui][search]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -481,12 +505,13 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() finds
 
     auto tips = mgr->search_by_keyword("calibration");
 
-    REQUIRE(tips.size() == 2);  // tip-001 and tip-004 have "calibration" in tags OR content
+    REQUIRE(tips.size() == 2); // tip-001 and tip-004 have "calibration" in tags OR content
 
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() is case-insensitive", "[tips_manager][search]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() is case-insensitive",
+                 "[ui][search]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -500,7 +525,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() is ca
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() returns empty for no matches", "[tips_manager][search]") {
+TEST_CASE_METHOD(TipsManagerTestFixture,
+                 "TipsManager: search_by_keyword() returns empty for no matches", "[ui][search]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -517,7 +543,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: search_by_keyword() retur
 // Specific Tip Lookup
 // ============================================================================
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tip_by_id() returns correct tip", "[tips_manager][lookup]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tip_by_id() returns correct tip",
+                 "[ui][lookup]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -532,7 +559,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tip_by_id() returns c
     TearDown();
 }
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tip_by_id() returns empty for invalid ID", "[tips_manager][lookup]") {
+TEST_CASE_METHOD(TipsManagerTestFixture,
+                 "TipsManager: get_tip_by_id() returns empty for invalid ID", "[ui][lookup]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();
@@ -549,7 +577,8 @@ TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: get_tip_by_id() returns e
 // Thread Safety (Basic Test)
 // ============================================================================
 
-TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: concurrent access is thread-safe", "[tips_manager][thread_safety]") {
+TEST_CASE_METHOD(TipsManagerTestFixture, "TipsManager: concurrent access is thread-safe",
+                 "[ui][thread_safety]") {
     SetUp();
 
     TipsManager* mgr = TipsManager::get_instance();

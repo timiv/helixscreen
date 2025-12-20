@@ -159,11 +159,10 @@ class MockMotionTestFixture {
                     status["toolhead"].contains("position") &&
                     status["toolhead"]["position"].is_array() &&
                     status["toolhead"]["position"].size() == 4) {
-                    return std::array<double, 4>{
-                        status["toolhead"]["position"][0].get<double>(),
-                        status["toolhead"]["position"][1].get<double>(),
-                        status["toolhead"]["position"][2].get<double>(),
-                        status["toolhead"]["position"][3].get<double>()};
+                    return std::array<double, 4>{status["toolhead"]["position"][0].get<double>(),
+                                                 status["toolhead"]["position"][1].get<double>(),
+                                                 status["toolhead"]["position"][2].get<double>(),
+                                                 status["toolhead"]["position"][3].get<double>()};
                 }
             }
         }
@@ -208,7 +207,7 @@ inline bool approx_equal(double a, double b, double tolerance = 0.001) {
 // Movement Command Tests (G0/G1)
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock G0/G1 movement commands", "[moonraker][mock][motion][movement]") {
+TEST_CASE("MoonrakerClientMock G0/G1 movement commands", "[slow][api][movement]") {
     MockMotionTestFixture fixture;
 
     SECTION("G0 X Y movement updates position") {
@@ -338,7 +337,7 @@ TEST_CASE("MoonrakerClientMock G0/G1 movement commands", "[moonraker][mock][moti
         REQUIRE(fixture.wait_for_callback(500));
 
         // First move to absolute position
-        mock.gcode_script("G90");  // Ensure absolute mode
+        mock.gcode_script("G90"); // Ensure absolute mode
         mock.gcode_script("G0 X10 Y10");
 
         // Wait for position update
@@ -407,11 +406,11 @@ TEST_CASE("MoonrakerClientMock G0/G1 movement commands", "[moonraker][mock][moti
 
         // Switch to relative, move +5
         mock.gcode_script("G91");
-        mock.gcode_script("G0 X5");  // Now at 15,10
+        mock.gcode_script("G0 X5"); // Now at 15,10
 
         // Switch back to absolute, move to 20
         mock.gcode_script("G90");
-        mock.gcode_script("G0 X20");  // Now at 20,10 (not 35!)
+        mock.gcode_script("G0 X20"); // Now at 20,10 (not 35!)
 
         // Wait for absolute position
         REQUIRE(fixture.wait_for_matching(
@@ -445,7 +444,7 @@ TEST_CASE("MoonrakerClientMock G0/G1 movement commands", "[moonraker][mock][moti
 // Homing Command Tests (G28)
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock G28 homing commands", "[moonraker][mock][motion][homing]") {
+TEST_CASE("MoonrakerClientMock G28 homing commands", "[slow][api][homing]") {
     MockMotionTestFixture fixture;
 
     SECTION("G28 homes all axes and resets to zero") {
@@ -716,8 +715,7 @@ TEST_CASE("MoonrakerClientMock G28 homing commands", "[moonraker][mock][motion][
 // Position Reporting Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock position in status updates",
-          "[moonraker][mock][motion][position_reporting]") {
+TEST_CASE("MoonrakerClientMock position in status updates", "[api][position_reporting]") {
     MockMotionTestFixture fixture;
 
     SECTION("Position updates are reflected in status notifications") {

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Copyright (C) 2025 356C LLC
  * Author: Preston Brown <pbrown@brown-house.net>
@@ -51,7 +52,7 @@ class TempGraphTestFixture {
 // Core API Tests
 // ============================================================================
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Create and destroy graph", "[temp_graph][core]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Create and destroy graph", "[ui][core]") {
     SECTION("Create graph with valid parent") {
         ui_temp_graph_t* graph = ui_temp_graph_create(screen);
 
@@ -87,7 +88,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Create and destroy graph", "[temp_graph]
 // Series Management Tests
 // ============================================================================
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Add series", "[temp_graph][series]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Add series", "[ui][series]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 
@@ -167,7 +168,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Add series", "[temp_graph][series]") {
     ui_temp_graph_destroy(graph);
 }
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Remove series", "[temp_graph][series]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Remove series", "[ui][series]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 
@@ -219,7 +220,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Remove series", "[temp_graph][series]") 
     ui_temp_graph_destroy(graph);
 }
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Show/hide series", "[temp_graph][series]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Show/hide series", "[ui][series]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 
@@ -259,7 +260,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Show/hide series", "[temp_graph][series]
 // Data Update Tests
 // ============================================================================
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Update series data (push mode)", "[temp_graph][data]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Update series data (push mode)", "[ui][data]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 
@@ -307,7 +308,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Update series data (push mode)", "[temp_
     ui_temp_graph_destroy(graph);
 }
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Set series data (array mode)", "[temp_graph][data]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Set series data (array mode)", "[ui][data]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 
@@ -368,7 +369,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Set series data (array mode)", "[temp_gr
     ui_temp_graph_destroy(graph);
 }
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Clear graph data", "[temp_graph][data]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Clear graph data", "[ui][data]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 
@@ -400,7 +401,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Clear graph data", "[temp_graph][data]")
     ui_temp_graph_destroy(graph);
 }
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Clear individual series data", "[temp_graph][data]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Clear individual series data", "[ui][data]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 
@@ -445,7 +446,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Clear individual series data", "[temp_gr
 // Target Temperature Tests
 // ============================================================================
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Set series target temperature", "[temp_graph][target]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Set series target temperature", "[ui][target]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 
@@ -502,7 +503,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Set series target temperature", "[temp_g
     ui_temp_graph_destroy(graph);
 }
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Show/hide target temperature", "[temp_graph][target]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Show/hide target temperature", "[ui][target]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 
@@ -543,7 +544,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Show/hide target temperature", "[temp_gr
 // Configuration Tests
 // ============================================================================
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Set temperature range", "[temp_graph][config]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Set temperature range", "[ui][config]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 
@@ -592,7 +593,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Set temperature range", "[temp_graph][co
     ui_temp_graph_destroy(graph);
 }
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Set point count", "[temp_graph][config]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Set point count", "[ui][config]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 
@@ -638,7 +639,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Set point count", "[temp_graph][config]"
     ui_temp_graph_destroy(graph);
 }
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Set series gradient", "[temp_graph][config]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Set series gradient", "[ui][config]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 
@@ -688,7 +689,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Set series gradient", "[temp_graph][conf
 // Integration Tests
 // ============================================================================
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Complete workflow scenarios", "[temp_graph][integration]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Complete workflow scenarios", "[ui][integration]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 
@@ -771,7 +772,7 @@ TEST_CASE_METHOD(TempGraphTestFixture, "Complete workflow scenarios", "[temp_gra
     ui_temp_graph_destroy(graph);
 }
 
-TEST_CASE_METHOD(TempGraphTestFixture, "Stress tests", "[temp_graph][stress]") {
+TEST_CASE_METHOD(TempGraphTestFixture, "Stress tests", "[ui][stress]") {
     ui_temp_graph_t* graph = ui_temp_graph_create(screen);
     REQUIRE(graph != nullptr);
 

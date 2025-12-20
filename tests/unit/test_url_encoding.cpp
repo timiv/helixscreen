@@ -17,7 +17,7 @@
 // URL Encoding Tests
 // ============================================================================
 
-TEST_CASE("HUrl::escape encodes special characters", "[url][encoding]") {
+TEST_CASE("HUrl::escape encodes special characters", "[api][encoding]") {
     SECTION("Encodes spaces as %20") {
         std::string path = ".thumbs/Gridfinity bin 3x2x9-300x300.png";
         std::string encoded = HUrl::escape(path, "/.-_");
@@ -77,7 +77,7 @@ TEST_CASE("HUrl::escape encodes special characters", "[url][encoding]") {
 // Realistic Thumbnail Path Tests
 // ============================================================================
 
-TEST_CASE("Thumbnail path encoding for Moonraker URLs", "[url][thumbnail]") {
+TEST_CASE("Thumbnail path encoding for Moonraker URLs", "[api][assets]") {
     SECTION("Real-world Gridfinity filename with spaces") {
         // This is the actual problematic filename from user testing
         std::string path = ".thumbs/Gridfinity bin 3x2x9-300x300.png";

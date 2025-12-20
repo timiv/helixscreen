@@ -221,7 +221,7 @@ class TestableMoonrakerMock : public MoonrakerClientMock {
 // Initial State Dispatch Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock initial state dispatch", "[moonraker][mock][initial_state]") {
+TEST_CASE("MoonrakerClientMock initial state dispatch", "[connection][slow][initial_state]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("connect() dispatches initial state via callback") {
@@ -409,8 +409,7 @@ TEST_CASE("MoonrakerClientMock initial state dispatch", "[moonraker][mock][initi
 // Notification Format Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock notification format matches real Moonraker",
-          "[moonraker][mock][notification_format]") {
+TEST_CASE("MoonrakerClientMock notification format matches real Moonraker", "[connection]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("notifications use notify_status_update method") {
@@ -487,7 +486,7 @@ TEST_CASE("MoonrakerClientMock notification format matches real Moonraker",
 // Callback Invocation Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock callback invocation", "[moonraker][mock][callbacks]") {
+TEST_CASE("MoonrakerClientMock callback invocation", "[connection][slow][callbacks]") {
     MockBehaviorTestFixture fixture1;
     MockBehaviorTestFixture fixture2;
 
@@ -560,7 +559,7 @@ TEST_CASE("MoonrakerClientMock callback invocation", "[moonraker][mock][callback
 // G-code Temperature Parsing Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock G-code temperature parsing", "[moonraker][mock][gcode]") {
+TEST_CASE("MoonrakerClientMock G-code temperature parsing", "[connection][slow][gcode]") {
     // Note: These tests verify gcode_script returns success.
     // The internal state changes are verified via log output.
     // Notification-based tests were removed due to timing flakiness.
@@ -636,7 +635,7 @@ TEST_CASE("MoonrakerClientMock G-code temperature parsing", "[moonraker][mock][g
 // Hardware Discovery Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock hardware discovery", "[moonraker][mock][hardware_discovery]") {
+TEST_CASE("MoonrakerClientMock hardware discovery", "[connection][slow][hardware_discovery]") {
     SECTION("VORON_24 has correct hardware") {
         MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
 
@@ -769,7 +768,7 @@ TEST_CASE("MoonrakerClientMock hardware discovery", "[moonraker][mock][hardware_
 // Connection State Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock connection state", "[moonraker][mock][connection_state]") {
+TEST_CASE("MoonrakerClientMock connection state", "[connection][slow][connection_state]") {
     SECTION("initial state is DISCONNECTED") {
         MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
         REQUIRE(mock.get_connection_state() == ConnectionState::DISCONNECTED);
@@ -826,8 +825,7 @@ TEST_CASE("MoonrakerClientMock connection state", "[moonraker][mock][connection_
 // Temperature Simulation Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock temperature simulation",
-          "[moonraker][mock][temperature_simulation]") {
+TEST_CASE("MoonrakerClientMock temperature simulation", "[connection]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("temperature approaches target over time") {
@@ -906,7 +904,7 @@ TEST_CASE("MoonrakerClientMock temperature simulation",
 // Bed Mesh Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock bed mesh", "[moonraker][mock][bed_mesh]") {
+TEST_CASE("MoonrakerClientMock bed mesh", "[slow][mock][calibration]") {
     SECTION("bed mesh is generated on construction") {
         MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
 
@@ -1170,7 +1168,7 @@ TEST_CASE("MoonrakerClientMock bed mesh", "[moonraker][mock][bed_mesh]") {
 // send_jsonrpc Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock send_jsonrpc methods", "[moonraker][mock][jsonrpc]") {
+TEST_CASE("MoonrakerClientMock send_jsonrpc methods", "[connection][slow][jsonrpc]") {
     SECTION("send_jsonrpc without params returns success") {
         MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
         REQUIRE(mock.send_jsonrpc("printer.info") == 0);
@@ -1203,8 +1201,7 @@ TEST_CASE("MoonrakerClientMock send_jsonrpc methods", "[moonraker][mock][jsonrpc
 // Guessing Methods Tests (Use PrinterHardware with mock hardware data)
 // ============================================================================
 
-TEST_CASE("PrinterHardware guessing methods work with mock hardware data",
-          "[moonraker][mock][guessing]") {
+TEST_CASE("PrinterHardware guessing methods work with mock hardware data", "[printer]") {
     SECTION("guess_bed_heater returns heater_bed") {
         MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
         mock.discover_printer([]() {});
@@ -1242,8 +1239,7 @@ TEST_CASE("PrinterHardware guessing methods work with mock hardware data",
 // G-code Motion Simulation Tests (Phase 1.6a)
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock G28 homing updates homed_axes",
-          "[moonraker][mock][motion][homing]") {
+TEST_CASE("MoonrakerClientMock G28 homing updates homed_axes", "[api][homing]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("G28 homes all axes and sets position to 0") {
@@ -1370,8 +1366,7 @@ TEST_CASE("MoonrakerClientMock G28 homing updates homed_axes",
     }
 }
 
-TEST_CASE("MoonrakerClientMock G0/G1 movement updates position",
-          "[moonraker][mock][motion][movement]") {
+TEST_CASE("MoonrakerClientMock G0/G1 movement updates position", "[api][movement]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("G0 absolute movement updates position") {
@@ -1549,8 +1544,7 @@ TEST_CASE("MoonrakerClientMock G0/G1 movement updates position",
     }
 }
 
-TEST_CASE("MoonrakerClientMock homed_axes in notifications",
-          "[moonraker][mock][motion][notifications]") {
+TEST_CASE("MoonrakerClientMock homed_axes in notifications", "[api][notifications]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("Initial state has empty homed_axes") {
@@ -1647,7 +1641,7 @@ TEST_CASE("MoonrakerClientMock homed_axes in notifications",
 // Print Job Simulation Tests (Phase 1.6b)
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock SDCARD_PRINT_FILE starts print", "[moonraker][mock][print][start]") {
+TEST_CASE("MoonrakerClientMock SDCARD_PRINT_FILE starts print", "[slow][print][start]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("SDCARD_PRINT_FILE sets state to printing and stores filename") {
@@ -1711,8 +1705,7 @@ TEST_CASE("MoonrakerClientMock SDCARD_PRINT_FILE starts print", "[moonraker][moc
     }
 }
 
-TEST_CASE("MoonrakerClientMock PAUSE/RESUME state transitions",
-          "[moonraker][mock][print][pause_resume]") {
+TEST_CASE("MoonrakerClientMock PAUSE/RESUME state transitions", "[print][pause_resume]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("PAUSE transitions from printing to paused") {
@@ -1820,8 +1813,7 @@ TEST_CASE("MoonrakerClientMock PAUSE/RESUME state transitions",
     }
 }
 
-TEST_CASE("MoonrakerClientMock CANCEL_PRINT resets to standby",
-          "[moonraker][mock][print][cancel]") {
+TEST_CASE("MoonrakerClientMock CANCEL_PRINT resets to standby", "[print][cancel]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("CANCEL_PRINT transitions to cancelled then standby") {
@@ -1866,8 +1858,7 @@ TEST_CASE("MoonrakerClientMock CANCEL_PRINT resets to standby",
     }
 }
 
-TEST_CASE("MoonrakerClientMock print progress increments during printing",
-          "[moonraker][mock][print][progress]") {
+TEST_CASE("MoonrakerClientMock print progress increments during printing", "[print][progress]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("Progress increases while printing") {
@@ -1974,8 +1965,7 @@ TEST_CASE("MoonrakerClientMock print progress increments during printing",
     }
 }
 
-TEST_CASE("MoonrakerClientMock print completion triggers complete state",
-          "[moonraker][mock][print][complete]") {
+TEST_CASE("MoonrakerClientMock print completion triggers complete state", "[print][complete]") {
     // Note: This test would take a long time with default progress rate.
     // For this test, we're verifying the mechanism works by checking
     // that the get_print_state_string helper returns correct values.
@@ -1993,8 +1983,7 @@ TEST_CASE("MoonrakerClientMock print completion triggers complete state",
     }
 }
 
-TEST_CASE("MoonrakerClientMock M112 emergency stop sets error state",
-          "[moonraker][mock][print][emergency]") {
+TEST_CASE("MoonrakerClientMock M112 emergency stop sets error state", "[print][emergency]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("M112 sets print state to error") {
@@ -2066,7 +2055,7 @@ TEST_CASE("MoonrakerClientMock M112 emergency stop sets error state",
 // ============================================================================
 
 TEST_CASE("MoonrakerClientMock BED_MESH_CALIBRATE generates new mesh",
-          "[moonraker][mock][bed_mesh][gcode]") {
+          "[mock][calibration][gcode]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("BED_MESH_CALIBRATE triggers mesh regeneration and notification") {
@@ -2136,7 +2125,7 @@ TEST_CASE("MoonrakerClientMock BED_MESH_CALIBRATE generates new mesh",
 }
 
 TEST_CASE("MoonrakerClientMock BED_MESH_PROFILE LOAD changes active profile",
-          "[moonraker][mock][bed_mesh][gcode]") {
+          "[mock][calibration][gcode]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("BED_MESH_PROFILE LOAD loads existing profile") {
@@ -2174,8 +2163,7 @@ TEST_CASE("MoonrakerClientMock BED_MESH_PROFILE LOAD changes active profile",
     }
 }
 
-TEST_CASE("MoonrakerClientMock BED_MESH_CLEAR clears active mesh",
-          "[moonraker][mock][bed_mesh][gcode]") {
+TEST_CASE("MoonrakerClientMock BED_MESH_CLEAR clears active mesh", "[mock][calibration][gcode]") {
     MockBehaviorTestFixture fixture;
 
     SECTION("BED_MESH_CLEAR clears active mesh and sends notification") {
@@ -2355,7 +2343,7 @@ TEST_CASE("MoonrakerClientMock - file metadata with success/error callbacks",
 // Fan Control Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock fan control", "[mock][fan]") {
+TEST_CASE("MoonrakerClientMock fan control", "[slow][mock][fan]") {
     // fixture must be declared BEFORE mock for correct destruction order
     MockBehaviorTestFixture fixture;
     MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
@@ -2454,7 +2442,7 @@ TEST_CASE("MoonrakerClientMock fan control", "[mock][fan]") {
 // Z Offset Tracking Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock Z offset tracking", "[mock][offset]") {
+TEST_CASE("MoonrakerClientMock Z offset tracking", "[slow][mock][offset]") {
     // fixture must be declared BEFORE mock for correct destruction order
     MockBehaviorTestFixture fixture;
     MoonrakerClientMock mock;
@@ -2534,7 +2522,7 @@ TEST_CASE("MoonrakerClientMock Z offset tracking", "[mock][offset]") {
 // RESTART / FIRMWARE_RESTART Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClientMock restart simulation", "[mock][restart]") {
+TEST_CASE("MoonrakerClientMock restart simulation", "[slow][mock][restart]") {
     // Use 100x speedup so restart delay is 20-30ms instead of 2-3 seconds
     // IMPORTANT: fixture must be declared BEFORE mock so it's destroyed AFTER mock.
     // This prevents use-after-free when restart thread dispatches to callbacks.
@@ -2626,7 +2614,7 @@ TEST_CASE("MoonrakerClientMock restart simulation", "[mock][restart]") {
  *   EXCLUDE_OBJECT NAME=Part_1
  *   EXCLUDE_OBJECT NAME="Part With Spaces"
  */
-TEST_CASE("MoonrakerClientMock parses EXCLUDE_OBJECT command", "[mock][gcode][exclude_object]") {
+TEST_CASE("MoonrakerClientMock parses EXCLUDE_OBJECT command", "[slow][mock][gcode][print]") {
     MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
     mock.connect("ws://test", []() {}, []() {});
 

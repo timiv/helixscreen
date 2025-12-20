@@ -75,7 +75,8 @@ TEST_CASE("AmsBackendMock realistic mode defaults", "[ams][mock][realistic]") {
     }
 }
 
-TEST_CASE("AmsBackendMock realistic mode load operation phases", "[ams][mock][realistic][load]") {
+TEST_CASE("AmsBackendMock realistic mode load operation phases",
+          "[ams][mock][realistic][load][slow]") {
     FastTimingScope timing_guard; // RAII: 1000x speedup, auto-restored
 
     AmsBackendMock backend(4);
@@ -140,7 +141,7 @@ TEST_CASE("AmsBackendMock realistic mode load operation phases", "[ams][mock][re
 }
 
 TEST_CASE("AmsBackendMock realistic mode unload operation phases",
-          "[ams][mock][realistic][unload]") {
+          "[ams][mock][realistic][unload][slow]") {
     FastTimingScope timing_guard; // RAII: 1000x speedup, auto-restored
 
     AmsBackendMock backend(4);
@@ -243,7 +244,8 @@ TEST_CASE("AmsBackendMock simple mode skips extra phases", "[ams][mock][realisti
     backend.stop();
 }
 
-TEST_CASE("AmsBackendMock realistic mode completes to IDLE", "[ams][mock][realistic][completion]") {
+TEST_CASE("AmsBackendMock realistic mode completes to IDLE",
+          "[ams][mock][realistic][completion][slow]") {
     FastTimingScope timing_guard; // RAII: 1000x speedup, auto-restored
 
     AmsBackendMock backend(4);
@@ -283,7 +285,8 @@ TEST_CASE("AmsBackendMock realistic mode completes to IDLE", "[ams][mock][realis
     backend.stop();
 }
 
-TEST_CASE("AmsBackendMock realistic mode can be cancelled", "[ams][mock][realistic][cancel]") {
+TEST_CASE("AmsBackendMock realistic mode can be cancelled",
+          "[ams][mock][realistic][cancel][slow]") {
     FastTimingScope timing_guard; // RAII: 1000x speedup, auto-restored
 
     AmsBackendMock backend(4);

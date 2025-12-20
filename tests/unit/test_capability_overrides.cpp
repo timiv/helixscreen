@@ -12,7 +12,7 @@ using json = nlohmann::json;
 // OverrideState Parsing Tests
 // ============================================================================
 
-TEST_CASE("CapabilityOverrides - parse_state", "[capabilities][overrides]") {
+TEST_CASE("CapabilityOverrides - parse_state", "[printer][overrides]") {
     SECTION("Parses 'auto' variants") {
         REQUIRE(CapabilityOverrides::parse_state("auto") == OverrideState::AUTO);
         REQUIRE(CapabilityOverrides::parse_state("AUTO") == OverrideState::AUTO);
@@ -46,7 +46,7 @@ TEST_CASE("CapabilityOverrides - parse_state", "[capabilities][overrides]") {
     }
 }
 
-TEST_CASE("CapabilityOverrides - state_to_string", "[capabilities][overrides]") {
+TEST_CASE("CapabilityOverrides - state_to_string", "[printer][overrides]") {
     REQUIRE(CapabilityOverrides::state_to_string(OverrideState::AUTO) == "auto");
     REQUIRE(CapabilityOverrides::state_to_string(OverrideState::ENABLE) == "enable");
     REQUIRE(CapabilityOverrides::state_to_string(OverrideState::DISABLE) == "disable");
@@ -56,7 +56,7 @@ TEST_CASE("CapabilityOverrides - state_to_string", "[capabilities][overrides]") 
 // Override State Tests
 // ============================================================================
 
-TEST_CASE("CapabilityOverrides - get/set override", "[capabilities][overrides]") {
+TEST_CASE("CapabilityOverrides - get/set override", "[printer][overrides]") {
     CapabilityOverrides overrides;
 
     SECTION("Default override is AUTO") {
@@ -86,7 +86,7 @@ TEST_CASE("CapabilityOverrides - get/set override", "[capabilities][overrides]")
 // Three-State Logic Tests
 // ============================================================================
 
-TEST_CASE("CapabilityOverrides - is_available logic", "[capabilities][overrides]") {
+TEST_CASE("CapabilityOverrides - is_available logic", "[printer][overrides]") {
     CapabilityOverrides overrides;
 
     // Create mock printer capabilities
@@ -134,12 +134,16 @@ TEST_CASE("CapabilityOverrides - is_available logic", "[capabilities][overrides]
     }
 }
 
-TEST_CASE("CapabilityOverrides - convenience methods", "[capabilities][overrides]") {
+TEST_CASE("CapabilityOverrides - convenience methods", "[printer][overrides]") {
     CapabilityOverrides overrides;
 
     PrinterCapabilities caps;
-    json objects = {"bed_mesh", "quad_gantry_level", "z_tilt", "gcode_macro CLEAN_NOZZLE",
-                    "gcode_macro HEAT_SOAK", "heater_generic chamber"};
+    json objects = {"bed_mesh",
+                    "quad_gantry_level",
+                    "z_tilt",
+                    "gcode_macro CLEAN_NOZZLE",
+                    "gcode_macro HEAT_SOAK",
+                    "heater_generic chamber"};
     caps.parse_objects(objects);
     overrides.set_printer_capabilities(caps);
 
@@ -166,7 +170,7 @@ TEST_CASE("CapabilityOverrides - convenience methods", "[capabilities][overrides
 // No Capabilities Set Tests
 // ============================================================================
 
-TEST_CASE("CapabilityOverrides - no capabilities set", "[capabilities][overrides]") {
+TEST_CASE("CapabilityOverrides - no capabilities set", "[printer][overrides]") {
     CapabilityOverrides overrides;
     // Don't call set_printer_capabilities()
 
@@ -190,7 +194,7 @@ TEST_CASE("CapabilityOverrides - no capabilities set", "[capabilities][overrides
 // Summary Tests
 // ============================================================================
 
-TEST_CASE("CapabilityOverrides - summary", "[capabilities][overrides]") {
+TEST_CASE("CapabilityOverrides - summary", "[printer][overrides]") {
     CapabilityOverrides overrides;
 
     SECTION("Summary shows all capabilities with no printer caps") {
@@ -229,7 +233,7 @@ TEST_CASE("CapabilityOverrides - summary", "[capabilities][overrides]") {
 // Copy and Move Tests
 // ============================================================================
 
-TEST_CASE("CapabilityOverrides - copy semantics", "[capabilities][overrides]") {
+TEST_CASE("CapabilityOverrides - copy semantics", "[printer][overrides]") {
     CapabilityOverrides original;
     original.set_override(capability::BED_LEVELING, OverrideState::ENABLE);
     original.set_override(capability::QGL, OverrideState::DISABLE);

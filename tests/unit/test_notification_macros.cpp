@@ -11,14 +11,15 @@
  * - Handle format strings correctly
  */
 
-#include "../catch_amalgamated.hpp"
 #include "ui_error_reporting.h"
-#include "ui_notification_history.h"
 #include "ui_notification.h"
+#include "ui_notification_history.h"
 #include "ui_toast.h"
 
 #include <cstring>
 #include <string>
+
+#include "../catch_amalgamated.hpp"
 
 // ============================================================================
 // Helper Functions
@@ -33,7 +34,7 @@ static void reset_history() {
 // NOTIFY_ERROR Tests
 // ============================================================================
 
-TEST_CASE("NOTIFY_ERROR: Creates history entry with ERROR severity", "[notification][macro]") {
+TEST_CASE("NOTIFY_ERROR: Creates history entry with ERROR severity", "[ui][macro]") {
     // Note: These tests verify the history tracking, not the UI display
     // (UI display requires LVGL initialization which is complex in unit tests)
 
@@ -63,7 +64,7 @@ TEST_CASE("NOTIFY_ERROR: Creates history entry with ERROR severity", "[notificat
 // NOTIFY_WARNING Tests
 // ============================================================================
 
-TEST_CASE("NOTIFY_WARNING: Creates history entry with WARNING severity", "[notification][macro]") {
+TEST_CASE("NOTIFY_WARNING: Creates history entry with WARNING severity", "[ui][macro]") {
     reset_history();
     NotificationHistory& history = NotificationHistory::instance();
 
@@ -85,7 +86,7 @@ TEST_CASE("NOTIFY_WARNING: Creates history entry with WARNING severity", "[notif
 // NOTIFY_INFO Tests
 // ============================================================================
 
-TEST_CASE("NOTIFY_INFO: Creates history entry with INFO severity", "[notification][macro]") {
+TEST_CASE("NOTIFY_INFO: Creates history entry with INFO severity", "[ui][macro]") {
     reset_history();
     NotificationHistory& history = NotificationHistory::instance();
 
@@ -107,7 +108,7 @@ TEST_CASE("NOTIFY_INFO: Creates history entry with INFO severity", "[notificatio
 // NOTIFY_SUCCESS Tests
 // ============================================================================
 
-TEST_CASE("NOTIFY_SUCCESS: Creates history entry with SUCCESS severity", "[notification][macro]") {
+TEST_CASE("NOTIFY_SUCCESS: Creates history entry with SUCCESS severity", "[ui][macro]") {
     reset_history();
     NotificationHistory& history = NotificationHistory::instance();
 
@@ -129,7 +130,7 @@ TEST_CASE("NOTIFY_SUCCESS: Creates history entry with SUCCESS severity", "[notif
 // LOG_ERROR_INTERNAL Tests
 // ============================================================================
 
-TEST_CASE("LOG_ERROR_INTERNAL: Does NOT create history entry", "[notification][macro]") {
+TEST_CASE("LOG_ERROR_INTERNAL: Does NOT create history entry", "[ui][macro]") {
     reset_history();
     NotificationHistory& history = NotificationHistory::instance();
 
@@ -149,12 +150,13 @@ TEST_CASE("LOG_ERROR_INTERNAL: Does NOT create history entry", "[notification][m
 // Format String Tests
 // ============================================================================
 
-TEST_CASE("Notification: Format strings with arguments", "[notification][format]") {
+TEST_CASE("Notification: Format strings with arguments", "[ui][format]") {
     reset_history();
     NotificationHistory& history = NotificationHistory::instance();
 
     // Test fmt::format style formatting
-    std::string formatted = fmt::format("Failed to connect to {} on port {}", "192.168.1.100", 7125);
+    std::string formatted =
+        fmt::format("Failed to connect to {} on port {}", "192.168.1.100", 7125);
 
     NotificationHistoryEntry entry = {};
     entry.timestamp_ms = 1000;
@@ -170,7 +172,7 @@ TEST_CASE("Notification: Format strings with arguments", "[notification][format]
     REQUIRE(std::string(entries[0].message) == "Failed to connect to 192.168.1.100 on port 7125");
 }
 
-TEST_CASE("Notification: Format strings with various types", "[notification][format]") {
+TEST_CASE("Notification: Format strings with various types", "[ui][format]") {
     // Test different format argument types
     std::string msg1 = fmt::format("Integer: {}", 42);
     std::string msg2 = fmt::format("Float: {:.2f}", 3.14159);
@@ -187,7 +189,7 @@ TEST_CASE("Notification: Format strings with various types", "[notification][for
 // Modal Flag Tests
 // ============================================================================
 
-TEST_CASE("Notification: Modal entries have was_modal flag set", "[notification][modal]") {
+TEST_CASE("Notification: Modal entries have was_modal flag set", "[ui][modal]") {
     reset_history();
     NotificationHistory& history = NotificationHistory::instance();
 
@@ -218,14 +220,14 @@ TEST_CASE("Notification: Modal entries have was_modal flag set", "[notification]
     REQUIRE(std::string(entries[0].title) == "Critical Error");
 
     REQUIRE(entries[1].was_modal == false);
-    REQUIRE(entries[1].title[0] == '\0');  // No title for toasts
+    REQUIRE(entries[1].title[0] == '\0'); // No title for toasts
 }
 
 // ============================================================================
 // Severity Ordering Tests
 // ============================================================================
 
-TEST_CASE("Notification: Multiple severities tracked correctly", "[notification][severity]") {
+TEST_CASE("Notification: Multiple severities tracked correctly", "[ui][severity]") {
     reset_history();
     NotificationHistory& history = NotificationHistory::instance();
 

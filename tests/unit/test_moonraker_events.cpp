@@ -181,7 +181,7 @@ class EventTestFixture {
 // ============================================================================
 
 TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient event handler can be registered",
-                 "[moonraker][events][registration]") {
+                 "[state][integration][registration]") {
     SECTION("registered handler receives events") {
         client_->register_event_handler(create_capture_handler());
 
@@ -214,7 +214,7 @@ TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient event handler can be registe
 // ============================================================================
 
 TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient events contain correct fields",
-                 "[moonraker][events][content]") {
+                 "[state][integration][content]") {
     client_->register_event_handler(create_capture_handler());
 
     SECTION("error event has is_error=true") {
@@ -275,7 +275,7 @@ TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient events contain correct field
 // ============================================================================
 
 TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient can emit multiple events sequentially",
-                 "[moonraker][events][sequential]") {
+                 "[state][integration][sequential]") {
     client_->register_event_handler(create_capture_handler());
 
     SECTION("events are received in order") {
@@ -316,7 +316,7 @@ TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient can emit multiple events seq
 // ============================================================================
 
 TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient handles null event handler gracefully",
-                 "[moonraker][events][null_handler]") {
+                 "[state][integration][null_handler]") {
     SECTION("emit without registered handler does not crash") {
         // No handler registered - should log and continue
         REQUIRE_NOTHROW(
@@ -364,7 +364,7 @@ TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient handles null event handler g
 // ============================================================================
 
 TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient catches exceptions from event handlers",
-                 "[moonraker][events][exception_safety]") {
+                 "[state][integration][exception_safety]") {
     SECTION("std::exception in handler is caught") {
         client_->register_event_handler(
             [](const MoonrakerEvent&) { throw std::runtime_error("Handler threw exception"); });
@@ -414,7 +414,7 @@ TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient catches exceptions from even
 // ============================================================================
 
 TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient replaces handler on re-registration",
-                 "[moonraker][events][replacement]") {
+                 "[state][integration][replacement]") {
     SECTION("new handler replaces old handler") {
         std::vector<std::string> handler1_events;
         std::vector<std::string> handler2_events;
@@ -450,7 +450,7 @@ TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient replaces handler on re-regis
 // ============================================================================
 
 TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient event emission is thread-safe",
-                 "[moonraker][events][threadsafe]") {
+                 "[state][integration][threadsafe]") {
     SECTION("concurrent registration and emission") {
         std::atomic<int> received_count{0};
         std::atomic<bool> stop_flag{false};
@@ -488,7 +488,7 @@ TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient event emission is thread-saf
 // ============================================================================
 
 TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient RECONNECTED event behavior",
-                 "[moonraker][events][reconnection]") {
+                 "[state][integration][reconnection]") {
     client_->register_event_handler(create_capture_handler());
 
     SECTION("first connection does NOT emit RECONNECTED event") {
@@ -541,7 +541,7 @@ TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient RECONNECTED event behavior",
 // ============================================================================
 
 TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient KLIPPY_READY event behavior",
-                 "[moonraker][events][klippy]") {
+                 "[state][integration][klippy]") {
     client_->register_event_handler(create_capture_handler());
 
     SECTION("klippy ready notification emits KLIPPY_READY event") {
@@ -584,7 +584,7 @@ TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient KLIPPY_READY event behavior"
 // ============================================================================
 
 TEST_CASE_METHOD(EventTestFixture, "MoonrakerClient combined connection flow events",
-                 "[moonraker][events][combined]") {
+                 "[state][integration][combined]") {
     client_->register_event_handler(create_capture_handler());
 
     SECTION("full reconnection scenario: connection lost, reconnected, klippy ready") {

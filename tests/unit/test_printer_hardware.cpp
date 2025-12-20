@@ -27,7 +27,7 @@
 // guess_bed_heater() Tests
 // ============================================================================
 
-TEST_CASE("PrinterHardware::guess_bed_heater", "[hardware][guessing]") {
+TEST_CASE("PrinterHardware::guess_bed_heater", "[slow][printer][guessing]") {
     std::vector<std::string> sensors;
     std::vector<std::string> fans;
     std::vector<std::string> leds;
@@ -103,7 +103,7 @@ TEST_CASE("PrinterHardware::guess_bed_heater", "[hardware][guessing]") {
 // guess_hotend_heater() Tests
 // ============================================================================
 
-TEST_CASE("PrinterHardware::guess_hotend_heater", "[hardware][guessing]") {
+TEST_CASE("PrinterHardware::guess_hotend_heater", "[slow][printer][guessing]") {
     std::vector<std::string> sensors;
     std::vector<std::string> fans;
     std::vector<std::string> leds;
@@ -197,7 +197,7 @@ TEST_CASE("PrinterHardware::guess_hotend_heater", "[hardware][guessing]") {
 // guess_bed_sensor() Tests
 // ============================================================================
 
-TEST_CASE("PrinterHardware::guess_bed_sensor", "[hardware][guessing]") {
+TEST_CASE("PrinterHardware::guess_bed_sensor", "[slow][printer][guessing]") {
     std::vector<std::string> fans;
     std::vector<std::string> leds;
 
@@ -270,7 +270,7 @@ TEST_CASE("PrinterHardware::guess_bed_sensor", "[hardware][guessing]") {
 // guess_hotend_sensor() Tests
 // ============================================================================
 
-TEST_CASE("PrinterHardware::guess_hotend_sensor", "[hardware][guessing]") {
+TEST_CASE("PrinterHardware::guess_hotend_sensor", "[slow][printer][guessing]") {
     std::vector<std::string> fans;
     std::vector<std::string> leds;
 
@@ -364,7 +364,7 @@ TEST_CASE("PrinterHardware::guess_hotend_sensor", "[hardware][guessing]") {
 // guess_part_cooling_fan() Tests
 // ============================================================================
 
-TEST_CASE("PrinterHardware::guess_part_cooling_fan", "[hardware][guessing]") {
+TEST_CASE("PrinterHardware::guess_part_cooling_fan", "[slow][printer][guessing]") {
     std::vector<std::string> heaters;
     std::vector<std::string> sensors;
     std::vector<std::string> leds;
@@ -422,7 +422,7 @@ TEST_CASE("PrinterHardware::guess_part_cooling_fan", "[hardware][guessing]") {
 // guess_main_led_strip() Tests
 // ============================================================================
 
-TEST_CASE("PrinterHardware::guess_main_led_strip", "[hardware][guessing]") {
+TEST_CASE("PrinterHardware::guess_main_led_strip", "[slow][printer][guessing]") {
     std::vector<std::string> heaters;
     std::vector<std::string> sensors;
     std::vector<std::string> fans;
@@ -491,7 +491,7 @@ TEST_CASE("PrinterHardware::guess_main_led_strip", "[hardware][guessing]") {
 // Real-world Mock Data Tests
 // ============================================================================
 
-TEST_CASE("PrinterHardware with MoonrakerClientMock data", "[hardware][guessing][mock]") {
+TEST_CASE("PrinterHardware with MoonrakerClientMock data", "[slow][printer][guessing][mock]") {
     SECTION("VORON_24 mock data") {
         MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
         mock.discover_printer([]() {}); // Populate hardware
@@ -588,7 +588,7 @@ TEST_CASE("PrinterHardware with MoonrakerClientMock data", "[hardware][guessing]
 // Edge Cases and Complex Scenarios
 // ============================================================================
 
-TEST_CASE("PrinterHardware edge cases", "[hardware][guessing][edge]") {
+TEST_CASE("PrinterHardware edge cases", "[slow][printer][guessing][edge]") {
     std::vector<std::string> sensors;
     std::vector<std::string> fans;
     std::vector<std::string> leds;

@@ -80,7 +80,7 @@ G1 X20 Y20 E10
 // Streaming Config Tests
 // =============================================================================
 
-TEST_CASE("GCodeStreamingConfig decision logic", "[gcode][streaming][config]") {
+TEST_CASE("GCodeStreamingConfig decision logic", "[slow][gcode][streaming][config]") {
     SECTION("small files should not trigger streaming in AUTO mode") {
         // A 100 byte file should never trigger streaming
         // (threshold calculation: even on 47MB RAM, threshold would be ~0.9MB)
@@ -135,7 +135,7 @@ TEST_CASE("GCodeStreamingConfig decision logic", "[gcode][streaming][config]") {
 // Layer Renderer Streaming Integration Tests
 // =============================================================================
 
-TEST_CASE("GCodeLayerRenderer streaming integration", "[gcode][streaming][renderer]") {
+TEST_CASE("GCodeLayerRenderer streaming integration", "[slow][gcode][streaming][renderer]") {
     TempGCodeFile temp_file(MULTI_LAYER_GCODE);
 
     SECTION("renderer starts with no data source") {
@@ -241,7 +241,7 @@ TEST_CASE("GCodeLayerRenderer streaming integration", "[gcode][streaming][render
 // Controller and Renderer Integration Tests
 // =============================================================================
 
-TEST_CASE("Streaming controller prefetch integration", "[gcode][streaming]") {
+TEST_CASE("Streaming controller prefetch integration", "[slow][gcode][streaming]") {
     // Create a larger file with more layers
     std::string large_gcode = "; Test file\nG28\n";
     for (int layer = 0; layer < 20; ++layer) {
@@ -277,7 +277,7 @@ TEST_CASE("Streaming controller prefetch integration", "[gcode][streaming]") {
 // Async Loading Tests
 // =============================================================================
 
-TEST_CASE("Streaming controller async open integration", "[gcode][streaming][async]") {
+TEST_CASE("Streaming controller async open integration", "[slow][gcode][streaming][async]") {
     TempGCodeFile temp_file(MULTI_LAYER_GCODE);
 
     SECTION("async open completes and renderer can be attached") {
@@ -317,7 +317,7 @@ TEST_CASE("Streaming controller async open integration", "[gcode][streaming][asy
 // Ghost Mode Disabled in Streaming Tests
 // =============================================================================
 
-TEST_CASE("Ghost mode behavior in streaming mode", "[gcode][streaming][renderer]") {
+TEST_CASE("Ghost mode behavior in streaming mode", "[slow][gcode][streaming][renderer]") {
     TempGCodeFile temp_file(MULTI_LAYER_GCODE);
     GCodeStreamingController controller;
     REQUIRE(controller.open_file(temp_file.path()));
