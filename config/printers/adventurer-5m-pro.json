@@ -1,0 +1,53 @@
+{
+  "animations_enabled": false,
+  "brightness": 100,
+  "config_path": "helixconfig.json",
+  "dark_mode": true,
+  "default_printer": "default_printer",
+  "display_rotate": 0,
+  "display_sleep_sec": 600,
+  "gcode_viewer": {
+    "shading_model": "phong",
+    "tube_sides": 4
+  },
+  "input": {
+    "scroll_limit": 5,
+    "scroll_throw": 25
+  },
+  "log_path": "/tmp/helixscreen.log",
+  "printers": {
+    "default_printer": {
+      "default_macros": {
+        "cooldown": "SET_HEATER_TEMPERATURE HEATER=extruder TARGET=0\nSET_HEATER_TEMPERATURE HEATER=heater_bed TARGET=0",
+        "load_filament": "LOAD_FILAMENT",
+        "unload_filament": "UNLOAD_FILAMENT"
+      },
+      "fan": {
+        "hotend": "heater_fan hotend_fan",
+        "part": "fan"
+      },
+      "fans": [],
+      "filament_sensors": {
+        "sensors": null
+      },
+      "heater": {
+        "bed": "heater_bed",
+        "hotend": "extruder"
+      },
+      "led": {
+        "strip": "led chamber_led"
+      },
+      "log_level": "debug",
+      "monitored_sensors": [],
+      "moonraker_api_key": false,
+      "moonraker_host": "127.0.0.1",
+      "moonraker_port": 7125,
+      "sensor": {
+        "bed": "heater_bed",
+        "hotend": "extruder"
+      },
+      "type": "FlashForge Adventurer 5M Pro"
+    }
+  },
+  "wizard_completed": true
+}

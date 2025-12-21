@@ -625,11 +625,15 @@ release-pi: | build/pi/bin/helix-screen build/pi/bin/helix-splash
 
 # Package AD5M release
 # Note: AD5M uses BusyBox which doesn't support tar -z, so we create uncompressed tar + gzip separately
+# Includes pre-configured helixconfig.json for Adventurer 5M Pro (skips setup wizard)
 release-ad5m: | build/ad5m/bin/helix-screen build/ad5m/bin/helix-splash
 	@echo "$(CYAN)$(BOLD)Packaging AD5M release v$(VERSION)...$(RESET)"
 	@mkdir -p $(RELEASE_DIR)/helixscreen
 	@cp build/ad5m/bin/helix-screen build/ad5m/bin/helix-splash $(RELEASE_DIR)/helixscreen/
 	@cp -r ui_xml config $(RELEASE_DIR)/helixscreen/
+	@# Copy AD5M Pro default config as helixconfig.json (skips wizard on first run)
+	@cp config/printers/adventurer-5m-pro.json $(RELEASE_DIR)/helixscreen/helixconfig.json
+	@echo "  $(DIM)Included pre-configured helixconfig.json for AD5M Pro$(RESET)"
 	@mkdir -p $(RELEASE_DIR)/helixscreen/scripts
 	@cp scripts/uninstall.sh $(RELEASE_DIR)/helixscreen/scripts/
 	@mkdir -p $(RELEASE_DIR)/helixscreen/assets
