@@ -6,6 +6,8 @@
 #include "capability_overrides.h"
 #include "filament_sensor_manager.h"
 #include "lvgl.h"
+#include "lvgl/src/display/lv_display_private.h" // For rendering_in_progress check
+#include "lvgl_debug_invalidate.h"
 #include "printer_capabilities.h"
 #include "runtime_config.h"
 
@@ -32,6 +34,13 @@ struct AsyncStatusUpdateContext {
 void async_status_update_callback(void* user_data) {
     auto* ctx = static_cast<AsyncStatusUpdateContext*>(user_data);
     if (ctx && ctx->printer_state) {
+        // Debug check: log if we're somehow in render phase (should never happen)
+        if (lvgl_is_rendering()) {
+            spdlog::error(
+                "[PrinterState] async_status_update_callback running during render phase!");
+            spdlog::error(
+                "[PrinterState] This should not happen - lv_async_call should run between frames");
+        }
         ctx->printer_state->update_from_status(ctx->state);
     }
     delete ctx;
@@ -419,6 +428,9 @@ void PrinterState::update_from_notification(const json& notification) {
 
 void PrinterState::update_from_status(const json& state) {
     std::lock_guard<std::mutex> lock(state_mutex_);
+
+    // Debug: Check if we're in render phase (this should never be true)
+    LV_DEBUG_RENDER_STATE();
 
     // Update extruder temperature (stored as centidegrees for 0.1°C resolution)
     if (state.contains("extruder")) {
