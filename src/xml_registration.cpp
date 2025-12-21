@@ -239,6 +239,7 @@ void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/timelapse_settings_overlay.xml");
     lv_xml_register_component_from_file("A:ui_xml/hidden_network_modal.xml");
     lv_xml_register_component_from_file("A:ui_xml/network_test_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/filament_preset_edit_modal.xml");
     lv_xml_register_component_from_file("A:ui_xml/wifi_network_item.xml");
 
     // Development tools
