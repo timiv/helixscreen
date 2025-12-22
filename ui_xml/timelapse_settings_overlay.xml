@@ -6,122 +6,53 @@
 <component>
   <view extends="overlay_panel" name="timelapse_settings_overlay" title="Timelapse Settings"
         width="#overlay_panel_width_full" bg_color="#app_bg_color">
-    <!-- Content Area -->
+    <!-- Content Area - no padding, rows handle their own -->
     <lv_obj name="overlay_content"
-            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_lg" scrollable="false"
-            style_border_width="0" flex_flow="column" style_pad_gap="#space_lg">
+            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="0" scrollable="true" scroll_dir="ver"
+            style_border_width="0" flex_flow="column">
       <!-- ================================================================== -->
-      <!-- ENABLE TIMELAPSE SECTION -->
+      <!-- ENABLE TIMELAPSE -->
       <!-- ================================================================== -->
-      <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-              flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
-        <lv_obj width="content"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="column" style_pad_gap="#space_xs">
-          <lv_obj width="content"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                  flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
-            <icon src="video" size="sm" variant="secondary"/>
-            <text_body text="Enable Timelapse" style_text_color="#text_primary"/>
-          </lv_obj>
-          <text_small text="Record timelapses of your prints" style_text_color="#text_secondary"/>
-        </lv_obj>
-        <helix_switch name="timelapse_enable_switch">
-          <event_cb trigger="value_changed" callback="on_timelapse_enabled_changed"/>
-        </helix_switch>
+      <setting_toggle_row name="row_timelapse_enable"
+                          label="Enable Timelapse" icon="video" description="Record timelapses of your prints"
+                          callback="on_timelapse_enabled_changed"/>
+      <!-- ================================================================== -->
+      <!-- RECORDING MODE -->
+      <!-- ================================================================== -->
+      <setting_dropdown_row name="row_timelapse_mode"
+                            label="Recording Mode" icon="layers"
+                            description="Choose how frames are captured during printing"
+                            callback="on_timelapse_mode_changed"/>
+      <!-- Mode info box -->
+      <lv_obj name="mode_info_container"
+              width="100%" height="content" style_bg_color="#card_bg_dark" style_radius="#border_radius"
+              style_pad_all="#space_md" style_border_width="0" scrollable="false" flex_flow="column"
+              style_pad_gap="#space_xs" style_margin_left="#space_lg" style_margin_right="#space_lg"
+              style_margin_bottom="#space_md">
+        <text_small name="mode_info_text"
+                    width="100%" text="Layer mode captures one frame per layer change. Best for most prints."
+                    style_text_color="#text_secondary" long_mode="wrap"/>
       </lv_obj>
-      <!-- Divider -->
-      <lv_obj width="100%"
-              height="1" style_bg_color="#card_border" style_bg_opa="100" style_border_width="0" scrollable="false"/>
       <!-- ================================================================== -->
-      <!-- RECORDING MODE SECTION -->
+      <!-- FRAMERATE -->
       <!-- ================================================================== -->
-      <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-              flex_flow="column" style_pad_gap="#space_sm">
-        <!-- Section Label with Icon -->
-        <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
-          <icon src="layers" size="sm" variant="secondary"/>
-          <text_body text="Recording Mode" style_text_color="#text_primary"/>
-        </lv_obj>
-        <!-- Description -->
-        <text_small width="100%"
-                    text="Choose how frames are captured during printing" style_text_color="#text_secondary"
-                    style_text_align="left"/>
-        <!-- Mode Dropdown Row -->
-        <lv_obj name="mode_row"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                scrollable="false" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center"
-                style_margin_top="#space_sm">
-          <text_body text="Mode" style_text_color="#text_primary"/>
-          <lv_dropdown name="timelapse_mode_dropdown"
-                       width="160" height="#input_height" style_radius="#border_radius" style_border_width="0"
-                       options="Layer Macro Hyperlapse">
-            <event_cb trigger="value_changed" callback="on_timelapse_mode_changed"/>
-          </lv_dropdown>
-        </lv_obj>
-        <!-- Mode info -->
-        <lv_obj name="mode_info_container"
-                width="100%" height="content" style_bg_color="#card_bg_dark" style_radius="#border_radius"
-                style_pad_all="#space_md" style_border_width="0" scrollable="false" flex_flow="column"
-                style_pad_gap="#space_xs" style_margin_top="#space_xs">
-          <text_small name="mode_info_text"
-                      width="100%" text="Layer Macro captures one frame per layer change. Best for most prints."
-                      style_text_color="#text_secondary" long_mode="wrap"/>
-        </lv_obj>
-      </lv_obj>
-      <!-- Divider -->
-      <lv_obj width="100%"
-              height="1" style_bg_color="#card_border" style_bg_opa="100" style_border_width="0" scrollable="false"/>
+      <setting_dropdown_row name="row_timelapse_framerate"
+                            label="Framerate" icon="animation_play"
+                            description="Video playback speed"
+                            callback="on_timelapse_framerate_changed"/>
       <!-- ================================================================== -->
-      <!-- OUTPUT SETTINGS SECTION -->
+      <!-- AUTO-RENDER -->
+      <!-- ================================================================== -->
+      <setting_toggle_row name="row_timelapse_autorender"
+                          label="Auto-render video" icon="play_circle" description="Create video when print completes"
+                          callback="on_timelapse_autorender_changed"/>
+      <!-- ================================================================== -->
+      <!-- INFO NOTE -->
       <!-- ================================================================== -->
       <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-              flex_flow="column" style_pad_gap="#space_sm">
-        <!-- Section Label with Icon -->
-        <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
-          <icon src="movie" size="sm" variant="secondary"/>
-          <text_body text="Output Settings" style_text_color="#text_primary"/>
-        </lv_obj>
-        <!-- Framerate Dropdown Row -->
-        <lv_obj name="framerate_row"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                scrollable="false" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
-          <text_body text="Framerate" style_text_color="#text_primary"/>
-          <lv_dropdown name="timelapse_framerate_dropdown"
-                       width="120" height="#input_height" style_radius="#border_radius" style_border_width="0"
-                       options="15 fps 24 fps 30 fps 60 fps">
-            <event_cb trigger="value_changed" callback="on_timelapse_framerate_changed"/>
-          </lv_dropdown>
-        </lv_obj>
-        <!-- Autorender Toggle Row -->
-        <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center"
-                style_margin_top="#space_sm">
-          <lv_obj width="content"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                  flex_flow="column" style_pad_gap="#space_xs">
-            <text_body text="Auto-render video" style_text_color="#text_primary"/>
-            <text_small text="Create video when print completes" style_text_color="#text_secondary"/>
-          </lv_obj>
-          <helix_switch name="timelapse_autorender_switch">
-            <event_cb trigger="value_changed" callback="on_timelapse_autorender_changed"/>
-          </helix_switch>
-        </lv_obj>
-      </lv_obj>
-      <!-- Spacer to push info to bottom -->
-      <lv_obj width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" scrollable="false"/>
-      <!-- Info Note at bottom -->
-      <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-              flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
+              height="content" style_bg_opa="0" style_border_width="0" scrollable="false" style_pad_left="#space_lg"
+              style_pad_right="#space_lg" style_pad_top="#space_md" style_pad_bottom="#space_lg" flex_flow="row"
+              style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_sm">
         <icon src="info" size="xs" variant="secondary"/>
         <text_small text="Requires Moonraker-Timelapse plugin" style_text_color="#text_secondary"/>
       </lv_obj>

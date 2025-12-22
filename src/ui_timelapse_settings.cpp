@@ -70,12 +70,37 @@ void TimelapseSettingsOverlay::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     spdlog::debug("[{}] setup() - finding widgets", get_name());
 
-    // Find widgets (recursive search)
-    enable_switch_ = lv_obj_find_by_name(panel_, "timelapse_enable_switch");
-    mode_dropdown_ = lv_obj_find_by_name(panel_, "timelapse_mode_dropdown");
+    // Find row containers first, then get inner widgets
+    // setting_toggle_row contains "toggle", setting_dropdown_row contains "dropdown"
+    lv_obj_t* enable_row = lv_obj_find_by_name(panel_, "row_timelapse_enable");
+    lv_obj_t* mode_row = lv_obj_find_by_name(panel_, "row_timelapse_mode");
+    lv_obj_t* framerate_row = lv_obj_find_by_name(panel_, "row_timelapse_framerate");
+    lv_obj_t* autorender_row = lv_obj_find_by_name(panel_, "row_timelapse_autorender");
+
+    // Find inner widgets within rows
+    if (enable_row) {
+        enable_switch_ = lv_obj_find_by_name(enable_row, "toggle");
+    }
+    if (mode_row) {
+        mode_dropdown_ = lv_obj_find_by_name(mode_row, "dropdown");
+    }
+    if (framerate_row) {
+        framerate_dropdown_ = lv_obj_find_by_name(framerate_row, "dropdown");
+    }
+    if (autorender_row) {
+        autorender_switch_ = lv_obj_find_by_name(autorender_row, "toggle");
+    }
+
+    // Mode info text is standalone
     mode_info_text_ = lv_obj_find_by_name(panel_, "mode_info_text");
-    framerate_dropdown_ = lv_obj_find_by_name(panel_, "timelapse_framerate_dropdown");
-    autorender_switch_ = lv_obj_find_by_name(panel_, "timelapse_autorender_switch");
+
+    // Set dropdown options programmatically (more reliable than XML \n parsing)
+    if (mode_dropdown_) {
+        lv_dropdown_set_options(mode_dropdown_, "Layer\nHyperlapse");
+    }
+    if (framerate_dropdown_) {
+        lv_dropdown_set_options(framerate_dropdown_, "15 fps\n24 fps\n30 fps\n60 fps");
+    }
 
     // Log widget discovery
     spdlog::debug("[{}] Widgets found: enable={} mode={} info={} framerate={} autorender={}",
