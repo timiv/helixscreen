@@ -1181,20 +1181,25 @@ TEST_CASE("MoonrakerClientMock send_jsonrpc methods", "[connection][slow][jsonrp
         REQUIRE(mock.send_jsonrpc("printer.print.start", params) == 0);
     }
 
-    SECTION("send_jsonrpc with callback returns success") {
+    SECTION("send_jsonrpc with callback returns valid request ID") {
         MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
         json params = {};
         bool callback_invoked = false;
-        // Note: Mock does not invoke callback, but should return success
-        REQUIRE(mock.send_jsonrpc("printer.info", params,
-                                  [&callback_invoked](json) { callback_invoked = true; }) == 0);
+        // Real MoonrakerClient returns valid RequestId (> 0) on success,
+        // or INVALID_REQUEST_ID (0) if send fails. Mock simulates success.
+        REQUIRE(mock.send_jsonrpc("printer.info", params, [&callback_invoked](json) {
+            callback_invoked = true;
+        }) != INVALID_REQUEST_ID);
     }
 
-    SECTION("send_jsonrpc with error callback returns success") {
+    SECTION("send_jsonrpc with error callback returns valid request ID") {
         MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
         json params = {};
+        // Real MoonrakerClient returns valid RequestId (> 0) on success,
+        // or INVALID_REQUEST_ID (0) if send fails. Mock simulates success.
         REQUIRE(mock.send_jsonrpc(
-                    "printer.info", params, [](json) {}, [](const MoonrakerError&) {}, 5000) == 0);
+                    "printer.info", params, [](json) {}, [](const MoonrakerError&) {}, 5000) !=
+                INVALID_REQUEST_ID);
     }
 }
 
