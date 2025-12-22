@@ -24,7 +24,8 @@
     <subject name="test_gateway_status" type="int" default="0"/>
     <subject name="test_internet_status" type="int" default="0"/>
   </subjects>
-  <view extends="overlay_panel" name="network_settings_overlay" title="Network Settings" width="#overlay_panel_width_full">
+  <view extends="overlay_panel" name="network_settings_overlay" title="Network Settings"
+        width="#overlay_panel_width_full" bg_color="#app_bg_color">
     <!-- Two-Column Content Area -->
     <lv_obj name="content_area"
             width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_lg" style_pad_gap="#space_lg"

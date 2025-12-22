@@ -1,0 +1,16 @@
+diff --git a/src/xml/lv_xml.c b/src/xml/lv_xml.c
+index eb2d72d97..5d0f23e22 100644
+--- a/src/xml/lv_xml.c
++++ b/src/xml/lv_xml.c
+@@ -749,8 +749,9 @@ static void resolve_params(lv_xml_component_scope_t * item_scope, lv_xml_compone
+             const char * ext_value = lv_xml_get_value_of(parent_attrs, name_clean);
+             if(ext_value) {
+                 /*If the value is not resolved earlier (e.g. it's a top level element created manually)
+-                 * use the default value*/
+-                if(ext_value[0] == '#' || ext_value[0] == '$') {
++                 * use the default value. Note: Only check for '$' (unresolved props), not '#' which
++                 * indicates const/token references that will be resolved by resolve_consts later.*/
++                if(ext_value[0] == '$') {
+                     ext_value = get_param_default(item_scope, name_clean);
+                 }
+                 else if(lv_streq(type, "style")) {

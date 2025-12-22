@@ -10,6 +10,7 @@ LVGL_PATCHED_FILES := \
 	src/themes/default/lv_theme_default.c \
 	src/xml/parsers/lv_xml_image_parser.c \
 	src/xml/lv_xml_style.c \
+	src/xml/lv_xml.c \
 	src/drivers/display/fb/lv_linux_fbdev.c
 
 # Reset all patched files in LVGL submodule to upstream state
@@ -86,4 +87,15 @@ apply-patches:
 		fi \
 	else \
 		echo "$(GREEN)✓ LVGL fbdev stride bpp detection patch already applied$(RESET)"; \
+	fi
+	$(Q)if git -C $(LVGL_DIR) diff --quiet src/xml/lv_xml.c 2>/dev/null; then \
+		echo "$(YELLOW)→ Applying LVGL XML prop const resolution patch...$(RESET)"; \
+		if git -C $(LVGL_DIR) apply --check ../../patches/lvgl_xml_prop_const_resolution.patch 2>/dev/null; then \
+			git -C $(LVGL_DIR) apply ../../patches/lvgl_xml_prop_const_resolution.patch && \
+			echo "$(GREEN)✓ XML prop const resolution patch applied$(RESET)"; \
+		else \
+			echo "$(YELLOW)⚠ Cannot apply patch (already applied or conflicts)$(RESET)"; \
+		fi \
+	else \
+		echo "$(GREEN)✓ LVGL XML prop const resolution patch already applied$(RESET)"; \
 	fi
