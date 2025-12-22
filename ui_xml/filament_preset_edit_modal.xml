@@ -42,9 +42,9 @@
                 style_pad_gap="#space_xs" scrollable="false">
           <text_small text="Name" style_text_color="#text_secondary"/>
           <lv_textarea name="name_input"
-                       width="100%" height="40" style_radius="#border_radius"
-                       style_bg_color="#card_bg" style_border_width="1" style_border_color="#text_secondary"
-                       one_line="true" placeholder="PLA" max_length="16"/>
+                       width="100%" height="40" style_radius="#border_radius" style_bg_color="#card_bg"
+                       style_border_width="1" style_border_color="#text_secondary" one_line="true" placeholder="PLA"
+                       max_length="16"/>
         </lv_obj>
         <!-- Temperature row -->
         <lv_obj width="100%"
@@ -56,9 +56,9 @@
                   style_pad_gap="#space_xs" scrollable="false">
             <text_small text="Nozzle °C" style_text_color="#text_secondary"/>
             <lv_spinbox name="nozzle_spinbox"
-                        width="#input_width" height="40" style_radius="#border_radius"
-                        style_bg_color="#card_bg" style_border_width="1" style_border_color="#text_secondary"
-                        value="210" min="150" max="300" step="5" digit_count="3"/>
+                        width="#input_width" height="40" style_radius="#border_radius" style_bg_color="#card_bg"
+                        style_border_width="1" style_border_color="#text_secondary" value="210" min="150" max="300"
+                        step="5" digit_count="3"/>
           </lv_obj>
           <!-- Bed temp -->
           <lv_obj width="content"
@@ -66,9 +66,9 @@
                   style_pad_gap="#space_xs" scrollable="false">
             <text_small text="Bed °C" style_text_color="#text_secondary"/>
             <lv_spinbox name="bed_spinbox"
-                        width="#input_width" height="40" style_radius="#border_radius"
-                        style_bg_color="#card_bg" style_border_width="1" style_border_color="#text_secondary"
-                        value="60" min="0" max="120" step="5" digit_count="3"/>
+                        width="#input_width" height="40" style_radius="#border_radius" style_bg_color="#card_bg"
+                        style_border_width="1" style_border_color="#text_secondary" value="60" min="0" max="120"
+                        step="5" digit_count="3"/>
           </lv_obj>
         </lv_obj>
       </lv_obj>

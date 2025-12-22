@@ -42,11 +42,9 @@
         extends="lv_obj" width="#overlay_panel_width" height="100%" align="right_mid" style_pad_all="0"
         style_border_width="0" style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column">
     <!-- Header Bar with E-stop action button -->
-    <header_bar name="overlay_header" title="Motion: XYZ"
-                hide_action_button="false"
-                action_button_icon="alert_octagon"
-                action_button_bg_color="#error_color"
-                action_button_radius="24"
+    <header_bar name="overlay_header"
+                title="Motion: XYZ" hide_action_button="false" action_button_icon="alert_octagon"
+                action_button_bg_color="#error_color" action_button_radius="24"
                 action_button_callback="emergency_stop_clicked"/>
     <!-- Content Area: Two Columns -->
     <lv_obj name="overlay_content"

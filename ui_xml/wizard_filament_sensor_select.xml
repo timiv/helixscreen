@@ -46,7 +46,8 @@
               height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_md"
               flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
         <icon src="information" size="sm" variant="secondary"/>
-        <text_small text="Most printers only need the Runout sensor configured." style_text_color="#text_secondary" flex_grow="1"/>
+        <text_small text="Most printers only need the Runout sensor configured."
+                    style_text_color="#text_secondary" flex_grow="1"/>
       </lv_obj>
     </ui_card>
   </view>

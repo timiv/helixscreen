@@ -32,8 +32,8 @@
         style_min_width="#card_min_width" style_max_width="#card_max_width" style_radius="#border_radius"
         style_pad_all="0" style_clip_corner="true" clickable="true">
     <!-- Pre-rendered gradient background (LVGL native .bin for instant blitting) -->
-    <lv_image name="gradient_bg" src="A:assets/images/gradient-card-medium.bin" 
-              width="#card_base_width" height="#card_height"/>
+    <lv_image name="gradient_bg"
+              width="#card_base_width" height="#card_height" src="A:assets/images/gradient-card-medium.bin"/>
     <!-- Thumbnail image - pre-scaled to display size via ThumbnailProcessor
          Source images are now ~160x160 (matching card size) instead of 300x300,
          so contain scaling is nearly 1:1 with minimal CPU overhead -->

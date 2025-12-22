@@ -14,16 +14,14 @@
             style_border_width="0" flex_flow="column" style_pad_gap="#space_md">
       <!-- Display: Textarea styled input (read-only) with unit label -->
       <lv_obj name="display_container"
-              width="100%" height="#keypad_display_height" style_bg_opa="0" style_border_width="0"
-              style_pad_all="0" scrollable="false" flex_flow="row" style_flex_cross_place="center">
+              width="100%" height="#keypad_display_height" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+              scrollable="false" flex_flow="row" style_flex_cross_place="center">
         <text_input name="input_display"
-                    flex_grow="1" height="100%" text="" bind_text="keypad_display"
-                    style_text_font="#font_heading" style_text_align="right"
-                    style_border_width="#input_border_width" style_radius="#border_radius"
+                    height="100%" flex_grow="1" text="" bind_text="keypad_display" style_text_font="#font_heading"
+                    style_text_align="right" style_border_width="#input_border_width" style_radius="#border_radius"
                     one_line="true" clickable="false" scrollable="false"/>
         <lv_label name="input_unit"
-                  text="" style_text_font="#font_body" style_text_color="#text_secondary"
-                  style_pad_left="#space_sm"/>
+                  text="" style_text_font="#font_body" style_text_color="#text_secondary" style_pad_left="#space_sm"/>
       </lv_obj>
       <!-- Button Grid: row_wrap with explicit row gaps (no space_evenly override) -->
       <lv_obj name="keypad_grid"

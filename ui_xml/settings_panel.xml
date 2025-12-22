@@ -81,7 +81,7 @@
         <text_small name="description" text="Notify when print finishes" style_text_color="#text_secondary"/>
       </lv_obj>
       <lv_dropdown name="completion_alert_dropdown"
-                   width="140" height="40" options="Off&#10;Notification&#10;Alert" style_radius="#border_radius"
+                   width="140" height="40" options="Off Notification Alert" style_radius="#border_radius"
                    style_border_width="0">
         <event_cb trigger="value_changed" callback="on_completion_alert_changed"/>
       </lv_dropdown>

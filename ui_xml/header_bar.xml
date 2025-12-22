@@ -47,10 +47,10 @@
     <!-- For icon-only buttons like E-stop, use circular radius and custom bg_color -->
     <lv_button name="action_button"
                width="#header_action_button_height" height="#header_action_button_height"
-               style_radius="$action_button_radius" style_bg_color="$action_button_bg_color"
-               style_border_width="0" style_shadow_width="0" scrollable="false" hidden="$hide_action_button">
-      <icon name="action_button_icon_widget" src="$action_button_icon" size="sm"
-            color="$action_button_icon_color" align="center"/>
+               style_radius="$action_button_radius" style_bg_color="$action_button_bg_color" style_border_width="0"
+               style_shadow_width="0" scrollable="false" hidden="$hide_action_button">
+      <icon name="action_button_icon_widget"
+            src="$action_button_icon" size="sm" color="$action_button_icon_color" align="center"/>
       <text_body name="action_button_label" text="$action_button_text" align="center"/>
       <event_cb trigger="clicked" callback="$action_button_callback"/>
     </lv_button>

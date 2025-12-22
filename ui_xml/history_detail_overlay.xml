@@ -41,8 +41,7 @@
                  width="100%" flex_grow="1" style_radius="#border_radius" style_pad_all="0" style_clip_corner="true"
                  scrollable="false">
           <!-- Pre-rendered gradient background -->
-          <lv_image name="gradient_bg" src="A:assets/images/gradient-panel-medium.bin" 
-                    width="100%" height="100%"/>
+          <lv_image name="gradient_bg" width="100%" height="100%" src="A:assets/images/gradient-panel-medium.bin"/>
           <!-- Fallback shown when no thumbnail (centered) -->
           <lv_obj name="thumbnail_fallback"
                   width="100%" height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0"

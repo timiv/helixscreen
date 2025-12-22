@@ -97,7 +97,8 @@
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                 flex_flow="row" flex_main_place="space_between" flex_cross_place="center" style_pad_top="#space_sm">
           <text_small text="Nozzle" style_text_color="#text_secondary"/>
-          <temp_display name="nozzle_temp_display" size="md" show_target="true" bind_current="extruder_temp" bind_target="extruder_target"/>
+          <temp_display name="nozzle_temp_display"
+                        size="md" show_target="true" bind_current="extruder_temp" bind_target="extruder_target"/>
         </lv_obj>
         <lv_bar name="nozzle_progress"
                 width="90%" height="#space_sm" bind_value="controls_nozzle_pct" range_min="0" range_max="100"
@@ -108,7 +109,8 @@
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                 flex_flow="row" flex_main_place="space_between" flex_cross_place="center" style_pad_top="#space_xs">
           <text_small text="Bed" style_text_color="#text_secondary"/>
-          <temp_display name="bed_temp_display" size="md" show_target="true" bind_current="bed_temp" bind_target="bed_target"/>
+          <temp_display name="bed_temp_display"
+                        size="md" show_target="true" bind_current="bed_temp" bind_target="bed_target"/>
         </lv_obj>
         <lv_bar name="bed_progress"
                 width="90%" height="#space_sm" bind_value="controls_bed_pct" range_min="0" range_max="100"
@@ -236,16 +238,13 @@
     </lv_obj>
     <!-- Row 3: Emergency Stop (ONLY visible when printing) -->
     <lv_obj name="estop_row"
-            width="100%" height="content" style_bg_opa="0" style_border_width="0"
-            style_pad_left="#space_md" style_pad_right="#space_md"
-            style_pad_bottom="#space_md" scrollable="false" hidden="true">
+            width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
+            style_pad_right="#space_md" style_pad_bottom="#space_md" scrollable="false" hidden="true">
       <lv_obj-bind_flag_if_eq subject="estop_visible" flag="hidden" ref_value="0"/>
       <lv_button name="estop_button_controls"
-                 width="100%" height="#button_height_normal"
-                 style_radius="#border_radius_large" style_border_width="0"
-                 style_bg_color="#error_color" flex_flow="row"
-                 style_flex_main_place="center" style_flex_cross_place="center"
-                 style_pad_gap="#space_md">
+                 width="100%" height="#button_height_normal" style_radius="#border_radius_large" style_border_width="0"
+                 style_bg_color="#error_color" flex_flow="row" style_flex_main_place="center"
+                 style_flex_cross_place="center" style_pad_gap="#space_md">
         <icon src="alert_octagon" size="md" color="#text_primary"/>
         <text_body text="Emergency Stop" style_text_color="#text_primary"/>
         <event_cb trigger="clicked" callback="emergency_stop_clicked"/>
