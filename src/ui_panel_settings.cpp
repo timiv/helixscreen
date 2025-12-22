@@ -84,6 +84,16 @@ static void on_gcode_mode_changed(lv_event_t* e) {
     SettingsManager::instance().set_gcode_render_mode(mode);
 }
 
+// Static callback for time format dropdown
+static void on_time_format_changed(lv_event_t* e) {
+    lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+    int index = static_cast<int>(lv_dropdown_get_selected(dropdown));
+    auto format = static_cast<TimeFormat>(index);
+    spdlog::info("[SettingsPanel] Time format changed: {} ({})", index,
+                 index == 0 ? "12 Hour" : "24 Hour");
+    SettingsManager::instance().set_time_format(format);
+}
+
 // Static callback for version row long-press (memory debug toggle)
 // This provides a touch-based way to enable memory debugging on Pi (no keyboard)
 static void on_version_long_pressed(lv_event_t*) {
@@ -135,6 +145,7 @@ void SettingsPanel::init_subjects() {
                              on_display_sleep_dropdown_changed);
     lv_xml_register_event_cb(nullptr, "on_bed_mesh_mode_changed", on_bed_mesh_mode_changed);
     lv_xml_register_event_cb(nullptr, "on_gcode_mode_changed", on_gcode_mode_changed);
+    lv_xml_register_event_cb(nullptr, "on_time_format_changed", on_time_format_changed);
     lv_xml_register_event_cb(nullptr, "on_version_long_pressed", on_version_long_pressed);
 
     // Register XML event callbacks for toggle switches
@@ -583,6 +594,24 @@ void SettingsPanel::handle_display_settings_clicked() {
                 spdlog::debug(
                     "[{}] G-code mode dropdown initialized to {} ({})", get_name(), current_mode,
                     current_mode == 0 ? "Auto" : (current_mode == 1 ? "3D" : "2D Layers"));
+            }
+
+            // Initialize time format dropdown
+            lv_obj_t* time_format_row =
+                lv_obj_find_by_name(display_settings_overlay_, "row_time_format");
+            lv_obj_t* time_format_dropdown =
+                time_format_row ? lv_obj_find_by_name(time_format_row, "dropdown") : nullptr;
+            if (time_format_dropdown) {
+                // Set dropdown options
+                lv_dropdown_set_options(time_format_dropdown,
+                                        SettingsManager::get_time_format_options());
+                // Set initial selection based on current setting
+                auto current_format = SettingsManager::instance().get_time_format();
+                lv_dropdown_set_selected(time_format_dropdown,
+                                         static_cast<uint32_t>(current_format));
+                spdlog::debug("[{}] Time format dropdown initialized to {} ({})", get_name(),
+                              static_cast<int>(current_format),
+                              current_format == TimeFormat::HOUR_12 ? "12H" : "24H");
             }
 
             // Initially hidden

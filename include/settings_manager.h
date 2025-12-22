@@ -15,6 +15,9 @@ class MoonrakerClient;
 /** @brief Print completion notification mode (Off=0, Notification=1, Alert=2) */
 enum class CompletionAlertMode { OFF = 0, NOTIFICATION = 1, ALERT = 2 };
 
+/** @brief Time display format (12-hour with AM/PM or 24-hour) */
+enum class TimeFormat { HOUR_12 = 0, HOUR_24 = 1 };
+
 /**
  * @brief Application settings manager with reactive UI binding
  *
@@ -213,6 +216,25 @@ class SettingsManager {
     /** @brief Get dropdown options string "Auto\n3D View\n2D Layers" */
     static const char* get_gcode_render_mode_options();
 
+    /**
+     * @brief Get time format setting
+     * @return Current time format (12-hour or 24-hour)
+     */
+    TimeFormat get_time_format() const;
+
+    /**
+     * @brief Set time format
+     *
+     * Controls whether times are displayed as 12-hour (with AM/PM) or 24-hour format.
+     * Affects temp graph, file dates, history timestamps, etc.
+     *
+     * @param format HOUR_12 for "2:30 PM" style, HOUR_24 for "14:30" style
+     */
+    void set_time_format(TimeFormat format);
+
+    /** @brief Get dropdown options string "12 Hour\n24 Hour" */
+    static const char* get_time_format_options();
+
     // =========================================================================
     // PRINTER SETTINGS
     // =========================================================================
@@ -374,6 +396,11 @@ class SettingsManager {
         return &gcode_render_mode_subject_;
     }
 
+    /** @brief Time format subject (integer: 0=12H, 1=24H) */
+    lv_subject_t* subject_time_format() {
+        return &time_format_subject_;
+    }
+
     /** @brief LED enabled subject (integer: 0=off, 1=on) */
     lv_subject_t* subject_led_enabled() {
         return &led_enabled_subject_;
@@ -493,6 +520,7 @@ class SettingsManager {
     lv_subject_t gcode_3d_enabled_subject_;
     lv_subject_t bed_mesh_render_mode_subject_;
     lv_subject_t gcode_render_mode_subject_;
+    lv_subject_t time_format_subject_;
     lv_subject_t led_enabled_subject_;
     lv_subject_t sounds_enabled_subject_;
     lv_subject_t completion_alert_subject_;

@@ -5,6 +5,8 @@
 
 #include "ui_theme.h"
 
+#include "settings_manager.h"
+
 #include <spdlog/spdlog.h>
 
 #include <cmath>
@@ -127,12 +129,47 @@ std::string format_file_size(size_t bytes) {
     return std::string(buf);
 }
 
+const char* get_time_format_string() {
+    TimeFormat format = SettingsManager::instance().get_time_format();
+    // %l = hour (1-12, space-padded), %I = hour (01-12, zero-padded)
+    // Using %l for cleaner display without leading zero
+    return (format == TimeFormat::HOUR_12) ? "%l:%M %p" : "%H:%M";
+}
+
+std::string format_time(const struct tm* tm_info) {
+    if (!tm_info) {
+        return "—";
+    }
+
+    char buf[16];
+    strftime(buf, sizeof(buf), get_time_format_string(), tm_info);
+
+    // Trim leading space from %l if present (space-padded hour)
+    std::string result(buf);
+    if (!result.empty() && result[0] == ' ') {
+        result.erase(0, 1);
+    }
+    return result;
+}
+
 std::string format_modified_date(time_t timestamp) {
     char buf[64];
     struct tm* timeinfo = localtime(&timestamp);
     if (timeinfo) {
-        // Format: "Jan 15 14:30"
-        strftime(buf, sizeof(buf), "%b %d %H:%M", timeinfo);
+        // Format: "Jan 15 2:30 PM" (12H) or "Jan 15 14:30" (24H)
+        TimeFormat format = SettingsManager::instance().get_time_format();
+        if (format == TimeFormat::HOUR_12) {
+            strftime(buf, sizeof(buf), "%b %d %l:%M %p", timeinfo);
+            // Trim double spaces from %l (space-padded hour)
+            std::string result(buf);
+            size_t pos;
+            while ((pos = result.find("  ")) != std::string::npos) {
+                result.erase(pos, 1);
+            }
+            return result;
+        } else {
+            strftime(buf, sizeof(buf), "%b %d %H:%M", timeinfo);
+        }
     } else {
         snprintf(buf, sizeof(buf), "Unknown");
     }

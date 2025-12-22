@@ -27,6 +27,9 @@ static const char* COMPLETION_ALERT_OPTIONS_TEXT = "Off\nNotification\nAlert";
 static const char* BED_MESH_RENDER_MODE_OPTIONS_TEXT = "Auto\n3D View\n2D Heatmap";
 static const char* GCODE_RENDER_MODE_OPTIONS_TEXT = "Auto\n3D View\n2D Layers";
 
+// Time format options (12H=0, 24H=1)
+static const char* TIME_FORMAT_OPTIONS_TEXT = "12 Hour\n24 Hour";
+
 SettingsManager& SettingsManager::instance() {
     static SettingsManager instance;
     return instance;
@@ -126,6 +129,11 @@ void SettingsManager::init_subjects() {
     gcode_mode = std::clamp(gcode_mode, 0, 2);
     lv_subject_init_int(&gcode_render_mode_subject_, gcode_mode);
 
+    // Time format (default: 0 = 12-hour)
+    int time_format = config->get<int>("/time_format", 0);
+    time_format = std::clamp(time_format, 0, 1);
+    lv_subject_init_int(&time_format_subject_, time_format);
+
     // Register subjects with LVGL XML system for data binding
     lv_xml_register_subject(nullptr, "settings_dark_mode", &dark_mode_subject_);
     lv_xml_register_subject(nullptr, "settings_display_sleep", &display_sleep_subject_);
@@ -143,6 +151,7 @@ void SettingsManager::init_subjects() {
     lv_xml_register_subject(nullptr, "settings_bed_mesh_render_mode",
                             &bed_mesh_render_mode_subject_);
     lv_xml_register_subject(nullptr, "settings_gcode_render_mode", &gcode_render_mode_subject_);
+    lv_xml_register_subject(nullptr, "settings_time_format", &time_format_subject_);
 
     subjects_initialized_ = true;
     spdlog::info("[SettingsManager] Subjects initialized: dark_mode={}, sleep={}s, sounds={}, "
@@ -305,6 +314,28 @@ void SettingsManager::set_gcode_render_mode(int mode) {
 
 const char* SettingsManager::get_gcode_render_mode_options() {
     return GCODE_RENDER_MODE_OPTIONS_TEXT;
+}
+
+TimeFormat SettingsManager::get_time_format() const {
+    int val = lv_subject_get_int(const_cast<lv_subject_t*>(&time_format_subject_));
+    return static_cast<TimeFormat>(std::clamp(val, 0, 1));
+}
+
+void SettingsManager::set_time_format(TimeFormat format) {
+    int val = static_cast<int>(format);
+    spdlog::info("[SettingsManager] set_time_format({})", val == 0 ? "12H" : "24H");
+
+    // 1. Update subject (UI reacts)
+    lv_subject_set_int(&time_format_subject_, val);
+
+    // 2. Persist to config
+    Config* config = Config::get_instance();
+    config->set<int>("/time_format", val);
+    config->save();
+}
+
+const char* SettingsManager::get_time_format_options() {
+    return TIME_FORMAT_OPTIONS_TEXT;
 }
 
 // =============================================================================

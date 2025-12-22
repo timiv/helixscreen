@@ -9,9 +9,11 @@
 #include "ui_notification.h"
 #include "ui_panel_common.h"
 #include "ui_panel_print_select.h"
+#include "ui_utils.h"
 
 #include "moonraker_api.h"
 #include "moonraker_client.h"
+#include "settings_manager.h"
 #include "thumbnail_cache.h"
 
 #include <spdlog/spdlog.h>
@@ -981,8 +983,21 @@ void HistoryListPanel::update_detail_subjects(const PrintHistoryJob& job) {
         time_t end_ts = static_cast<time_t>(job.end_time);
         struct tm* tm_info = localtime(&end_ts);
         char buf[32];
-        strftime(buf, sizeof(buf), "%b %d, %H:%M", tm_info);
-        lv_subject_copy_string(&detail_end_time_, buf);
+        // Format based on user's time format preference
+        TimeFormat format = SettingsManager::instance().get_time_format();
+        if (format == TimeFormat::HOUR_12) {
+            strftime(buf, sizeof(buf), "%b %d, %l:%M %p", tm_info);
+            // Trim double spaces from %l (space-padded hour)
+            std::string result(buf);
+            size_t pos;
+            while ((pos = result.find("  ")) != std::string::npos) {
+                result.erase(pos, 1);
+            }
+            lv_subject_copy_string(&detail_end_time_, result.c_str());
+        } else {
+            strftime(buf, sizeof(buf), "%b %d, %H:%M", tm_info);
+            lv_subject_copy_string(&detail_end_time_, buf);
+        }
     } else {
         lv_subject_copy_string(&detail_end_time_, "-");
     }

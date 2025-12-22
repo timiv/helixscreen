@@ -104,12 +104,34 @@ std::string format_file_size(size_t bytes);
  * @brief Format Unix timestamp to date/time string
  *
  * Converts timestamp to localized date/time format.
- * Examples: "Jan 15 14:30", "Dec 5 09:15"
+ * Respects user's 12/24 hour time format setting.
+ * Examples: "Jan 15 2:30 PM" (12H) or "Jan 15 14:30" (24H)
  *
  * @param timestamp Unix timestamp (time_t)
  * @return Formatted date/time string
  */
 std::string format_modified_date(time_t timestamp);
+
+/**
+ * @brief Format time portion only (no date)
+ *
+ * Returns time in user's preferred format.
+ * Examples: "2:30 PM" (12H) or "14:30" (24H)
+ *
+ * @param tm_info Pointer to tm struct with time to format
+ * @return Formatted time string
+ */
+std::string format_time(const struct tm* tm_info);
+
+/**
+ * @brief Get strftime format string for current time format setting
+ *
+ * Returns "%H:%M" for 24-hour or "%l:%M %p" for 12-hour format.
+ * Useful when you need to incorporate time into a larger format string.
+ *
+ * @return Format string for strftime
+ */
+const char* get_time_format_string();
 
 /**
  * @brief Get responsive padding for content areas below headers

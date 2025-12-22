@@ -5,6 +5,8 @@
   "default_printer": "default_printer",
   "display_rotate": 0,
   "display_sleep_sec": 600,
+  "time_format": 0,
+  "_time_format_comment": "Time display format. 0 = 12-hour (2:30 PM), 1 = 24-hour (14:30). Default is 12-hour.",
   "log_dest": "auto",
   "_log_dest_comment": "Log destination: 'auto' (detect best), 'journal' (systemd), 'syslog', 'file', 'console' (disable system log)",
   "log_path": "",

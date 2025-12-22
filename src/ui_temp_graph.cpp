@@ -4,6 +4,7 @@
 #include "ui_temp_graph.h"
 
 #include "ui_theme.h"
+#include "ui_utils.h"
 
 #include <spdlog/spdlog.h>
 
@@ -288,7 +289,7 @@ static void draw_x_axis_labels_cb(lv_event_t* e) {
     }
 
     // Track previous label to skip duplicates
-    char prev_label[8] = "";
+    char prev_label[12] = ""; // Sized for 12H format: "12:30 PM"
 
     // Draw labels at regular time intervals
     // Start from the first time that's on a nice boundary after the left edge
@@ -310,14 +311,19 @@ static void draw_x_axis_labels_cb(lv_event_t* e) {
             continue;
         }
 
-        // Format time string (HH:MM)
+        // Format time string based on user preference (12H or 24H)
         time_t time_sec = static_cast<time_t>(label_time_ms / 1000);
         struct tm* tm_info = localtime(&time_sec);
         // Use static buffer array - LVGL may defer draw and need persistent strings
-        static char time_str_buf[8][8]; // 8 labels max, 8 chars each
+        // Buffer sized for 12H format: "12:30 PM" + null = 9 chars
+        static char time_str_buf[8][12]; // 8 labels max, 12 chars each
         static int time_str_idx = 0;
         char* time_str = time_str_buf[time_str_idx++ % 8];
-        strftime(time_str, 8, "%H:%M", tm_info);
+        strftime(time_str, 12, get_time_format_string(), tm_info);
+        // Trim leading space from %l (space-padded hour in 12H format)
+        if (time_str[0] == ' ') {
+            memmove(time_str, time_str + 1, strlen(time_str));
+        }
 
         // Skip duplicate labels (same HH:MM)
         if (strcmp(time_str, prev_label) == 0) {
@@ -326,10 +332,11 @@ static void draw_x_axis_labels_cb(lv_event_t* e) {
         strncpy(prev_label, time_str, sizeof(prev_label) - 1);
 
         // Create label area (centered on label_x)
+        // Sized for 12H format like "2:30 PM" (wider than 24H "14:30")
         lv_area_t label_area;
-        label_area.x1 = label_x - 20; // 40px width, centered
+        label_area.x1 = label_x - 28; // 56px width, centered
         label_area.y1 = label_y;
-        label_area.x2 = label_x + 20;
+        label_area.x2 = label_x + 28;
         label_area.y2 = label_y + label_height;
 
         label_dsc.text = time_str;
@@ -341,16 +348,21 @@ static void draw_x_axis_labels_cb(lv_event_t* e) {
     if (graph->visible_point_count >= (graph->point_count * 4 / 5)) {
         time_t now_sec = static_cast<time_t>(latest_ms / 1000);
         struct tm* tm_info = localtime(&now_sec);
-        // Use static buffer for the "now" label
-        static char now_str[8];
-        strftime(now_str, sizeof(now_str), "%H:%M", tm_info);
+        // Use static buffer for the "now" label (sized for 12H format)
+        static char now_str[12];
+        strftime(now_str, sizeof(now_str), get_time_format_string(), tm_info);
+        // Trim leading space from %l (space-padded hour in 12H format)
+        if (now_str[0] == ' ') {
+            memmove(now_str, now_str + 1, strlen(now_str));
+        }
 
         // Only draw if different from last label
         if (strcmp(now_str, prev_label) != 0) {
+            // Sized for 12H format like "2:30 PM" (wider than 24H "14:30")
             lv_area_t label_area;
-            label_area.x1 = content_x2 - 20;
+            label_area.x1 = content_x2 - 32;
             label_area.y1 = label_y;
-            label_area.x2 = content_x2 + 20;
+            label_area.x2 = content_x2 + 24;
             label_area.y2 = label_y + label_height;
 
             label_dsc.text = now_str;
