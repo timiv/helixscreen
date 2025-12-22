@@ -48,7 +48,7 @@ ZOffsetCalibrationPanel::~ZOffsetCalibrationPanel() {
         lv_observer_remove(manual_probe_z_observer_);
         manual_probe_z_observer_ = nullptr;
     }
-    spdlog::debug("[ZOffsetCal] Destroyed, observers cleaned up");
+    // NOTE: No spdlog here - logger may be destroyed before us during static destruction
 }
 
 // ============================================================================
