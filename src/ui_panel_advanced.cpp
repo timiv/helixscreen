@@ -8,15 +8,15 @@
 #include "ui_timelapse_settings.h"
 #include "ui_toast.h"
 
+#include "app_globals.h"
+#include "macro_analysis_manager.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
+#include "moonraker_manager.h"
 #include "printer_capabilities.h"
 #include "printer_state.h"
 
 #include <spdlog/spdlog.h>
-
-// Forward declarations
-MoonrakerClient* get_moonraker_client();
 
 // Global instance (singleton pattern matching SettingsPanel)
 static std::unique_ptr<AdvancedPanel> g_advanced_panel;
@@ -53,6 +53,7 @@ void AdvancedPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_advanced_machine_limits", on_machine_limits_clicked);
     lv_xml_register_event_cb(nullptr, "on_advanced_spoolman", on_spoolman_clicked);
     lv_xml_register_event_cb(nullptr, "on_advanced_macros", on_macros_clicked);
+    lv_xml_register_event_cb(nullptr, "on_configure_print_start", on_configure_print_start_clicked);
 
     // Note: Input shaping uses on_input_shaper_row_clicked registered by InputShaperPanel
     // Note: Restart row doesn't exist - restart buttons have their own callbacks in
@@ -131,6 +132,27 @@ void AdvancedPanel::handle_macros_clicked() {
     }
 }
 
+void AdvancedPanel::handle_configure_print_start_clicked() {
+    spdlog::debug("[{}] Configure PRINT_START clicked", get_name());
+
+    MoonrakerManager* mgr = get_moonraker_manager();
+    if (!mgr) {
+        spdlog::error("[{}] No MoonrakerManager available", get_name());
+        ui_toast_show(ToastSeverity::ERROR, "Not connected to printer", 2000);
+        return;
+    }
+
+    helix::MacroAnalysisManager* macro_mgr = mgr->macro_analysis();
+    if (!macro_mgr) {
+        spdlog::error("[{}] No MacroAnalysisManager available", get_name());
+        ui_toast_show(ToastSeverity::ERROR, "Macro analysis not initialized", 2000);
+        return;
+    }
+
+    // Launch wizard (handles its own analysis and UI)
+    macro_mgr->analyze_and_launch_wizard();
+}
+
 // ============================================================================
 // STATIC EVENT CALLBACKS (registered via lv_xml_register_event_cb)
 // ============================================================================
@@ -145,4 +167,8 @@ void AdvancedPanel::on_spoolman_clicked(lv_event_t* /*e*/) {
 
 void AdvancedPanel::on_macros_clicked(lv_event_t* /*e*/) {
     get_global_advanced_panel().handle_macros_clicked();
+}
+
+void AdvancedPanel::on_configure_print_start_clicked(lv_event_t* /*e*/) {
+    get_global_advanced_panel().handle_configure_print_start_clicked();
 }

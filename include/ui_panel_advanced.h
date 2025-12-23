@@ -95,6 +95,7 @@ class AdvancedPanel : public PanelBase {
     void handle_machine_limits_clicked();
     void handle_spoolman_clicked();
     void handle_macros_clicked();
+    void handle_configure_print_start_clicked();
 
     //
     // === Static Event Callbacks (registered via lv_xml_register_event_cb) ===
@@ -103,6 +104,7 @@ class AdvancedPanel : public PanelBase {
     static void on_machine_limits_clicked(lv_event_t* e);
     static void on_spoolman_clicked(lv_event_t* e);
     static void on_macros_clicked(lv_event_t* e);
+    static void on_configure_print_start_clicked(lv_event_t* e);
 
     //
     // === Cached Overlay Panels ===

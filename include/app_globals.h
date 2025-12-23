@@ -8,6 +8,7 @@
 // Forward declarations
 class MoonrakerClient;
 class MoonrakerAPI;
+class MoonrakerManager;
 class PrinterState;
 
 /**
@@ -33,6 +34,18 @@ MoonrakerAPI* get_moonraker_api();
  * @param api Pointer to MoonrakerAPI instance
  */
 void set_moonraker_api(MoonrakerAPI* api);
+
+/**
+ * @brief Get global MoonrakerManager instance
+ * @return Pointer to global MoonrakerManager (may be nullptr if not initialized)
+ */
+MoonrakerManager* get_moonraker_manager();
+
+/**
+ * @brief Set global MoonrakerManager instance (called by Application during init)
+ * @param manager Pointer to MoonrakerManager instance
+ */
+void set_moonraker_manager(MoonrakerManager* manager);
 
 /**
  * @brief Get global PrinterState singleton instance

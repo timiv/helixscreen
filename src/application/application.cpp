@@ -584,6 +584,12 @@ bool Application::init_moonraker() {
     // Inject API into panels
     m_subjects->inject_api(m_moonraker->api());
 
+    // Register MoonrakerManager globally (for Advanced panel access to MacroAnalysisManager)
+    set_moonraker_manager(m_moonraker.get());
+
+    // Initialize macro analysis manager (for PRINT_START wizard)
+    m_moonraker->init_macro_analysis(m_config);
+
     // Initialize global keyboard
     ui_keyboard_init(m_screen);
 

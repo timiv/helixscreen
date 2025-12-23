@@ -112,6 +112,10 @@
     <setting_action_row name="row_macros" label="Macro Browser" icon="console" description="Execute printer macros">
       <event_cb trigger="clicked" callback="on_advanced_macros"/>
     </setting_action_row>
+    <!-- Configure PRINT_START -->
+    <setting_action_row name="row_configure_print_start" label="Configure PRINT_START" icon="code_braces" description="Make bed mesh and QGL skippable">
+      <event_cb trigger="clicked" callback="on_configure_print_start"/>
+    </setting_action_row>
     <!-- Timelapse Settings -->
     <setting_action_row name="row_timelapse" label="Timelapse" icon="video" description="Configure timelapse recording">
       <lv_obj-bind_flag_if_eq subject="printer_has_timelapse" flag="hidden" ref_value="0"/>

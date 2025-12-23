@@ -9,6 +9,7 @@
 #include "ams_state.h"
 #include "app_globals.h"
 #include "config.h"
+#include "macro_analysis_manager.h"
 #include "moonraker_api.h"
 #include "moonraker_api_mock.h"
 #include "moonraker_client.h"
@@ -69,6 +70,9 @@ void MoonrakerManager::shutdown() {
         m_print_start_collector.reset();
     }
 
+    // Clean up macro analysis manager
+    m_macro_analysis.reset();
+
     // Release observer guards
     m_print_start_observer.reset();
     m_print_start_phase_observer.reset();
@@ -108,14 +112,22 @@ int MoonrakerManager::connect(const std::string& websocket_url, const std::strin
     // CRITICAL: Without discover_printer(), we never call printer.objects.subscribe,
     // so we never receive notify_status_update messages (print_stats, temperatures, etc.)
     MoonrakerClient* client = m_client.get();
+    helix::MacroAnalysisManager* macro_mgr = m_macro_analysis.get();
     return m_client->connect(
         websocket_url.c_str(),
-        [client]() {
+        [client, macro_mgr]() {
             // Connection established - start printer discovery
             // This queries printer capabilities and subscribes to status updates
             spdlog::info("[MoonrakerManager] Connected, starting printer discovery...");
-            client->discover_printer(
-                []() { spdlog::info("[MoonrakerManager] Printer discovery complete"); });
+            client->discover_printer([macro_mgr]() {
+                spdlog::info("[MoonrakerManager] Printer discovery complete");
+
+                // Trigger macro analysis after discovery
+                if (macro_mgr) {
+                    spdlog::debug("[MoonrakerManager] Triggering PRINT_START macro analysis");
+                    macro_mgr->check_and_notify();
+                }
+            });
         },
         []() {
             // Disconnected - state changes are handled via notification queue
@@ -366,4 +378,18 @@ void MoonrakerManager::init_print_start_collector() {
         nullptr);
 
     spdlog::debug("[MoonrakerManager] Print start collector initialized");
+}
+
+void MoonrakerManager::init_macro_analysis(Config* config) {
+    if (!m_api) {
+        spdlog::warn("[MoonrakerManager] Cannot init macro_analysis - no API");
+        return;
+    }
+
+    m_macro_analysis = std::make_unique<helix::MacroAnalysisManager>(config, m_api.get());
+    spdlog::debug("[MoonrakerManager] Macro analysis manager initialized");
+}
+
+helix::MacroAnalysisManager* MoonrakerManager::macro_analysis() const {
+    return m_macro_analysis.get();
 }

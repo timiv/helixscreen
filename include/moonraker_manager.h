@@ -18,6 +18,10 @@ class MoonrakerAPI;
 class PrinterState;
 class PrintStartCollector;
 
+namespace helix {
+class MacroAnalysisManager;
+}
+
 using json = nlohmann::json;
 
 /**
@@ -125,6 +129,20 @@ class MoonrakerManager {
      */
     void init_print_start_collector();
 
+    /**
+     * @brief Initialize macro analysis manager
+     *
+     * Creates the manager for PRINT_START macro analysis and wizard.
+     * Call after init() but before connect().
+     */
+    void init_macro_analysis(Config* config);
+
+    /**
+     * @brief Get macro analysis manager
+     * @return Pointer to manager, or nullptr if not initialized
+     */
+    helix::MacroAnalysisManager* macro_analysis() const;
+
   private:
     // Initialization helpers
     void create_client(const RuntimeConfig& runtime_config);
@@ -146,6 +164,9 @@ class MoonrakerManager {
     ObserverGuard m_print_start_phase_observer;
     ObserverGuard m_print_layer_fallback_observer;
     ObserverGuard m_print_progress_fallback_observer;
+
+    // Macro analysis manager (PRINT_START wizard integration)
+    std::unique_ptr<helix::MacroAnalysisManager> m_macro_analysis;
 
     bool m_initialized = false;
 };
