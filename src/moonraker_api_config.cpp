@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "moonraker_api.h"
-
 #include "moonraker_api_internal.h"
 
 #include <spdlog/spdlog.h>

@@ -381,10 +381,10 @@ class PrintPreparationManager {
      * @param macro_skip_params Skip params to append to PRINT_START call
      * @param on_navigate_to_status Callback to navigate to print status panel
      */
-    void modify_and_print(
-        const std::string& file_path, const std::vector<gcode::OperationType>& ops_to_disable,
-        const std::vector<std::pair<std::string, std::string>>& macro_skip_params,
-        NavigateToStatusCallback on_navigate_to_status);
+    void modify_and_print(const std::string& file_path,
+                          const std::vector<gcode::OperationType>& ops_to_disable,
+                          const std::vector<std::pair<std::string, std::string>>& macro_skip_params,
+                          NavigateToStatusCallback on_navigate_to_status);
 
     /**
      * @brief Modify and print using helix_print plugin (server-side modification)
@@ -439,7 +439,8 @@ class PrintPreparationManager {
      *
      * @return Vector of (param_name, value) pairs like {"SKIP_BED_MESH", "1"}
      */
-    [[nodiscard]] std::vector<std::pair<std::string, std::string>> collect_macro_skip_params() const;
+    [[nodiscard]] std::vector<std::pair<std::string, std::string>>
+    collect_macro_skip_params() const;
 };
 
 } // namespace helix::ui

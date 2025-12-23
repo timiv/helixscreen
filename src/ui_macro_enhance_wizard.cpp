@@ -215,12 +215,14 @@ void MacroEnhanceWizard::bind_subjects_to_widgets() {
     // Bind shared description subject to multiple widgets [L020: Track all observers]
     lv_obj_t* applying_status = find_widget("applying_status");
     if (applying_status != nullptr) {
-        applying_status_observer_ = lv_label_bind_text(applying_status, &description_subject_, "%s");
+        applying_status_observer_ =
+            lv_label_bind_text(applying_status, &description_subject_, "%s");
     }
 
     lv_obj_t* success_message = find_widget("success_message");
     if (success_message != nullptr) {
-        success_message_observer_ = lv_label_bind_text(success_message, &description_subject_, "%s");
+        success_message_observer_ =
+            lv_label_bind_text(success_message, &description_subject_, "%s");
     }
 
     lv_obj_t* error_message = find_widget("error_message");
@@ -574,7 +576,8 @@ void MacroEnhanceWizard::handle_approve() {
     temp_op.category = op->category;
     temp_op.line_number = op->line_number;
 
-    helix::MacroEnhancement enhancement = helix::PrintStartEnhancer::generate_wrapper(temp_op, skip_param);
+    helix::MacroEnhancement enhancement =
+        helix::PrintStartEnhancer::generate_wrapper(temp_op, skip_param);
     enhancement.user_approved = true;
     enhancements_.push_back(enhancement);
 

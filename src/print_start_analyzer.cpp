@@ -42,13 +42,15 @@ const char* category_to_string(PrintStartOpCategory category) {
 // ============================================================================
 
 bool PrintStartAnalysis::has_operation(PrintStartOpCategory category) const {
-    return std::any_of(operations.begin(), operations.end(),
-                       [category](const PrintStartOperation& op) { return op.category == category; });
+    return std::any_of(
+        operations.begin(), operations.end(),
+        [category](const PrintStartOperation& op) { return op.category == category; });
 }
 
 const PrintStartOperation* PrintStartAnalysis::get_operation(PrintStartOpCategory category) const {
-    auto it = std::find_if(operations.begin(), operations.end(),
-                           [category](const PrintStartOperation& op) { return op.category == category; });
+    auto it =
+        std::find_if(operations.begin(), operations.end(),
+                     [category](const PrintStartOperation& op) { return op.category == category; });
     return (it != operations.end()) ? &(*it) : nullptr;
 }
 
@@ -77,7 +79,8 @@ std::string PrintStartAnalysis::summary() const {
         ss << " [";
         bool first = true;
         for (const auto& op : operations) {
-            if (!first) ss << ", ";
+            if (!first)
+                ss << ", ";
             first = false;
             ss << op.name;
             if (op.has_skip_param) {
@@ -152,7 +155,7 @@ static const std::vector<std::string> SKIP_PARAM_VARIATIONS[] = {
 // ============================================================================
 
 void PrintStartAnalyzer::analyze(MoonrakerAPI* api, AnalysisCallback on_complete,
-                                  ErrorCallback on_error) {
+                                 ErrorCallback on_error) {
     if (!api) {
         if (on_error) {
             MoonrakerError err;
@@ -184,12 +187,13 @@ void PrintStartAnalyzer::analyze(MoonrakerAPI* api, AnalysisCallback on_complete
                 // Search through config keys
                 for (auto& [key, value] : config.items()) {
                     std::string key_lower = key;
-                    std::transform(key_lower.begin(), key_lower.end(), key_lower.begin(), ::tolower);
+                    std::transform(key_lower.begin(), key_lower.end(), key_lower.begin(),
+                                   ::tolower);
 
                     if (key_lower == section_lower && value.contains("gcode")) {
                         std::string gcode = value["gcode"].get<std::string>();
-                        spdlog::info("[PrintStartAnalyzer] Found macro '{}' ({} chars)", MACRO_NAMES[i],
-                                     gcode.size());
+                        spdlog::info("[PrintStartAnalyzer] Found macro '{}' ({} chars)",
+                                     MACRO_NAMES[i], gcode.size());
 
                         result = parse_macro(MACRO_NAMES[i], gcode);
                         result.found = true;
@@ -214,7 +218,7 @@ void PrintStartAnalyzer::analyze(MoonrakerAPI* api, AnalysisCallback on_complete
 }
 
 PrintStartAnalysis PrintStartAnalyzer::parse_macro(const std::string& macro_name,
-                                                    const std::string& gcode) {
+                                                   const std::string& gcode) {
     PrintStartAnalysis result;
     result.found = true;
     result.macro_name = macro_name;
@@ -292,21 +296,26 @@ std::vector<PrintStartOperation> PrintStartAnalyzer::detect_operations(const std
 
         // Skip empty lines and comments
         auto first_non_space = line.find_first_not_of(" \t");
-        if (first_non_space == std::string::npos) continue;
-        if (line[first_non_space] == '#' || line[first_non_space] == ';') continue;
+        if (first_non_space == std::string::npos)
+            continue;
+        if (line[first_non_space] == '#' || line[first_non_space] == ';')
+            continue;
 
         // Skip Jinja2 control statements ({% ... %})
-        if (line.find("{%") != std::string::npos) continue;
+        if (line.find("{%") != std::string::npos)
+            continue;
 
         // Extract the command (first word on the line, excluding Jinja2 expressions)
         std::string trimmed = line.substr(first_non_space);
 
         // Skip lines that are just Jinja2 expressions
-        if (trimmed[0] == '{') continue;
+        if (trimmed[0] == '{')
+            continue;
 
         // Get the command name
         auto end_of_cmd = trimmed.find_first_of(" \t{");
-        std::string cmd = (end_of_cmd != std::string::npos) ? trimmed.substr(0, end_of_cmd) : trimmed;
+        std::string cmd =
+            (end_of_cmd != std::string::npos) ? trimmed.substr(0, end_of_cmd) : trimmed;
 
         // Check against known patterns
         std::string cmd_upper = cmd;
@@ -320,9 +329,10 @@ std::vector<PrintStartOperation> PrintStartAnalyzer::detect_operations(const std
                 op.line_number = line_num;
 
                 // Avoid duplicates (same operation appearing multiple times)
-                bool duplicate = std::any_of(
-                    operations.begin(), operations.end(),
-                    [&op](const PrintStartOperation& existing) { return existing.name == op.name; });
+                bool duplicate = std::any_of(operations.begin(), operations.end(),
+                                             [&op](const PrintStartOperation& existing) {
+                                                 return existing.name == op.name;
+                                             });
 
                 if (!duplicate) {
                     operations.push_back(op);
@@ -337,8 +347,8 @@ std::vector<PrintStartOperation> PrintStartAnalyzer::detect_operations(const std
 }
 
 bool PrintStartAnalyzer::detect_skip_conditional(const std::string& gcode,
-                                                  const std::string& op_name,
-                                                  std::string& out_param_name) {
+                                                 const std::string& op_name,
+                                                 std::string& out_param_name) {
     // Get the category to know which skip param variations to look for
     PrintStartOpCategory category = categorize_operation(op_name);
     if (category == PrintStartOpCategory::UNKNOWN) {
@@ -378,14 +388,14 @@ bool PrintStartAnalyzer::detect_skip_conditional(const std::string& gcode,
         std::transform(param_lower.begin(), param_lower.end(), param_lower.begin(), ::tolower);
 
         std::string context_lower = context;
-        std::transform(context_lower.begin(), context_lower.end(), context_lower.begin(), ::tolower);
+        std::transform(context_lower.begin(), context_lower.end(), context_lower.begin(),
+                       ::tolower);
 
         // Look for the param in an if statement
         if (context_lower.find(param_lower) != std::string::npos) {
             // Verify it's in an if statement context
             // Look for patterns like: {% if ... param ...
-            std::regex if_pattern(R"(\{%\s*if\s+.*)" + param_lower + R"(.*%\})",
-                                  std::regex::icase);
+            std::regex if_pattern(R"(\{%\s*if\s+.*)" + param_lower + R"(.*%\})", std::regex::icase);
             if (std::regex_search(context, if_pattern)) {
                 out_param_name = param;
                 spdlog::trace("[PrintStartAnalyzer] {} is controlled by {}", op_name, param);

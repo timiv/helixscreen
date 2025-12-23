@@ -53,7 +53,7 @@ std::string PrintStartCallInfo::with_skip_params(
     // Start with the original line, trimmed of trailing whitespace/newlines
     std::string modified = raw_line;
     while (!modified.empty() && (modified.back() == '\n' || modified.back() == '\r' ||
-                                  modified.back() == ' ' || modified.back() == '\t')) {
+                                 modified.back() == ' ' || modified.back() == '\t')) {
         modified.pop_back();
     }
 
@@ -61,10 +61,10 @@ std::string PrintStartCallInfo::with_skip_params(
     for (const auto& [param_name, param_value] : skip_params) {
         // Validate param_name contains only safe characters (A-Z, 0-9, _)
         // This prevents injection of malformed parameters
-        bool valid_name = !param_name.empty() &&
-                          std::all_of(param_name.begin(), param_name.end(), [](char c) {
-                              return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
-                          });
+        bool valid_name =
+            !param_name.empty() && std::all_of(param_name.begin(), param_name.end(), [](char c) {
+                return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+            });
         if (!valid_name) {
             spdlog::warn("[PrintStartCallInfo] Skipping invalid param name: {}", param_name);
             continue;

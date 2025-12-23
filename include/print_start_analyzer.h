@@ -56,11 +56,11 @@ enum class PrintStartOpCategory {
  * @brief An operation detected within a PRINT_START macro
  */
 struct PrintStartOperation {
-    std::string name;          ///< G-code command (e.g., "BED_MESH_CALIBRATE")
+    std::string name; ///< G-code command (e.g., "BED_MESH_CALIBRATE")
     PrintStartOpCategory category = PrintStartOpCategory::UNKNOWN;
-    bool has_skip_param = false;  ///< true if already wrapped in conditional
-    std::string skip_param_name;  ///< e.g., "SKIP_BED_MESH" if detected
-    size_t line_number = 0;       ///< Line number in macro gcode (1-indexed)
+    bool has_skip_param = false; ///< true if already wrapped in conditional
+    std::string skip_param_name; ///< e.g., "SKIP_BED_MESH" if detected
+    size_t line_number = 0;      ///< Line number in macro gcode (1-indexed)
 };
 
 /**
@@ -68,9 +68,9 @@ struct PrintStartOperation {
  */
 struct PrintStartAnalysis {
     // === Macro Discovery ===
-    bool found = false;              ///< A print start macro was found
-    std::string macro_name;          ///< Actual name found (e.g., "PRINT_START", "START_PRINT")
-    std::string raw_gcode;           ///< Full macro gcode content
+    bool found = false;     ///< A print start macro was found
+    std::string macro_name; ///< Actual name found (e.g., "PRINT_START", "START_PRINT")
+    std::string raw_gcode;  ///< Full macro gcode content
 
     // === Detected Operations ===
     std::vector<PrintStartOperation> operations;
@@ -79,9 +79,9 @@ struct PrintStartAnalysis {
     std::vector<std::string> known_params; ///< e.g., ["BED", "EXTRUDER", "CHAMBER"]
 
     // === Controllability ===
-    bool is_controllable = false;    ///< At least one op has skip param
-    size_t controllable_count = 0;   ///< How many ops are already controllable
-    size_t total_ops_count = 0;      ///< Total detected operations
+    bool is_controllable = false;  ///< At least one op has skip param
+    size_t controllable_count = 0; ///< How many ops are already controllable
+    size_t total_ops_count = 0;    ///< Total detected operations
 
     // === Helper Methods ===
 
@@ -206,8 +206,8 @@ class PrintStartAnalyzer {
      * @return true if operation is conditional
      */
     [[nodiscard]] static bool detect_skip_conditional(const std::string& gcode,
-                                                       const std::string& op_name,
-                                                       std::string& out_param_name);
+                                                      const std::string& op_name,
+                                                      std::string& out_param_name);
 
     /**
      * @brief Extract known parameters from macro gcode
@@ -220,7 +220,7 @@ class PrintStartAnalyzer {
 
     // === Macro Name Candidates ===
     static constexpr const char* MACRO_NAMES[] = {"PRINT_START", "START_PRINT", "_PRINT_START",
-                                                   "_START_PRINT"};
+                                                  "_START_PRINT"};
     static constexpr size_t MACRO_NAMES_COUNT = 4;
 };
 

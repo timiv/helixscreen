@@ -600,7 +600,8 @@ void PrintPreparationManager::start_print(const std::string& filename,
 
     // Check if user disabled operations that are in the PRINT_START macro
     // These need skip params appended to the PRINT_START call
-    std::vector<std::pair<std::string, std::string>> macro_skip_params = collect_macro_skip_params();
+    std::vector<std::pair<std::string, std::string>> macro_skip_params =
+        collect_macro_skip_params();
 
     // Determine if we need to modify the G-code file
     bool needs_file_modification = !ops_to_disable.empty();
@@ -756,7 +757,8 @@ PrintPreparationManager::collect_macro_skip_params() const {
     }
 
     if (!skip_params.empty()) {
-        spdlog::info("[PrintPreparationManager] Collected {} macro skip params", skip_params.size());
+        spdlog::info("[PrintPreparationManager] Collected {} macro skip params",
+                     skip_params.size());
     }
 
     return skip_params;
@@ -818,7 +820,7 @@ void PrintPreparationManager::modify_and_print_via_plugin(
     const std::vector<std::pair<std::string, std::string>>& macro_skip_params,
     const std::vector<std::string>& mod_names, NavigateToStatusCallback on_navigate_to_status) {
     auto* self = this;
-    auto alive = alive_guard_; // Capture for lifetime checking in async callbacks
+    auto alive = alive_guard_;              // Capture for lifetime checking in async callbacks
     auto scan_result = cached_scan_result_; // Copy for lambda capture
 
     // Validate scan_result before proceeding
@@ -907,7 +909,7 @@ void PrintPreparationManager::modify_and_print_streaming(
     const std::vector<std::pair<std::string, std::string>>& macro_skip_params,
     NavigateToStatusCallback on_navigate_to_status) {
     auto* self = this;
-    auto alive = alive_guard_; // Capture for lifetime checking in async callbacks
+    auto alive = alive_guard_;              // Capture for lifetime checking in async callbacks
     auto scan_result = cached_scan_result_; // Copy for lambda capture
 
     // Validate scan_result before proceeding (SERIOUS-3 fix)
