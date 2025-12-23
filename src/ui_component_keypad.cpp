@@ -83,7 +83,7 @@ void ui_keypad_init(lv_obj_t* parent) {
     ui_keypad_init_subjects();
 
     // Create keypad from XML component
-    keypad_widget = (lv_obj_t*)lv_xml_create(parent, "numeric_keypad_modal", nullptr);
+    keypad_widget = (lv_obj_t*)lv_xml_create(parent, "numeric_keypad_panel", nullptr);
     if (!keypad_widget) {
         spdlog::error("[Keypad] Failed to create keypad from XML");
         return;

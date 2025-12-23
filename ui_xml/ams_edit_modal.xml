@@ -2,211 +2,207 @@
 <!-- Copyright 2025 HelixScreen -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- Modal for editing filament properties in an AMS slot -->
+<!-- NOTE: Backdrop created programmatically by Modal system -->
 <component>
   <consts>
     <px name="swatch_size" value="40"/>
     <px name="dropdown_width" value="120"/>
   </consts>
-  <!-- Full-screen backdrop overlay -->
+  <!-- Dialog card (backdrop created programmatically) -->
   <view name="ams_edit_modal"
-        extends="lv_obj" width="100%" height="100%" style_bg_color="0x000000" style_bg_opa="200" style_border_width="0"
-        style_radius="0" style_pad_all="0" align="center" clickable="true">
-    <!-- Dialog card using ui_dialog widget (provides themed background) -->
-    <ui_dialog name="dialog_card"
-               width="320" height="content" align="center" flex_flow="column" style_flex_main_place="start"
-               style_pad_gap="0">
-      <!-- Header with title and close button -->
+        extends="ui_dialog" width="320" height="content" align="center" flex_flow="column" style_flex_main_place="start"
+        style_pad_gap="0">
+    <!-- Header with title and close button -->
+    <lv_obj width="100%"
+            height="content" style_bg_opa="0" style_border_width="0" style_pad_left="#space_lg"
+            style_pad_right="#space_md" style_pad_top="#space_lg" style_pad_bottom="#space_sm" flex_flow="row"
+            style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
+      <text_heading text="Edit Filament"/>
+      <!-- Close button -->
+      <lv_button name="btn_close"
+                 width="40" height="40" style_radius="#border_radius" style_bg_opa="0" style_border_width="0"
+                 style_shadow_width="0" clickable="true">
+        <event_cb trigger="clicked" callback="ams_edit_modal_close_cb"/>
+        <icon src="close" size="sm" variant="secondary" align="center"/>
+      </lv_button>
+    </lv_obj>
+    <!-- Horizontal divider -->
+    <lv_obj width="100%"
+            height="1" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"
+            scrollable="false"/>
+    <!-- Content area -->
+    <lv_obj width="100%"
+            height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_md" flex_flow="column"
+            style_pad_gap="#space_md" scrollable="false">
+      <!-- Slot indicator -->
+      <text_small name="slot_indicator" text="Slot 1" style_text_color="#text_secondary"/>
+      <!-- Filament selection row -->
       <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_left="#space_lg"
-              style_pad_right="#space_md" style_pad_top="#space_lg" style_pad_bottom="#space_sm" flex_flow="row"
-              style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
-        <text_heading text="Edit Filament"/>
-        <!-- Close button -->
-        <lv_button name="btn_close"
-                   width="40" height="40" style_radius="#border_radius" style_bg_opa="0" style_border_width="0"
-                   style_shadow_width="0" clickable="true">
-          <event_cb trigger="clicked" callback="ams_edit_modal_close_cb"/>
-          <icon src="close" size="sm" variant="secondary" align="center"/>
-        </lv_button>
-      </lv_obj>
-      <!-- Horizontal divider -->
-      <lv_obj width="100%"
-              height="1" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"
-              scrollable="false"/>
-      <!-- Content area -->
-      <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_md" flex_flow="column"
-              style_pad_gap="#space_md" scrollable="false">
-        <!-- Slot indicator -->
-        <text_small name="slot_indicator" text="Slot 1" style_text_color="#text_secondary"/>
-        <!-- Filament selection row -->
+              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+              style_flex_main_place="start" style_flex_cross_place="stretch" style_pad_gap="#space_xs"
+              scrollable="false">
+        <text_small text="Filament" style_text_color="#text_secondary"/>
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                style_flex_main_place="start" style_flex_cross_place="stretch" style_pad_gap="#space_xs"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_main_place="start" style_pad_gap="#space_sm" scrollable="false">
+          <lv_dropdown name="vendor_dropdown"
+                       width="#dropdown_width" height="content" style_radius="#border_radius" style_border_width="0">
+            <event_cb trigger="value_changed" callback="ams_edit_vendor_changed_cb"/>
+          </lv_dropdown>
+          <lv_dropdown name="material_dropdown"
+                       width="#dropdown_width" height="content" style_radius="#border_radius" style_border_width="0">
+            <event_cb trigger="value_changed" callback="ams_edit_material_changed_cb"/>
+          </lv_dropdown>
+        </lv_obj>
+      </lv_obj>
+      <!-- Color row -->
+      <lv_obj width="100%"
+              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+              style_flex_main_place="start" style_flex_cross_place="stretch" style_pad_gap="#space_xs"
+              scrollable="false">
+        <text_small text="Color" style_text_color="#text_secondary"/>
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_sm"
                 scrollable="false">
-          <text_small text="Filament" style_text_color="#text_secondary"/>
-          <lv_obj width="100%"
+          <!-- Color swatch (tappable to open picker) -->
+          <lv_obj name="color_swatch"
+                  width="#swatch_size" height="#swatch_size" style_radius="#border_radius" style_bg_color="0x808080"
+                  style_bg_opa="255" style_border_width="2" style_border_color="#text_secondary" style_border_opa="80"
+                  scrollable="false" clickable="true">
+            <event_cb trigger="clicked" callback="ams_edit_color_clicked_cb"/>
+          </lv_obj>
+          <!-- Edit icon button -->
+          <lv_button name="btn_edit_color"
+                     width="#icon_button_size" height="#icon_button_size" style_radius="#border_radius" style_bg_opa="0"
+                     style_border_width="0" style_shadow_width="0" clickable="true">
+            <icon src="tune" size="sm" variant="primary" align="center"/>
+            <event_cb trigger="clicked" callback="ams_edit_color_clicked_cb"/>
+          </lv_button>
+          <!-- Color name label -->
+          <text_body name="color_name_label" text="" style_text_color="#text_secondary" flex_grow="1"/>
+        </lv_obj>
+      </lv_obj>
+      <!-- Temperature display (auto from material, read-only) -->
+      <lv_obj width="100%"
+              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+              style_flex_main_place="start" style_flex_cross_place="stretch" style_pad_gap="#space_xs"
+              scrollable="false">
+        <text_small text="Temperature" style_text_color="#text_secondary"/>
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_main_place="start" style_pad_gap="#space_lg" scrollable="false">
+          <lv_obj width="content"
                   height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_flex_main_place="start" style_pad_gap="#space_sm" scrollable="false">
-            <lv_dropdown name="vendor_dropdown"
-                         width="#dropdown_width" height="content" style_radius="#border_radius" style_border_width="0">
-              <event_cb trigger="value_changed" callback="ams_edit_vendor_changed_cb"/>
-            </lv_dropdown>
-            <lv_dropdown name="material_dropdown"
-                         width="#dropdown_width" height="content" style_radius="#border_radius" style_border_width="0">
-              <event_cb trigger="value_changed" callback="ams_edit_material_changed_cb"/>
-            </lv_dropdown>
+                  style_pad_gap="#space_xs" scrollable="false">
+            <text_small text="Nozzle:" style_text_color="#text_secondary"/>
+            <text_body name="temp_nozzle_label" text="200-230°C"/>
+          </lv_obj>
+          <lv_obj width="content"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                  style_pad_gap="#space_xs" scrollable="false">
+            <text_small text="Bed:" style_text_color="#text_secondary"/>
+            <text_body name="temp_bed_label" text="60°C"/>
           </lv_obj>
         </lv_obj>
-        <!-- Color row -->
+      </lv_obj>
+      <!-- Remaining weight section -->
+      <lv_obj width="100%"
+              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+              style_flex_main_place="start" style_flex_cross_place="stretch" style_pad_gap="#space_xs"
+              scrollable="false">
+        <!-- Header row with label, percentage, and edit button -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                style_flex_main_place="start" style_flex_cross_place="stretch" style_pad_gap="#space_xs"
-                scrollable="false">
-          <text_small text="Color" style_text_color="#text_secondary"/>
-          <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
+          <text_small text="Remaining" style_text_color="#text_secondary"/>
+          <lv_obj width="content"
                   height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_sm"
-                  scrollable="false">
-            <!-- Color swatch (tappable to open picker) -->
-            <lv_obj name="color_swatch"
-                    width="#swatch_size" height="#swatch_size" style_radius="#border_radius" style_bg_color="0x808080"
-                    style_bg_opa="255" style_border_width="2" style_border_color="#text_secondary" style_border_opa="80"
-                    scrollable="false" clickable="true">
-              <event_cb trigger="clicked" callback="ams_edit_color_clicked_cb"/>
-            </lv_obj>
-            <!-- Edit icon button -->
-            <lv_button name="btn_edit_color"
+                  style_flex_cross_place="center" style_pad_gap="#space_xs" scrollable="false">
+            <text_body name="remaining_pct_label" text="75%"/>
+            <!-- Edit button (shown when edit_remaining_mode=0) -->
+            <lv_button name="btn_remaining_edit"
                        width="#icon_button_size" height="#icon_button_size" style_radius="#border_radius"
                        style_bg_opa="0" style_border_width="0" style_shadow_width="0" clickable="true">
+              <bind_flag_if_eq subject="edit_remaining_mode" flag="hidden" ref_value="1"/>
               <icon src="tune" size="sm" variant="primary" align="center"/>
-              <event_cb trigger="clicked" callback="ams_edit_color_clicked_cb"/>
+              <event_cb trigger="clicked" callback="ams_edit_remaining_edit_cb"/>
             </lv_button>
-            <!-- Color name label -->
-            <text_body name="color_name_label" text="" style_text_color="#text_secondary" flex_grow="1"/>
+            <!-- Accept button (shown when edit_remaining_mode=1) -->
+            <lv_button name="btn_remaining_accept"
+                       width="#icon_button_size" height="#icon_button_size" style_radius="#border_radius"
+                       style_bg_opa="0" style_border_width="0" style_shadow_width="0" clickable="true" hidden="true">
+              <bind_flag_if_eq subject="edit_remaining_mode" flag="hidden" ref_value="0"/>
+              <icon src="check" size="sm" variant="success" align="center"/>
+              <event_cb trigger="clicked" callback="ams_edit_remaining_accept_cb"/>
+            </lv_button>
+            <!-- Cancel button (shown when edit_remaining_mode=1) -->
+            <lv_button name="btn_remaining_cancel"
+                       width="#icon_button_size" height="#icon_button_size" style_radius="#border_radius"
+                       style_bg_opa="0" style_border_width="0" style_shadow_width="0" clickable="true" hidden="true">
+              <bind_flag_if_eq subject="edit_remaining_mode" flag="hidden" ref_value="0"/>
+              <icon src="close" size="sm" variant="error" align="center"/>
+              <event_cb trigger="clicked" callback="ams_edit_remaining_cancel_cb"/>
+            </lv_button>
           </lv_obj>
         </lv_obj>
-        <!-- Temperature display (auto from material, read-only) -->
-        <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                style_flex_main_place="start" style_flex_cross_place="stretch" style_pad_gap="#space_xs"
-                scrollable="false">
-          <text_small text="Temperature" style_text_color="#text_secondary"/>
-          <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_flex_main_place="start" style_pad_gap="#space_lg" scrollable="false">
-            <lv_obj width="content"
-                    height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                    style_pad_gap="#space_xs" scrollable="false">
-              <text_small text="Nozzle:" style_text_color="#text_secondary"/>
-              <text_body name="temp_nozzle_label" text="200-230°C"/>
-            </lv_obj>
-            <lv_obj width="content"
-                    height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                    style_pad_gap="#space_xs" scrollable="false">
-              <text_small text="Bed:" style_text_color="#text_secondary"/>
-              <text_body name="temp_bed_label" text="60°C"/>
-            </lv_obj>
-          </lv_obj>
+        <!-- Progress bar (shown when edit_remaining_mode=0) -->
+        <lv_obj name="remaining_progress_container"
+                width="100%" height="#slider_height" style_bg_color="#text_secondary" style_bg_opa="38"
+                style_radius="#border_radius" style_border_width="0" style_pad_all="0" scrollable="false">
+          <bind_flag_if_eq subject="edit_remaining_mode" flag="hidden" ref_value="1"/>
+          <lv_obj name="remaining_progress_fill"
+                  height="100%" style_bg_color="#primary_color" style_bg_opa="255" style_radius="#border_radius"
+                  style_border_width="0" style_pad_all="0" scrollable="false"/>
         </lv_obj>
-        <!-- Remaining weight section -->
-        <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                style_flex_main_place="start" style_flex_cross_place="stretch" style_pad_gap="#space_xs"
-                scrollable="false">
-          <!-- Header row with label, percentage, and edit button -->
-          <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
-            <text_small text="Remaining" style_text_color="#text_secondary"/>
-            <lv_obj width="content"
-                    height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                    style_flex_cross_place="center" style_pad_gap="#space_xs" scrollable="false">
-              <text_body name="remaining_pct_label" text="75%"/>
-              <!-- Edit button (shown when edit_remaining_mode=0) -->
-              <lv_button name="btn_remaining_edit"
-                         width="#icon_button_size" height="#icon_button_size" style_radius="#border_radius"
-                         style_bg_opa="0" style_border_width="0" style_shadow_width="0" clickable="true">
-                <bind_flag_if_eq subject="edit_remaining_mode" flag="hidden" ref_value="1"/>
-                <icon src="tune" size="sm" variant="primary" align="center"/>
-                <event_cb trigger="clicked" callback="ams_edit_remaining_edit_cb"/>
-              </lv_button>
-              <!-- Accept button (shown when edit_remaining_mode=1) -->
-              <lv_button name="btn_remaining_accept"
-                         width="#icon_button_size" height="#icon_button_size" style_radius="#border_radius"
-                         style_bg_opa="0" style_border_width="0" style_shadow_width="0" clickable="true" hidden="true">
-                <bind_flag_if_eq subject="edit_remaining_mode" flag="hidden" ref_value="0"/>
-                <icon src="check" size="sm" variant="success" align="center"/>
-                <event_cb trigger="clicked" callback="ams_edit_remaining_accept_cb"/>
-              </lv_button>
-              <!-- Cancel button (shown when edit_remaining_mode=1) -->
-              <lv_button name="btn_remaining_cancel"
-                         width="#icon_button_size" height="#icon_button_size" style_radius="#border_radius"
-                         style_bg_opa="0" style_border_width="0" style_shadow_width="0" clickable="true" hidden="true">
-                <bind_flag_if_eq subject="edit_remaining_mode" flag="hidden" ref_value="0"/>
-                <icon src="close" size="sm" variant="error" align="center"/>
-                <event_cb trigger="clicked" callback="ams_edit_remaining_cancel_cb"/>
-              </lv_button>
-            </lv_obj>
-          </lv_obj>
-          <!-- Progress bar (shown when edit_remaining_mode=0) -->
-          <lv_obj name="remaining_progress_container"
-                  width="100%" height="#slider_height" style_bg_color="#text_secondary" style_bg_opa="38"
-                  style_radius="#border_radius" style_border_width="0" style_pad_all="0" scrollable="false">
-            <bind_flag_if_eq subject="edit_remaining_mode" flag="hidden" ref_value="1"/>
-            <lv_obj name="remaining_progress_fill"
-                    height="100%" style_bg_color="#primary_color" style_bg_opa="255" style_radius="#border_radius"
-                    style_border_width="0" style_pad_all="0" scrollable="false"/>
-          </lv_obj>
-          <!-- Slider (shown when edit_remaining_mode=1) -->
-          <lv_slider name="remaining_slider"
-                     width="100%" height="#slider_height" style_radius="#border_radius" value="75" min="0" max="100"
-                     hidden="true">
-            <bind_flag_if_eq subject="edit_remaining_mode" flag="hidden" ref_value="0"/>
-            <event_cb trigger="value_changed" callback="ams_edit_remaining_changed_cb"/>
-          </lv_slider>
-        </lv_obj>
-        <!-- Sync to Spoolman button (hidden if not linked) -->
-        <lv_button name="btn_sync_spoolman"
-                   width="100%" height="#button_height_small" style_radius="#border_radius" style_bg_color="#card_bg"
-                   style_border_width="0" style_shadow_width="0" hidden="true" clickable="true">
-          <lv_obj width="100%"
-                  height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs"
-                  scrollable="false" clickable="false">
-            <icon src="refresh" size="sm" variant="secondary"/>
-            <text_body text="Sync to Spoolman" style_text_color="#text_secondary"/>
-          </lv_obj>
-          <event_cb trigger="clicked" callback="ams_edit_sync_spoolman_cb"/>
-        </lv_button>
+        <!-- Slider (shown when edit_remaining_mode=1) -->
+        <lv_slider name="remaining_slider"
+                   width="100%" height="#slider_height" style_radius="#border_radius" value="75" min="0" max="100"
+                   hidden="true">
+          <bind_flag_if_eq subject="edit_remaining_mode" flag="hidden" ref_value="0"/>
+          <event_cb trigger="value_changed" callback="ams_edit_remaining_changed_cb"/>
+        </lv_slider>
       </lv_obj>
-      <!-- Horizontal divider above buttons -->
-      <lv_obj width="100%"
-              height="1" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"
+      <!-- Sync to Spoolman button (hidden if not linked) -->
+      <lv_button name="btn_sync_spoolman"
+                 width="100%" height="#button_height_small" style_radius="#border_radius" style_bg_color="#card_bg"
+                 style_border_width="0" style_shadow_width="0" hidden="true" clickable="true">
+        <lv_obj width="100%"
+                height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs"
+                scrollable="false" clickable="false">
+          <icon src="refresh" size="sm" variant="secondary"/>
+          <text_body text="Sync to Spoolman" style_text_color="#text_secondary"/>
+        </lv_obj>
+        <event_cb trigger="clicked" callback="ams_edit_sync_spoolman_cb"/>
+      </lv_button>
+    </lv_obj>
+    <!-- Horizontal divider above buttons -->
+    <lv_obj width="100%"
+            height="1" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"
+            scrollable="false"/>
+    <!-- Action buttons row -->
+    <lv_obj width="100%"
+            height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+            scrollable="false">
+      <!-- Reset button -->
+      <lv_button name="btn_reset"
+                 height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_shadow_width="0"
+                 clickable="true">
+        <text_body text="Reset" align="center" style_text_color="#text_secondary"/>
+        <event_cb trigger="clicked" callback="ams_edit_reset_cb"/>
+      </lv_button>
+      <!-- Vertical divider -->
+      <lv_obj width="1"
+              height="100%" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"
               scrollable="false"/>
-      <!-- Action buttons row -->
-      <lv_obj width="100%"
-              height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-              scrollable="false">
-        <!-- Reset button -->
-        <lv_button name="btn_reset"
-                   height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0"
-                   style_shadow_width="0" clickable="true">
-          <text_body text="Reset" align="center" style_text_color="#text_secondary"/>
-          <event_cb trigger="clicked" callback="ams_edit_reset_cb"/>
-        </lv_button>
-        <!-- Vertical divider -->
-        <lv_obj width="1"
-                height="100%" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0"
-                style_pad_all="0" scrollable="false"/>
-        <!-- Save button -->
-        <lv_button name="btn_save"
-                   height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0"
-                   style_shadow_width="0" clickable="true">
-          <text_body text="Save" align="center" style_text_color="#text_primary"/>
-          <event_cb trigger="clicked" callback="ams_edit_save_cb"/>
-        </lv_button>
-      </lv_obj>
-    </ui_dialog>
+      <!-- Save button -->
+      <lv_button name="btn_save"
+                 height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_shadow_width="0"
+                 clickable="true">
+        <text_body text="Save" align="center" style_text_color="#text_primary"/>
+        <event_cb trigger="clicked" callback="ams_edit_save_cb"/>
+      </lv_button>
+    </lv_obj>
   </view>
 </component>

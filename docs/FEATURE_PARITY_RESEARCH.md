@@ -93,7 +93,7 @@ Make HelixScreen the **definitive** Klipper touchscreen UI by achieving feature 
 | Network Settings | `network_settings_overlay.xml` | IP configuration |
 | Display Settings | `display_settings_overlay.xml` | Brightness, rotation |
 | Print File Detail | `print_file_detail.xml` | File metadata, start print |
-| Numeric Keypad | `numeric_keypad_modal.xml` | Number input |
+| Numeric Keypad | `numeric_keypad_panel.xml` | Number input |
 | E-Stop Confirmation | `estop_confirmation_dialog.xml` | E-stop guard |
 
 ### First-Run Wizard (7 Steps)

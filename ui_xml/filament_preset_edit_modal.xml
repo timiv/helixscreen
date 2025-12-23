@@ -2,103 +2,97 @@
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- Modal for editing filament preset (name, nozzle temp, bed temp) -->
+<!-- NOTE: Backdrop created programmatically by Modal system -->
 <component>
   <consts>
     <px name="input_width" value="100"/>
   </consts>
-  <!-- Full-screen backdrop overlay -->
+  <!-- Dialog card (backdrop created programmatically) -->
   <view name="filament_preset_edit_modal"
-        extends="lv_obj" width="100%" height="100%" style_bg_color="0x000000" style_bg_opa="200" style_border_width="0"
-        style_radius="0" style_pad_all="0" align="center" clickable="true">
-    <!-- Dialog card -->
-    <ui_dialog name="dialog_card"
-               width="280" height="content" align="center" flex_flow="column" style_flex_main_place="start"
-               style_pad_gap="0">
-      <!-- Header with title and close button -->
+        extends="ui_dialog" width="280" height="content" align="center" flex_flow="column" style_flex_main_place="start"
+        style_pad_gap="0">
+    <!-- Header with title and close button -->
+    <lv_obj width="100%"
+            height="content" style_bg_opa="0" style_border_width="0" style_pad_left="#space_lg"
+            style_pad_right="#space_md" style_pad_top="#space_lg" style_pad_bottom="#space_sm" flex_flow="row"
+            style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
+      <text_heading name="modal_title" text="Edit Preset"/>
+      <!-- Close button -->
+      <lv_button name="btn_close"
+                 width="40" height="40" style_radius="#border_radius" style_bg_opa="0" style_border_width="0"
+                 style_shadow_width="0">
+        <event_cb trigger="clicked" callback="filament_preset_edit_close_cb"/>
+        <icon src="close" size="sm" variant="secondary" align="center"/>
+      </lv_button>
+    </lv_obj>
+    <!-- Horizontal divider -->
+    <lv_obj width="100%"
+            height="1" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"
+            scrollable="false"/>
+    <!-- Content area -->
+    <lv_obj width="100%"
+            height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_md" flex_flow="column"
+            style_pad_gap="#space_md" scrollable="false">
+      <!-- Name field -->
       <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_left="#space_lg"
-              style_pad_right="#space_md" style_pad_top="#space_lg" style_pad_bottom="#space_sm" flex_flow="row"
-              style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
-        <text_heading name="modal_title" text="Edit Preset"/>
-        <!-- Close button -->
-        <lv_button name="btn_close"
-                   width="40" height="40" style_radius="#border_radius" style_bg_opa="0" style_border_width="0"
-                   style_shadow_width="0">
-          <event_cb trigger="clicked" callback="filament_preset_edit_close_cb"/>
-          <icon src="close" size="sm" variant="secondary" align="center"/>
-        </lv_button>
+              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+              style_pad_gap="#space_xs" scrollable="false">
+        <text_small text="Name" style_text_color="#text_secondary"/>
+        <lv_textarea name="name_input"
+                     width="100%" height="40" style_radius="#border_radius" style_bg_color="#card_bg"
+                     style_border_width="1" style_border_color="#text_secondary" one_line="true" placeholder="PLA"
+                     max_length="16"/>
       </lv_obj>
-      <!-- Horizontal divider -->
+      <!-- Temperature row -->
       <lv_obj width="100%"
-              height="1" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"
-              scrollable="false"/>
-      <!-- Content area -->
-      <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_md" flex_flow="column"
-              style_pad_gap="#space_md" scrollable="false">
-        <!-- Name field -->
-        <lv_obj width="100%"
+              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+              style_flex_main_place="space_between" style_pad_gap="#space_md" scrollable="false">
+        <!-- Nozzle temp -->
+        <lv_obj width="content"
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
                 style_pad_gap="#space_xs" scrollable="false">
-          <text_small text="Name" style_text_color="#text_secondary"/>
-          <lv_textarea name="name_input"
-                       width="100%" height="40" style_radius="#border_radius" style_bg_color="#card_bg"
-                       style_border_width="1" style_border_color="#text_secondary" one_line="true" placeholder="PLA"
-                       max_length="16"/>
+          <text_small text="Nozzle °C" style_text_color="#text_secondary"/>
+          <lv_spinbox name="nozzle_spinbox"
+                      width="#input_width" height="40" style_radius="#border_radius" style_bg_color="#card_bg"
+                      style_border_width="1" style_border_color="#text_secondary" value="210" min="150" max="300"
+                      step="5" digit_count="3"/>
         </lv_obj>
-        <!-- Temperature row -->
-        <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_flex_main_place="space_between" style_pad_gap="#space_md" scrollable="false">
-          <!-- Nozzle temp -->
-          <lv_obj width="content"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                  style_pad_gap="#space_xs" scrollable="false">
-            <text_small text="Nozzle °C" style_text_color="#text_secondary"/>
-            <lv_spinbox name="nozzle_spinbox"
-                        width="#input_width" height="40" style_radius="#border_radius" style_bg_color="#card_bg"
-                        style_border_width="1" style_border_color="#text_secondary" value="210" min="150" max="300"
-                        step="5" digit_count="3"/>
-          </lv_obj>
-          <!-- Bed temp -->
-          <lv_obj width="content"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                  style_pad_gap="#space_xs" scrollable="false">
-            <text_small text="Bed °C" style_text_color="#text_secondary"/>
-            <lv_spinbox name="bed_spinbox"
-                        width="#input_width" height="40" style_radius="#border_radius" style_bg_color="#card_bg"
-                        style_border_width="1" style_border_color="#text_secondary" value="60" min="0" max="120"
-                        step="5" digit_count="3"/>
-          </lv_obj>
+        <!-- Bed temp -->
+        <lv_obj width="content"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                style_pad_gap="#space_xs" scrollable="false">
+          <text_small text="Bed °C" style_text_color="#text_secondary"/>
+          <lv_spinbox name="bed_spinbox"
+                      width="#input_width" height="40" style_radius="#border_radius" style_bg_color="#card_bg"
+                      style_border_width="1" style_border_color="#text_secondary" value="60" min="0" max="120" step="5"
+                      digit_count="3"/>
         </lv_obj>
       </lv_obj>
-      <!-- Horizontal divider above buttons -->
-      <lv_obj width="100%"
-              height="1" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"
+    </lv_obj>
+    <!-- Horizontal divider above buttons -->
+    <lv_obj width="100%"
+            height="1" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"
+            scrollable="false"/>
+    <!-- Action buttons row -->
+    <lv_obj width="100%"
+            height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+            scrollable="false">
+      <!-- Cancel button -->
+      <lv_button name="btn_cancel"
+                 height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_shadow_width="0">
+        <event_cb trigger="clicked" callback="filament_preset_edit_close_cb"/>
+        <text_body text="Cancel" align="center" style_text_color="#text_secondary"/>
+      </lv_button>
+      <!-- Vertical divider -->
+      <lv_obj width="1"
+              height="100%" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"
               scrollable="false"/>
-      <!-- Action buttons row -->
-      <lv_obj width="100%"
-              height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-              scrollable="false">
-        <!-- Cancel button -->
-        <lv_button name="btn_cancel"
-                   height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0"
-                   style_shadow_width="0">
-          <event_cb trigger="clicked" callback="filament_preset_edit_close_cb"/>
-          <text_body text="Cancel" align="center" style_text_color="#text_secondary"/>
-        </lv_button>
-        <!-- Vertical divider -->
-        <lv_obj width="1"
-                height="100%" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0"
-                style_pad_all="0" scrollable="false"/>
-        <!-- Save button -->
-        <lv_button name="btn_save"
-                   height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0"
-                   style_shadow_width="0">
-          <event_cb trigger="clicked" callback="filament_preset_edit_save_cb"/>
-          <text_body text="Save" align="center" style_text_color="#text_primary"/>
-        </lv_button>
-      </lv_obj>
-    </ui_dialog>
+      <!-- Save button -->
+      <lv_button name="btn_save"
+                 height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_shadow_width="0">
+        <event_cb trigger="clicked" callback="filament_preset_edit_save_cb"/>
+        <text_body text="Save" align="center" style_text_color="#text_primary"/>
+      </lv_button>
+    </lv_obj>
   </view>
 </component>

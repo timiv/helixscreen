@@ -165,9 +165,10 @@ void register_xml_components() {
 
     // Modal dialogs
     lv_xml_register_component_from_file("A:ui_xml/modal_dialog.xml");
-    lv_xml_register_component_from_file("A:ui_xml/numeric_keypad_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/numeric_keypad_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/runout_guidance_modal.xml");
     lv_xml_register_component_from_file("A:ui_xml/plugin_install_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/macro_enhance_modal.xml");
 
     // Print file components
     lv_xml_register_component_from_file("A:ui_xml/print_file_card.xml");

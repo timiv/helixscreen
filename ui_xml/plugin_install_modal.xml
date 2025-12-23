@@ -1,144 +1,138 @@
 <?xml version="1.0"?>
 <!-- Copyright 2025 HelixScreen -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- NOTE: Backdrop created programmatically by Modal system -->
 <component>
-  <!-- Full-screen backdrop overlay -->
-  <view name="plugin_install_modal_root"
-        extends="lv_obj" width="100%" height="100%" style_bg_opa="200" style_border_width="0" style_radius="0"
-        style_pad_all="0" align="center" clickable="true">
-    <!-- Dialog card -->
-    <ui_dialog name="dialog_card"
-               width="85%" height="content" align="center" flex_flow="column" style_flex_main_place="start"
-               style_pad_gap="0">
-      <!-- ============================================================ -->
-      <!-- Content area -->
-      <!-- ============================================================ -->
-      <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_left="#space_lg"
-              style_pad_right="#space_lg" style_pad_top="#space_lg" style_pad_bottom="#space_lg" flex_flow="column"
-              style_flex_cross_place="center" style_pad_gap="#space_md">
-        <!-- Icon -->
-        <icon src="puzzle_outline" size="lg" color="#accent_color"/>
-        <!-- Title -->
-        <text_heading name="modal_title" width="100%" text="Optimize Your Printing" style_text_align="center"/>
-        <!-- Description (LOCAL mode - auto-install available) -->
-        <lv_obj name="local_description"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                flex_flow="column" style_pad_gap="#space_sm">
-          <text_body width="100%"
-                     text="The HelixPrint plugin enables fast G-code modifications directly on your printer—like skipping bed leveling for quick reprints."
-                     long_mode="wrap" style_text_align="center" style_text_color="#text_secondary"/>
-          <text_small width="100%"
-                      text="Installation takes about 30 seconds." long_mode="wrap" style_text_align="center"
-                      style_text_color="#text_secondary"/>
-        </lv_obj>
-        <!-- Description (REMOTE mode - manual install required) -->
-        <lv_obj name="remote_description"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                flex_flow="column" style_pad_gap="#space_sm" hidden="true">
-          <text_body width="100%"
-                     text="Install the HelixPrint plugin to enable fast G-code modifications. Run this command via SSH on your printer:"
-                     long_mode="wrap" style_text_align="center" style_text_color="#text_secondary"/>
-          <!-- Command textarea (read-only, displays curl command) -->
-          <lv_textarea name="command_textarea"
-                       width="100%" height="content" text="" max_length="256" one_line="false" clickable="false"
-                       scrollable="false" style_border_width="#input_border_width" style_pad_all="#space_sm"
-                       style_text_font="#font_small" style_margin_top="#space_sm" style_min_height="56"/>
-          <!-- Copy feedback -->
-          <text_small name="copy_feedback"
-                      width="100%" text="" style_text_align="center" style_text_color="#success_color" hidden="true"/>
-        </lv_obj>
-        <!-- Installing state (spinner) -->
-        <lv_obj name="installing_container"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_lg"
-                flex_flow="column" style_flex_cross_place="center" style_pad_gap="#space_md" hidden="true">
-          <spinner size="lg"/>
-          <text_heading text="Installing..." style_text_align="center"/>
-          <text_small text="This may take up to 30 seconds" style_text_color="#text_secondary"/>
-        </lv_obj>
-        <!-- Result state (success/failure) -->
-        <lv_obj name="result_container"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_md"
-                flex_flow="column" style_flex_cross_place="center" style_pad_gap="#space_sm" hidden="true">
-          <icon name="result_icon" src="check_circle" size="lg" color="#success_color"/>
-          <text_heading name="result_title" width="100%" text="Success!" style_text_align="center"/>
-          <text_body name="result_message"
-                     width="100%" text="Plugin installed successfully." long_mode="wrap" style_text_align="center"
-                     style_text_color="#text_secondary"/>
-        </lv_obj>
-        <!-- Don't ask again checkbox -->
-        <lv_obj name="checkbox_container"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_top="#space_md"
-                style_pad_bottom="0" flex_flow="row" style_flex_main_place="center">
-          <lv_checkbox name="dont_ask_checkbox" text="Don't ask again" style_pad_all="#space_xs"/>
-        </lv_obj>
+  <!-- Dialog card (backdrop created programmatically) -->
+  <view name="plugin_install_modal"
+        extends="ui_dialog" width="85%" height="content" align="center" flex_flow="column" style_flex_main_place="start"
+        style_pad_gap="0">
+    <!-- ============================================================ -->
+    <!-- Content area -->
+    <!-- ============================================================ -->
+    <lv_obj width="100%"
+            height="content" style_bg_opa="0" style_border_width="0" style_pad_left="#space_lg"
+            style_pad_right="#space_lg" style_pad_top="#space_lg" style_pad_bottom="#space_lg" flex_flow="column"
+            style_flex_cross_place="center" style_pad_gap="#space_md">
+      <!-- Icon -->
+      <icon src="puzzle_outline" size="lg" color="#accent_color"/>
+      <!-- Title -->
+      <text_heading name="modal_title" width="100%" text="Optimize Your Printing" style_text_align="center"/>
+      <!-- Description (LOCAL mode - auto-install available) -->
+      <lv_obj name="local_description"
+              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+              style_pad_gap="#space_sm">
+        <text_body width="100%"
+                   text="The HelixPrint plugin enables fast G-code modifications directly on your printer—like skipping bed leveling for quick reprints."
+                   long_mode="wrap" style_text_align="center" style_text_color="#text_secondary"/>
+        <text_small width="100%"
+                    text="Installation takes about 30 seconds." long_mode="wrap" style_text_align="center"
+                    style_text_color="#text_secondary"/>
       </lv_obj>
-      <!-- Horizontal divider above buttons -->
-      <lv_obj width="100%"
-              height="1" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"/>
-      <!-- ============================================================ -->
-      <!-- Button row (LOCAL mode: Not Now / Install) -->
-      <!-- ============================================================ -->
-      <lv_obj name="local_button_row"
-              width="100%" height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-              style_pad_gap="0" flex_flow="row">
-        <!-- Not Now button -->
-        <lv_button name="btn_cancel"
-                   height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
-                   clickable="true">
-          <event_cb trigger="clicked" callback="on_modal_cancel_clicked"/>
-          <text_body text="Not Now" align="center"/>
-        </lv_button>
-        <!-- Vertical divider -->
-        <lv_obj width="1"
-                height="100%" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0"
-                style_pad_all="0"/>
-        <!-- Install button -->
-        <lv_button name="btn_install"
-                   height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
-                   style_bg_color="#accent_color" clickable="true">
-          <event_cb trigger="clicked" callback="on_plugin_install_clicked"/>
-          <text_body text="Install Plugin" align="center" style_text_color="#text_primary"/>
-        </lv_button>
+      <!-- Description (REMOTE mode - manual install required) -->
+      <lv_obj name="remote_description"
+              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+              style_pad_gap="#space_sm" hidden="true">
+        <text_body width="100%"
+                   text="Install the HelixPrint plugin to enable fast G-code modifications. Run this command via SSH on your printer:"
+                   long_mode="wrap" style_text_align="center" style_text_color="#text_secondary"/>
+        <!-- Command textarea (read-only, displays curl command) -->
+        <lv_textarea name="command_textarea"
+                     width="100%" height="content" text="" max_length="256" one_line="false" clickable="false"
+                     scrollable="false" style_border_width="#input_border_width" style_pad_all="#space_sm"
+                     style_text_font="#font_small" style_margin_top="#space_sm" style_min_height="56"/>
+        <!-- Copy feedback -->
+        <text_small name="copy_feedback"
+                    width="100%" text="" style_text_align="center" style_text_color="#success_color" hidden="true"/>
       </lv_obj>
-      <!-- ============================================================ -->
-      <!-- Button row (REMOTE mode: Done / Copy Command) -->
-      <!-- ============================================================ -->
-      <lv_obj name="remote_button_row"
-              width="100%" height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-              style_pad_gap="0" flex_flow="row" hidden="true">
-        <!-- Done button -->
-        <lv_button name="btn_done"
-                   height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
-                   clickable="true">
-          <event_cb trigger="clicked" callback="on_modal_cancel_clicked"/>
-          <text_body text="Done" align="center"/>
-        </lv_button>
-        <!-- Vertical divider -->
-        <lv_obj width="1"
-                height="100%" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0"
-                style_pad_all="0"/>
-        <!-- Copy Command button -->
-        <lv_button name="btn_copy"
-                   height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
-                   style_bg_color="#accent_color" clickable="true">
-          <event_cb trigger="clicked" callback="on_plugin_copy_clicked"/>
-          <text_body text="Copy Command" align="center" style_text_color="#text_primary"/>
-        </lv_button>
+      <!-- Installing state (spinner) -->
+      <lv_obj name="installing_container"
+              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_lg"
+              flex_flow="column" style_flex_cross_place="center" style_pad_gap="#space_md" hidden="true">
+        <spinner size="lg"/>
+        <text_heading text="Installing..." style_text_align="center"/>
+        <text_small text="This may take up to 30 seconds" style_text_color="#text_secondary"/>
       </lv_obj>
-      <!-- ============================================================ -->
-      <!-- Button row (RESULT mode: single OK button) -->
-      <!-- ============================================================ -->
-      <lv_obj name="result_button_row"
-              width="100%" height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-              style_pad_gap="0" flex_flow="row" hidden="true">
-        <lv_button name="btn_ok"
-                   height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
-                   clickable="true">
-          <event_cb trigger="clicked" callback="on_modal_ok_clicked"/>
-          <text_body text="OK" align="center"/>
-        </lv_button>
+      <!-- Result state (success/failure) -->
+      <lv_obj name="result_container"
+              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_md"
+              flex_flow="column" style_flex_cross_place="center" style_pad_gap="#space_sm" hidden="true">
+        <icon name="result_icon" src="check_circle" size="lg" color="#success_color"/>
+        <text_heading name="result_title" width="100%" text="Success!" style_text_align="center"/>
+        <text_body name="result_message"
+                   width="100%" text="Plugin installed successfully." long_mode="wrap" style_text_align="center"
+                   style_text_color="#text_secondary"/>
       </lv_obj>
-    </ui_dialog>
+      <!-- Don't ask again checkbox -->
+      <lv_obj name="checkbox_container"
+              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_top="#space_md"
+              style_pad_bottom="0" flex_flow="row" style_flex_main_place="center">
+        <lv_checkbox name="dont_ask_checkbox" text="Don't ask again" style_pad_all="#space_xs"/>
+      </lv_obj>
+    </lv_obj>
+    <!-- Horizontal divider above buttons -->
+    <lv_obj width="100%"
+            height="1" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"/>
+    <!-- ============================================================ -->
+    <!-- Button row (LOCAL mode: Not Now / Install) -->
+    <!-- ============================================================ -->
+    <lv_obj name="local_button_row"
+            width="100%" height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+            style_pad_gap="0" flex_flow="row">
+      <!-- Not Now button -->
+      <lv_button name="btn_cancel"
+                 height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
+                 clickable="true">
+        <event_cb trigger="clicked" callback="on_modal_cancel_clicked"/>
+        <text_body text="Not Now" align="center"/>
+      </lv_button>
+      <!-- Vertical divider -->
+      <lv_obj width="1"
+              height="100%" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"/>
+      <!-- Install button -->
+      <lv_button name="btn_install"
+                 height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
+                 style_bg_color="#accent_color" clickable="true">
+        <event_cb trigger="clicked" callback="on_plugin_install_clicked"/>
+        <text_body text="Install Plugin" align="center" style_text_color="#text_primary"/>
+      </lv_button>
+    </lv_obj>
+    <!-- ============================================================ -->
+    <!-- Button row (REMOTE mode: Done / Copy Command) -->
+    <!-- ============================================================ -->
+    <lv_obj name="remote_button_row"
+            width="100%" height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+            style_pad_gap="0" flex_flow="row" hidden="true">
+      <!-- Done button -->
+      <lv_button name="btn_done"
+                 height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
+                 clickable="true">
+        <event_cb trigger="clicked" callback="on_modal_cancel_clicked"/>
+        <text_body text="Done" align="center"/>
+      </lv_button>
+      <!-- Vertical divider -->
+      <lv_obj width="1"
+              height="100%" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0" style_pad_all="0"/>
+      <!-- Copy Command button -->
+      <lv_button name="btn_copy"
+                 height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
+                 style_bg_color="#accent_color" clickable="true">
+        <event_cb trigger="clicked" callback="on_plugin_copy_clicked"/>
+        <text_body text="Copy Command" align="center" style_text_color="#text_primary"/>
+      </lv_button>
+    </lv_obj>
+    <!-- ============================================================ -->
+    <!-- Button row (RESULT mode: single OK button) -->
+    <!-- ============================================================ -->
+    <lv_obj name="result_button_row"
+            width="100%" height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+            style_pad_gap="0" flex_flow="row" hidden="true">
+      <lv_button name="btn_ok"
+                 height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
+                 clickable="true">
+        <event_cb trigger="clicked" callback="on_modal_ok_clicked"/>
+        <text_body text="OK" align="center"/>
+      </lv_button>
+    </lv_obj>
   </view>
 </component>
