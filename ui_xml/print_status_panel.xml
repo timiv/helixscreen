@@ -147,20 +147,26 @@
           <temp_display name="bed_temp_display"
                         size="lg" show_target="true" bind_current="bed_temp" bind_target="bed_target"/>
         </ui_card>
-        <!-- Filament Sensor Status (hidden if no sensors) -->
-        <lv_obj name="filament_status_row"
+        <!-- Filament & AMS Status Row (side-by-side) -->
+        <lv_obj name="filament_ams_status_row"
                 width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
-                style_pad_top="#space_xs" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
-          <lv_obj-bind_flag_if_eq subject="filament_sensor_count" flag="hidden" ref_value="0"/>
-          <text_small text="Filament" style_text_color="#text_secondary"/>
-          <filament_sensor_indicator/>
-        </lv_obj>
-        <!-- AMS Current Tool Status (hidden if no AMS or no tool active) -->
-        <lv_obj name="ams_status_row"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
-                style_pad_top="#space_xs" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
-          <text_small text="Active" style_text_color="#text_secondary"/>
-          <ams_current_tool name="ams_current_tool_indicator"/>
+                style_pad_right="#space_md" style_pad_top="#space_xs" flex_flow="row"
+                style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
+          <!-- Filament Sensor Status (hidden if no sensors) -->
+          <lv_obj name="filament_status_row"
+                  width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                  flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
+            <lv_obj-bind_flag_if_eq subject="filament_sensor_count" flag="hidden" ref_value="0"/>
+            <text_small text="Filament" style_text_color="#text_secondary"/>
+            <filament_sensor_indicator/>
+          </lv_obj>
+          <!-- AMS Current Tool Status (hidden if no AMS or no tool active) -->
+          <lv_obj name="ams_status_row"
+                  width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                  flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
+            <text_small text="Active" style_text_color="#text_secondary"/>
+            <ams_current_tool name="ams_current_tool_indicator"/>
+          </lv_obj>
         </lv_obj>
         <!-- Control Buttons (stacked below status, no spacer to avoid clipping) -->
         <lv_obj name="button_grid"
