@@ -37,7 +37,7 @@ class SettingsPanel : public PanelBase {
      */
     SettingsPanel(PrinterState& printer_state, MoonrakerAPI* api);
 
-    ~SettingsPanel() override = default;
+    ~SettingsPanel() override;
 
     //
     // === PanelBase Implementation ===
@@ -101,6 +101,10 @@ class SettingsPanel : public PanelBase {
     lv_obj_t* printer_value_ = nullptr;
     lv_obj_t* klipper_value_ = nullptr;
     lv_obj_t* moonraker_value_ = nullptr;
+
+    // Observers for reactive bindings (must be removed before labels are destroyed)
+    lv_observer_t* klipper_version_observer_ = nullptr;
+    lv_observer_t* moonraker_version_observer_ = nullptr;
 
     //
     // === Reactive Subjects ===

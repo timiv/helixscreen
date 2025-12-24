@@ -42,20 +42,20 @@ static void show_rich_completion_modal(PrintJobState state, const char* filename
     int total_layers = lv_subject_get_int(printer_state.get_print_layer_total_subject());
 
     // Determine icon colors and title based on state
-    const char* icon_color = "#success_color";
+    const char* icon_color_token = "success_color";
     const char* title = "Print Complete";
 
     switch (state) {
     case PrintJobState::COMPLETE:
-        icon_color = "#success_color";
+        icon_color_token = "success_color";
         title = "Print Complete";
         break;
     case PrintJobState::CANCELLED:
-        icon_color = "#warning_color";
+        icon_color_token = "warning_color";
         title = "Print Cancelled";
         break;
     case PrintJobState::ERROR:
-        icon_color = "#error_color";
+        icon_color_token = "error_color";
         title = "Print Failed";
         break;
     default:
@@ -79,7 +79,7 @@ static void show_rich_completion_modal(PrintJobState state, const char* filename
         if (icon_label) {
             // Icon component stores the icon name, we need to update via the icon API
             // For now, just update the color - the icon is set in XML
-            lv_color_t color = ui_theme_parse_color(icon_color);
+            lv_color_t color = ui_theme_get_color(icon_color_token);
             lv_obj_set_style_text_color(icon_label, color, LV_PART_MAIN);
         }
     }

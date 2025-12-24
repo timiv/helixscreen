@@ -43,6 +43,21 @@ SettingsPanel::SettingsPanel(PrinterState& printer_state, MoonrakerAPI* api)
     spdlog::trace("[{}] Constructor", get_name());
 }
 
+SettingsPanel::~SettingsPanel() {
+    // Remove observers BEFORE labels are destroyed to prevent use-after-free
+    // The subjects (in PrinterState) outlive this panel, so observers must be
+    // explicitly removed or LVGL will try to update destroyed labels
+    if (klipper_version_observer_) {
+        lv_observer_remove(klipper_version_observer_);
+        klipper_version_observer_ = nullptr;
+    }
+    if (moonraker_version_observer_) {
+        lv_observer_remove(moonraker_version_observer_);
+        moonraker_version_observer_ = nullptr;
+    }
+    spdlog::trace("[{}] Destructor - observers cleaned up", get_name());
+}
+
 // ============================================================================
 // PANELBASE IMPLEMENTATION
 // ============================================================================
@@ -374,7 +389,9 @@ void SettingsPanel::populate_info_rows() {
         klipper_value_ = lv_obj_find_by_name(klipper_row, "value");
         if (klipper_value_) {
             // Bind to reactive subject - updates automatically after discovery
-            lv_label_bind_text(klipper_value_, printer_state_.get_klipper_version_subject(), "%s");
+            // Track observer for cleanup in destructor
+            klipper_version_observer_ = lv_label_bind_text(
+                klipper_value_, printer_state_.get_klipper_version_subject(), "%s");
             spdlog::debug("[{}]   ✓ Klipper version bound to subject", get_name());
         }
     }
@@ -385,8 +402,9 @@ void SettingsPanel::populate_info_rows() {
         moonraker_value_ = lv_obj_find_by_name(moonraker_row, "value");
         if (moonraker_value_) {
             // Bind to reactive subject - updates automatically after discovery
-            lv_label_bind_text(moonraker_value_, printer_state_.get_moonraker_version_subject(),
-                               "%s");
+            // Track observer for cleanup in destructor
+            moonraker_version_observer_ = lv_label_bind_text(
+                moonraker_value_, printer_state_.get_moonraker_version_subject(), "%s");
             spdlog::debug("[{}]   ✓ Moonraker version bound to subject", get_name());
         }
     }
@@ -709,6 +727,11 @@ void SettingsPanel::populate_sensor_list() {
         // Store klipper_name as user data for callbacks
         // Note: We need to allocate this because sensor goes out of scope
         char* klipper_name = static_cast<char*>(lv_malloc(sensor.klipper_name.size() + 1));
+        if (!klipper_name) {
+            spdlog::error("[{}] Failed to allocate memory for sensor name: {}", get_name(),
+                          sensor.klipper_name);
+            continue;
+        }
         strcpy(klipper_name, sensor.klipper_name.c_str());
         lv_obj_set_user_data(row, klipper_name);
 

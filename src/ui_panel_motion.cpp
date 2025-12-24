@@ -22,9 +22,6 @@
 #include <cstring>
 #include <memory>
 
-// Distance values in mm (indexed by jog_distance_t)
-static const float distance_values[] = {0.1f, 1.0f, 10.0f, 100.0f};
-
 // Forward declarations for XML event callbacks
 static void on_motion_z_up_10(lv_event_t* e);
 static void on_motion_z_up_1(lv_event_t* e);
@@ -84,29 +81,11 @@ void MotionPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Use standard overlay panel setup (wires header, back button, handles responsive padding)
     ui_overlay_panel_setup_standard(panel_, parent_screen_, "overlay_header", "overlay_content");
 
-    // Setup all button groups
-    setup_distance_buttons();
+    // Setup jog pad and Z-axis controls
     setup_jog_pad();
     setup_z_buttons();
-    setup_home_buttons();
 
     spdlog::debug("[{}] Setup complete!", get_name());
-}
-
-void MotionPanel::setup_distance_buttons() {
-    const char* dist_names[] = {"dist_0_1", "dist_1", "dist_10", "dist_100"};
-
-    for (int i = 0; i < 4; i++) {
-        dist_buttons_[i] = lv_obj_find_by_name(panel_, dist_names[i]);
-        if (dist_buttons_[i]) {
-            // Pass 'this' as user_data for trampoline
-            lv_obj_add_event_cb(dist_buttons_[i], on_distance_button_clicked, LV_EVENT_CLICKED,
-                                this);
-        }
-    }
-
-    update_distance_buttons();
-    spdlog::debug("[{}] Distance selector (4 buttons)", get_name());
 }
 
 void MotionPanel::setup_jog_pad() {
@@ -171,23 +150,6 @@ void MotionPanel::setup_z_buttons() {
     spdlog::debug("[{}] Z-axis controls (declarative XML event_cb)", get_name());
 }
 
-void MotionPanel::setup_home_buttons() {
-    lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
-    if (!overlay_content)
-        return;
-
-    const char* home_names[] = {"home_all", "home_x", "home_y", "home_z"};
-
-    for (const char* name : home_names) {
-        lv_obj_t* btn = lv_obj_find_by_name(overlay_content, name);
-        if (btn) {
-            lv_obj_add_event_cb(btn, on_home_button_clicked, LV_EVENT_CLICKED, this);
-        }
-    }
-
-    spdlog::debug("[{}] Home buttons (4 buttons)", get_name());
-}
-
 void MotionPanel::register_position_observers() {
     // Subscribe to PrinterState position updates so UI reflects real printer position
     // Using ObserverGuard for RAII - observers automatically removed on destruction
@@ -207,25 +169,6 @@ void MotionPanel::register_position_observers() {
 
     spdlog::debug("[{}] Position + kinematics observers registered (RAII ObserverGuard)",
                   get_name());
-}
-
-void MotionPanel::update_distance_buttons() {
-    for (int i = 0; i < 4; i++) {
-        if (dist_buttons_[i]) {
-            if (i == current_distance_) {
-                // Active state - theme handles colors
-                lv_obj_add_state(dist_buttons_[i], LV_STATE_CHECKED);
-            } else {
-                // Inactive state - theme handles colors
-                lv_obj_remove_state(dist_buttons_[i], LV_STATE_CHECKED);
-            }
-        }
-    }
-
-    // Update jog pad widget distance if it exists
-    if (jog_pad_) {
-        ui_jog_pad_set_distance(jog_pad_, current_distance_);
-    }
 }
 
 void MotionPanel::on_position_x_changed(lv_observer_t* observer, lv_subject_t* subject) {
@@ -279,18 +222,6 @@ void MotionPanel::update_z_axis_label(bool bed_moves) {
     spdlog::debug("[{}] Z-axis label updated: {} (bed_moves={})", get_name(), label, bed_moves);
 }
 
-void MotionPanel::handle_distance_button(lv_obj_t* btn) {
-    // Find which button was clicked
-    for (int i = 0; i < 4; i++) {
-        if (btn == dist_buttons_[i]) {
-            current_distance_ = (jog_distance_t)i;
-            spdlog::debug("[{}] Distance selected: {:.1f}mm", get_name(), distance_values[i]);
-            update_distance_buttons();
-            return;
-        }
-    }
-}
-
 void MotionPanel::handle_z_button(const char* name) {
     spdlog::debug("[{}] Z button callback fired! Button name: '{}'", get_name(),
                   name ? name : "(null)");
@@ -338,21 +269,6 @@ void MotionPanel::handle_z_button(const char* name) {
     }
 }
 
-void MotionPanel::handle_home_button(const char* name) {
-    if (!name)
-        return;
-
-    if (strcmp(name, "home_all") == 0) {
-        home('A');
-    } else if (strcmp(name, "home_x") == 0) {
-        home('X');
-    } else if (strcmp(name, "home_y") == 0) {
-        home('Y');
-    } else if (strcmp(name, "home_z") == 0) {
-        home('Z');
-    }
-}
-
 void MotionPanel::jog_pad_jog_cb(jog_direction_t direction, float distance_mm, void* user_data) {
     auto* self = static_cast<MotionPanel*>(user_data);
     if (self) {
@@ -365,27 +281,6 @@ void MotionPanel::jog_pad_home_cb(void* user_data) {
     if (self) {
         self->home('A'); // Home XY
     }
-}
-
-void MotionPanel::on_distance_button_clicked(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[MotionPanel] on_distance_button_clicked");
-    auto* self = static_cast<MotionPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        lv_obj_t* btn = static_cast<lv_obj_t*>(lv_event_get_target(e));
-        self->handle_distance_button(btn);
-    }
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void MotionPanel::on_home_button_clicked(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[MotionPanel] on_home_button_clicked");
-    auto* self = static_cast<MotionPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        lv_obj_t* btn = static_cast<lv_obj_t*>(lv_event_get_target(e));
-        const char* name = lv_obj_get_name(btn);
-        self->handle_home_button(name);
-    }
-    LVGL_SAFE_EVENT_CB_END();
 }
 
 void MotionPanel::set_position(float x, float y, float z) {
@@ -404,13 +299,6 @@ void MotionPanel::set_position(float x, float y, float z) {
     lv_subject_copy_string(&pos_x_subject_, pos_x_buf_);
     lv_subject_copy_string(&pos_y_subject_, pos_y_buf_);
     lv_subject_copy_string(&pos_z_subject_, pos_z_buf_);
-}
-
-void MotionPanel::set_distance(jog_distance_t dist) {
-    if (dist >= 0 && dist <= 3) {
-        current_distance_ = dist;
-        update_distance_buttons();
-    }
 }
 
 void MotionPanel::jog(jog_direction_t direction, float distance_mm) {

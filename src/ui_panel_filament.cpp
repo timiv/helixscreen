@@ -56,6 +56,23 @@ FilamentPanel::FilamentPanel(PrinterState& printer_state, MoonrakerAPI* api)
     lv_xml_register_event_cb(nullptr, "on_filament_load", on_load_clicked);
     lv_xml_register_event_cb(nullptr, "on_filament_unload", on_unload_clicked);
     lv_xml_register_event_cb(nullptr, "on_filament_purge", on_purge_clicked);
+
+    // Material preset buttons
+    lv_xml_register_event_cb(nullptr, "on_filament_preset_pla", on_preset_pla_clicked);
+    lv_xml_register_event_cb(nullptr, "on_filament_preset_petg", on_preset_petg_clicked);
+    lv_xml_register_event_cb(nullptr, "on_filament_preset_abs", on_preset_abs_clicked);
+    lv_xml_register_event_cb(nullptr, "on_filament_preset_tpu", on_preset_tpu_clicked);
+
+    // Temperature tap targets
+    lv_xml_register_event_cb(nullptr, "on_filament_nozzle_temp_tap", on_nozzle_temp_tap_clicked);
+    lv_xml_register_event_cb(nullptr, "on_filament_bed_temp_tap", on_bed_temp_tap_clicked);
+    lv_xml_register_event_cb(nullptr, "on_filament_nozzle_target_tap", on_nozzle_target_tap_clicked);
+    lv_xml_register_event_cb(nullptr, "on_filament_bed_target_tap", on_bed_target_tap_clicked);
+
+    // Purge amount buttons
+    lv_xml_register_event_cb(nullptr, "on_filament_purge_5mm", on_purge_5mm_clicked);
+    lv_xml_register_event_cb(nullptr, "on_filament_purge_10mm", on_purge_10mm_clicked);
+    lv_xml_register_event_cb(nullptr, "on_filament_purge_25mm", on_purge_25mm_clicked);
 }
 
 FilamentPanel::~FilamentPanel() {
@@ -129,59 +146,23 @@ void FilamentPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         return;
     }
 
-    spdlog::debug("[{}] Setting up event handlers...", get_name());
+    spdlog::debug("[{}] Setting up (events handled declaratively via XML)", get_name());
 
-    // Find and setup preset buttons (PLA, PETG, ABS, TPU)
+    // Find preset buttons (for visual state updates)
     const char* preset_names[] = {"preset_pla", "preset_petg", "preset_abs", "preset_tpu"};
     for (int i = 0; i < 4; i++) {
         preset_buttons_[i] = lv_obj_find_by_name(panel_, preset_names[i]);
-        if (preset_buttons_[i]) {
-            lv_obj_add_event_cb(preset_buttons_[i], on_preset_button_clicked, LV_EVENT_CLICKED,
-                                this);
-        }
-    }
-    spdlog::debug("[{}] Preset buttons configured (4)", get_name());
-
-    // Find and setup tappable temperature displays for custom input (right side)
-    lv_obj_t* nozzle_temp_tap = lv_obj_find_by_name(panel_, "nozzle_temp_tap");
-    if (nozzle_temp_tap) {
-        lv_obj_add_event_cb(nozzle_temp_tap, on_nozzle_temp_clicked, LV_EVENT_CLICKED, this);
-    }
-    lv_obj_t* bed_temp_tap = lv_obj_find_by_name(panel_, "bed_temp_tap");
-    if (bed_temp_tap) {
-        lv_obj_add_event_cb(bed_temp_tap, on_bed_temp_clicked, LV_EVENT_CLICKED, this);
     }
 
-    // Find and setup tappable targets in left card
-    lv_obj_t* nozzle_target_tap = lv_obj_find_by_name(panel_, "nozzle_target_tap");
-    if (nozzle_target_tap) {
-        lv_obj_add_event_cb(nozzle_target_tap, on_nozzle_target_tap_clicked, LV_EVENT_CLICKED,
-                            this);
-    }
-    lv_obj_t* bed_target_tap = lv_obj_find_by_name(panel_, "bed_target_tap");
-    if (bed_target_tap) {
-        lv_obj_add_event_cb(bed_target_tap, on_bed_target_tap_clicked, LV_EVENT_CLICKED, this);
-    }
-
-    // Find and setup purge amount selector buttons
+    // Find purge amount buttons (for visual state updates)
     purge_5mm_btn_ = lv_obj_find_by_name(panel_, "purge_5mm");
     purge_10mm_btn_ = lv_obj_find_by_name(panel_, "purge_10mm");
     purge_25mm_btn_ = lv_obj_find_by_name(panel_, "purge_25mm");
-    if (purge_5mm_btn_) {
-        lv_obj_add_event_cb(purge_5mm_btn_, on_purge_amount_clicked, LV_EVENT_CLICKED, this);
-    }
-    if (purge_10mm_btn_) {
-        lv_obj_add_event_cb(purge_10mm_btn_, on_purge_amount_clicked, LV_EVENT_CLICKED, this);
-    }
-    if (purge_25mm_btn_) {
-        lv_obj_add_event_cb(purge_25mm_btn_, on_purge_amount_clicked, LV_EVENT_CLICKED, this);
-    }
 
-    // Find action buttons (events handled by XML event_cb, but refs needed for state management)
+    // Find action buttons (for state management)
     btn_load_ = lv_obj_find_by_name(panel_, "btn_load");
     btn_unload_ = lv_obj_find_by_name(panel_, "btn_unload");
     btn_purge_ = lv_obj_find_by_name(panel_, "btn_purge");
-    spdlog::debug("[{}] Action buttons configured (events via XML)", get_name());
 
     // Find safety warning card
     safety_warning_ = lv_obj_find_by_name(panel_, "safety_warning");
@@ -641,48 +622,47 @@ void FilamentPanel::on_purge_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
-void FilamentPanel::on_preset_button_clicked(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_preset_button_clicked");
-    auto* self = static_cast<FilamentPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        // Determine which preset was clicked by checking button name
-        lv_obj_t* btn = static_cast<lv_obj_t*>(lv_event_get_target(e));
-        const char* name = lv_obj_get_name(btn);
-
-        int material_id = -1;
-        if (name) {
-            if (strcmp(name, "preset_pla") == 0)
-                material_id = 0;
-            else if (strcmp(name, "preset_petg") == 0)
-                material_id = 1;
-            else if (strcmp(name, "preset_abs") == 0)
-                material_id = 2;
-            else if (strcmp(name, "preset_tpu") == 0)
-                material_id = 3;
-        }
-
-        if (material_id >= 0) {
-            self->handle_preset_button(material_id);
-        }
-    }
+// Material preset callbacks (XML event_cb - use global singleton)
+void FilamentPanel::on_preset_pla_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_preset_pla_clicked");
+    LV_UNUSED(e);
+    get_global_filament_panel().handle_preset_button(0);
     LVGL_SAFE_EVENT_CB_END();
 }
 
-void FilamentPanel::on_nozzle_temp_clicked(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_nozzle_temp_clicked");
-    auto* self = static_cast<FilamentPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        self->handle_nozzle_temp_tap();
-    }
+void FilamentPanel::on_preset_petg_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_preset_petg_clicked");
+    LV_UNUSED(e);
+    get_global_filament_panel().handle_preset_button(1);
     LVGL_SAFE_EVENT_CB_END();
 }
 
-void FilamentPanel::on_bed_temp_clicked(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_bed_temp_clicked");
-    auto* self = static_cast<FilamentPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        self->handle_bed_temp_tap();
-    }
+void FilamentPanel::on_preset_abs_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_preset_abs_clicked");
+    LV_UNUSED(e);
+    get_global_filament_panel().handle_preset_button(2);
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void FilamentPanel::on_preset_tpu_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_preset_tpu_clicked");
+    LV_UNUSED(e);
+    get_global_filament_panel().handle_preset_button(3);
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+// Temperature tap callbacks (XML event_cb - use global singleton)
+void FilamentPanel::on_nozzle_temp_tap_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_nozzle_temp_tap_clicked");
+    LV_UNUSED(e);
+    get_global_filament_panel().handle_nozzle_temp_tap();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void FilamentPanel::on_bed_temp_tap_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_bed_temp_tap_clicked");
+    LV_UNUSED(e);
+    get_global_filament_panel().handle_bed_temp_tap();
     LVGL_SAFE_EVENT_CB_END();
 }
 
@@ -702,40 +682,37 @@ void FilamentPanel::custom_bed_keypad_cb(float value, void* user_data) {
 
 void FilamentPanel::on_nozzle_target_tap_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_nozzle_target_tap_clicked");
-    auto* self = static_cast<FilamentPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        self->handle_nozzle_temp_tap();
-    }
+    LV_UNUSED(e);
+    get_global_filament_panel().handle_nozzle_temp_tap();
     LVGL_SAFE_EVENT_CB_END();
 }
 
 void FilamentPanel::on_bed_target_tap_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_bed_target_tap_clicked");
-    auto* self = static_cast<FilamentPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        self->handle_bed_temp_tap();
-    }
+    LV_UNUSED(e);
+    get_global_filament_panel().handle_bed_temp_tap();
     LVGL_SAFE_EVENT_CB_END();
 }
 
-void FilamentPanel::on_purge_amount_clicked(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_purge_amount_clicked");
-    auto* self = static_cast<FilamentPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        lv_obj_t* btn = static_cast<lv_obj_t*>(lv_event_get_target(e));
-        const char* name = lv_obj_get_name(btn);
+// Purge amount callbacks (XML event_cb - use global singleton)
+void FilamentPanel::on_purge_5mm_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_purge_5mm_clicked");
+    LV_UNUSED(e);
+    get_global_filament_panel().handle_purge_amount_select(5);
+    LVGL_SAFE_EVENT_CB_END();
+}
 
-        int amount = 10; // Default
-        if (name) {
-            if (strcmp(name, "purge_5mm") == 0)
-                amount = 5;
-            else if (strcmp(name, "purge_10mm") == 0)
-                amount = 10;
-            else if (strcmp(name, "purge_25mm") == 0)
-                amount = 25;
-        }
-        self->handle_purge_amount_select(amount);
-    }
+void FilamentPanel::on_purge_10mm_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_purge_10mm_clicked");
+    LV_UNUSED(e);
+    get_global_filament_panel().handle_purge_amount_select(10);
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void FilamentPanel::on_purge_25mm_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_purge_25mm_clicked");
+    LV_UNUSED(e);
+    get_global_filament_panel().handle_purge_amount_select(25);
     LVGL_SAFE_EVENT_CB_END();
 }
 

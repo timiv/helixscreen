@@ -52,7 +52,6 @@ class MotionPanel : public PanelBase {
     jog_distance_t get_distance() const {
         return current_distance_;
     }
-    void set_distance(jog_distance_t dist);
     void jog(jog_direction_t direction, float distance_mm);
     void home(char axis);
     void handle_z_button(const char* name);
@@ -74,27 +73,18 @@ class MotionPanel : public PanelBase {
     float current_z_ = 0.0f;
 
     lv_obj_t* jog_pad_ = nullptr;
-    lv_obj_t* dist_buttons_[4] = {nullptr};
 
     ObserverGuard position_x_observer_;
     ObserverGuard position_y_observer_;
     ObserverGuard position_z_observer_;
     ObserverGuard bed_moves_observer_;
 
-    void setup_distance_buttons();
     void setup_jog_pad();
     void setup_z_buttons();
-    void setup_home_buttons();
     void register_position_observers();
-    void update_distance_buttons();
-
-    void handle_distance_button(lv_obj_t* btn);
-    void handle_home_button(const char* name);
 
     static void jog_pad_jog_cb(jog_direction_t direction, float distance_mm, void* user_data);
     static void jog_pad_home_cb(void* user_data);
-    static void on_distance_button_clicked(lv_event_t* e);
-    static void on_home_button_clicked(lv_event_t* e);
     static void on_position_x_changed(lv_observer_t* observer, lv_subject_t* subject);
     static void on_position_y_changed(lv_observer_t* observer, lv_subject_t* subject);
     static void on_position_z_changed(lv_observer_t* observer, lv_subject_t* subject);

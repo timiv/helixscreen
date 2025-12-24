@@ -267,13 +267,22 @@ class FilamentPanel : public PanelBase {
     static void on_unload_clicked(lv_event_t* e);
     static void on_purge_clicked(lv_event_t* e);
 
-    // Imperative callbacks (use user_data for instance access)
-    static void on_preset_button_clicked(lv_event_t* e);
-    static void on_nozzle_temp_clicked(lv_event_t* e);
-    static void on_bed_temp_clicked(lv_event_t* e);
+    // Material preset callbacks (XML event_cb)
+    static void on_preset_pla_clicked(lv_event_t* e);
+    static void on_preset_petg_clicked(lv_event_t* e);
+    static void on_preset_abs_clicked(lv_event_t* e);
+    static void on_preset_tpu_clicked(lv_event_t* e);
+
+    // Temperature tap callbacks (XML event_cb)
+    static void on_nozzle_temp_tap_clicked(lv_event_t* e);
+    static void on_bed_temp_tap_clicked(lv_event_t* e);
     static void on_nozzle_target_tap_clicked(lv_event_t* e);
     static void on_bed_target_tap_clicked(lv_event_t* e);
-    static void on_purge_amount_clicked(lv_event_t* e);
+
+    // Purge amount callbacks (XML event_cb)
+    static void on_purge_5mm_clicked(lv_event_t* e);
+    static void on_purge_10mm_clicked(lv_event_t* e);
+    static void on_purge_25mm_clicked(lv_event_t* e);
 
     // Keypad callback bridges (different signature - not LVGL events)
     static void custom_nozzle_keypad_cb(float value, void* user_data);

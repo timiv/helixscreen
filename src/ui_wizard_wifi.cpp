@@ -64,40 +64,37 @@ static int compute_signal_icon_state(int signal_strength, bool is_secured) {
 
 /**
  * @brief Per-instance network item data for reactive UI updates
+ *
+ * Subjects are stack-allocated (not heap) since lv_subject_t is a small struct (~32 bytes).
+ * This eliminates manual memory management and potential leaks.
  */
 struct NetworkItemData {
     WiFiNetwork network;
-    lv_subject_t* ssid;
-    lv_subject_t* signal_strength;
-    lv_subject_t* is_secured;
-    lv_subject_t* signal_icon_state; // Combined state 1-8 for icon visibility binding
+    lv_subject_t ssid;              // Stack-allocated subject
+    lv_subject_t signal_strength;   // Stack-allocated subject
+    lv_subject_t is_secured;        // Stack-allocated subject
+    lv_subject_t signal_icon_state; // Combined state 1-8 for icon visibility binding
     char ssid_buffer[64];
     WizardWifiStep* parent;                            // Back-reference for callbacks
     lv_observer_t* ssid_observer = nullptr;            // Track observer for cleanup
     std::vector<lv_observer_t*> signal_icon_observers; // Track all 8 signal icon observers
 
     NetworkItemData(const WiFiNetwork& net, WizardWifiStep* p) : network(net), parent(p) {
-        ssid = new lv_subject_t();
-        signal_strength = new lv_subject_t();
-        is_secured = new lv_subject_t();
-        signal_icon_state = new lv_subject_t();
-
         strncpy(ssid_buffer, network.ssid.c_str(), sizeof(ssid_buffer) - 1);
         ssid_buffer[sizeof(ssid_buffer) - 1] = '\0';
-        lv_subject_init_string(ssid, ssid_buffer, nullptr, sizeof(ssid_buffer), ssid_buffer);
-        lv_subject_init_int(signal_strength, network.signal_strength);
-        lv_subject_init_int(is_secured, network.is_secured ? 1 : 0);
+        lv_subject_init_string(&ssid, ssid_buffer, nullptr, sizeof(ssid_buffer), ssid_buffer);
+        lv_subject_init_int(&signal_strength, network.signal_strength);
+        lv_subject_init_int(&is_secured, network.is_secured ? 1 : 0);
 
         // Compute combined icon state (1-8)
         int icon_state = compute_signal_icon_state(network.signal_strength, network.is_secured);
-        lv_subject_init_int(signal_icon_state, icon_state);
+        lv_subject_init_int(&signal_icon_state, icon_state);
     }
 
     ~NetworkItemData() {
-        delete ssid;
-        delete signal_strength;
-        delete is_secured;
-        delete signal_icon_state;
+        // Subjects are stack members - they're automatically destroyed
+        // Note: Observers must be removed BEFORE this destructor runs
+        // (handled in network_item_delete_cb via LV_EVENT_DELETE)
     }
 };
 
@@ -317,7 +314,7 @@ void WizardWifiStep::populate_network_list(const std::vector<WiFiNetwork>& netwo
         // Bind SSID label (save observer for cleanup)
         lv_obj_t* ssid_label = lv_obj_find_by_name(item, "ssid_label");
         if (ssid_label) {
-            item_data->ssid_observer = lv_label_bind_text(ssid_label, item_data->ssid, nullptr);
+            item_data->ssid_observer = lv_label_bind_text(ssid_label, &item_data->ssid, nullptr);
         }
 
         // Set security type text
@@ -342,7 +339,7 @@ void WizardWifiStep::populate_network_list(const std::vector<WiFiNetwork>& netwo
                 {"sig_1_lock", 5}, {"sig_2_lock", 6}, {"sig_3_lock", 7}, {"sig_4_lock", 8},
             };
 
-            int current_state = lv_subject_get_int(item_data->signal_icon_state);
+            int current_state = lv_subject_get_int(&item_data->signal_icon_state);
 
             for (const auto& binding : icon_bindings) {
                 lv_obj_t* icon = lv_obj_find_by_name(signal_icons, binding.name);
@@ -350,7 +347,7 @@ void WizardWifiStep::populate_network_list(const std::vector<WiFiNetwork>& netwo
                     // Bind visibility: hidden when state != ref_value
                     // Store observer for cleanup - prevents crash when deleting network items
                     lv_observer_t* obs = lv_obj_bind_flag_if_not_eq(
-                        icon, item_data->signal_icon_state, LV_OBJ_FLAG_HIDDEN, binding.state);
+                        icon, &item_data->signal_icon_state, LV_OBJ_FLAG_HIDDEN, binding.state);
                     if (obs) {
                         item_data->signal_icon_observers.push_back(obs);
                     }
