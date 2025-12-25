@@ -518,6 +518,12 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                         self->refresh_files();
                     }
 
+                    // Check USB symlink now that connection is established
+                    // (moved from set_api() which runs before connection)
+                    if (self->usb_source_) {
+                        self->check_moonraker_usb_symlink();
+                    }
+
                     // Update installer's websocket URL for local/remote detection
                     if (self->api_) {
                         self->plugin_installer_.set_websocket_url(
@@ -888,12 +894,6 @@ void PrintSelectPanel::set_api(MoonrakerAPI* api) {
     // Update detail view's dependencies (it was created with nullptr in setup())
     if (detail_view_) {
         detail_view_->set_dependencies(api_, &printer_state_);
-    }
-
-    // Check if Moonraker has symlink access to USB files (same-host setup)
-    // If so, hide the USB tab since files are already accessible via Printer source
-    if (api_ && usb_source_) {
-        check_moonraker_usb_symlink();
     }
 
     // Note: Don't auto-refresh here - WebSocket may not be connected yet.
