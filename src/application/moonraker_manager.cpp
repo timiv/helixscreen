@@ -339,6 +339,15 @@ void MoonrakerManager::init_print_start_collector() {
     static std::weak_ptr<PrintStartCollector> s_collector;
     s_collector = m_print_start_collector;
 
+    // Track previous state to detect TRANSITIONS to PRINTING, not just current state.
+    // This prevents false triggers when the app starts while a print is already running.
+    // (Similar pattern to print_start_navigation.cpp)
+    static PrintJobState s_prev_print_state = PrintJobState::STANDBY;
+    s_prev_print_state = static_cast<PrintJobState>(
+        lv_subject_get_int(get_printer_state().get_print_state_enum_subject()));
+    spdlog::debug("[MoonrakerManager] PRINT_START collector observer registered (initial state={})",
+                  static_cast<int>(s_prev_print_state));
+
     // Observer to start/stop collector based on print state
     m_print_start_observer = ObserverGuard(
         get_printer_state().get_print_state_enum_subject(),
@@ -348,19 +357,28 @@ void MoonrakerManager::init_print_start_collector() {
                 return;
 
             auto state = static_cast<PrintJobState>(lv_subject_get_int(subject));
-            if (state == PrintJobState::PRINTING) {
+
+            // Only start collector on TRANSITION to PRINTING from non-printing state.
+            // This prevents showing "Preparing Print" when app starts mid-print.
+            bool was_not_printing = (s_prev_print_state != PrintJobState::PRINTING &&
+                                     s_prev_print_state != PrintJobState::PAUSED);
+            bool is_now_printing = (state == PrintJobState::PRINTING);
+
+            if (was_not_printing && is_now_printing) {
                 if (!collector->is_active()) {
                     collector->reset();
                     collector->start();
                     collector->enable_fallbacks();
-                    spdlog::info("[MoonrakerManager] PRINT_START collector started");
+                    spdlog::info("[MoonrakerManager] PRINT_START collector started (transition)");
                 }
-            } else {
+            } else if (state != PrintJobState::PRINTING && state != PrintJobState::PAUSED) {
                 if (collector->is_active()) {
                     collector->stop();
                     spdlog::info("[MoonrakerManager] PRINT_START collector stopped");
                 }
             }
+
+            s_prev_print_state = state;
         },
         nullptr);
 
