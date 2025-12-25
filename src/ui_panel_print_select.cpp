@@ -216,13 +216,15 @@ void PrintSelectPanel::init_subjects() {
                                         "selected_filename");
 
     // Thumbnail uses POINTER subject (required by lv_image_bind_src)
-    strncpy(selected_thumbnail_buffer_, helix::ui::PrintSelectCardView::DEFAULT_THUMB,
+    // Use get_default_thumbnail() for pre-rendered .bin support
+    std::string default_thumb = helix::ui::PrintSelectCardView::get_default_thumbnail();
+    strncpy(selected_thumbnail_buffer_, default_thumb.c_str(),
             sizeof(selected_thumbnail_buffer_) - 1);
     UI_SUBJECT_INIT_AND_REGISTER_POINTER(selected_thumbnail_subject_, selected_thumbnail_buffer_,
                                          "selected_thumbnail");
 
     // Detail view thumbnail - uses cached PNG for better upscaling quality
-    strncpy(selected_detail_thumbnail_buffer_, helix::ui::PrintSelectCardView::DEFAULT_THUMB,
+    strncpy(selected_detail_thumbnail_buffer_, default_thumb.c_str(),
             sizeof(selected_detail_thumbnail_buffer_) - 1);
     UI_SUBJECT_INIT_AND_REGISTER_POINTER(selected_detail_thumbnail_subject_,
                                          selected_detail_thumbnail_buffer_,
@@ -429,7 +431,7 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                 self->file_list_[index].layer_count_str = updated.layer_count_str;
             }
             if (!updated.thumbnail_path.empty() &&
-                updated.thumbnail_path != helix::ui::PrintSelectCardView::DEFAULT_THUMB) {
+                !helix::ui::PrintSelectCardView::is_placeholder_thumbnail(updated.thumbnail_path)) {
                 self->file_list_[index].thumbnail_path = updated.thumbnail_path;
             }
 

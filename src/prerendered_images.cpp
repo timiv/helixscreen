@@ -67,4 +67,21 @@ std::string get_prerendered_printer_path(const std::string& printer_name, int sc
     return "A:assets/images/printers/" + printer_name + ".png";
 }
 
+std::string get_prerendered_placeholder_path(const std::string& placeholder_name) {
+    // Path relative to install directory
+    std::string bin_path = "assets/images/prerendered/";
+    bin_path += placeholder_name;
+    bin_path += ".bin";
+
+    if (prerendered_exists(bin_path)) {
+        spdlog::debug("[Prerendered] Using placeholder: {}", bin_path);
+        return "A:" + bin_path;
+    }
+
+    // Fallback to original PNG
+    std::string png_path = "assets/images/" + placeholder_name + ".png";
+    spdlog::debug("[Prerendered] Placeholder fallback to PNG: {}", png_path);
+    return "A:" + png_path;
+}
+
 } // namespace helix

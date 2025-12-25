@@ -100,6 +100,29 @@ check-images:
 	fi
 
 # =============================================================================
+# Placeholder Thumbnail Pre-rendering
+# =============================================================================
+# Pre-renders placeholder thumbnails for instant display on embedded devices
+REGEN_PLACEHOLDER_SCRIPT := scripts/regen_placeholder_images.sh
+
+.PHONY: gen-placeholder-images
+gen-placeholder-images:
+	$(ECHO) "$(CYAN)Generating pre-rendered placeholder thumbnails...$(RESET)"
+	$(Q)mkdir -p $(PRERENDERED_DIR)
+	$(Q)OUTPUT_DIR=$(PRERENDERED_DIR) ./$(REGEN_PLACEHOLDER_SCRIPT)
+	$(ECHO) "$(GREEN)✓ Placeholder images generated$(RESET)"
+
+.PHONY: clean-placeholder-images
+clean-placeholder-images:
+	$(ECHO) "$(CYAN)Cleaning pre-rendered placeholder images...$(RESET)"
+	$(Q)./$(REGEN_PLACEHOLDER_SCRIPT) --clean
+	$(ECHO) "$(GREEN)✓ Cleaned placeholder images$(RESET)"
+
+.PHONY: list-placeholder-images
+list-placeholder-images:
+	$(Q)./$(REGEN_PLACEHOLDER_SCRIPT) --list
+
+# =============================================================================
 # Printer Image Pre-rendering
 # =============================================================================
 # Generates optimized versions of printer images at 300px and 150px
@@ -126,13 +149,13 @@ clean-printer-images:
 list-printer-images:
 	$(Q)./$(REGEN_PRINTER_IMAGES_SCRIPT) --list
 
-# Generate ALL pre-rendered images (splash + printers)
+# Generate ALL pre-rendered images (splash + printers + placeholders)
 .PHONY: gen-all-images
-gen-all-images: gen-images gen-printer-images
+gen-all-images: gen-images gen-printer-images gen-placeholder-images
 
 # Clean ALL pre-rendered images
 .PHONY: clean-all-images
-clean-all-images: clean-images clean-printer-images
+clean-all-images: clean-images clean-printer-images clean-placeholder-images
 
 # =============================================================================
 # Help
@@ -149,6 +172,11 @@ help-images:
 	@echo "    gen-images-pi      - Generate splash for Pi (all sizes)"
 	@echo "    clean-images       - Remove splash .bin files"
 	@echo "    list-images        - Show splash targets"
+	@echo ""
+	@echo "  Placeholder thumbnails:"
+	@echo "    gen-placeholder-images   - Generate placeholder .bin files"
+	@echo "    clean-placeholder-images - Remove placeholder .bin files"
+	@echo "    list-placeholder-images  - Show placeholder targets"
 	@echo ""
 	@echo "  Printer images:"
 	@echo "    gen-printer-images - Generate printer .bin files (300px, 150px)"

@@ -145,7 +145,7 @@ void PrintSelectFileProvider::refresh_files(const std::string& current_path,
                         continue;
                     }
 
-                    data.thumbnail_path = PrintSelectCardView::DEFAULT_THUMB;
+                    data.thumbnail_path = PrintSelectCardView::get_default_thumbnail();
                     data.print_time_minutes = 0;
                     data.filament_grams = 0.0f;
                     data.size_str = format_file_size(data.file_size_bytes);

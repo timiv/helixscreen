@@ -229,7 +229,7 @@ std::vector<PrintFileData> PrintSelectUsbSource::convert_to_print_file_data() co
         file_data.modified_timestamp = static_cast<time_t>(usb_file.modified_time);
         file_data.print_time_minutes = 0; // USB files don't have Moonraker metadata
         file_data.filament_grams = 0.0f;
-        file_data.thumbnail_path = PrintSelectCardView::DEFAULT_THUMB;
+        file_data.thumbnail_path = PrintSelectCardView::get_default_thumbnail();
         file_data.is_dir = false;
 
         // Format size string

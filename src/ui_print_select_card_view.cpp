@@ -3,6 +3,7 @@
 
 #include "ui_print_select_card_view.h"
 
+#include "prerendered_images.h"
 #include "ui_panel_print_select.h" // For PrintFileData, CardDimensions
 #include "ui_theme.h"
 #include "ui_utils.h" // For strip_gcode_extension
@@ -12,6 +13,21 @@
 #include <algorithm>
 
 namespace helix::ui {
+
+// ============================================================================
+// Static Methods
+// ============================================================================
+
+std::string PrintSelectCardView::get_default_thumbnail() {
+    // Try prerendered .bin first for embedded performance
+    return helix::get_prerendered_placeholder_path("thumbnail-placeholder-160");
+}
+
+bool PrintSelectCardView::is_placeholder_thumbnail(const std::string& path) {
+    // Check for both PNG and pre-rendered .bin formats
+    return path == DEFAULT_THUMB ||
+           path == "A:assets/images/prerendered/thumbnail-placeholder-160.bin";
+}
 
 // ============================================================================
 // Construction / Destruction
@@ -140,10 +156,13 @@ void PrintSelectCardView::init_pool(const CardDimensions& dims) {
     card_pool_indices_.resize(POOL_SIZE, -1);
     card_data_pool_.reserve(POOL_SIZE);
 
+    // Cache placeholder path for use in attrs array (needs stable pointer)
+    std::string placeholder_thumb = get_default_thumbnail();
+
     // Create pool cards (initially hidden)
     for (int i = 0; i < POOL_SIZE; i++) {
         const char* attrs[] = {"thumbnail_src",
-                               DEFAULT_THUMB,
+                               placeholder_thumb.c_str(),
                                "filename",
                                "",
                                "print_time",

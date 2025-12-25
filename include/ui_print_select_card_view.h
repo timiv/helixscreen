@@ -100,6 +100,27 @@ class PrintSelectCardView {
     static constexpr const char* DEFAULT_THUMB = "A:assets/images/thumbnail-placeholder-160.png";
     static constexpr const char* FOLDER_ICON = "A:assets/images/folder.png";
 
+    /**
+     * @brief Get the best available placeholder thumbnail path
+     *
+     * Returns pre-rendered .bin file if available, otherwise falls back to PNG.
+     * Use this instead of DEFAULT_THUMB for optimal embedded performance.
+     *
+     * @return LVGL path to placeholder thumbnail (A:...)
+     */
+    static std::string get_default_thumbnail();
+
+    /**
+     * @brief Check if a path is the placeholder thumbnail (any format)
+     *
+     * Checks if the given path matches either the PNG or pre-rendered .bin
+     * placeholder. Use this instead of direct comparison with DEFAULT_THUMB.
+     *
+     * @param path Thumbnail path to check
+     * @return true if path is a placeholder thumbnail
+     */
+    static bool is_placeholder_thumbnail(const std::string& path);
+
     // Directory card styling (reduced overlay heights)
     static constexpr int DIR_METADATA_CLIP_HEIGHT = 40; ///< Metadata clip height for directories
     static constexpr int DIR_METADATA_OVERLAY_HEIGHT =
