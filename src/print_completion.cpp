@@ -263,25 +263,29 @@ void cleanup_stale_helix_temp_files(MoonrakerAPI* api) {
     }
 
     // List files in .helix_temp directory
+    // Note: Moonraker returns ALL files in root, not just the path we request
+    // We must filter by path prefix ourselves
     api->list_files(
         "gcodes", ".helix_temp", false,
         [api](const std::vector<FileInfo>& files) {
-            if (files.empty()) {
-                spdlog::debug("[PrintComplete] No stale temp files to clean up");
-                return;
-            }
-
-            spdlog::info("[PrintComplete] Cleaning up {} stale temp files from .helix_temp",
-                         files.size());
-
-            // Delete each file
+            // Filter to only files actually in .helix_temp/
+            int cleanup_count = 0;
             for (const auto& file : files) {
                 if (file.is_dir) {
-                    continue; // Skip directories
+                    continue;
                 }
 
+                // Only process files that are actually in .helix_temp/
+                // file.path contains the relative path from root (e.g.,
+                // ".helix_temp/modified_123.gcode")
+                if (file.path.find(".helix_temp/") != 0) {
+                    continue; // Not in .helix_temp directory
+                }
+
+                cleanup_count++;
+
                 // Moonraker's delete_file requires full path including root
-                std::string filepath = "gcodes/.helix_temp/" + file.filename;
+                std::string filepath = "gcodes/" + file.path;
                 api->delete_file(
                     filepath,
                     [filepath]() {
@@ -291,6 +295,13 @@ void cleanup_stale_helix_temp_files(MoonrakerAPI* api) {
                         spdlog::warn("[PrintComplete] Failed to delete stale temp file {}: {}",
                                      filepath, err.message);
                     });
+            }
+
+            if (cleanup_count > 0) {
+                spdlog::info("[PrintComplete] Cleaning up {} stale temp files from .helix_temp",
+                             cleanup_count);
+            } else {
+                spdlog::debug("[PrintComplete] No stale temp files to clean up");
             }
         },
         [](const MoonrakerError& err) {
