@@ -359,38 +359,32 @@ inline void ui_update_queue_shutdown() {
 /**
  * @brief Thread-aware async call with automatic routing
  *
- * This function handles LVGL async calls correctly based on the calling thread:
+ * This function handles LVGL async calls correctly by ALWAYS deferring to a
+ * safe execution point. We never use lv_async_call() directly because:
  *
- * **Main Thread (LVGL thread):**
- * - Checks rendering_in_progress flag (safe - no race condition)
- * - If rendering: defers to REFR_READY (after render completes)
- * - If not rendering: uses lv_async_call() directly
+ * **The LVGL Timer Restart Problem:**
+ * - lv_async_call() creates a period-0 timer
+ * - LVGL's lv_timer_handler() restarts from the HEAD of the timer list
+ *   when a new timer is created mid-iteration
+ * - If the refr_timer starts rendering AFTER the async timer was created,
+ *   the async callback fires INSIDE the render phase → assertion failure
  *
- * **Background Thread (WebSocket, async ops):**
- * - Always defers to DeferredRenderQueue (REFR_READY)
- * - Eliminates TOCTOU race on rendering_in_progress flag
+ * **Solution:**
+ * - Always queue to DeferredRenderQueue which drains at LV_EVENT_REFR_READY
+ * - This guarantees callbacks never execute during the render phase
  *
  * @param async_xcb Callback function (same signature as lv_async_call)
  * @param user_data User data passed to callback
  * @return LV_RESULT_OK on success
  */
 inline lv_result_t ui_async_call(lv_async_cb_t async_xcb, void* user_data) {
-    // Background thread: always defer to avoid TOCTOU race
-    if (!helix::ui::UpdateQueue::is_main_thread()) {
-        helix::ui::DeferredRenderQueue::instance().queue(async_xcb, user_data);
-        return LV_RESULT_OK;
-    }
-
-    // Main thread: check render phase (safe - no race)
-    lv_display_t* disp = lv_display_get_default();
-    if (disp && disp->rendering_in_progress) {
-        spdlog::debug("[UI ASYNC] Deferring callback - render in progress");
-        helix::ui::DeferredRenderQueue::instance().queue(async_xcb, user_data);
-        return LV_RESULT_OK;
-    }
-
-    // Main thread, not rendering: use LVGL's native async call
-    return lv_async_call(async_xcb, user_data);
+    // Always defer to the queue - lv_async_call() is never safe due to
+    // LVGL's timer restart behavior during lv_timer_handler()
+    //
+    // DEBUG: Uncomment to trace deferred calls:
+    // spdlog::trace("[ui_async_call] Deferring callback {:p}", (void*)async_xcb);
+    helix::ui::DeferredRenderQueue::instance().queue(async_xcb, user_data);
+    return LV_RESULT_OK;
 }
 
 /**
