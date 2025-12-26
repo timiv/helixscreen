@@ -139,6 +139,7 @@ MDI_ICONS+=",0xF0174"    # code-tags
 MDI_ICONS+=",0xF018D"    # console/terminal
 MDI_ICONS+=",0xF01B4"    # delete (trash)
 MDI_ICONS+=",0xF01D9"    # dots-vertical (advanced)
+MDI_ICONS+=",0xF01DA"    # download
 MDI_ICONS+=",0xF01FA"    # engine (motor)
 
 # Ethernet/Network
@@ -217,6 +218,7 @@ MDI_ICONS+=",0xF073A"    # cancel
 MDI_ICONS+=",0xF0758"    # grid-large
 MDI_ICONS+=",0xF0770"    # folder-open
 MDI_ICONS+=",0xF0792"    # arrow-collapse-down (flow-down)
+MDI_ICONS+=",0xF0CE1"    # arrow-up-circle (load/activate)
 MDI_ICONS+=",0xF0907"    # rabbit (Happy Hare logo)
 MDI_ICONS+=",0xF0793"    # arrow-expand-down (bed drops - CoreXY Z closer)
 MDI_ICONS+=",0xF0795"    # arrow-collapse-up (flow-up)
@@ -239,6 +241,7 @@ MDI_ICONS+=",0xF095B"    # sine-wave (input shaper)
 MDI_ICONS+=",0xF022F"    # film (filament - film reel icon)
 MDI_ICONS+=",0xF0A46"    # engine-off (motor-off)
 MDI_ICONS+=",0xF0A66"    # puzzle-outline (plugin)
+MDI_ICONS+=",0xF0A7A"    # trash-can-outline (delete)
 MDI_ICONS+=",0xF0D17"    # tortoise (AFC/Box Turtle logo)
 MDI_ICONS+=",0xF0D49"    # axis-arrow (all 3 axes)
 MDI_ICONS+=",0xF0D4C"    # axis-x-arrow

@@ -46,6 +46,7 @@ static const IconMapping ICON_MAP[] = {
     {"arrow_right",        "\xF3\xB0\x81\x94"},  // F0054 arrow-right
     {"arrow_right_bold",   "\xF3\xB0\x9C\xB4"},  // F0734 arrow-right-bold
     {"arrow_up",           "\xF3\xB0\x81\x9D"},  // F005D arrow-up (head ascends)
+    {"arrow_up_circle",    "\xF3\xB0\xB3\xA1"},  // F0CE1 arrow-up-circle (load/activate)
     {"arrow_up_right",     "\xF3\xB1\x9E\xBF"},  // F17BF arrow-up-right (retraction)
     {"axis_arrow",         "\xF3\xB0\xB5\x89"},  // F0D49 axis-arrow (all 3 axes)
     {"axis_x_arrow",       "\xF3\xB0\xB5\x8C"},  // F0D4C axis-x-arrow
@@ -82,6 +83,7 @@ static const IconMapping ICON_MAP[] = {
     {"dashboard",          "\xF3\xB0\x95\xAE"},  // F056E view-dashboard
     {"delete",             "\xF3\xB0\x86\xB4"},  // F01B4 delete/trash
     {"dots_vertical",      "\xF3\xB0\x87\x99"},  // F01D9 dots-vertical/advanced
+    {"download",           "\xF3\xB0\x87\x9A"},  // F01DA download
 
     // Engine/Motor
     {"engine",             "\xF3\xB0\x87\xBA"},  // F01FA engine/motor
@@ -178,6 +180,7 @@ static const IconMapping ICON_MAP[] = {
     {"thermometer_plus",   "\xF3\xB0\xB8\x85"},  // F0E05 thermometer-plus
     {"tortoise",           "\xF3\xB0\xB4\x97"},  // F0D17 tortoise (AFC/Box Turtle logo)
     {"train_flatbed",      "\xF3\xB1\xAC\xB5"},  // F1B35 train-car-flatbed (print bed base)
+    {"trash_can_outline",  "\xF3\xB0\xA9\xBA"},  // F0A7A trash-can-outline (delete)
     {"tray_arrow_up",      "\xF3\xB0\x84\xA0"},  // F0120 tray-arrow-up (unload/eject)
     {"tune",               "\xF3\xB0\x98\xAE"},  // F062E tune
     {"undo",               "\xF3\xB0\x95\x8C"},  // F054C undo (counter-clockwise arrow - loosen)
