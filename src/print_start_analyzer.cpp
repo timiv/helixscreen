@@ -4,6 +4,7 @@
 #include "print_start_analyzer.h"
 
 #include "moonraker_api.h"
+#include "operation_patterns.h"
 
 #include <spdlog/spdlog.h>
 
@@ -12,6 +13,61 @@
 #include <sstream>
 
 namespace helix {
+
+// ============================================================================
+// Category Mapping (shared OperationCategory <-> PrintStartOpCategory)
+// ============================================================================
+
+namespace {
+
+/**
+ * @brief Map shared OperationCategory to PrintStartOpCategory
+ *
+ * Note: PURGE_LINE maps to NOZZLE_CLEAN for backward compatibility
+ */
+PrintStartOpCategory to_print_start_category(OperationCategory cat) {
+    switch (cat) {
+    case OperationCategory::BED_LEVELING:
+        return PrintStartOpCategory::BED_LEVELING;
+    case OperationCategory::QGL:
+        return PrintStartOpCategory::QGL;
+    case OperationCategory::Z_TILT:
+        return PrintStartOpCategory::Z_TILT;
+    case OperationCategory::NOZZLE_CLEAN:
+    case OperationCategory::PURGE_LINE: // Map purge to nozzle_clean for compat
+        return PrintStartOpCategory::NOZZLE_CLEAN;
+    case OperationCategory::HOMING:
+        return PrintStartOpCategory::HOMING;
+    case OperationCategory::CHAMBER_SOAK:
+        return PrintStartOpCategory::CHAMBER_SOAK;
+    default:
+        return PrintStartOpCategory::UNKNOWN;
+    }
+}
+
+/**
+ * @brief Map PrintStartOpCategory to shared OperationCategory
+ */
+OperationCategory to_operation_category(PrintStartOpCategory cat) {
+    switch (cat) {
+    case PrintStartOpCategory::BED_LEVELING:
+        return OperationCategory::BED_LEVELING;
+    case PrintStartOpCategory::QGL:
+        return OperationCategory::QGL;
+    case PrintStartOpCategory::Z_TILT:
+        return OperationCategory::Z_TILT;
+    case PrintStartOpCategory::NOZZLE_CLEAN:
+        return OperationCategory::NOZZLE_CLEAN;
+    case PrintStartOpCategory::HOMING:
+        return OperationCategory::HOMING;
+    case PrintStartOpCategory::CHAMBER_SOAK:
+        return OperationCategory::CHAMBER_SOAK;
+    default:
+        return OperationCategory::UNKNOWN;
+    }
+}
+
+} // anonymous namespace
 
 // ============================================================================
 // Category Helpers
@@ -94,61 +150,10 @@ std::string PrintStartAnalysis::summary() const {
 }
 
 // ============================================================================
-// Operation Detection Patterns
+// Operation Detection Patterns - Now using shared operation_patterns.h
 // ============================================================================
-
-// Operation patterns with their categories
-struct OperationPattern {
-    const char* pattern;
-    PrintStartOpCategory category;
-    const char* suggested_skip_param;
-};
-
-static const OperationPattern OPERATION_PATTERNS[] = {
-    // Bed leveling
-    {"BED_MESH_CALIBRATE", PrintStartOpCategory::BED_LEVELING, "SKIP_BED_MESH"},
-    {"G29", PrintStartOpCategory::BED_LEVELING, "SKIP_BED_MESH"},
-
-    // Quad Gantry Level
-    {"QUAD_GANTRY_LEVEL", PrintStartOpCategory::QGL, "SKIP_QGL"},
-
-    // Z Tilt
-    {"Z_TILT_ADJUST", PrintStartOpCategory::Z_TILT, "SKIP_Z_TILT"},
-
-    // Nozzle cleaning
-    {"CLEAN_NOZZLE", PrintStartOpCategory::NOZZLE_CLEAN, "SKIP_NOZZLE_CLEAN"},
-    {"NOZZLE_CLEAN", PrintStartOpCategory::NOZZLE_CLEAN, "SKIP_NOZZLE_CLEAN"},
-    {"PURGE_LINE", PrintStartOpCategory::NOZZLE_CLEAN, "SKIP_PURGE"},
-    {"PRIME_LINE", PrintStartOpCategory::NOZZLE_CLEAN, "SKIP_PURGE"},
-    {"PURGE_NOZZLE", PrintStartOpCategory::NOZZLE_CLEAN, "SKIP_PURGE"},
-
-    // Homing
-    {"G28", PrintStartOpCategory::HOMING, "SKIP_HOMING"},
-
-    // Chamber soak
-    {"HEAT_SOAK", PrintStartOpCategory::CHAMBER_SOAK, "SKIP_SOAK"},
-    {"CHAMBER_SOAK", PrintStartOpCategory::CHAMBER_SOAK, "SKIP_SOAK"},
-    {"TEMPERATURE_WAIT", PrintStartOpCategory::CHAMBER_SOAK, "SKIP_SOAK"},
-};
-
-static constexpr size_t OPERATION_PATTERNS_COUNT =
-    sizeof(OPERATION_PATTERNS) / sizeof(OPERATION_PATTERNS[0]);
-
-// Skip parameter pattern variations (for detection)
-static const std::vector<std::string> SKIP_PARAM_VARIATIONS[] = {
-    // BED_LEVELING
-    {"SKIP_BED_MESH", "SKIP_MESH", "SKIP_BED_LEVELING", "NO_BED_MESH", "SKIP_LEVEL"},
-    // QGL
-    {"SKIP_QGL", "SKIP_GANTRY", "NO_QGL", "SKIP_QUAD_GANTRY_LEVEL"},
-    // Z_TILT
-    {"SKIP_Z_TILT", "SKIP_TILT", "NO_Z_TILT", "SKIP_Z_TILT_ADJUST"},
-    // NOZZLE_CLEAN
-    {"SKIP_NOZZLE_CLEAN", "SKIP_CLEAN", "SKIP_PURGE", "NO_PURGE", "SKIP_PRIME"},
-    // HOMING
-    {"SKIP_HOMING", "SKIP_HOME", "NO_HOME"},
-    // CHAMBER_SOAK
-    {"SKIP_SOAK", "SKIP_HEAT_SOAK", "NO_SOAK", "SKIP_CHAMBER"},
-};
+// All patterns are defined in operation_patterns.h and accessed via
+// OPERATION_KEYWORDS[] and get_skip_variations()
 
 // ============================================================================
 // PrintStartAnalyzer Implementation
@@ -250,10 +255,10 @@ PrintStartAnalysis PrintStartAnalyzer::parse_macro(const std::string& macro_name
 }
 
 std::string PrintStartAnalyzer::get_suggested_skip_param(const std::string& op_name) {
-    for (size_t i = 0; i < OPERATION_PATTERNS_COUNT; ++i) {
-        if (op_name == OPERATION_PATTERNS[i].pattern) {
-            return OPERATION_PATTERNS[i].suggested_skip_param;
-        }
+    // Use shared pattern registry
+    const auto* kw = find_keyword(op_name);
+    if (kw) {
+        return kw->skip_param;
     }
     // Default: SKIP_ + operation name
     return "SKIP_" + op_name;
@@ -267,13 +272,10 @@ PrintStartOpCategory PrintStartAnalyzer::categorize_operation(const std::string&
         cmd = cmd.substr(0, space_pos);
     }
 
-    // Convert to uppercase for matching
-    std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
-
-    for (size_t i = 0; i < OPERATION_PATTERNS_COUNT; ++i) {
-        if (cmd == OPERATION_PATTERNS[i].pattern) {
-            return OPERATION_PATTERNS[i].category;
-        }
+    // Use shared pattern registry
+    const auto* kw = find_keyword(cmd);
+    if (kw) {
+        return to_print_start_category(kw->category);
     }
 
     return PrintStartOpCategory::UNKNOWN;
@@ -317,28 +319,22 @@ std::vector<PrintStartOperation> PrintStartAnalyzer::detect_operations(const std
         std::string cmd =
             (end_of_cmd != std::string::npos) ? trimmed.substr(0, end_of_cmd) : trimmed;
 
-        // Check against known patterns
-        std::string cmd_upper = cmd;
-        std::transform(cmd_upper.begin(), cmd_upper.end(), cmd_upper.begin(), ::toupper);
+        // Check against shared pattern registry
+        const auto* kw = find_keyword(cmd);
+        if (kw) {
+            PrintStartOperation op;
+            op.name = kw->keyword;
+            op.category = to_print_start_category(kw->category);
+            op.line_number = line_num;
 
-        for (size_t i = 0; i < OPERATION_PATTERNS_COUNT; ++i) {
-            if (cmd_upper == OPERATION_PATTERNS[i].pattern) {
-                PrintStartOperation op;
-                op.name = OPERATION_PATTERNS[i].pattern;
-                op.category = OPERATION_PATTERNS[i].category;
-                op.line_number = line_num;
+            // Avoid duplicates (same operation appearing multiple times)
+            bool duplicate = std::any_of(
+                operations.begin(), operations.end(),
+                [&op](const PrintStartOperation& existing) { return existing.name == op.name; });
 
-                // Avoid duplicates (same operation appearing multiple times)
-                bool duplicate = std::any_of(operations.begin(), operations.end(),
-                                             [&op](const PrintStartOperation& existing) {
-                                                 return existing.name == op.name;
-                                             });
-
-                if (!duplicate) {
-                    operations.push_back(op);
-                    spdlog::trace("[PrintStartAnalyzer] Detected {} at line {}", op.name, line_num);
-                }
-                break;
+            if (!duplicate) {
+                operations.push_back(op);
+                spdlog::trace("[PrintStartAnalyzer] Detected {} at line {}", op.name, line_num);
             }
         }
     }
@@ -355,13 +351,12 @@ bool PrintStartAnalyzer::detect_skip_conditional(const std::string& gcode,
         return false;
     }
 
-    // Get index for skip param variations
-    size_t category_idx = static_cast<size_t>(category);
-    if (category_idx >= sizeof(SKIP_PARAM_VARIATIONS) / sizeof(SKIP_PARAM_VARIATIONS[0])) {
+    // Get skip param variations from shared registry
+    OperationCategory shared_cat = to_operation_category(category);
+    const auto& variations = get_skip_variations(shared_cat);
+    if (variations.empty()) {
         return false;
     }
-
-    const auto& variations = SKIP_PARAM_VARIATIONS[category_idx];
 
     // Look for patterns like:
     //   {% if SKIP_BED_MESH == 0 %}

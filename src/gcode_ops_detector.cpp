@@ -3,6 +3,8 @@
 
 #include "gcode_ops_detector.h"
 
+#include "operation_patterns.h"
+
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -13,6 +15,40 @@
 
 namespace helix {
 namespace gcode {
+
+// ============================================================================
+// Category Mapping (shared OperationCategory <-> gcode::OperationType)
+// ============================================================================
+
+namespace {
+
+/**
+ * @brief Map shared OperationCategory to gcode::OperationType
+ */
+OperationType to_operation_type(OperationCategory cat) {
+    switch (cat) {
+    case OperationCategory::BED_LEVELING:
+        return OperationType::BED_LEVELING;
+    case OperationCategory::QGL:
+        return OperationType::QGL;
+    case OperationCategory::Z_TILT:
+        return OperationType::Z_TILT;
+    case OperationCategory::NOZZLE_CLEAN:
+        return OperationType::NOZZLE_CLEAN;
+    case OperationCategory::PURGE_LINE:
+        return OperationType::PURGE_LINE;
+    case OperationCategory::HOMING:
+        return OperationType::HOMING;
+    case OperationCategory::CHAMBER_SOAK:
+        return OperationType::CHAMBER_SOAK;
+    case OperationCategory::START_PRINT:
+        return OperationType::START_PRINT;
+    default:
+        return OperationType::HOMING; // Safe fallback
+    }
+}
+
+} // anonymous namespace
 
 // ============================================================================
 // DetectedOperation implementation
@@ -140,83 +176,33 @@ std::string GCodeOpsDetector::operation_type_name(OperationType type) {
 
 void GCodeOpsDetector::init_default_patterns() {
     // ========================================================================
-    // Bed Leveling patterns
+    // Build patterns from shared operation_patterns.h registry
     // ========================================================================
+    // All patterns are now defined in a single place (operation_patterns.h)
+    // and used by both GCodeOpsDetector and PrintStartAnalyzer.
 
-    // Direct commands
-    patterns_.push_back({OperationType::BED_LEVELING, "BED_MESH_CALIBRATE",
-                         OperationEmbedding::DIRECT_COMMAND, false});
-    patterns_.push_back({OperationType::BED_LEVELING, "G29", OperationEmbedding::DIRECT_COMMAND,
-                         true}); // Case sensitive for G-codes
-    patterns_.push_back({OperationType::BED_LEVELING, "BED_MESH_PROFILE LOAD",
-                         OperationEmbedding::DIRECT_COMMAND, false});
+    for (size_t i = 0; i < OPERATION_KEYWORDS_COUNT; ++i) {
+        const auto& kw = OPERATION_KEYWORDS[i];
 
-    // Macro calls
-    patterns_.push_back(
-        {OperationType::BED_LEVELING, "AUTO_BED_MESH", OperationEmbedding::MACRO_CALL, false});
+        // Determine embedding type based on pattern characteristics
+        // G-codes and direct Klipper commands = DIRECT_COMMAND
+        // User macros = MACRO_CALL
+        OperationEmbedding embedding = OperationEmbedding::MACRO_CALL;
 
-    // ========================================================================
-    // Quad Gantry Level patterns
-    // ========================================================================
+        std::string pattern = kw.keyword;
+        if (pattern.rfind("G", 0) == 0 || // G28, G29
+            pattern == "BED_MESH_CALIBRATE" || pattern == "QUAD_GANTRY_LEVEL" ||
+            pattern == "Z_TILT_ADJUST" || pattern.find("BED_MESH_PROFILE") == 0 ||
+            pattern.find("SET_HEATER_TEMPERATURE") == 0) {
+            embedding = OperationEmbedding::DIRECT_COMMAND;
+        }
 
-    patterns_.push_back(
-        {OperationType::QGL, "QUAD_GANTRY_LEVEL", OperationEmbedding::DIRECT_COMMAND, false});
-    patterns_.push_back({OperationType::QGL, "QGL", OperationEmbedding::MACRO_CALL, false});
+        patterns_.push_back(
+            {to_operation_type(kw.category), pattern, embedding, kw.case_sensitive});
+    }
 
-    // ========================================================================
-    // Z Tilt patterns
-    // ========================================================================
-
-    patterns_.push_back(
-        {OperationType::Z_TILT, "Z_TILT_ADJUST", OperationEmbedding::DIRECT_COMMAND, false});
-    patterns_.push_back({OperationType::Z_TILT, "Z_TILT", OperationEmbedding::MACRO_CALL, false});
-
-    // ========================================================================
-    // Nozzle cleaning patterns
-    // ========================================================================
-
-    patterns_.push_back(
-        {OperationType::NOZZLE_CLEAN, "CLEAN_NOZZLE", OperationEmbedding::MACRO_CALL, false});
-    patterns_.push_back(
-        {OperationType::NOZZLE_CLEAN, "NOZZLE_WIPE", OperationEmbedding::MACRO_CALL, false});
-    patterns_.push_back(
-        {OperationType::NOZZLE_CLEAN, "WIPE_NOZZLE", OperationEmbedding::MACRO_CALL, false});
-    patterns_.push_back(
-        {OperationType::NOZZLE_CLEAN, "BRUSH_NOZZLE", OperationEmbedding::MACRO_CALL, false});
-    patterns_.push_back(
-        {OperationType::NOZZLE_CLEAN, "NOZZLE_BRUSH", OperationEmbedding::MACRO_CALL, false});
-
-    // ========================================================================
-    // Homing patterns
-    // ========================================================================
-
-    patterns_.push_back({OperationType::HOMING, "G28", OperationEmbedding::DIRECT_COMMAND, true});
-    patterns_.push_back(
-        {OperationType::HOMING, "SAFE_HOME", OperationEmbedding::MACRO_CALL, false});
-
-    // ========================================================================
-    // Chamber soak patterns
-    // ========================================================================
-
-    patterns_.push_back(
-        {OperationType::CHAMBER_SOAK, "HEAT_SOAK", OperationEmbedding::MACRO_CALL, false});
-    patterns_.push_back(
-        {OperationType::CHAMBER_SOAK, "CHAMBER_SOAK", OperationEmbedding::MACRO_CALL, false});
-    patterns_.push_back({OperationType::CHAMBER_SOAK, "SET_HEATER_TEMPERATURE HEATER=chamber",
-                         OperationEmbedding::DIRECT_COMMAND, false});
-
-    // ========================================================================
-    // Purge line patterns
-    // ========================================================================
-
-    patterns_.push_back(
-        {OperationType::PURGE_LINE, "PURGE_LINE", OperationEmbedding::MACRO_CALL, false});
-    patterns_.push_back(
-        {OperationType::PURGE_LINE, "PRIME_LINE", OperationEmbedding::MACRO_CALL, false});
-    patterns_.push_back(
-        {OperationType::PURGE_LINE, "PRIME_NOZZLE", OperationEmbedding::MACRO_CALL, false});
-    patterns_.push_back(
-        {OperationType::PURGE_LINE, "INTRO_LINE", OperationEmbedding::MACRO_CALL, false});
+    spdlog::debug("[GCodeOpsDetector] Initialized {} patterns from shared registry",
+                  patterns_.size());
 }
 
 void GCodeOpsDetector::add_pattern(OperationPattern pattern) {
