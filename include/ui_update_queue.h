@@ -356,7 +356,7 @@ inline void ui_update_queue_shutdown() {
  * @brief Thread-aware async call with automatic routing
  *
  * This function handles LVGL async calls correctly by:
- * - On main thread: Execute immediately if not rendering, else defer
+ * - On main thread: Queue and force immediate render to drain
  * - On background thread: Always defer to next frame
  *
  * **The LVGL Timer Restart Problem (why we can't always use lv_async_call):**
@@ -366,9 +366,15 @@ inline void ui_update_queue_shutdown() {
  * - If the refr_timer starts rendering AFTER the async timer was created,
  *   the async callback fires INSIDE the render phase → assertion failure
  *
+ * **The TOCTOU Race Problem (2025-12-26):**
+ * - Previous "fast path" checked rendering_in_progress then executed callback
+ * - Race window: rendering could START between check and execution
+ * - This caused SIGSEGV on AD5M due to memory access during render
+ * - Fix: ALWAYS queue, then force synchronous render to drain immediately
+ *
  * **Solution:**
- * - Main thread + not rendering: Execute callback directly (fast path)
  * - Main thread + rendering: Defer to DeferredRenderQueue (drains at REFR_READY)
+ * - Main thread + not rendering: Queue + lv_refr_now() for immediate execution
  * - Background thread: Queue to UpdateQueue (drains at REFR_START)
  *
  * @param async_xcb Callback function (same signature as lv_async_call)
@@ -388,8 +394,13 @@ inline lv_result_t ui_async_call(lv_async_cb_t async_xcb, void* user_data) {
             // During render - defer to after render completes
             helix::ui::DeferredRenderQueue::instance().queue(async_xcb, user_data);
         } else {
-            // Not rendering - safe to execute immediately (fast path)
-            async_xcb(user_data);
+            // Not rendering - queue and force immediate render cycle
+            // This eliminates the TOCTOU race: we queue THEN render (atomic)
+            // The callback executes at REFR_READY, after render completes
+            helix::ui::DeferredRenderQueue::instance().queue(async_xcb, user_data);
+            // Force a synchronous render cycle to drain the queue promptly
+            // lv_refr_now() is synchronous - by return, our callback has executed
+            lv_refr_now(disp);
         }
     } else {
         // Background thread - queue for main thread execution at REFR_START
