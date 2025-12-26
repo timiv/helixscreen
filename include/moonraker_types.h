@@ -39,6 +39,7 @@ using json = nlohmann::json;
 struct SafetyLimits {
     double max_temperature_celsius = 400.0;
     double min_temperature_celsius = 0.0;
+    double min_extrude_temp_celsius = 170.0; ///< Minimum temp for extrusion (Klipper default)
     double max_fan_speed_percent = 100.0;
     double min_fan_speed_percent = 0.0;
     double max_feedrate_mm_min = 50000.0;

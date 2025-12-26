@@ -262,7 +262,7 @@
                 style_pad_gap="#space_xs">
           <lv_obj-bind_flag_if_eq subject="filament_safety_warning_visible" flag="hidden" ref_value="0"/>
           <icon src="alert" size="sm" variant="warning"/>
-          <text_small text="Heat to 170°C to load/unload"/>
+          <text_small bind_text="filament_safety_warning_text"/>
         </lv_obj>
       </lv_obj>
     </lv_obj>

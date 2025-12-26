@@ -18,6 +18,7 @@
 #include "print_completion.h"
 #include "print_start_collector.h"
 #include "printer_state.h"
+#include "ui_panel_filament.h"
 #include "settings_manager.h"
 #include "sound_manager.h"
 
@@ -128,6 +129,28 @@ int MoonrakerManager::connect(const std::string& websocket_url, const std::strin
                 // Clean up any stale .helix_temp files from previous sessions
                 // (These are temp files created when modifying G-code for prints)
                 helix::cleanup_stale_helix_temp_files(api);
+
+                // Fetch safety limits from Klipper config (min_extrude_temp, max_temp, etc.)
+                // and propagate to UI panels
+                if (api) {
+                    api->update_safety_limits_from_printer(
+                        [api]() {
+                            // Propagate limits to panels
+                            const auto& limits = api->get_safety_limits();
+                            int min_extrude = static_cast<int>(limits.min_extrude_temp_celsius);
+                            int max_temp = static_cast<int>(limits.max_temperature_celsius);
+                            int min_temp = static_cast<int>(limits.min_temperature_celsius);
+
+                            get_global_filament_panel().set_limits(min_temp, max_temp,
+                                                                   min_extrude);
+                            spdlog::info("[MoonrakerManager] Safety limits propagated to panels");
+                        },
+                        [](const MoonrakerError& err) {
+                            spdlog::warn("[MoonrakerManager] Failed to fetch safety limits: {}",
+                                         err.message);
+                            // Panels will use their default values (170°C)
+                        });
+                }
 
                 // Trigger macro analysis after discovery
                 if (macro_mgr) {
