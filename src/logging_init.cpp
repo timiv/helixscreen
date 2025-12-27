@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "logging_init.h"
 
+#include "lvgl_assert_handler.h"
+
+#include <lvgl.h>
+#include <src/display/lv_display_private.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <cstdlib>
 #include <filesystem>
 #include <vector>
+
+// Define the global callback pointer for LVGL assert handler
+helix_assert_callback_t g_helix_assert_cpp_callback = nullptr;
 
 #ifdef __linux__
 #ifdef HELIX_HAS_SYSTEMD
@@ -142,6 +149,31 @@ void add_system_sink(std::vector<spdlog::sink_ptr>& sinks, LogTarget target,
     }
 }
 
+/// C++ assert callback that logs via spdlog and dumps backtrace
+void lvgl_assert_spdlog_callback(const char* file, int line, const char* func) {
+    // Log via spdlog for consistent logging across all outputs
+    spdlog::critical("╔═══════════════════════════════════════════════════════════╗");
+    spdlog::critical("║              LVGL ASSERTION FAILED                        ║");
+    spdlog::critical("╠═══════════════════════════════════════════════════════════╣");
+    spdlog::critical("║ File: {}", file);
+    spdlog::critical("║ Line: {}", line);
+    spdlog::critical("║ Func: {}()", func);
+
+    // Log LVGL display state if available
+    lv_display_t* disp = lv_display_get_default();
+    if (disp) {
+        spdlog::critical("║ Display rendering_in_progress: {}",
+                         disp->rendering_in_progress ? "YES (!!)" : "no");
+    } else {
+        spdlog::critical("║ Display: not initialized");
+    }
+    spdlog::critical("╚═══════════════════════════════════════════════════════════╝");
+
+    // Dump recent log messages that led up to this assertion
+    spdlog::critical("=== Recent log messages (backtrace) ===");
+    spdlog::dump_backtrace();
+}
+
 } // namespace
 
 void init(const LogConfig& config) {
@@ -166,9 +198,17 @@ void init(const LogConfig& config) {
     // Set as default logger
     spdlog::set_default_logger(logger);
 
+    // Enable backtrace buffer to capture recent log messages before an assertion
+    // These get dumped when spdlog::dump_backtrace() is called in the assert handler
+    spdlog::enable_backtrace(32);
+
+    // Register C++ callback for LVGL assert handler
+    // This provides spdlog integration and LVGL state context
+    g_helix_assert_cpp_callback = lvgl_assert_spdlog_callback;
+
     // Log what we configured (at debug level so it's not noisy)
-    spdlog::debug("[Logging] Initialized: target={}, console={}", log_target_name(effective_target),
-                  config.enable_console ? "yes" : "no");
+    spdlog::debug("[Logging] Initialized: target={}, console={}, backtrace=32 messages",
+                  log_target_name(effective_target), config.enable_console ? "yes" : "no");
 }
 
 LogTarget parse_log_target(const std::string& str) {

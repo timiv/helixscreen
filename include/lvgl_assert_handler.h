@@ -2,11 +2,15 @@
 // Copyright (C) 2025 HelixScreen Contributors
 /**
  * @file lvgl_assert_handler.h
- * @brief Custom LVGL assert handler for debugging
+ * @brief Custom LVGL assert handler with enhanced debugging context
  *
- * This handler logs assertion failures with file/line/function info
- * instead of the default while(1) infinite loop, allowing better
- * diagnosis of issues like the lv_inv_area rendering assertion.
+ * This handler logs assertion failures with:
+ * - File/line/function info
+ * - Stack traces (Linux/macOS)
+ * - Optional C++ callback for spdlog integration
+ * - LVGL display state context
+ *
+ * Continues execution after logging (does not halt).
  */
 
 #pragma once
@@ -14,16 +18,50 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
+
+// Stack trace support (Linux/macOS)
+#if defined(__linux__) || defined(__APPLE__)
+#include <execinfo.h>
+#define HELIX_HAS_BACKTRACE 1
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @brief Custom LVGL assert handler that logs and optionally continues
+ * @brief Callback type for C++ assert handler extension
  *
- * Called when LV_ASSERT fails. Logs detailed information about the
- * assertion location to help diagnose issues.
+ * Set this to a C++ function to get spdlog integration.
+ * Called after the C handler logs to stderr/file.
+ */
+typedef void (*helix_assert_callback_t)(const char* file, int line, const char* func);
+extern helix_assert_callback_t g_helix_assert_cpp_callback;
+
+/**
+ * @brief Print stack trace to file descriptor
+ */
+static inline void helix_print_backtrace(int fd) {
+#ifdef HELIX_HAS_BACKTRACE
+    void* callstack[32];
+    int frames = backtrace(callstack, 32);
+    if (frames > 0) {
+        dprintf(fd, "\n=== Stack Trace (%d frames) ===\n", frames);
+        backtrace_symbols_fd(callstack, frames, fd);
+        dprintf(fd, "===================\n\n");
+    }
+#else
+    (void)fd;
+    dprintf(fd, "(Stack trace not available on this platform)\n");
+#endif
+}
+
+/**
+ * @brief Custom LVGL assert handler that logs and continues
+ *
+ * Called when LV_ASSERT fails. Logs detailed information including
+ * stack trace and optionally calls C++ handler for spdlog integration.
  *
  * @param file Source file where assertion failed
  * @param line Line number where assertion failed
@@ -47,32 +85,35 @@ static inline void helix_lvgl_assert_handler(const char* file, int line, const c
             "║ Line: %-54d ║\n"
             "║ Func: %-54s ║\n"
             "╠══════════════════════════════════════════════════════════════╣\n"
-            "║ This is likely caused by lv_obj_invalidate() being called    ║\n"
-            "║ during the LVGL render phase. Check for:                     ║\n"
-            "║   1. Subject observers that call invalidate                  ║\n"
-            "║   2. Timer callbacks during render                           ║\n"
-            "║   3. Race conditions in async callbacks                      ║\n"
+            "║ Common causes:                                               ║\n"
+            "║   1. lv_obj_invalidate() during render phase                 ║\n"
+            "║   2. Subject observers triggering UI updates                 ║\n"
+            "║   3. Async callbacks not using ui_async_call()               ║\n"
+            "║   4. NULL font/text/attributes in text operations            ║\n"
             "╚══════════════════════════════════════════════════════════════╝\n",
             time_buf, file, line, func);
     fflush(stderr);
 
-    // Also try to write to log file for embedded systems
+    // Print stack trace to stderr
+    helix_print_backtrace(STDERR_FILENO);
+
+    // Also write to log file for embedded systems
     FILE* log = fopen("/tmp/helix_assert.log", "a");
     if (log) {
         fprintf(log, "[%s] LVGL ASSERT at %s:%d in %s()\n", time_buf, file, line, func);
         fflush(log);
+        // Write stack trace to log file too
+        int log_fd = fileno(log);
+        if (log_fd >= 0) {
+            helix_print_backtrace(log_fd);
+        }
         fclose(log);
     }
 
-    // IMPORTANT: We continue instead of halting to allow the app to keep running
-    // and potentially log more context. However, LVGL state may be corrupted.
-    // In production, you might want to trigger a graceful restart here.
-
-    // Uncomment to halt (original behavior):
-    // while(1);
-
-    // Uncomment to abort (generates core dump for debugging):
-    // abort();
+    // Call C++ callback if registered (for spdlog integration)
+    if (g_helix_assert_cpp_callback) {
+        g_helix_assert_cpp_callback(file, line, func);
+    }
 }
 
 #ifdef __cplusplus

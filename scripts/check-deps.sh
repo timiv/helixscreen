@@ -194,12 +194,11 @@ check_libraries() {
     echo ""
     echo -e "${BOLD}Libraries${RESET}"
 
-    # fmt (required by spdlog)
+    # fmt (optional - spdlog uses bundled headers if not found)
     if check_pkg fmt; then
         :  # ok already printed
     else
-        warn "fmt not found (required by spdlog)"
-        hint "fmt" "fmt" "libfmt-dev" "fmt-devel"
+        skip "fmt library not found (optional - spdlog uses bundled headers)"
     fi
 
     # OpenSSL (Linux only - macOS uses system)
