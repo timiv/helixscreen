@@ -3,13 +3,13 @@
 
 #include "lvgl_assert_handler.h"
 
-#include <lvgl.h>
-#include <src/display/lv_display_private.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <cstdlib>
 #include <filesystem>
+#include <lvgl.h>
+#include <src/display/lv_display_private.h>
 #include <vector>
 
 // Define the global callback pointer for LVGL assert handler

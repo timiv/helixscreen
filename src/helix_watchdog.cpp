@@ -179,7 +179,9 @@ struct WatchdogArgs {
 };
 
 static void print_usage(const char* program) {
-    fprintf(stderr, "Usage: %s [-w width] [-h height] [--splash-bin=<path>] -- <helix-screen> [args...]\n", program);
+    fprintf(stderr,
+            "Usage: %s [-w width] [-h height] [--splash-bin=<path>] -- <helix-screen> [args...]\n",
+            program);
     fprintf(stderr, "  -w <width>          Screen width (default: %d)\n", DEFAULT_WIDTH);
     fprintf(stderr, "  -h <height>         Screen height (default: %d)\n", DEFAULT_HEIGHT);
     fprintf(stderr, "  --splash-bin=<path> Path to splash screen binary (optional)\n");
@@ -255,8 +257,8 @@ static pid_t start_splash_process(const WatchdogArgs& args) {
         snprintf(width_str, sizeof(width_str), "%d", args.width);
         snprintf(height_str, sizeof(height_str), "%d", args.height);
 
-        execl(args.splash_binary.c_str(), "helix-splash",
-              "-w", width_str, "-h", height_str, nullptr);
+        execl(args.splash_binary.c_str(), "helix-splash", "-w", width_str, "-h", height_str,
+              nullptr);
 
         // If exec fails
         fprintf(stderr, "[Watchdog] Failed to exec splash: %s\n", strerror(errno));

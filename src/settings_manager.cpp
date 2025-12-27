@@ -66,8 +66,8 @@ void SettingsManager::init_subjects() {
     // Display dim settings (default: dim to 30% after 5 minutes)
     dim_timeout_sec_ = config->get<int>("/display_dim_sec", 300);
     dim_brightness_percent_ = std::clamp(config->get<int>("/display_dim_brightness", 30), 1, 100);
-    spdlog::info("[SettingsManager] Display dim: {}s timeout, {}% brightness",
-                 dim_timeout_sec_, dim_brightness_percent_);
+    spdlog::info("[SettingsManager] Display dim: {}s timeout, {}% brightness", dim_timeout_sec_,
+                 dim_brightness_percent_);
 
     // Brightness: Read from hardware first, fall back to config
     // This ensures UI reflects actual display state on startup
