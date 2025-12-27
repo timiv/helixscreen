@@ -122,6 +122,16 @@ class UpdateQueue {
         initialized_ = false;
     }
 
+    /**
+     * @brief Directly drain the queue for unit testing
+     *
+     * Avoids using lv_timer_handler() which can cause timing issues in tests.
+     * Call this after queuing updates in test code.
+     */
+    void drain_queue_for_testing() {
+        process_pending();
+    }
+
   private:
     UpdateQueue() = default;
     ~UpdateQueue() {

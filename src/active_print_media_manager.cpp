@@ -81,10 +81,12 @@ void ActivePrintMediaManager::on_print_filename_changed(lv_observer_t* observer,
                                                         lv_subject_t* subject) {
     auto* self = static_cast<ActivePrintMediaManager*>(lv_observer_get_user_data(observer));
     if (!self) {
+        spdlog::warn("[ActivePrintMediaManager] Observer callback with null self!");
         return;
     }
 
-    const char* filename = static_cast<const char*>(lv_subject_get_pointer(subject));
+    const char* filename = lv_subject_get_string(subject);
+    spdlog::debug("[ActivePrintMediaManager] on_print_filename_changed: '{}'", filename);
     self->process_filename(filename);
 }
 
@@ -124,9 +126,11 @@ void ActivePrintMediaManager::process_filename(const char* raw_filename) {
     spdlog::debug("[ActivePrintMediaManager] Display filename: {}", display_name);
 
     // Thread-safe update to display filename subject (RAII via unique_ptr)
+    // Capture printer_state_ reference to avoid using global in tests
+    PrinterState* state = &printer_state_;
     ui_queue_update<std::string>(
         std::make_unique<std::string>(display_name),
-        [](std::string* name) { ::get_printer_state().set_print_display_filename(*name); });
+        [state](std::string* name) { state->set_print_display_filename(*name); });
 
     // Load thumbnail if filename changed
     if (!effective_filename.empty() && effective_filename != last_loaded_thumbnail_filename_) {
@@ -167,12 +171,9 @@ void ActivePrintMediaManager::load_thumbnail_for_file(const std::string& filenam
             // Also set total layer count from metadata while we have it
             if (metadata.layer_count > 0) {
                 int layer_count = static_cast<int>(metadata.layer_count);
-                ui_async_call(
-                    [](void* data) {
-                        int count = static_cast<int>(reinterpret_cast<intptr_t>(data));
-                        ::get_printer_state().set_print_layer_total(count);
-                    },
-                    reinterpret_cast<void*>(static_cast<intptr_t>(layer_count)));
+                PrinterState* state = &printer_state_;
+                ui_queue_update<int>(std::make_unique<int>(layer_count),
+                                     [state](int* count) { state->set_print_layer_total(*count); });
                 spdlog::debug("[ActivePrintMediaManager] Set total layers from metadata: {}",
                               metadata.layer_count);
             }
@@ -199,9 +200,10 @@ void ActivePrintMediaManager::load_thumbnail_for_file(const std::string& filenam
                     }
 
                     // Thread-safe update to thumbnail path subject (RAII via unique_ptr)
+                    PrinterState* state = &printer_state_;
                     ui_queue_update<std::string>(
-                        std::make_unique<std::string>(lvgl_path), [](std::string* path) {
-                            ::get_printer_state().set_print_thumbnail_path(*path);
+                        std::make_unique<std::string>(lvgl_path), [state](std::string* path) {
+                            state->set_print_thumbnail_path(*path);
                             spdlog::info("[ActivePrintMediaManager] Thumbnail path set: {}", *path);
                         });
                 },
@@ -222,14 +224,13 @@ void ActivePrintMediaManager::clear_print_info() {
     last_effective_filename_.clear();
     last_loaded_thumbnail_filename_.clear();
 
-    // Thread-safe clear of shared subjects
-    ui_async_call(
-        [](void*) {
-            ::get_printer_state().set_print_thumbnail_path("");
-            ::get_printer_state().set_print_display_filename("");
-            spdlog::debug("[ActivePrintMediaManager] Cleared print info subjects");
-        },
-        nullptr);
+    // Thread-safe clear of shared subjects (capture printer_state_ for testability)
+    PrinterState* state = &printer_state_;
+    ui_queue_update([state]() {
+        state->set_print_thumbnail_path("");
+        state->set_print_display_filename("");
+        spdlog::debug("[ActivePrintMediaManager] Cleared print info subjects");
+    });
 }
 
 } // namespace helix

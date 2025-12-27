@@ -34,13 +34,20 @@ std::string get_filename_basename(const std::string& path) {
 
 std::string strip_gcode_extension(const std::string& filename) {
     // Common G-code extensions (case-insensitive check)
-    static const std::vector<std::string> extensions = {".gcode", ".GCODE", ".Gcode", ".gco",
-                                                        ".GCO",   ".Gco",   ".g",     ".G"};
+    static const std::vector<std::string> extensions = {".gcode", ".gco", ".g"};
 
     for (const auto& ext : extensions) {
         if (filename.size() > ext.size()) {
             size_t pos = filename.size() - ext.size();
-            if (filename.compare(pos, ext.size(), ext) == 0) {
+            // Case-insensitive suffix comparison
+            std::string suffix = filename.substr(pos);
+            std::string suffix_lower;
+            suffix_lower.reserve(suffix.size());
+            for (char c : suffix) {
+                suffix_lower.push_back(
+                    static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+            }
+            if (suffix_lower == ext) {
                 return filename.substr(0, pos);
             }
         }
