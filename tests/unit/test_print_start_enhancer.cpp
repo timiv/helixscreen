@@ -331,7 +331,7 @@ M109 S210
 
 TEST_CASE("PrintStartEnhancer: generate_backup_filename", "[enhancer][utility]") {
     SECTION("Format is correct") {
-        auto filename = PrintStartEnhancer::generate_backup_filename();
+        auto filename = PrintStartEnhancer::generate_backup_filename("printer.cfg");
 
         // Should start with printer.cfg.backup.
         REQUIRE(filename.find("printer.cfg.backup.") == 0);
@@ -341,11 +341,16 @@ TEST_CASE("PrintStartEnhancer: generate_backup_filename", "[enhancer][utility]")
         REQUIRE(std::regex_match(filename, timestamp_pattern));
     }
 
+    SECTION("Works with different source files") {
+        auto filename = PrintStartEnhancer::generate_backup_filename("macros.cfg");
+        REQUIRE(filename.find("macros.cfg.backup.") == 0);
+    }
+
     SECTION("Consecutive calls produce different filenames") {
-        auto filename1 = PrintStartEnhancer::generate_backup_filename();
+        auto filename1 = PrintStartEnhancer::generate_backup_filename("printer.cfg");
         // Small delay to ensure different timestamp
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        auto filename2 = PrintStartEnhancer::generate_backup_filename();
+        auto filename2 = PrintStartEnhancer::generate_backup_filename("printer.cfg");
 
         // May or may not be different depending on timing, but both should be valid
         REQUIRE(filename1.find("printer.cfg.backup.") == 0);
