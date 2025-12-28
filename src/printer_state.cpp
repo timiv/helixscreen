@@ -545,8 +545,11 @@ void PrinterState::update_from_status(const json& state) {
             lv_subject_copy_string(&print_state_, state_str.c_str());
             // Update enum subject (for type-safe logic)
             PrintJobState new_state = parse_print_job_state(state_str.c_str());
-            spdlog::info("[PrinterState] UPDATE print_stats.state: '{}' -> enum {}", state_str,
-                         static_cast<int>(new_state));
+            int current_state = lv_subject_get_int(&print_state_enum_);
+            if (static_cast<int>(new_state) != current_state) {
+                spdlog::info("[PrinterState] print_stats.state: '{}' -> enum {} (was {})", state_str,
+                             static_cast<int>(new_state), current_state);
+            }
             lv_subject_set_int(&print_state_enum_, static_cast<int>(new_state));
 
             // Update print_active (1 when PRINTING/PAUSED, 0 otherwise)

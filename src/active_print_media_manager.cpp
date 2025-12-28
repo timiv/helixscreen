@@ -86,7 +86,6 @@ void ActivePrintMediaManager::on_print_filename_changed(lv_observer_t* observer,
     }
 
     const char* filename = lv_subject_get_string(subject);
-    spdlog::debug("[ActivePrintMediaManager] on_print_filename_changed: '{}'", filename);
     self->process_filename(filename);
 }
 
