@@ -371,7 +371,7 @@ void ThumbnailCache::evict_if_needed() {
     struct CacheEntry {
         std::filesystem::path path;
         std::filesystem::file_time_type mtime;
-        size_t size;
+        std::uintmax_t size; // Match std::filesystem::file_size() return type
     };
     std::vector<CacheEntry> entries;
 

@@ -189,7 +189,7 @@ void PowerPanel::populate_device_list(const std::vector<PowerDevice>& devices) {
     }
 
     if (!has_devices) {
-        std::snprintf(status_buf_, sizeof(status_buf_), "");
+        status_buf_[0] = '\0'; // Clear status
         lv_subject_copy_string(&status_subject_, status_buf_);
         return;
     }
@@ -199,7 +199,7 @@ void PowerPanel::populate_device_list(const std::vector<PowerDevice>& devices) {
     }
 
     // Clear status message on success
-    std::snprintf(status_buf_, sizeof(status_buf_), "");
+    status_buf_[0] = '\0';
     lv_subject_copy_string(&status_subject_, status_buf_);
 }
 

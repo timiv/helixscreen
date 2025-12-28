@@ -85,7 +85,7 @@ void FilamentSensorManager::discover_sensors(const std::vector<std::string>& kli
 
     for (const auto& klipper_name : klipper_sensor_names) {
         std::string sensor_name;
-        FilamentSensorType type;
+        FilamentSensorType type = FilamentSensorType::SWITCH; // Default, overwritten by parse
 
         if (!parse_klipper_name(klipper_name, sensor_name, type)) {
             spdlog::warn("[FilamentSensorManager] Failed to parse sensor name: {}", klipper_name);

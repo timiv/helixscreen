@@ -68,8 +68,9 @@ static int compute_signal_icon_state(int signal_strength, bool is_secured) {
  *
  * Subjects are stack-allocated (not heap) since lv_subject_t is a small struct (~32 bytes).
  * This eliminates manual memory management and potential leaks.
+ * @note Named distinctly to avoid ODR conflicts with NetworkSettingsItemData
  */
-struct NetworkItemData {
+struct WifiWizardNetworkItemData {
     WiFiNetwork network;
     lv_subject_t ssid;              // Stack-allocated subject
     lv_subject_t signal_strength;   // Stack-allocated subject
@@ -80,7 +81,7 @@ struct NetworkItemData {
     lv_observer_t* ssid_observer = nullptr;            // Track observer for cleanup
     std::vector<lv_observer_t*> signal_icon_observers; // Track all 8 signal icon observers
 
-    NetworkItemData(const WiFiNetwork& net, WizardWifiStep* p) : network(net), parent(p) {
+    WifiWizardNetworkItemData(const WiFiNetwork& net, WizardWifiStep* p) : network(net), parent(p) {
         strncpy(ssid_buffer, network.ssid.c_str(), sizeof(ssid_buffer) - 1);
         ssid_buffer[sizeof(ssid_buffer) - 1] = '\0';
         lv_subject_init_string(&ssid, ssid_buffer, nullptr, sizeof(ssid_buffer), ssid_buffer);
@@ -92,7 +93,7 @@ struct NetworkItemData {
         lv_subject_init_int(&signal_icon_state, icon_state);
     }
 
-    ~NetworkItemData() {
+    ~WifiWizardNetworkItemData() {
         // Subjects are stack members - they're automatically destroyed
         // Note: Observers must be removed BEFORE this destructor runs
         // (handled in network_item_delete_cb via LV_EVENT_DELETE)
@@ -310,7 +311,7 @@ void WizardWifiStep::populate_network_list(const std::vector<WiFiNetwork>& netwo
         lv_obj_set_name(item, item_name);
 
         // Create per-instance data with back-reference to this step
-        NetworkItemData* item_data = new NetworkItemData(network, this);
+        WifiWizardNetworkItemData* item_data = new WifiWizardNetworkItemData(network, this);
 
         // Bind SSID label (save observer for cleanup)
         lv_obj_t* ssid_label = lv_obj_find_by_name(item, "ssid_label");
@@ -406,7 +407,8 @@ void WizardWifiStep::clear_network_list() {
         if (name && strncmp(name, "network_item_", 13) == 0) {
             spdlog::debug("[{}] Deleting network item: {}", get_name(), name);
 
-            // Delete the widget - the DELETE handler will automatically clean up NetworkItemData
+            // Delete the widget - the DELETE handler will automatically clean up
+            // WifiWizardNetworkItemData
             lv_obj_delete(child);
         }
     }
@@ -424,7 +426,8 @@ void WizardWifiStep::network_item_delete_cb(lv_event_t* e) {
         return;
 
     // Get data before cleanup
-    NetworkItemData* data = static_cast<NetworkItemData*>(lv_obj_get_user_data(obj));
+    WifiWizardNetworkItemData* data =
+        static_cast<WifiWizardNetworkItemData*>(lv_obj_get_user_data(obj));
     if (!data)
         return;
 
@@ -458,13 +461,14 @@ void WizardWifiStep::on_wifi_toggle_changed_static(lv_event_t* e) {
 }
 
 void WizardWifiStep::on_network_item_clicked_static(lv_event_t* e) {
-    // Network items use item user_data (NetworkItemData with parent pointer)
+    // Network items use item user_data (WifiWizardNetworkItemData with parent pointer)
     // instead of event user_data, since XML event_cb can't pass instance context
     lv_obj_t* item = static_cast<lv_obj_t*>(lv_event_get_target(e));
     if (!item)
         return;
 
-    NetworkItemData* item_data = static_cast<NetworkItemData*>(lv_obj_get_user_data(item));
+    WifiWizardNetworkItemData* item_data =
+        static_cast<WifiWizardNetworkItemData*>(lv_obj_get_user_data(item));
     if (item_data && item_data->parent) {
         item_data->parent->handle_network_item_clicked(e);
     }
@@ -553,7 +557,8 @@ void WizardWifiStep::handle_network_item_clicked(lv_event_t* e) {
     if (!item)
         return;
 
-    NetworkItemData* item_data = static_cast<NetworkItemData*>(lv_obj_get_user_data(item));
+    WifiWizardNetworkItemData* item_data =
+        static_cast<WifiWizardNetworkItemData*>(lv_obj_get_user_data(item));
     if (!item_data) {
         LOG_ERROR_INTERNAL("No network data found in clicked item");
         return;

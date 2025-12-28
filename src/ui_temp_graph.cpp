@@ -142,8 +142,10 @@ static void draw_task_cb(lv_event_t* e) {
 
     // Find the series this line belongs to (match by color)
     ui_temp_series_meta_t* meta = find_series_by_color(graph, line_dsc->color);
-    lv_opa_t top_opa = meta ? meta->gradient_top_opa : UI_TEMP_GRAPH_GRADIENT_TOP_OPA;
-    lv_opa_t bottom_opa = meta ? meta->gradient_bottom_opa : UI_TEMP_GRAPH_GRADIENT_BOTTOM_OPA;
+    lv_opa_t top_opa =
+        meta ? meta->gradient_top_opa : static_cast<lv_opa_t>(UI_TEMP_GRAPH_GRADIENT_TOP_OPA);
+    lv_opa_t bottom_opa =
+        meta ? meta->gradient_bottom_opa : static_cast<lv_opa_t>(UI_TEMP_GRAPH_GRADIENT_BOTTOM_OPA);
     lv_color_t ser_color = line_dsc->color;
 
     // Get line segment Y coordinates

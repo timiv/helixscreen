@@ -2026,6 +2026,8 @@ void ui_gcode_viewer_set_specular(lv_obj_t* obj, float intensity, float shinines
     st->renderer_->set_specular(intensity, shininess);
     lv_obj_invalidate(obj); // Request redraw
 #else
+    (void)intensity;
+    (void)shininess;
     spdlog::warn("[GCode Viewer] set_specular() ignored - not using TinyGL 3D renderer");
 #endif
 }

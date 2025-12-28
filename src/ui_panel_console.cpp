@@ -4,13 +4,13 @@
 #include "ui_panel_console.h"
 
 #include "ui_error_reporting.h"
-#include "ui_update_queue.h"
 #include "ui_event_safety.h"
 #include "ui_keyboard_manager.h"
 #include "ui_nav.h"
 #include "ui_panel_common.h"
 #include "ui_subject_registry.h"
 #include "ui_theme.h"
+#include "ui_update_queue.h"
 
 #include "app_globals.h"
 #include "moonraker_client.h"
@@ -297,7 +297,7 @@ void ConsolePanel::update_visibility() {
     if (has_entries) {
         std::snprintf(status_buf_, sizeof(status_buf_), "%zu entries", entries_.size());
     } else {
-        std::snprintf(status_buf_, sizeof(status_buf_), "");
+        status_buf_[0] = '\0'; // Clear status text
     }
     lv_subject_copy_string(&status_subject_, status_buf_);
 }

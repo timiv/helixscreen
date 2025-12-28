@@ -44,22 +44,24 @@ void destroy_network_settings_overlay() {
 
 /**
  * @brief Per-instance network item data for click handling
+ * @note Named distinctly to avoid ODR conflicts with WifiWizardNetworkSettingsItemData
  */
-struct NetworkItemData {
+struct NetworkSettingsItemData {
     std::string ssid;
     bool is_secured;
 };
 
 /**
  * @brief DELETE event handler for network list items
- * Automatically frees NetworkItemData when widget is deleted
+ * Automatically frees NetworkSettingsItemData when widget is deleted
  */
 static void network_item_delete_cb(lv_event_t* e) {
     lv_obj_t* obj = lv_event_get_target_obj(e);
-    NetworkItemData* data = static_cast<NetworkItemData*>(lv_obj_get_user_data(obj));
+    NetworkSettingsItemData* data =
+        static_cast<NetworkSettingsItemData*>(lv_obj_get_user_data(obj));
     if (data) {
         // Use unique_ptr for RAII cleanup
-        std::unique_ptr<NetworkItemData> auto_delete(data);
+        std::unique_ptr<NetworkSettingsItemData> auto_delete(data);
         lv_obj_set_user_data(obj, nullptr);
         // data automatically freed when unique_ptr goes out of scope
     }
@@ -605,7 +607,7 @@ void NetworkSettingsOverlay::populate_network_list(const std::vector<WiFiNetwork
         }
 
         // Store network data for click handler
-        auto* data = new NetworkItemData{network.ssid, network.is_secured};
+        auto* data = new NetworkSettingsItemData{network.ssid, network.is_secured};
         lv_obj_set_user_data(item, data);
 
         // Register DELETE handler for automatic cleanup
@@ -1006,7 +1008,8 @@ void NetworkSettingsOverlay::handle_network_item_clicked(lv_event_t* e) {
     if (!item)
         return;
 
-    NetworkItemData* item_data = static_cast<NetworkItemData*>(lv_obj_get_user_data(item));
+    NetworkSettingsItemData* item_data =
+        static_cast<NetworkSettingsItemData*>(lv_obj_get_user_data(item));
     if (!item_data) {
         spdlog::error("[NetworkSettingsOverlay] No network data found in clicked item");
         return;

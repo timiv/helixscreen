@@ -419,7 +419,7 @@ void MacroEnhanceWizard::show_applying(const std::string& status) {
     snprintf(step_title_buf_, sizeof(step_title_buf_), "Applying Changes");
     lv_subject_set_pointer(&step_title_subject_, step_title_buf_);
 
-    snprintf(step_progress_buf_, sizeof(step_progress_buf_), "");
+    step_progress_buf_[0] = '\0'; // Clear progress text
     lv_subject_set_pointer(&step_progress_subject_, step_progress_buf_);
 
     snprintf(description_buf_, sizeof(description_buf_), "%s", status.c_str());
@@ -434,7 +434,7 @@ void MacroEnhanceWizard::show_success(const std::string& /* message */) {
     snprintf(step_title_buf_, sizeof(step_title_buf_), "Setup Complete!");
     lv_subject_set_pointer(&step_title_subject_, step_title_buf_);
 
-    snprintf(step_progress_buf_, sizeof(step_progress_buf_), "");
+    step_progress_buf_[0] = '\0'; // Clear progress text
     lv_subject_set_pointer(&step_progress_subject_, step_progress_buf_);
 
     // Use friendly success message instead of technical details
@@ -453,7 +453,7 @@ void MacroEnhanceWizard::show_error(const std::string& message) {
     snprintf(step_title_buf_, sizeof(step_title_buf_), "Error");
     lv_subject_set_pointer(&step_title_subject_, step_title_buf_);
 
-    snprintf(step_progress_buf_, sizeof(step_progress_buf_), "");
+    step_progress_buf_[0] = '\0'; // Clear progress text
     lv_subject_set_pointer(&step_progress_subject_, step_progress_buf_);
 
     snprintf(description_buf_, sizeof(description_buf_), "%s", message.c_str());

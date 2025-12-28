@@ -152,7 +152,7 @@ void MacrosPanel::populate_macro_list() {
 
     // Update status
     if (has_macros) {
-        std::snprintf(status_buf_, sizeof(status_buf_), "");
+        status_buf_[0] = '\0'; // Clear status when macros are present
     } else {
         std::snprintf(status_buf_, sizeof(status_buf_), "No macros found");
     }
