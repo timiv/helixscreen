@@ -188,6 +188,69 @@ bool HelixPluginInstaller::is_local_moonraker() const {
     return is_local_host(host);
 }
 
+HelixPluginInstaller::SyncInstallResult
+HelixPluginInstaller::install_local_sync(bool enable_phase_tracking) {
+    // NOTE: This method is designed to be called from a background thread.
+    // It does NOT use std::function to avoid ARM/glibc static linking issues.
+
+    if (!is_local_moonraker()) {
+        spdlog::warn("[PluginInstaller] Cannot auto-install on remote Moonraker");
+        return {false, "Auto-install only works on local Moonraker"};
+    }
+
+    std::string script_path = get_install_script_path();
+    if (script_path.empty()) {
+        spdlog::warn("[PluginInstaller] Install script not found");
+        return {false, "Install script not found. Use the remote install command instead."};
+    }
+
+    state_.store(PluginInstallState::INSTALLING);
+    spdlog::info("[PluginInstaller] Starting local installation: {} --auto (phase_tracking={})",
+                 script_path, enable_phase_tracking);
+
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        state_.store(PluginInstallState::FAILED);
+        std::string err_msg = strerror(errno);
+        spdlog::error("[PluginInstaller] Fork failed: {}", err_msg);
+        return {false, "Failed to start installer: " + err_msg};
+    }
+
+    if (pid == 0) {
+        if (enable_phase_tracking) {
+            execl(script_path.c_str(), script_path.c_str(), "--auto", "--with-phase-tracking",
+                  nullptr);
+        } else {
+            execl(script_path.c_str(), script_path.c_str(), "--auto", nullptr);
+        }
+        _exit(127);
+    }
+
+    constexpr int INSTALL_TIMEOUT_SECONDS = 60;
+    WaitResult result = wait_for_child_with_timeout(pid, INSTALL_TIMEOUT_SECONDS, "Installation");
+
+    if (result.timed_out) {
+        state_.store(PluginInstallState::FAILED);
+        return {false, "Installation timed out. The script may be stuck."};
+    }
+
+    if (result.error) {
+        state_.store(PluginInstallState::FAILED);
+        return {false, "Installation failed: " + result.error_message};
+    }
+
+    if (result.exit_code == 0) {
+        state_.store(PluginInstallState::SUCCESS);
+        spdlog::info("[PluginInstaller] Installation completed successfully");
+        return {true, "Plugin installed successfully. Moonraker is restarting..."};
+    }
+
+    state_.store(PluginInstallState::FAILED);
+    spdlog::error("[PluginInstaller] Installation failed (exit code {})", result.exit_code);
+    return {false, "Installation failed. Check logs for details."};
+}
+
 void HelixPluginInstaller::install_local(InstallCallback callback, bool enable_phase_tracking) {
     // NOTE: Thread safety - this method must be called from the main thread only.
     // The state_ member is not protected by a mutex for performance reasons.
@@ -426,7 +489,6 @@ std::string HelixPluginInstaller::get_install_script_path() const {
         }
     }
 
-    spdlog::debug("[PluginInstaller] Install script not found in search paths");
     return "";
 }
 

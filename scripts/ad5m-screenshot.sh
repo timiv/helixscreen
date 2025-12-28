@@ -21,7 +21,4 @@ head -c 1536000 /tmp/fb_raw.bin | magick -size 800x480 -depth 8 BGRA:- "${OUTPUT
 
 echo "Screenshot saved to: ${OUTPUT_PATH}"
 
-# Open on macOS
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    open "${OUTPUT_PATH}"
-fi
+# Don't auto-open - user can view manually if needed

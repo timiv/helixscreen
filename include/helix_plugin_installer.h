@@ -121,6 +121,26 @@ class HelixPluginInstaller {
     // === Installation ===
 
     /**
+     * @brief Result of synchronous installation
+     */
+    struct SyncInstallResult {
+        bool success = false;
+        std::string message;
+    };
+
+    /**
+     * @brief Attempt local auto-installation (synchronous, no callback)
+     *
+     * This method blocks during script execution (up to 60s timeout).
+     * Returns a result struct instead of using callbacks, which avoids
+     * std::function-related crashes on ARM/glibc static builds.
+     *
+     * @param enable_phase_tracking If true, also installs phase tracking macros
+     * @return Result with success flag and message
+     */
+    [[nodiscard]] SyncInstallResult install_local_sync(bool enable_phase_tracking = false);
+
+    /**
      * @brief Attempt local auto-installation
      *
      * Runs the bundled install.sh script with --auto flag.

@@ -13,40 +13,40 @@
 - **Uses**: 11 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: gotcha
 > Always use -v or -vv when running helix-screen to see logs. Default shows WARN only which misses all debug info
 
-### [L003] [***+-/-----] Component names explicit
-- **Uses**: 7 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: pattern
+### [L003] [***--|+----] Component names explicit
+- **Uses**: 8 | **Velocity**: 1 | **Learned**: 2025-12-14 | **Last**: 2025-12-28 | **Category**: pattern
 > Always add name='component_name' on XML component tags. Internal view names don't propagate, causing lv_obj_find_by_name to return NULL
 
 ### [L004] [*****/*----] Subject init before create
 - **Uses**: 12 | **Learned**: 2025-12-14 | **Last**: 2025-12-27 | **Category**: pattern
 > Initialize and register subjects BEFORE lv_xml_create(). Order: fonts, images, components, init subjects, register subjects, create UI
 
-### [L005] [**+--/-----] Static buffers for subjects
-- **Uses**: 5 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: gotcha
+### [L005] [***--|+----] Static buffers for subjects
+- **Uses**: 6 | **Velocity**: 1 | **Learned**: 2025-12-14 | **Last**: 2025-12-28 | **Category**: gotcha
 > String subject buffers must be static or heap allocated, not stack. Stack buffers go out of scope and corrupt data
 
 ### [L006] [**+--/-----] get_color vs parse_color
 - **Uses**: 5 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: correction
 > ui_theme_get_color('token') looks up theme tokens. ui_theme_parse_color('#hex') parses literal hex only. Using parse_color with token names returns garbage
 
-### [L007] [**+--/-----] XML event callbacks only
-- **Uses**: 5 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: correction
+### [L007] [***--|+----] XML event callbacks only
+- **Uses**: 6 | **Velocity**: 1 | **Learned**: 2025-12-14 | **Last**: 2025-12-28 | **Category**: correction
 > Never use lv_obj_add_event_cb() in C++. Always use XML event_cb trigger and register with lv_xml_register_event_cb()
 
-### [L008] [**+--/-----] Design tokens mandatory
-- **Uses**: 5 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: pattern
+### [L008] [***--|+----] Design tokens mandatory
+- **Uses**: 6 | **Velocity**: 1 | **Learned**: 2025-12-14 | **Last**: 2025-12-28 | **Category**: pattern
 > No hardcoded colors or spacing. Use #card_bg, #space_md, text_body etc. Check globals.xml for available tokens
 
 ### [L009] [***--/-----] Icon font sync workflow
 - **Uses**: 6 | **Learned**: 2025-12-14 | **Last**: 2025-12-27 | **Category**: gotcha
 > After adding icon to codepoints.h: add to regen_mdi_fonts.sh, run make regen-fonts, then rebuild. Forgetting any step = missing icon
 
-### [L010] [*****/*****] No spdlog in destructors
-- **Uses**: 41 | **Learned**: 2025-12-14 | **Last**: 2025-12-27 | **Category**: gotcha
+### [L010] [*****|*----] No spdlog in destructors
+- **Uses**: 43 | **Velocity**: 2 | **Learned**: 2025-12-14 | **Last**: 2025-12-28 | **Category**: gotcha
 > Never call spdlog::info/warn/error in destructors. Logger may be destroyed before your object during static destruction, causing crash on exit
 
-### [L011] [*****/-----] No mutex in destructors
-- **Uses**: 10 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: gotcha
+### [L011] [***--|+----] No mutex in destructors
+- **Uses**: 11 | **Velocity**: 1 | **Learned**: 2025-12-14 | **Last**: 2025-12-28 | **Category**: gotcha
 > Avoid mutex locks in destructors during static destruction phase. Other objects may already be destroyed, causing deadlock or crash on exit
 
 ### [L012] [****-|***--] Guard async callbacks
@@ -57,12 +57,12 @@
 - **Uses**: 8 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: correction
 > Register event callbacks with lv_xml_register_event_cb() BEFORE calling lv_xml_create(). XML parser needs callbacks available during creation
 
-### [L014] [*****/**---] Register all XML components
-- **Uses**: 14 | **Learned**: 2025-12-14 | **Last**: 2025-12-27 | **Category**: gotcha
+### [L014] [****-|+----] Register all XML components
+- **Uses**: 15 | **Velocity**: 1 | **Learned**: 2025-12-14 | **Last**: 2025-12-28 | **Category**: gotcha
 > When adding new XML components, must add lv_xml_component_register_from_file() call in main.cpp. Forgetting causes silent failures
 
-### [L015] [**+--/-----] No hardcoded colors in C++
-- **Uses**: 5 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: correction
+### [L015] [***--|+----] No hardcoded colors in C++
+- **Uses**: 6 | **Velocity**: 1 | **Learned**: 2025-12-14 | **Last**: 2025-12-28 | **Category**: correction
 > Use ui_theme_get_color() for all colors in C++. Hardcoded lv_color_hex() values break dark mode and violate design token system
 
 ### [L016] [**+--/-----] Test flag required
@@ -103,9 +103,9 @@
 > NEVER delete files you don't understand without explicit user permission. If untracked files cause build errors, ASK the user first - they may be important WIP. Ignoring the build error is always safer than deleting files.
 
 
-### [L027] [*+---/-----] Worktree initialization
-- **Uses**: 3 | **Learned**: 2025-12-24 | **Last**: 2025-12-25 | **Category**: pattern
-> When creating a git worktree for a project with submodules or generated files, ALWAYS run the init script (e.g., init-worktree.sh) before building. Worktrees share git history but have separate working directories - generated files like lib/libhv/include/hv/ don't exist until built.
+### [L027] [***--|**---] Worktree initialization
+- **Uses**: 6 | **Velocity**: 3 | **Learned**: 2025-12-24 | **Last**: 2025-12-28 | **Category**: pattern
+> When creating a git worktree, ALWAYS run ./scripts/init-worktree.sh BEFORE any commits. Worktrees don't auto-initialize submodules - uninitialized submodules appear as deletions and will be silently removed from git's tree on your next commit.
 
 
 ### [L028] [*+---/-----] Use project venv
@@ -113,8 +113,8 @@
 > Always use project's .venv for Python packages (.venv/bin/pip install X), never system pip. Project dependencies should stay isolated in the venv.
 
 
-### [L029] [****+/-----] LVGL observer callbacks
-- **Uses**: 9 | **Learned**: 2025-12-25 | **Last**: 2025-12-25 | **Category**: pattern
+### [L029] [***--|+----] LVGL observer callbacks
+- **Uses**: 10 | **Velocity**: 1 | **Learned**: 2025-12-25 | **Last**: 2025-12-28 | **Category**: pattern
 > LVGL observer callbacks use C-style function signatures (lv_observer_t*, lv_subject_t*) - NOT lambdas. Must pass user_data via lv_observer_get_user_data(observer). Also: lv_subject_set_*() from non-main threads must use ui_async_call() to avoid render-phase assertions.
 
 
@@ -129,7 +129,12 @@
 
 
 
-### [L032] [***--|***--] Re-stage after pre-commit format
-- **Uses**: 6 | **Velocity**: 4 | **Learned**: 2025-12-27 | **Last**: 2025-12-28 | **Category**: correction
+### [L032] [***--|****+] Re-stage after pre-commit format
+- **Uses**: 9 | **Velocity**: 7 | **Learned**: 2025-12-27 | **Last**: 2025-12-28 | **Category**: correction
 > When pre-commit hook auto-formats files, they are NOT automatically re-staged. Always check git status after a commit and amend if the hook formatted files. Look for 'Auto-formatted: <file>' messages and run 'git add -u && git commit --amend --no-edit'.
+
+
+### [L033] [*----|+----] No detached threads on ARM/glibc
+- **Uses**: 2 | **Velocity**: 1 | **Learned**: 2025-12-28 | **Last**: 2025-12-28 | **Category**: gotcha
+> std::thread::detach() causes SIGABRT on ARM Linux with static glibc due to TLS cleanup issues during thread exit. Affects anything using TLS (spdlog, std::function, STL). Use synchronous execution or persistent worker threads instead.
 
