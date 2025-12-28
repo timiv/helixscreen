@@ -5,6 +5,7 @@
 
 #include "ui_fonts.h"
 #include "ui_theme.h"
+#include "ui_update_queue.h"
 #include "ui_widget_memory.h"
 
 #include "ams_types.h"
@@ -290,7 +291,17 @@ static void segment_anim_cb(void* var, int32_t value) {
         data->prev_segment = data->filament_segment;
     }
 
-    lv_obj_invalidate(obj);
+    // Defer invalidation to avoid calling during render phase
+    // Animation exec callbacks can run during lv_timer_handler() which may overlap with rendering
+    // Check lv_obj_is_valid() in case widget is deleted before callback executes
+    ui_async_call(
+        [](void* obj_ptr) {
+            auto* obj = static_cast<lv_obj_t*>(obj_ptr);
+            if (lv_obj_is_valid(obj)) {
+                lv_obj_invalidate(obj);
+            }
+        },
+        obj);
 }
 
 // Start error pulse animation
@@ -340,7 +351,16 @@ static void error_pulse_anim_cb(void* var, int32_t value) {
         return;
 
     data->error_pulse_opa = static_cast<lv_opa_t>(value);
-    lv_obj_invalidate(obj);
+    // Defer invalidation to avoid calling during render phase
+    // Check lv_obj_is_valid() in case widget is deleted before callback executes
+    ui_async_call(
+        [](void* obj_ptr) {
+            auto* obj = static_cast<lv_obj_t*>(obj_ptr);
+            if (lv_obj_is_valid(obj)) {
+                lv_obj_invalidate(obj);
+            }
+        },
+        obj);
 }
 
 // ============================================================================

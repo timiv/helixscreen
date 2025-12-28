@@ -7,6 +7,8 @@
 #include "lvgl/lvgl.h"
 
 #include <array>
+#include <atomic>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -162,6 +164,9 @@ class InputShaperPanel {
     std::vector<ShaperFit> shaper_results_;
     std::string recommended_type_;
     float recommended_freq_ = 0.0f;
+
+    // Destruction flag for async callback safety [L012]
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
 };
 
 // Global instance accessor

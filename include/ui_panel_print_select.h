@@ -17,6 +17,7 @@
 #include "print_history_manager.h"
 #include "usb_backend.h"
 
+#include <atomic>
 #include <ctime>
 #include <memory>
 #include <optional>
@@ -455,6 +456,10 @@ class PrintSelectPanel : public PanelBase {
 
     /// Observer for PrintHistoryManager - updates file status when history changes
     HistoryChangedCallback history_observer_;
+
+    /// Destruction flag for async callback safety [L012]
+    /// Shared pointer allows callbacks to check if panel is still alive
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
 
     // File list change notification handler name (for unregistering)
     std::string filelist_handler_name_;

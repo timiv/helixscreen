@@ -61,6 +61,10 @@ bool MoonrakerManager::init(const RuntimeConfig& runtime_config, Config* config)
 }
 
 void MoonrakerManager::shutdown() {
+    // Signal to async callbacks that we're being destroyed [L012]
+    // Must happen FIRST before any cleanup
+    m_alive->store(false);
+
     if (!m_initialized) {
         return;
     }
@@ -298,10 +302,16 @@ void MoonrakerManager::register_callbacks() {
         }
     });
 
+    // Capture alive flag for destruction detection [L012]
+    auto alive = m_alive;
+
     // Set up state change callback to queue updates for main thread
     // CRITICAL: This runs on Moonraker thread, NOT main thread
     m_client->set_state_change_callback(
-        [this](ConnectionState old_state, ConnectionState new_state) {
+        [this, alive](ConnectionState old_state, ConnectionState new_state) {
+            if (!alive->load())
+                return;
+
             spdlog::trace("[MoonrakerManager] State change: {} -> {} (queueing)",
                           static_cast<int>(old_state), static_cast<int>(new_state));
 
@@ -314,7 +324,10 @@ void MoonrakerManager::register_callbacks() {
         });
 
     // Register notification callback to queue updates for main thread
-    m_client->register_notify_update([this](json notification) {
+    m_client->register_notify_update([this, alive](json notification) {
+        if (!alive->load())
+            return;
+
         std::lock_guard<std::mutex> lock(m_notification_mutex);
         m_notification_queue.push(notification);
     });

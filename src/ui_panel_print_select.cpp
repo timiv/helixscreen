@@ -143,6 +143,9 @@ PrintSelectPanel::PrintSelectPanel(PrinterState& printer_state, MoonrakerAPI* ap
 }
 
 PrintSelectPanel::~PrintSelectPanel() {
+    // Signal destruction to async callbacks [L012]
+    alive_->store(false);
+
     // Remove history manager observer first (simple pointer comparison removal)
     // Applying [L010]: No spdlog in destructors
     if (history_observer_) {
@@ -1904,6 +1907,7 @@ void PrintSelectPanel::show_filament_warning() {
 void PrintSelectPanel::delete_file() {
     std::string filename_to_delete(selected_filename_buffer_);
     auto* self = this;
+    auto alive = alive_; // Capture shared_ptr by value for destruction check [L012]
 
     if (api_) {
         // Construct full path: gcodes/<current_path>/<filename>
@@ -1920,28 +1924,58 @@ void PrintSelectPanel::delete_file() {
         api_->delete_file(
             full_path,
             // Success callback - dispatch to main thread for LVGL safety
-            [self]() {
+            [self, alive]() {
+                if (!alive->load()) {
+                    spdlog::debug("[PrintSelectPanel] delete_file success callback skipped - panel "
+                                  "destroyed");
+                    return;
+                }
                 spdlog::info("[{}] File deleted successfully", self->get_name());
                 ui_async_call(
                     [](void* user_data) {
-                        auto* panel = static_cast<PrintSelectPanel*>(user_data);
+                        auto* ctx = static_cast<
+                            std::pair<PrintSelectPanel*, std::weak_ptr<std::atomic<bool>>>*>(
+                            user_data);
+                        auto alive_weak = ctx->second.lock();
+                        if (!alive_weak || !alive_weak->load()) {
+                            delete ctx;
+                            return;
+                        }
+                        auto* panel = ctx->first;
                         panel->hide_delete_confirmation();
                         panel->hide_detail_view();
                         panel->refresh_files();
+                        delete ctx;
                     },
-                    self);
+                    new std::pair<PrintSelectPanel*, std::weak_ptr<std::atomic<bool>>>(self,
+                                                                                       alive));
             },
             // Error callback - dispatch to main thread for LVGL safety
-            [self](const MoonrakerError& error) {
+            [self, alive](const MoonrakerError& error) {
+                if (!alive->load()) {
+                    spdlog::debug("[PrintSelectPanel] delete_file error callback skipped - panel "
+                                  "destroyed");
+                    return;
+                }
                 LOG_ERROR_INTERNAL("[{}] File delete error: {} ({})", self->get_name(),
                                    error.message, error.get_type_string());
                 ui_async_call(
                     [](void* user_data) {
-                        auto* panel = static_cast<PrintSelectPanel*>(user_data);
+                        auto* ctx = static_cast<
+                            std::pair<PrintSelectPanel*, std::weak_ptr<std::atomic<bool>>>*>(
+                            user_data);
+                        auto alive_weak = ctx->second.lock();
+                        if (!alive_weak || !alive_weak->load()) {
+                            delete ctx;
+                            return;
+                        }
+                        auto* panel = ctx->first;
                         NOTIFY_ERROR("Failed to delete file");
                         panel->hide_delete_confirmation();
+                        delete ctx;
                     },
-                    self);
+                    new std::pair<PrintSelectPanel*, std::weak_ptr<std::atomic<bool>>>(self,
+                                                                                       alive));
             });
     } else {
         NOTIFY_WARNING("Cannot delete file: printer not connected");

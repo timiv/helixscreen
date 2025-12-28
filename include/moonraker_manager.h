@@ -7,6 +7,8 @@
 
 #include "runtime_config.h"
 
+#include <atomic>
+#include <memory>
 #include <queue>
 
 #include "hv/json.hpp"
@@ -198,6 +200,9 @@ class MoonrakerManager {
 
     // Macro modification manager (PRINT_START wizard integration)
     std::unique_ptr<helix::MacroModificationManager> m_macro_analysis;
+
+    // Destruction flag for async callback safety [L012]
+    std::shared_ptr<std::atomic<bool>> m_alive = std::make_shared<std::atomic<bool>>(true);
 
     bool m_initialized = false;
 };

@@ -8,6 +8,8 @@
 #include "moonraker_domain_service.h" // For BedMeshProfile
 
 #include <array>
+#include <atomic>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -127,6 +129,10 @@ class BedMeshPanel : public PanelBase {
     std::string pending_rename_new_;
     enum class PendingOperation { None, Delete, Rename };
     PendingOperation pending_operation_ = PendingOperation::None;
+
+    // Destruction flag for async callback safety [L012]
+    // Shared with WebSocket callbacks to detect when panel is destroyed
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
 
     // ========== Private Methods ==========
     void register_event_callbacks();

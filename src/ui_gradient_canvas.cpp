@@ -4,6 +4,7 @@
 #include "ui_gradient_canvas.h"
 
 #include "ui_error_reporting.h"
+#include "ui_update_queue.h"
 
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
@@ -273,7 +274,16 @@ void ui_gradient_canvas_redraw(lv_obj_t* obj) {
     GradientData* data = static_cast<GradientData*>(lv_obj_get_user_data(obj));
     if (data) {
         render_gradient_buffer(data);
-        lv_obj_invalidate(obj);
+        // Defer invalidation to avoid calling during render phase
+        // Check lv_obj_is_valid() in case widget is deleted before callback executes
+        ui_async_call(
+            [](void* obj_ptr) {
+                auto* obj = static_cast<lv_obj_t*>(obj_ptr);
+                if (lv_obj_is_valid(obj)) {
+                    lv_obj_invalidate(obj);
+                }
+            },
+            obj);
     }
 }
 
@@ -284,6 +294,15 @@ void ui_gradient_canvas_set_dither(lv_obj_t* obj, bool enable) {
     if (data && data->dither != enable) {
         data->dither = enable;
         render_gradient_buffer(data);
-        lv_obj_invalidate(obj);
+        // Defer invalidation to avoid calling during render phase
+        // Check lv_obj_is_valid() in case widget is deleted before callback executes
+        ui_async_call(
+            [](void* obj_ptr) {
+                auto* obj = static_cast<lv_obj_t*>(obj_ptr);
+                if (lv_obj_is_valid(obj)) {
+                    lv_obj_invalidate(obj);
+                }
+            },
+            obj);
     }
 }

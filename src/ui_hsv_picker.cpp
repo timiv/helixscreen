@@ -3,6 +3,8 @@
 
 #include "ui_hsv_picker.h"
 
+#include "ui_update_queue.h"
+
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "lvgl/src/xml/lv_xml_parser.h"
@@ -296,7 +298,16 @@ static void hue_touch_handler(lv_event_t* e) {
 
     // Re-render SV square with new hue
     render_sv_square(data);
-    lv_obj_invalidate(data->sv_image);
+    // Defer invalidation to avoid calling during render phase
+    // Check lv_obj_is_valid() in case widget is deleted before callback executes
+    ui_async_call(
+        [](void* obj_ptr) {
+            auto* obj = static_cast<lv_obj_t*>(obj_ptr);
+            if (lv_obj_is_valid(obj)) {
+                lv_obj_invalidate(obj);
+            }
+        },
+        data->sv_image);
 
     update_indicators(data);
     notify_color_changed(data);
@@ -478,7 +489,16 @@ void ui_hsv_picker_set_color_rgb(lv_obj_t* obj, uint32_t rgb) {
     // Re-render SV square with new hue
     render_sv_square(data);
     if (data->sv_image) {
-        lv_obj_invalidate(data->sv_image);
+        // Defer invalidation to avoid calling during render phase
+        // Check lv_obj_is_valid() in case widget is deleted before callback executes
+        ui_async_call(
+            [](void* obj_ptr) {
+                auto* obj = static_cast<lv_obj_t*>(obj_ptr);
+                if (lv_obj_is_valid(obj)) {
+                    lv_obj_invalidate(obj);
+                }
+            },
+            data->sv_image);
     }
 
     update_indicators(data);
@@ -518,7 +538,16 @@ void ui_hsv_picker_set_hsv(lv_obj_t* obj, float hue, float sat, float val) {
 
     render_sv_square(data);
     if (data->sv_image) {
-        lv_obj_invalidate(data->sv_image);
+        // Defer invalidation to avoid calling during render phase
+        // Check lv_obj_is_valid() in case widget is deleted before callback executes
+        ui_async_call(
+            [](void* obj_ptr) {
+                auto* obj = static_cast<lv_obj_t*>(obj_ptr);
+                if (lv_obj_is_valid(obj)) {
+                    lv_obj_invalidate(obj);
+                }
+            },
+            data->sv_image);
     }
 
     update_indicators(data);

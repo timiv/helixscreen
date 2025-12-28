@@ -34,7 +34,9 @@ InputShaperPanel& get_global_input_shaper_panel() {
 }
 
 InputShaperPanel::~InputShaperPanel() {
-    // Nothing to clean up - API collector handles its own lifecycle
+    // Signal to async callbacks that this panel is being destroyed [L012]
+    alive_->store(false);
+    // API collector handles its own lifecycle
 }
 
 void init_input_shaper_row_handler() {
@@ -242,12 +244,23 @@ void InputShaperPanel::start_calibration(char axis) {
     set_state(State::MEASURING);
     spdlog::info("[InputShaper] Starting calibration for axis {}", axis);
 
+    // Capture alive flag for destruction detection [L012]
+    auto alive = alive_;
+
     // Use the API - collector handles all the G-code response parsing
     api_->start_resonance_test(
         axis,
         nullptr, // on_progress (not used currently)
-        [this](const InputShaperResult& result) { on_calibration_result(result); },
-        [this](const MoonrakerError& err) { on_calibration_error(err.message); });
+        [this, alive](const InputShaperResult& result) {
+            if (!alive->load())
+                return;
+            on_calibration_result(result);
+        },
+        [this, alive](const MoonrakerError& err) {
+            if (!alive->load())
+                return;
+            on_calibration_error(err.message);
+        });
 }
 
 void InputShaperPanel::measure_noise() {
@@ -261,16 +274,23 @@ void InputShaperPanel::measure_noise() {
     set_state(State::MEASURING);
     spdlog::info("[InputShaper] Starting MEASURE_AXES_NOISE");
 
+    // Capture alive flag for destruction detection [L012]
+    auto alive = alive_;
+
     api_->execute_gcode(
         "MEASURE_AXES_NOISE",
-        [this]() {
+        [this, alive]() {
+            if (!alive->load())
+                return;
             spdlog::debug("[InputShaper] MEASURE_AXES_NOISE command accepted");
             // Note: This fires when command is accepted, not when complete
             // Results appear in console output
             ui_toast_show(ToastSeverity::INFO, "Noise measurement started. Check console.", 3000);
             set_state(State::IDLE);
         },
-        [this](const MoonrakerError& err) {
+        [this, alive](const MoonrakerError& err) {
+            if (!alive->load())
+                return;
             spdlog::error("[InputShaper] Failed to measure noise: {}", err.message);
             on_calibration_error(err.message);
         });

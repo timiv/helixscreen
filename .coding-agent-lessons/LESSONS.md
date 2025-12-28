@@ -49,8 +49,8 @@
 - **Uses**: 10 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: gotcha
 > Avoid mutex locks in destructors during static destruction phase. Other objects may already be destroyed, causing deadlock or crash on exit
 
-### [L012] [*****/*****] Guard async callbacks
-- **Uses**: 23 | **Learned**: 2025-12-14 | **Last**: 2025-12-27 | **Category**: gotcha
+### [L012] [****-|***--] Guard async callbacks
+- **Uses**: 27 | **Velocity**: 4 | **Learned**: 2025-12-14 | **Last**: 2025-12-28 | **Category**: gotcha
 > Async WebSocket callbacks can fire after object destruction. Use weak_ptr or flag checks to guard against stale this pointers in async handlers
 
 ### [L013] [****-/-----] Callbacks before XML creation
@@ -129,7 +129,7 @@
 
 
 
-### [L032] [*----/-----] Re-stage after pre-commit format
-- **Uses**: 2 | **Learned**: 2025-12-27 | **Last**: 2025-12-27 | **Category**: correction
+### [L032] [***--|***--] Re-stage after pre-commit format
+- **Uses**: 6 | **Velocity**: 4 | **Learned**: 2025-12-27 | **Last**: 2025-12-28 | **Category**: correction
 > When pre-commit hook auto-formats files, they are NOT automatically re-staged. Always check git status after a commit and amend if the hook formatted files. Look for 'Auto-formatted: <file>' messages and run 'git add -u && git commit --amend --no-edit'.
 
