@@ -594,8 +594,8 @@ RequestId MoonrakerClientMock::send_jsonrpc(const std::string& method, const jso
     }
 
     // Unimplemented methods - log warning
-    spdlog::warn("[MoonrakerClientMock] Method '{}' not implemented - callbacks not invoked",
-                 method);
+    spdlog::debug("[MoonrakerClientMock] Method '{}' not implemented - callbacks not invoked",
+                  method);
     return next_mock_request_id();
 }
 

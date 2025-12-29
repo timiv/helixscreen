@@ -330,7 +330,7 @@ void PrintStartAnalyzer::analyze(MoonrakerAPI* api, AnalysisCallback on_complete
             }
 
             if (cfg_files.empty()) {
-                spdlog::warn("[PrintStartAnalyzer] No .cfg files found in config directory");
+                spdlog::debug("[PrintStartAnalyzer] No .cfg files found in config directory");
                 PrintStartAnalysis result;
                 result.found = false;
                 if (on_complete) {
