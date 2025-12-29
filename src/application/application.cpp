@@ -21,6 +21,7 @@
 #include "moonraker_manager.h"
 #include "panel_factory.h"
 #include "print_history_manager.h"
+#include "screenshot.h"
 #include "streaming_policy.h"
 #include "subject_initializer.h"
 
@@ -1001,7 +1002,7 @@ int Application::main_loop() {
         // Auto-screenshot
         if (m_args.screenshot_enabled && !m_screenshot_taken &&
             DisplayManager::get_ticks() >= m_screenshot_time) {
-            // Screenshot logic would go here
+            helix::save_screenshot();
             m_screenshot_taken = true;
         }
 
