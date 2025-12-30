@@ -91,7 +91,14 @@ TempControlPanel::TempControlPanel(PrinterState& printer_state, MoonrakerAPI* ap
 void TempControlPanel::nozzle_temp_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
     auto* self = static_cast<TempControlPanel*>(lv_observer_get_user_data(observer));
     if (self) {
-        self->on_nozzle_temp_changed(lv_subject_get_int(subject));
+        int temp_centi = lv_subject_get_int(subject);
+        static int last_logged = 0;
+        // Log every 40th unique value (~10 seconds of updates)
+        if (temp_centi != last_logged && (temp_centi / 100) != (last_logged / 100)) {
+            spdlog::trace("[TempPanel] Observer fired: nozzle temp = {} centideg", temp_centi);
+            last_logged = temp_centi;
+        }
+        self->on_nozzle_temp_changed(temp_centi);
     }
 }
 
@@ -140,7 +147,16 @@ void TempControlPanel::on_nozzle_temp_changed(int temp_centi) {
 
     // Guard: don't update live graph until subjects initialized
     if (!subjects_initialized_) {
+        spdlog::debug("[TempPanel] SKIPPING graph update: subjects not initialized");
         return;
+    }
+
+    // DEBUG: Log that we passed subjects check (log every 40 calls = ~10sec)
+    static int passed_init_count = 0;
+    if (++passed_init_count % 40 == 0) {
+        spdlog::trace("[TempPanel] PASSED subjects check #{}, throttle check: {} vs {} (diff={}ms)",
+                      passed_init_count, now_ms, nozzle_last_graph_update_ms_,
+                      now_ms - nozzle_last_graph_update_ms_);
     }
 
     // Throttle live graph updates to 1 Hz (graph has 1200 points for 20 minutes at 1 sample/sec)
@@ -152,26 +168,43 @@ void TempControlPanel::on_nozzle_temp_changed(int temp_centi) {
 
     float temp_deg = centi_to_degrees_f(temp_centi);
 
-    if (nozzle_graph_ && nozzle_series_id_ >= 0) {
-        ui_temp_graph_update_series_with_time(nozzle_graph_, nozzle_series_id_, temp_deg, now_ms);
-        spdlog::trace("[TempPanel] Nozzle graph updated: {:.1f}°C", temp_deg);
+    // Update all registered nozzle temperature graphs
+    update_nozzle_graphs(temp_deg, now_ms);
+
+    // Update mini graph Y-axis scaling (dynamic based on both temps)
+    float bed_deg = centi_to_degrees_f(bed_current_);
+    update_mini_graph_y_axis(temp_deg, bed_deg);
+}
+
+void TempControlPanel::update_nozzle_graphs(float temp_deg, int64_t now_ms) {
+    // Log graph update state every 40 updates (~40 seconds)
+    static int graph_update_count = 0;
+    if (++graph_update_count % 40 == 0) {
+        spdlog::trace("[TempPanel] Nozzle graphs update #{}: {:.1f}°C to {} graphs",
+                      graph_update_count, temp_deg, nozzle_temp_graphs_.size());
     }
 
-    // Also update mini combined graph (filament panel)
-    if (mini_graph_ && mini_nozzle_series_id_ >= 0) {
-        // Dynamic Y-axis scaling using extracted helper
-        float bed_deg = centi_to_degrees_f(bed_current_);
-        float new_y_max = calculate_mini_graph_y_max(mini_graph_y_max_, temp_deg, bed_deg);
-
-        if (new_y_max != mini_graph_y_max_) {
-            spdlog::debug("[TempPanel] Mini graph Y-axis {} to {}°C",
-                          new_y_max > mini_graph_y_max_ ? "expanded" : "shrunk", new_y_max);
-            mini_graph_y_max_ = new_y_max;
-            ui_temp_graph_set_temp_range(mini_graph_, 0.0f, mini_graph_y_max_);
+    // Update all registered graphs that care about nozzle temperature
+    for (const auto& reg : nozzle_temp_graphs_) {
+        if (reg.graph && reg.series_id >= 0) {
+            ui_temp_graph_update_series_with_time(reg.graph, reg.series_id, temp_deg, now_ms);
         }
+    }
+}
 
-        ui_temp_graph_update_series_with_time(mini_graph_, mini_nozzle_series_id_, temp_deg,
-                                              now_ms);
+void TempControlPanel::update_mini_graph_y_axis(float nozzle_deg, float bed_deg) {
+    if (!mini_graph_) {
+        return;
+    }
+
+    // Dynamic Y-axis scaling using extracted helper
+    float new_y_max = calculate_mini_graph_y_max(mini_graph_y_max_, nozzle_deg, bed_deg);
+
+    if (new_y_max != mini_graph_y_max_) {
+        spdlog::debug("[TempPanel] Mini graph Y-axis {} to {}°C",
+                      new_y_max > mini_graph_y_max_ ? "expanded" : "shrunk", new_y_max);
+        mini_graph_y_max_ = new_y_max;
+        ui_temp_graph_set_temp_range(mini_graph_, 0.0f, mini_graph_y_max_);
     }
 }
 
@@ -232,14 +265,23 @@ void TempControlPanel::on_bed_temp_changed(int temp_centi) {
 
     float temp_deg = centi_to_degrees_f(temp_centi);
 
-    if (bed_graph_ && bed_series_id_ >= 0) {
-        ui_temp_graph_update_series_with_time(bed_graph_, bed_series_id_, temp_deg, now_ms);
-        spdlog::trace("[TempPanel] Bed graph updated: {:.1f}°C", temp_deg);
+    // Update all registered bed temperature graphs
+    update_bed_graphs(temp_deg, now_ms);
+}
+
+void TempControlPanel::update_bed_graphs(float temp_deg, int64_t now_ms) {
+    // Log graph update state every 40 updates (~40 seconds)
+    static int graph_update_count = 0;
+    if (++graph_update_count % 40 == 0) {
+        spdlog::trace("[TempPanel] Bed graphs update #{}: {:.1f}°C to {} graphs",
+                      graph_update_count, temp_deg, bed_temp_graphs_.size());
     }
 
-    // Also update mini combined graph (filament panel)
-    if (mini_graph_ && mini_bed_series_id_ >= 0) {
-        ui_temp_graph_update_series_with_time(mini_graph_, mini_bed_series_id_, temp_deg, now_ms);
+    // Update all registered graphs that care about bed temperature
+    for (const auto& reg : bed_temp_graphs_) {
+        if (reg.graph && reg.series_id >= 0) {
+            ui_temp_graph_update_series_with_time(reg.graph, reg.series_id, temp_deg, now_ms);
+        }
     }
 }
 
@@ -749,6 +791,9 @@ void TempControlPanel::setup_nozzle_panel(lv_obj_t* panel, lv_obj_t* parent_scre
         if (nozzle_graph_) {
             ui_temp_graph_set_y_axis(nozzle_graph_,
                                      static_cast<float>(nozzle_config_.y_axis_increment), true);
+            // Register graph for unified temperature updates
+            nozzle_temp_graphs_.push_back({nozzle_graph_, nozzle_series_id_});
+            spdlog::debug("[TempPanel] Registered nozzle_graph_ for temp updates");
         }
     }
 
@@ -840,6 +885,9 @@ void TempControlPanel::setup_bed_panel(lv_obj_t* panel, lv_obj_t* parent_screen)
         if (bed_graph_) {
             ui_temp_graph_set_y_axis(bed_graph_, static_cast<float>(bed_config_.y_axis_increment),
                                      true);
+            // Register graph for unified temperature updates
+            bed_temp_graphs_.push_back({bed_graph_, bed_series_id_});
+            spdlog::debug("[TempPanel] Registered bed_graph_ for temp updates");
         }
     }
 
@@ -1113,6 +1161,8 @@ void TempControlPanel::setup_mini_combined_graph(lv_obj_t* container) {
     if (mini_bed_series_id_ >= 0) {
         // Subtle gradient so it doesn't dominate
         ui_temp_graph_set_series_gradient(mini_graph_, mini_bed_series_id_, LV_OPA_0, LV_OPA_10);
+        // Register for unified bed temperature updates
+        bed_temp_graphs_.push_back({mini_graph_, mini_bed_series_id_});
     }
 
     // Add nozzle series SECOND (renders on top) - red/heating color
@@ -1120,6 +1170,8 @@ void TempControlPanel::setup_mini_combined_graph(lv_obj_t* container) {
     if (mini_nozzle_series_id_ >= 0) {
         // More visible gradient for the primary temp (filament loading)
         ui_temp_graph_set_series_gradient(mini_graph_, mini_nozzle_series_id_, LV_OPA_0, LV_OPA_20);
+        // Register for unified nozzle temperature updates
+        nozzle_temp_graphs_.push_back({mini_graph_, mini_nozzle_series_id_});
     }
 
     // Replay last 5 minutes of history to each series
@@ -1135,8 +1187,9 @@ void TempControlPanel::setup_mini_combined_graph(lv_obj_t* container) {
         ui_temp_graph_set_series_target(mini_graph_, mini_bed_series_id_, target_deg, true);
     }
 
-    spdlog::info("[TempPanel] Mini combined graph created with {} point capacity",
-                 MINI_GRAPH_POINTS);
+    spdlog::info("[TempPanel] Mini combined graph created with {} point capacity, "
+                 "registered {} nozzle graphs, {} bed graphs",
+                 MINI_GRAPH_POINTS, nozzle_temp_graphs_.size(), bed_temp_graphs_.size());
 }
 
 void TempControlPanel::replay_history_to_mini_graph() {
