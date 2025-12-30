@@ -175,6 +175,7 @@ static const IconMapping ICON_MAP[] = {
 
     // SD card / Send
     {"sd",                 "\xF3\xB0\x91\xB9"},  // F0479 sd
+    {"script_text",        "\xF3\xB0\xAF\x82"},  // F0BC2 script-text (macro/script)
     {"send",               "\xF3\xB0\x92\x8A"},  // F048A send
     {"settings",           "\xF3\xB0\x92\x93"},  // F0493 cog
     {"sine_wave",          "\xF3\xB0\xA5\x9B"},  // F095B sine-wave
