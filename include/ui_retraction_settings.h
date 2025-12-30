@@ -3,10 +3,9 @@
 
 #pragma once
 
-#include "ui_panel_base.h"
-
 #include "lvgl.h"
 #include "moonraker_client.h"
+#include "overlay_base.h"
 #include "printer_state.h"
 
 /**
@@ -28,7 +27,7 @@
  *
  * Values are stored in PrinterState subjects and synced from Moonraker subscription.
  */
-class RetractionSettingsOverlay : public PanelBase {
+class RetractionSettingsOverlay : public OverlayBase {
   public:
     /**
      * @brief Construct RetractionSettingsOverlay
@@ -38,19 +37,73 @@ class RetractionSettingsOverlay : public PanelBase {
     RetractionSettingsOverlay(PrinterState& printer_state, MoonrakerClient* client);
     ~RetractionSettingsOverlay() override;
 
-    // PanelBase interface
-    void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
-    [[nodiscard]] const char* get_name() const override {
-        return "RetractionSettings";
-    }
-    [[nodiscard]] const char* get_xml_component_name() const override {
-        return "retraction_settings_overlay";
-    }
+    //
+    // === OverlayBase Implementation ===
+    //
+
+    /**
+     * @brief Initialize subjects for XML binding
+     */
     void init_subjects() override;
 
-    // Lifecycle hooks
+    /**
+     * @brief Create overlay UI from XML
+     *
+     * @param parent Parent widget to attach overlay to (usually screen)
+     * @return Root object of overlay, or nullptr on failure
+     */
+    lv_obj_t* create(lv_obj_t* parent) override;
+
+    /**
+     * @brief Get human-readable overlay name
+     * @return "Retraction Settings"
+     */
+    [[nodiscard]] const char* get_name() const override {
+        return "Retraction Settings";
+    }
+
+    /**
+     * @brief Called when overlay becomes visible
+     */
     void on_activate() override;
+
+    /**
+     * @brief Called when overlay is hidden
+     */
     void on_deactivate() override;
+
+    /**
+     * @brief Clean up resources for async-safe destruction
+     */
+    void cleanup() override;
+
+    //
+    // === Legacy Compatibility ===
+    //
+
+    /**
+     * @brief Get XML component name for lv_xml_create()
+     * @return "retraction_settings_overlay"
+     */
+    [[nodiscard]] const char* get_xml_component_name() const {
+        return "retraction_settings_overlay";
+    }
+
+    /**
+     * @brief Get root panel object (alias for get_root())
+     * @return Panel object, or nullptr if not yet created
+     */
+    lv_obj_t* get_panel() const {
+        return overlay_root_;
+    }
+
+    /**
+     * @brief Update MoonrakerClient pointer
+     * @param client New client pointer (may be nullptr)
+     */
+    void set_client(MoonrakerClient* client) {
+        client_ = client;
+    }
 
   private:
     /**
@@ -94,7 +147,11 @@ class RetractionSettingsOverlay : public PanelBase {
     char unretract_extra_buf_[16];
     char unretract_speed_buf_[16];
 
-    // Moonraker client for G-code
+    //
+    // === Injected Dependencies ===
+    //
+
+    PrinterState& printer_state_;
     MoonrakerClient* client_ = nullptr;
 
     // Debounce - don't send G-code while syncing from printer state

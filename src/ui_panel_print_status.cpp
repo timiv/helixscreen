@@ -81,7 +81,7 @@ PrintStatusPanel& get_global_print_status_panel() {
 }
 
 PrintStatusPanel::PrintStatusPanel(PrinterState& printer_state, MoonrakerAPI* api)
-    : PanelBase(printer_state, api) {
+    : printer_state_(printer_state), api_(api) {
     // Subscribe to PrinterState temperature subjects (ObserverGuard handles cleanup)
     extruder_temp_observer_ =
         ObserverGuard(printer_state_.get_extruder_temp_subject(), extruder_temp_observer_cb, this);
@@ -283,35 +283,38 @@ void PrintStatusPanel::init_subjects() {
     spdlog::debug("[{}] Subjects initialized (17 subjects)", get_name());
 }
 
-void PrintStatusPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
-    // Call base class to store panel_ and parent_screen_
-    PanelBase::setup(panel, parent_screen);
+lv_obj_t* PrintStatusPanel::create(lv_obj_t* parent) {
+    parent_screen_ = parent;
 
-    if (!panel_) {
-        spdlog::error("[{}] NULL panel", get_name());
-        return;
+    // Create overlay root from XML
+    overlay_root_ =
+        static_cast<lv_obj_t*>(lv_xml_create(parent, get_xml_component_name(), nullptr));
+    if (!overlay_root_) {
+        spdlog::error("[{}] Failed to create overlay from XML", get_name());
+        return nullptr;
     }
 
     spdlog::info("[{}] Setting up panel...", get_name());
 
     // Panel width is set via XML using #overlay_panel_width_large (same as print_file_detail)
     // Use standard overlay panel setup for header/content/back button
-    ui_overlay_panel_setup_standard(panel_, parent_screen_, "overlay_header", "overlay_content");
+    ui_overlay_panel_setup_standard(overlay_root_, parent_screen_, "overlay_header",
+                                    "overlay_content");
 
     // Store header reference for e-stop visibility control
-    overlay_header_ = lv_obj_find_by_name(panel_, "overlay_header");
+    overlay_header_ = lv_obj_find_by_name(overlay_root_, "overlay_header");
 
-    lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
+    lv_obj_t* overlay_content = lv_obj_find_by_name(overlay_root_, "overlay_content");
     if (!overlay_content) {
         spdlog::error("[{}] overlay_content not found!", get_name());
-        return;
+        return nullptr;
     }
 
     // Find thumbnail section for nested widgets
     lv_obj_t* thumbnail_section = lv_obj_find_by_name(overlay_content, "thumbnail_section");
     if (!thumbnail_section) {
         spdlog::error("[{}] thumbnail_section not found!", get_name());
-        return;
+        return nullptr;
     }
 
     // Find G-code viewer, thumbnail, and gradient background widgets
@@ -361,7 +364,7 @@ void PrintStatusPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     }
 
     // Force layout calculation
-    lv_obj_update_layout(panel_);
+    lv_obj_update_layout(overlay_root_);
 
     // Register resize callback
     ui_resize_handler_register(on_resize_static);
@@ -435,10 +438,15 @@ void PrintStatusPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         spdlog::info("[{}] Restored cached thumbnail: {}", get_name(), cached_thumbnail_path_);
     }
 
+    // Hide initially - NavigationManager will show when pushed
+    lv_obj_add_flag(overlay_root_, LV_OBJ_FLAG_HIDDEN);
+
     spdlog::info("[{}] Setup complete!", get_name());
+    return overlay_root_;
 }
 
 void PrintStatusPanel::on_activate() {
+    OverlayBase::on_activate(); // Sets visible_ = true
     is_active_ = true;
 
     int state_enum = lv_subject_get_int(printer_state_.get_print_state_enum_subject());
@@ -460,6 +468,7 @@ void PrintStatusPanel::on_activate() {
 }
 
 void PrintStatusPanel::on_deactivate() {
+    OverlayBase::on_deactivate(); // Sets visible_ = false
     is_active_ = false;
     spdlog::debug("[{}] on_deactivate()", get_name());
 
@@ -470,6 +479,10 @@ void PrintStatusPanel::on_deactivate() {
 
     // Hide runout guidance modal if panel is deactivated (e.g., navbar navigation)
     hide_runout_guidance_modal();
+}
+
+void PrintStatusPanel::cleanup() {
+    OverlayBase::cleanup(); // Sets cleanup_called_ = true
 }
 
 // ============================================================================

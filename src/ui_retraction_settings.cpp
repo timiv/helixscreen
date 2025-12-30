@@ -4,6 +4,7 @@
 #include "ui_retraction_settings.h"
 
 #include "ui_nav.h"
+#include "ui_nav_manager.h"
 
 #include "lvgl/src/xml/lv_xml.h"
 #include "runtime_config.h"
@@ -38,8 +39,8 @@ void init_global_retraction_settings(PrinterState& printer_state, MoonrakerClien
 
 RetractionSettingsOverlay::RetractionSettingsOverlay(PrinterState& printer_state,
                                                      MoonrakerClient* client)
-    : PanelBase(printer_state, nullptr), client_(client) {
-    spdlog::debug("[Retraction Settings] Constructor");
+    : printer_state_(printer_state), client_(client) {
+    spdlog::debug("[{}] Constructor", get_name());
 }
 
 RetractionSettingsOverlay::~RetractionSettingsOverlay() {
@@ -92,31 +93,46 @@ void RetractionSettingsOverlay::init_subjects() {
     spdlog::debug("[{}] init_subjects() - registered callbacks", get_name());
 }
 
-void RetractionSettingsOverlay::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
-    PanelBase::setup(panel, parent_screen);
+lv_obj_t* RetractionSettingsOverlay::create(lv_obj_t* parent) {
+    // Create overlay root from XML
+    overlay_root_ =
+        static_cast<lv_obj_t*>(lv_xml_create(parent, get_xml_component_name(), nullptr));
+    if (!overlay_root_) {
+        spdlog::error("[{}] Failed to create overlay from XML", get_name());
+        return nullptr;
+    }
 
-    spdlog::debug("[{}] setup() - finding widgets", get_name());
+    spdlog::debug("[{}] create() - finding widgets", get_name());
 
     // Find widgets
-    enable_switch_ = lv_obj_find_by_name(panel_, "retraction_enabled_switch");
-    retract_length_slider_ = lv_obj_find_by_name(panel_, "retract_length_slider");
-    retract_speed_slider_ = lv_obj_find_by_name(panel_, "retract_speed_slider");
-    unretract_extra_slider_ = lv_obj_find_by_name(panel_, "unretract_extra_slider");
-    unretract_speed_slider_ = lv_obj_find_by_name(panel_, "unretract_speed_slider");
+    enable_switch_ = lv_obj_find_by_name(overlay_root_, "retraction_enabled_switch");
+    retract_length_slider_ = lv_obj_find_by_name(overlay_root_, "retract_length_slider");
+    retract_speed_slider_ = lv_obj_find_by_name(overlay_root_, "retract_speed_slider");
+    unretract_extra_slider_ = lv_obj_find_by_name(overlay_root_, "unretract_extra_slider");
+    unretract_speed_slider_ = lv_obj_find_by_name(overlay_root_, "unretract_speed_slider");
 
     spdlog::debug("[{}] Widgets found: enable={} length={} speed={} extra={} uspeed={}", get_name(),
                   enable_switch_ != nullptr, retract_length_slider_ != nullptr,
                   retract_speed_slider_ != nullptr, unretract_extra_slider_ != nullptr,
                   unretract_speed_slider_ != nullptr);
+
+    return overlay_root_;
 }
 
 void RetractionSettingsOverlay::on_activate() {
+    OverlayBase::on_activate();
     spdlog::debug("[{}] on_activate() - syncing from printer state", get_name());
     sync_from_printer_state();
 }
 
 void RetractionSettingsOverlay::on_deactivate() {
+    OverlayBase::on_deactivate();
     spdlog::debug("[{}] on_deactivate()", get_name());
+}
+
+void RetractionSettingsOverlay::cleanup() {
+    spdlog::debug("[{}] cleanup()", get_name());
+    OverlayBase::cleanup();
 }
 
 void RetractionSettingsOverlay::sync_from_printer_state() {
@@ -294,17 +310,30 @@ void RetractionSettingsOverlay::on_unretract_speed_changed(lv_event_t* /*e*/) {
 // =============================================================================
 
 static void on_retraction_row_clicked(lv_event_t* /*e*/) {
-    // Create overlay if not exists
-    if (!g_retraction_settings_panel) {
-        g_retraction_settings_panel = static_cast<lv_obj_t*>(
-            lv_xml_create(lv_screen_active(), "retraction_settings_overlay", nullptr));
-        if (!g_retraction_settings_panel) {
-            spdlog::error("[Retraction Settings] Failed to create overlay");
-            return;
-        }
-        get_global_retraction_settings().setup(g_retraction_settings_panel, lv_screen_active());
+    spdlog::debug("[Retraction Settings] Retraction row clicked");
+
+    if (!g_retraction_settings) {
+        spdlog::error("[Retraction Settings] Global instance not initialized!");
+        return;
     }
 
+    // Lazy-create the retraction settings panel using OverlayBase::create()
+    if (!g_retraction_settings_panel) {
+        spdlog::debug("[Retraction Settings] Creating retraction settings panel...");
+        g_retraction_settings_panel =
+            g_retraction_settings->create(lv_display_get_screen_active(NULL));
+
+        if (g_retraction_settings_panel) {
+            // Register with NavigationManager for lifecycle callbacks
+            NavigationManager::instance().register_overlay_instance(g_retraction_settings_panel,
+                                                                    g_retraction_settings.get());
+            spdlog::debug("[Retraction Settings] Panel created and registered");
+        } else {
+            spdlog::error("[Retraction Settings] Failed to create retraction_settings_overlay");
+            return;
+        }
+    }
+
+    // Show the overlay - NavigationManager will call on_activate()
     ui_nav_push_overlay(g_retraction_settings_panel);
-    get_global_retraction_settings().on_activate();
 }

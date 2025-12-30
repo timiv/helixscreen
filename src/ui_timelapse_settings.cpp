@@ -4,6 +4,7 @@
 #include "ui_timelapse_settings.h"
 
 #include "ui_nav.h"
+#include "ui_nav_manager.h"
 
 #include "lvgl/src/xml/lv_xml.h"
 #include "runtime_config.h"
@@ -55,8 +56,8 @@ int TimelapseSettingsOverlay::index_to_framerate(int index) {
 }
 
 TimelapseSettingsOverlay::TimelapseSettingsOverlay(PrinterState& printer_state, MoonrakerAPI* api)
-    : PanelBase(printer_state, api) {
-    spdlog::debug("[Timelapse Settings] Constructor");
+    : printer_state_(printer_state), api_(api) {
+    spdlog::debug("[{}] Constructor", get_name());
 }
 
 void TimelapseSettingsOverlay::init_subjects() {
@@ -65,17 +66,23 @@ void TimelapseSettingsOverlay::init_subjects() {
     spdlog::debug("[{}] init_subjects() - registered row click callback", get_name());
 }
 
-void TimelapseSettingsOverlay::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
-    PanelBase::setup(panel, parent_screen);
+lv_obj_t* TimelapseSettingsOverlay::create(lv_obj_t* parent) {
+    // Create overlay root from XML
+    overlay_root_ =
+        static_cast<lv_obj_t*>(lv_xml_create(parent, get_xml_component_name(), nullptr));
+    if (!overlay_root_) {
+        spdlog::error("[{}] Failed to create overlay from XML", get_name());
+        return nullptr;
+    }
 
-    spdlog::debug("[{}] setup() - finding widgets", get_name());
+    spdlog::debug("[{}] create() - finding widgets", get_name());
 
     // Find row containers first, then get inner widgets
     // setting_toggle_row contains "toggle", setting_dropdown_row contains "dropdown"
-    lv_obj_t* enable_row = lv_obj_find_by_name(panel_, "row_timelapse_enable");
-    lv_obj_t* mode_row = lv_obj_find_by_name(panel_, "row_timelapse_mode");
-    lv_obj_t* framerate_row = lv_obj_find_by_name(panel_, "row_timelapse_framerate");
-    lv_obj_t* autorender_row = lv_obj_find_by_name(panel_, "row_timelapse_autorender");
+    lv_obj_t* enable_row = lv_obj_find_by_name(overlay_root_, "row_timelapse_enable");
+    lv_obj_t* mode_row = lv_obj_find_by_name(overlay_root_, "row_timelapse_mode");
+    lv_obj_t* framerate_row = lv_obj_find_by_name(overlay_root_, "row_timelapse_framerate");
+    lv_obj_t* autorender_row = lv_obj_find_by_name(overlay_root_, "row_timelapse_autorender");
 
     // Find inner widgets within rows
     if (enable_row) {
@@ -92,7 +99,7 @@ void TimelapseSettingsOverlay::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     }
 
     // Mode info text is standalone
-    mode_info_text_ = lv_obj_find_by_name(panel_, "mode_info_text");
+    mode_info_text_ = lv_obj_find_by_name(overlay_root_, "mode_info_text");
 
     // Set dropdown options programmatically (more reliable than XML \n parsing)
     if (mode_dropdown_) {
@@ -113,15 +120,24 @@ void TimelapseSettingsOverlay::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     lv_xml_register_event_cb(nullptr, "on_timelapse_mode_changed", on_mode_changed);
     lv_xml_register_event_cb(nullptr, "on_timelapse_framerate_changed", on_framerate_changed);
     lv_xml_register_event_cb(nullptr, "on_timelapse_autorender_changed", on_autorender_changed);
+
+    return overlay_root_;
 }
 
 void TimelapseSettingsOverlay::on_activate() {
+    OverlayBase::on_activate();
     spdlog::debug("[{}] on_activate() - fetching current settings", get_name());
     fetch_settings();
 }
 
 void TimelapseSettingsOverlay::on_deactivate() {
+    OverlayBase::on_deactivate();
     spdlog::debug("[{}] on_deactivate()", get_name());
+}
+
+void TimelapseSettingsOverlay::cleanup() {
+    spdlog::debug("[{}] cleanup()", get_name());
+    OverlayBase::cleanup();
 }
 
 void TimelapseSettingsOverlay::fetch_settings() {
@@ -296,23 +312,23 @@ static void on_timelapse_row_clicked(lv_event_t* e) {
         return;
     }
 
-    // Lazy-create the timelapse settings panel
+    // Lazy-create the timelapse settings panel using OverlayBase::create()
     if (!g_timelapse_settings_panel) {
         spdlog::debug("[Timelapse Settings] Creating timelapse settings panel...");
-        g_timelapse_settings_panel = static_cast<lv_obj_t*>(
-            lv_xml_create(lv_display_get_screen_active(NULL), "timelapse_settings_overlay", NULL));
+        g_timelapse_settings_panel =
+            g_timelapse_settings->create(lv_display_get_screen_active(NULL));
 
         if (g_timelapse_settings_panel) {
-            g_timelapse_settings->setup(g_timelapse_settings_panel,
-                                        lv_display_get_screen_active(NULL));
-            spdlog::debug("[Timelapse Settings] Panel created and setup complete");
+            // Register with NavigationManager for lifecycle callbacks
+            NavigationManager::instance().register_overlay_instance(g_timelapse_settings_panel,
+                                                                    g_timelapse_settings.get());
+            spdlog::debug("[Timelapse Settings] Panel created and registered");
         } else {
             spdlog::error("[Timelapse Settings] Failed to create timelapse_settings_overlay");
             return;
         }
     }
 
-    // Show the overlay and activate it
+    // Show the overlay - NavigationManager will call on_activate()
     ui_nav_push_overlay(g_timelapse_settings_panel);
-    g_timelapse_settings->on_activate();
 }

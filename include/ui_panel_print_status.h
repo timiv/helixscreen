@@ -5,9 +5,12 @@
 
 #include "ui_modal.h"
 #include "ui_observer_guard.h"
-#include "ui_panel_base.h"
 
+#include "overlay_base.h"
 #include "printer_state.h"
+
+// Forward declaration
+class MoonrakerAPI;
 
 #include <atomic>
 #include <functional>
@@ -235,7 +238,7 @@ typedef enum {
     PRINT_STATE_ERROR = static_cast<int>(PrintState::Error)
 } print_state_t;
 
-class PrintStatusPanel : public PanelBase {
+class PrintStatusPanel : public OverlayBase {
   public:
     /**
      * @brief Construct PrintStatusPanel with injected dependencies
@@ -248,7 +251,7 @@ class PrintStatusPanel : public PanelBase {
     ~PrintStatusPanel() override;
 
     //
-    // === PanelBase Implementation ===
+    // === OverlayBase Implementation ===
     //
 
     /**
@@ -259,17 +262,20 @@ class PrintStatusPanel : public PanelBase {
     void init_subjects() override;
 
     /**
-     * @brief Setup button handlers and image scaling
+     * @brief Create overlay UI from XML
      *
-     * - Wires pause, tune, cancel, light buttons
-     * - Wires temperature card click handlers
-     * - Configures progress bar
-     * - Registers resize callback for thumbnail scaling
-     *
-     * @param panel Root panel object from lv_xml_create()
-     * @param parent_screen Parent screen for navigation
+     * @param parent Parent widget to attach overlay to (usually screen)
+     * @return Root object of overlay, or nullptr on failure
      */
-    void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
+    lv_obj_t* create(lv_obj_t* parent) override;
+
+    /**
+     * @brief Get human-readable overlay name
+     * @return "Print Status"
+     */
+    const char* get_name() const override {
+        return "Print Status";
+    }
 
     /**
      * @brief Called when panel becomes visible
@@ -285,11 +291,37 @@ class PrintStatusPanel : public PanelBase {
      */
     void on_deactivate() override;
 
-    const char* get_name() const override {
-        return "Print Status";
-    }
-    const char* get_xml_component_name() const override {
+    /**
+     * @brief Clean up resources for async-safe destruction
+     */
+    void cleanup() override;
+
+    //
+    // === Legacy Compatibility ===
+    //
+
+    /**
+     * @brief Get XML component name for lv_xml_create()
+     * @return "print_status_panel"
+     */
+    const char* get_xml_component_name() const {
         return "print_status_panel";
+    }
+
+    /**
+     * @brief Get root panel object (alias for get_root())
+     * @return Panel object, or nullptr if not yet created
+     */
+    lv_obj_t* get_panel() const {
+        return overlay_root_;
+    }
+
+    /**
+     * @brief Update MoonrakerAPI pointer
+     * @param api New API pointer (may be nullptr)
+     */
+    void set_api(MoonrakerAPI* api) {
+        api_ = api;
     }
 
     //
@@ -436,6 +468,14 @@ class PrintStatusPanel : public PanelBase {
     void handle_tune_save_z_offset();
 
   private:
+    //
+    // === Injected Dependencies ===
+    //
+
+    PrinterState& printer_state_;
+    MoonrakerAPI* api_;
+    lv_obj_t* parent_screen_ = nullptr;
+
     //
     // === Subjects (owned by this panel) ===
     // Note: Display filename uses shared print_display_filename from PrinterState

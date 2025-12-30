@@ -3,10 +3,9 @@
 
 #pragma once
 
-#include "ui_panel_base.h"
-
 #include "lvgl.h"
 #include "moonraker_api.h"
+#include "overlay_base.h"
 #include "printer_state.h"
 
 /**
@@ -29,7 +28,7 @@
  *
  * @see docs/FEATURE_STATUS.md for implementation progress
  */
-class TimelapseSettingsOverlay : public PanelBase {
+class TimelapseSettingsOverlay : public OverlayBase {
   public:
     /**
      * @brief Construct TimelapseSettingsOverlay
@@ -38,19 +37,73 @@ class TimelapseSettingsOverlay : public PanelBase {
      */
     TimelapseSettingsOverlay(PrinterState& printer_state, MoonrakerAPI* api);
 
-    // PanelBase interface
-    void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
-    [[nodiscard]] const char* get_name() const override {
-        return "TimelapseSettings";
-    }
-    [[nodiscard]] const char* get_xml_component_name() const override {
-        return "timelapse_settings_overlay";
-    }
+    //
+    // === OverlayBase Implementation ===
+    //
+
+    /**
+     * @brief Initialize subjects for XML binding
+     */
     void init_subjects() override;
 
-    // Lifecycle hooks
+    /**
+     * @brief Create overlay UI from XML
+     *
+     * @param parent Parent widget to attach overlay to (usually screen)
+     * @return Root object of overlay, or nullptr on failure
+     */
+    lv_obj_t* create(lv_obj_t* parent) override;
+
+    /**
+     * @brief Get human-readable overlay name
+     * @return "Timelapse Settings"
+     */
+    [[nodiscard]] const char* get_name() const override {
+        return "Timelapse Settings";
+    }
+
+    /**
+     * @brief Called when overlay becomes visible
+     */
     void on_activate() override;
+
+    /**
+     * @brief Called when overlay is hidden
+     */
     void on_deactivate() override;
+
+    /**
+     * @brief Clean up resources for async-safe destruction
+     */
+    void cleanup() override;
+
+    //
+    // === Legacy Compatibility ===
+    //
+
+    /**
+     * @brief Get XML component name for lv_xml_create()
+     * @return "timelapse_settings_overlay"
+     */
+    [[nodiscard]] const char* get_xml_component_name() const {
+        return "timelapse_settings_overlay";
+    }
+
+    /**
+     * @brief Get root panel object (alias for get_root())
+     * @return Panel object, or nullptr if not yet created
+     */
+    lv_obj_t* get_panel() const {
+        return overlay_root_;
+    }
+
+    /**
+     * @brief Update MoonrakerAPI pointer
+     * @param api New API pointer (may be nullptr)
+     */
+    void set_api(MoonrakerAPI* api) {
+        api_ = api;
+    }
 
   private:
     /**
@@ -74,6 +127,13 @@ class TimelapseSettingsOverlay : public PanelBase {
     static void on_mode_changed(lv_event_t* e);
     static void on_framerate_changed(lv_event_t* e);
     static void on_autorender_changed(lv_event_t* e);
+
+    //
+    // === Injected Dependencies ===
+    //
+
+    PrinterState& printer_state_;
+    MoonrakerAPI* api_;
 
     // Current settings (loaded from API)
     TimelapseSettings current_settings_;

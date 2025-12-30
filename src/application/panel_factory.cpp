@@ -3,7 +3,6 @@
 
 #include "panel_factory.h"
 
-#include "overlay_base.h"
 #include "ui_component_keypad.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
@@ -18,45 +17,13 @@
 #include "app_globals.h"
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
+#include "overlay_base.h"
 #include "printer_state.h"
 
 #include <spdlog/spdlog.h>
 
-// ============================================================================
-// PanelOverlayAdapter - Bridges PanelBase to OverlayBase for NavigationManager
-// ============================================================================
-//
-// NavigationManager::register_overlay_instance() requires OverlayBase*, but
-// PrintStatusPanel extends PanelBase. This adapter forwards lifecycle hooks.
-//
-
-class PanelOverlayAdapter : public OverlayBase {
-  public:
-    explicit PanelOverlayAdapter(PanelBase* panel) : panel_(panel) {}
-
-    // Already initialized by PanelBase
-    void init_subjects() override {}
-
-    // Already created by PanelFactory
-    lv_obj_t* create(lv_obj_t* /*parent*/) override {
-        return nullptr;
-    }
-
-    const char* get_name() const override {
-        return panel_->get_name();
-    }
-
-    void on_activate() override {
-        panel_->on_activate();
-    }
-
-    void on_deactivate() override {
-        panel_->on_deactivate();
-    }
-
-  private:
-    PanelBase* panel_;
-};
+// Note: PanelOverlayAdapter was removed - PrintStatusPanel now inherits directly
+// from OverlayBase, eliminating the need for an adapter.
 
 bool PanelFactory::find_panels(lv_obj_t* panel_container) {
     for (int i = 0; i < UI_PANEL_COUNT; i++) {
@@ -107,18 +74,17 @@ void PanelFactory::setup_panels(lv_obj_t* screen) {
 }
 
 bool PanelFactory::create_print_status_overlay(lv_obj_t* screen) {
-    m_print_status_panel = create_overlay(screen, "print_status_panel", "print status");
+    // PrintStatusPanel now inherits from OverlayBase, so use create() directly
+    auto& print_status = get_global_print_status_panel();
+    m_print_status_panel = print_status.create(screen);
     if (!m_print_status_panel) {
+        spdlog::error("[PanelFactory] Failed to create print status overlay");
         return false;
     }
 
-    get_global_print_status_panel().setup(m_print_status_panel, screen);
-    lv_obj_add_flag(m_print_status_panel, LV_OBJ_FLAG_HIDDEN);
-
     // Register for lifecycle callbacks (on_activate/on_deactivate)
-    // PrintStatusPanel is a PanelBase used as an overlay - adapter bridges the interface
-    static PanelOverlayAdapter adapter(&get_global_print_status_panel());
-    NavigationManager::instance().register_overlay_instance(m_print_status_panel, &adapter);
+    // PrintStatusPanel now inherits from OverlayBase directly - no adapter needed
+    NavigationManager::instance().register_overlay_instance(m_print_status_panel, &print_status);
 
     // Wire to print select panel
     get_print_select_panel(get_printer_state(), nullptr)
