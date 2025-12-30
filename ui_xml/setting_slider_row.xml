@@ -3,7 +3,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- Reusable Settings Slider Row Component -->
 <!-- Creates a settings row with label, description, and an inline slider -->
-<!-- Usage: <setting_slider_row label="Scroll Speed" icon="mat_swipe" description="Higher = faster" min="1" max="100" value="50"/> -->
+<!-- Usage: <setting_slider_row label="Scroll Speed" icon="tune" description="Higher = faster" min="1" max="100" value="50"/> -->
 <component>
   <api>
     <prop name="label" type="string" default="Setting"/>

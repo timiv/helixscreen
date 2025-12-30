@@ -3,7 +3,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- Reusable Settings Action Row Component -->
 <!-- Creates a clickable row that opens a sub-panel or performs an action -->
-<!-- Usage: <setting_action_row label="Network Settings" icon="mat_lan" description="WiFi and Ethernet"/> -->
+<!-- Usage: <setting_action_row label="Network Settings" icon="lan" description="WiFi and Ethernet"/> -->
 <component>
   <api>
     <prop name="label" type="string" default="Action"/>

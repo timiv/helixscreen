@@ -2,18 +2,21 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright 2025 356C LLC
 #
-# Validate that all icons in ui_icon_codepoints.h are included in compiled fonts
+# Bidirectional icon validation:
+#   1. Forward:  codepoints.h → fonts (are defined icons compiled?)
+#   2. Reverse:  XML icon="" → codepoints.h (are used icons defined?)
 #
-# This script prevents the common bug where icons are added to the codepoints
-# header but the font files aren't regenerated, causing missing glyphs at runtime.
+# This script prevents two common bugs:
+#   - Icons added to codepoints.h but fonts not regenerated
+#   - Icons used in XML but never added to codepoints.h
 #
 # Usage:
 #   ./scripts/validate_icon_fonts.sh         # Check if fonts are up to date
 #   ./scripts/validate_icon_fonts.sh --fix   # Regenerate fonts if needed
 #
 # Exit codes:
-#   0 - All icons present in fonts
-#   1 - Missing icons (fonts need regeneration)
+#   0 - All icons valid
+#   1 - Missing icons (fonts need regeneration or codepoints need adding)
 #   2 - Script error
 
 set -e
@@ -84,7 +87,7 @@ echo "  Icons in font: $IN_FONT_COUNT"
 echo ""
 
 if [[ $MISSING_COUNT -gt 0 ]]; then
-    echo "❌ MISSING ICONS ($MISSING_COUNT):"
+    echo "❌ MISSING FROM FONTS ($MISSING_COUNT):"
     echo ""
     echo -e "$MISSING" | while IFS= read -r cp; do
         if [[ -n "$cp" ]]; then
@@ -107,6 +110,74 @@ if [[ $MISSING_COUNT -gt 0 ]]; then
         exit 1
     fi
 else
-    echo "✓ All required icons are present in compiled fonts"
-    exit 0
+    echo "✓ All defined icons are present in compiled fonts"
+fi
+
+# =============================================================================
+# REVERSE CHECK: XML icon="" → codepoints.h
+# =============================================================================
+echo ""
+echo "Validating XML icon references..."
+
+XML_DIR="ui_xml"
+
+# Extract all icon names from XML files (icon="name" attributes)
+# - Exclude XML comments (lines containing <!--)
+# - Exclude *_icon="..." patterns (like hide_action_button_icon="true")
+extract_xml_icons() {
+    grep -h 'icon="' "$XML_DIR"/*.xml 2>/dev/null |
+    grep -v '<!--' |
+    grep -v '_icon=' |
+    grep -oE 'icon="[^"]+"' |
+    sed -E 's/icon="([^"]+)"/\1/' |
+    sort -u
+}
+
+# Extract all defined icon names from codepoints.h
+extract_defined_icons() {
+    grep -oE '\{"[^"]+",\s*"\\x' "$CODEPOINTS_FILE" |
+    sed -E 's/\{"([^"]+)".*/\1/' |
+    sort -u
+}
+
+XML_ICONS=$(extract_xml_icons)
+DEFINED_ICONS=$(extract_defined_icons)
+
+# Find icons used in XML but not defined in codepoints.h
+UNDEFINED=""
+UNDEFINED_COUNT=0
+while IFS= read -r icon; do
+    [[ -z "$icon" ]] && continue
+    if ! echo "$DEFINED_ICONS" | grep -qx "$icon"; then
+        UNDEFINED="${UNDEFINED}${icon}\n"
+        UNDEFINED_COUNT=$((UNDEFINED_COUNT + 1))
+    fi
+done <<< "$XML_ICONS"
+
+XML_COUNT=$(echo "$XML_ICONS" | grep -c . || echo 0)
+DEFINED_COUNT=$(echo "$DEFINED_ICONS" | grep -c . || echo 0)
+
+echo "  Icons used in XML: $XML_COUNT"
+echo "  Icons defined: $DEFINED_COUNT"
+echo ""
+
+if [[ $UNDEFINED_COUNT -gt 0 ]]; then
+    echo "❌ UNDEFINED ICONS ($UNDEFINED_COUNT):"
+    echo "   These icons are used in XML but not defined in $CODEPOINTS_FILE"
+    echo ""
+    echo -e "$UNDEFINED" | while IFS= read -r icon; do
+        if [[ -n "$icon" ]]; then
+            # Find which XML file uses this icon
+            FILES=$(grep -rl "icon=\"$icon\"" "$XML_DIR" 2>/dev/null | sed 's|.*/||' | tr '\n' ', ' | sed 's/, $//')
+            echo "   $icon (used in: $FILES)"
+        fi
+    done
+    echo ""
+    echo "To fix: Add the missing icon to include/ui_icon_codepoints.h"
+    echo "        and scripts/regen_mdi_fonts.sh, then run 'make regen-fonts'"
+    echo ""
+    echo "Find codepoints at: https://pictogrammers.com/library/mdi/"
+    exit 1
+else
+    echo "✓ All XML icon references are defined"
 fi
