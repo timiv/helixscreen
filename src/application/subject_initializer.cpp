@@ -102,9 +102,7 @@ void SubjectInitializer::inject_api(MoonrakerAPI* api) {
     }
     // MotionPanel now uses get_moonraker_api() global - no set_api() needed
     // BedMeshPanel now uses get_moonraker_api() global - no set_api() needed
-    if (m_extrusion_panel) {
-        m_extrusion_panel->set_api(api);
-    }
+    // ExtrusionPanel now uses get_moonraker_api() global - no set_api() needed
     if (m_temp_control_panel) {
         m_temp_control_panel->set_api(api);
     }
@@ -115,7 +113,7 @@ void SubjectInitializer::inject_api(MoonrakerAPI* api) {
     get_global_filament_panel().set_api(api);
     get_global_advanced_panel().set_api(api);
     // SpoolmanPanel uses get_moonraker_api() global directly
-    get_global_history_dashboard_panel().set_api(api);
+    // HistoryDashboardPanel uses get_moonraker_api() global directly (OverlayBase pattern)
     // HistoryListPanel uses get_moonraker_api() global directly (OverlayBase pattern)
     get_global_timelapse_settings().set_api(api);
 
@@ -167,9 +165,7 @@ void SubjectInitializer::init_panel_subjects() {
     // SpoolmanPanel uses lazy initialization via get_global_spoolman_panel()
     // and is initialized on first access in AdvancedPanel::handle_spoolman_clicked()
 
-    init_global_history_dashboard_panel(get_printer_state(), nullptr, get_print_history_manager());
-    get_global_history_dashboard_panel().init_subjects();
-
+    // HistoryDashboardPanel is now lazy-initialized (OverlayBase pattern)
     // HistoryListPanel is now lazy-initialized by HistoryDashboardPanel (OverlayBase pattern)
 
     // Settings overlays

@@ -744,9 +744,19 @@ void Application::create_overlays() {
     }
 
     if (m_args.overlays.extrusion) {
-        if (auto* p = create_overlay_panel(m_screen, "extrusion_panel", "extrusion")) {
+        auto& extrusion = get_global_extrusion_panel();
+
+        // Initialize subjects and callbacks if not already done
+        if (!extrusion.are_subjects_initialized()) {
+            extrusion.init_subjects();
+        }
+        extrusion.register_callbacks();
+
+        // Create overlay UI
+        auto* p = extrusion.create(m_screen);
+        if (p) {
             m_overlay_panels.extrusion = p;
-            get_global_extrusion_panel().setup(p, m_screen);
+            NavigationManager::instance().register_overlay_instance(p, &extrusion);
             ui_nav_push_overlay(p);
         }
     }
@@ -826,10 +836,15 @@ void Application::create_overlays() {
     }
 
     if (m_args.overlays.history_dashboard) {
-        if (auto* p = create_overlay_panel(m_screen, "history_dashboard_panel", "history")) {
-            get_global_history_dashboard_panel().setup(p, m_screen);
+        auto& overlay = get_global_history_dashboard_panel();
+        if (!overlay.are_subjects_initialized()) {
+            overlay.init_subjects();
+        }
+        overlay.register_callbacks();
+        auto* p = overlay.create(m_screen);
+        if (p) {
+            NavigationManager::instance().register_overlay_instance(p, &overlay);
             ui_nav_push_overlay(p);
-            get_global_history_dashboard_panel().on_activate();
         }
     }
 

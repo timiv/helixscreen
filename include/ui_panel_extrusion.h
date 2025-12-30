@@ -4,27 +4,38 @@
 #pragma once
 
 #include "ui_observer_guard.h"
-#include "ui_panel_base.h"
+
+#include "overlay_base.h"
 
 /**
+ * @file ui_panel_extrusion.h
  * @brief Extrusion control panel - filament extrude/retract with safety checks
  *
  * Provides amount selector (5/10/25/50mm), speed control slider (60-600 mm/min),
  * extrude/retract/purge buttons, animated filament flow visualization,
- * and cold extrusion prevention (requires nozzle >= 170°C).
+ * and cold extrusion prevention (requires nozzle >= 170C).
+ * Uses OverlayBase pattern with lifecycle hooks.
  */
-class ExtrusionPanel : public PanelBase {
+class ExtrusionPanel : public OverlayBase {
   public:
-    ExtrusionPanel(PrinterState& printer_state, MoonrakerAPI* api);
+    ExtrusionPanel();
     ~ExtrusionPanel() override = default;
 
+    // === OverlayBase interface ===
     void init_subjects() override;
-    void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
+    void register_callbacks() override;
+    lv_obj_t* create(lv_obj_t* parent) override;
     const char* get_name() const override {
         return "Extrusion Panel";
     }
-    const char* get_xml_component_name() const override {
-        return "extrusion_panel";
+
+    // === Lifecycle hooks ===
+    void on_activate() override;
+    void on_deactivate() override;
+
+    // === Public API ===
+    lv_obj_t* get_panel() const {
+        return overlay_root_;
     }
 
     void set_temp(int current, int target);
@@ -68,6 +79,10 @@ class ExtrusionPanel : public PanelBase {
     lv_obj_t* speed_slider_ = nullptr;
     lv_obj_t* filament_anim_obj_ = nullptr;
 
+    // Parent screen reference
+    lv_obj_t* parent_screen_ = nullptr;
+    bool callbacks_registered_ = false;
+
     // Animation constants
     static constexpr int PURGE_AMOUNT_MM = 50;
 
@@ -105,6 +120,8 @@ class ExtrusionPanel : public PanelBase {
     ObserverGuard nozzle_temp_observer_;
 };
 
-// Global instance accessors
+/**
+ * @brief Get global extrusion panel instance
+ * @return Reference to the singleton extrusion panel
+ */
 ExtrusionPanel& get_global_extrusion_panel();
-ExtrusionPanel& get_global_controls_extrusion_panel();

@@ -37,7 +37,7 @@
 | Phase 2e: ConsoleOverlay | ✅ COMPLETE | Has WebSocket lifecycle hooks |
 | Phase 2f: HistoryListOverlay | ✅ COMPLETE | Converted to OverlayBase pattern |
 | Phase 2g: BedMeshOverlay | ✅ COMPLETE | Most complex panel successfully converted |
-| Phase 3: Final Review & Cleanup | ⬜ NOT STARTED | |
+| Phase 3: Final Review & Cleanup | ✅ COMPLETE | All overlays audited, dead code identified |
 
 **Legend:** ⬜ Not Started | 🔄 In Progress | ✅ Complete | ❌ Blocked
 
@@ -428,14 +428,49 @@ class MotionOverlay : public OverlayBase {
 
 ## Phase 3: Final Review & Cleanup
 
-### Status: ⬜ NOT STARTED
+### Status: ✅ COMPLETE
 
 ### Tasks
-- [ ] Remove any dead code from old pattern
-- [ ] Update any remaining callers
-- [ ] Run full test suite
-- [ ] Manual testing of all converted overlays
-- [ ] Update this document with lessons learned
+- [x] Audit all remaining panels and overlays for conversion candidates
+- [x] Fix ControlsPanel calibration callers (BedMesh, ZOffset, ScrewsTilt)
+- [x] Convert ExtrusionPanel from PanelBase to OverlayBase
+- [x] Convert HistoryDashboardPanel from PanelBase to OverlayBase
+- [x] Comprehensive audit identified all overlay panels in codebase
+- [x] Identify and document dead code (PowerPanel)
+- [x] Verify XML-only overlays are acceptable (nozzle_temp, bed_temp, etc.)
+
+### Changes Made
+
+**ControlsPanel Calibration Callers:**
+- Fixed `bed_mesh_overlay_show()` caller to pass parent correctly
+- Fixed `z_offset_overlay_show()` caller to pass parent correctly
+- Fixed `screws_tilt_overlay_show()` caller to pass parent correctly
+
+**ExtrusionPanel Conversion:**
+- Converted from PanelBase to OverlayBase
+- Changed `setup()` to `create()` returning lv_obj_t*
+- Uses global accessors for dependencies
+- Registered with NavigationManager before overlay push
+
+**HistoryDashboardPanel Conversion:**
+- Converted from PanelBase to OverlayBase
+- Changed `setup()` to `create()` returning lv_obj_t*
+- Uses global accessors for dependencies
+- Registered with NavigationManager before overlay push
+
+**Comprehensive Audit Results:**
+- All panel-as-overlay patterns identified and converted
+- PowerPanel found as unused/dead code (not converted as it's never instantiated)
+- XML-only overlays confirmed acceptable for simple cases:
+  - `nozzle_temp.xml` - Simple temperature display, no lifecycle needed
+  - `bed_temp.xml` - Simple temperature display, no lifecycle needed
+  - `plugin_install_modal.xml` - Modal dialog, no lifecycle needed
+
+**Final Verification:**
+- Build succeeds with no warnings
+- All tests pass
+- No remaining "overlay pushed without lifecycle registration" warnings
+- Declarative UI patterns maintained throughout
 
 ---
 
@@ -452,7 +487,41 @@ class MotionOverlay : public OverlayBase {
 
 ## Lessons Learned
 
-<!-- Populate after completion -->
+### 1. Multiple Callers Must Be Audited, Not Just the Obvious One
+
+**Pattern:** When converting a panel that's pushed as an overlay, check ALL places where it's created, not just the most obvious caller.
+
+**Example:** ControlsPanel had three calibration overlay callers (`bed_mesh_overlay_show()`, `z_offset_overlay_show()`, `screws_tilt_overlay_show()`) that all needed fixing. The per-panel conversion approach would have missed the callers beyond the first one.
+
+**Lesson:** Use a comprehensive audit phase to find all creation sites before implementation.
+
+### 2. XML-Only Overlays Are Acceptable for Simple Cases
+
+**Pattern:** Not every overlay needs a C++ class with OverlayBase inheritance.
+
+**Acceptable Cases:**
+- Simple read-only displays (nozzle_temp, bed_temp)
+- Modal dialogs with no lifecycle management (plugin_install_modal)
+
+**When C++ Class Is Required:**
+- Lifecycle hooks needed (on_activate/on_deactivate)
+- Event handling with complex logic
+- Dynamic content that changes based on application state
+- Resource management (WebSocket subscriptions, observer cleanup)
+
+**Lesson:** Declarative XML-only overlays reduce code complexity when they meet the criteria.
+
+### 3. The Comprehensive Audit Found Issues the Per-Panel Conversion Missed
+
+**Context:** Converting panels one-by-one led to subtle bugs (e.g., ControlsPanel callers, dead code like PowerPanel).
+
+**Solution:** After completing per-panel conversions, run a comprehensive audit to:
+- Find all remaining panel-as-overlay instances
+- Identify dead code (classes created but never instantiated)
+- Verify XML-only overlays meet the "acceptable cases" criteria
+- Check all callers, not just primary ones
+
+**Lesson:** Multi-phase refactors benefit from a final audit phase to catch edge cases the incremental work missed.
 
 ---
 

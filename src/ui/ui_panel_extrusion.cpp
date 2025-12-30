@@ -26,22 +26,46 @@
 
 constexpr int ExtrusionPanel::AMOUNT_VALUES[4];
 
-ExtrusionPanel::ExtrusionPanel(PrinterState& printer_state, MoonrakerAPI* api)
-    : PanelBase(printer_state, api) {
+// ============================================================================
+// Global Instance
+// ============================================================================
+
+static std::unique_ptr<ExtrusionPanel> g_extrusion_panel;
+
+ExtrusionPanel& get_global_extrusion_panel() {
+    if (!g_extrusion_panel) {
+        g_extrusion_panel = std::make_unique<ExtrusionPanel>();
+    }
+    return *g_extrusion_panel;
+}
+
+// ============================================================================
+// Constructor
+// ============================================================================
+
+ExtrusionPanel::ExtrusionPanel() {
     // Initialize buffer contents
-    std::snprintf(temp_status_buf_, sizeof(temp_status_buf_), "%d / %d°C", nozzle_current_,
+    std::snprintf(temp_status_buf_, sizeof(temp_status_buf_), "%d / %dC", nozzle_current_,
                   nozzle_target_);
-    std::snprintf(warning_temps_buf_, sizeof(warning_temps_buf_), "Current: %d°C\nTarget: %d°C",
+    std::snprintf(warning_temps_buf_, sizeof(warning_temps_buf_), "Current: %dC\nTarget: %dC",
                   nozzle_current_, nozzle_target_);
     std::snprintf(speed_display_buf_, sizeof(speed_display_buf_), "%d mm/min",
                   extrusion_speed_mmpm_);
+
+    spdlog::debug("[ExtrusionPanel] Instance created");
 }
+
+// ============================================================================
+// Subject Initialization
+// ============================================================================
 
 void ExtrusionPanel::init_subjects() {
     if (subjects_initialized_) {
-        spdlog::warn("[{}] init_subjects() called twice - ignoring", get_name());
+        spdlog::debug("[{}] Subjects already initialized", get_name());
         return;
     }
+
+    spdlog::debug("[{}] Initializing subjects", get_name());
 
     // Initialize subjects with default values
     UI_SUBJECT_INIT_AND_REGISTER_STRING(temp_status_subject_, temp_status_buf_, temp_status_buf_,
@@ -53,6 +77,22 @@ void ExtrusionPanel::init_subjects() {
         "extrusion_safety_warning_visible"); // 1=visible (cold at start)
     UI_SUBJECT_INIT_AND_REGISTER_STRING(speed_display_subject_, speed_display_buf_,
                                         speed_display_buf_, "extrusion_speed_display");
+
+    subjects_initialized_ = true;
+    spdlog::debug("[{}] Subjects initialized", get_name());
+}
+
+// ============================================================================
+// Callback Registration
+// ============================================================================
+
+void ExtrusionPanel::register_callbacks() {
+    if (callbacks_registered_) {
+        spdlog::debug("[{}] Callbacks already registered", get_name());
+        return;
+    }
+
+    spdlog::debug("[{}] Registering event callbacks", get_name());
 
     // Register XML event callbacks (declarative pattern)
     lv_xml_register_event_cb(nullptr, "on_extrusion_extrude", [](lv_event_t* /*e*/) {
@@ -72,23 +112,38 @@ void ExtrusionPanel::init_subjects() {
         }
     });
 
-    subjects_initialized_ = true;
-    spdlog::debug("[{}] Subjects initialized and event callbacks registered", get_name());
+    callbacks_registered_ = true;
+    spdlog::debug("[{}] Event callbacks registered", get_name());
 }
 
-void ExtrusionPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
-    // Call base class to store panel_ and parent_screen_
-    PanelBase::setup(panel, parent_screen);
+// ============================================================================
+// Create
+// ============================================================================
 
-    if (!panel_) {
-        spdlog::error("[{}] NULL panel", get_name());
-        return;
+lv_obj_t* ExtrusionPanel::create(lv_obj_t* parent) {
+    if (!parent) {
+        spdlog::error("[{}] Cannot create: null parent", get_name());
+        return nullptr;
     }
 
-    spdlog::info("[{}] Setting up event handlers...", get_name());
+    spdlog::debug("[{}] Creating overlay from XML", get_name());
+
+    parent_screen_ = parent;
+
+    // Reset cleanup flag when (re)creating
+    cleanup_called_ = false;
+
+    // Create overlay from XML
+    overlay_root_ = static_cast<lv_obj_t*>(lv_xml_create(parent, "extrusion_panel", nullptr));
+
+    if (!overlay_root_) {
+        spdlog::error("[{}] Failed to create from XML", get_name());
+        return nullptr;
+    }
 
     // Use standard overlay panel setup (wires header, back button, handles responsive padding)
-    ui_overlay_panel_setup_standard(panel_, parent_screen_, "overlay_header", "overlay_content");
+    ui_overlay_panel_setup_standard(overlay_root_, parent_screen_, "overlay_header",
+                                    "overlay_content");
 
     // Setup all controls
     setup_amount_buttons();
@@ -104,11 +159,37 @@ void ExtrusionPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     update_safety_state();
     update_speed_display();
 
-    spdlog::info("[{}] Setup complete!", get_name());
+    // Initially hidden
+    lv_obj_add_flag(overlay_root_, LV_OBJ_FLAG_HIDDEN);
+
+    spdlog::info("[{}] Overlay created successfully", get_name());
+    return overlay_root_;
 }
 
+// ============================================================================
+// Lifecycle Hooks
+// ============================================================================
+
+void ExtrusionPanel::on_activate() {
+    // Call base class first
+    OverlayBase::on_activate();
+
+    spdlog::debug("[{}] on_activate()", get_name());
+}
+
+void ExtrusionPanel::on_deactivate() {
+    spdlog::debug("[{}] on_deactivate()", get_name());
+
+    // Call base class
+    OverlayBase::on_deactivate();
+}
+
+// ============================================================================
+// Setup Helpers
+// ============================================================================
+
 void ExtrusionPanel::setup_amount_buttons() {
-    lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
+    lv_obj_t* overlay_content = lv_obj_find_by_name(overlay_root_, "overlay_content");
     if (!overlay_content) {
         spdlog::error("[{}] overlay_content not found!", get_name());
         return;
@@ -129,7 +210,7 @@ void ExtrusionPanel::setup_amount_buttons() {
 }
 
 void ExtrusionPanel::setup_action_buttons() {
-    lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
+    lv_obj_t* overlay_content = lv_obj_find_by_name(overlay_root_, "overlay_content");
     if (!overlay_content)
         return;
 
@@ -159,30 +240,30 @@ void ExtrusionPanel::setup_temperature_observer() {
 }
 
 void ExtrusionPanel::update_temp_status() {
-    // Status indicator: ✓ (ready), ⚠ (heating), ✗ (too cold)
+    // Status indicator: check (ready), warning (heating), x (too cold)
     const char* status_icon;
     if (helix::ui::temperature::is_extrusion_safe(nozzle_current_,
                                                   AppConstants::Temperature::MIN_EXTRUSION_TEMP)) {
-        // Within 5°C of target and hot enough (safe range check without overflow)
+        // Within 5C of target and hot enough (safe range check without overflow)
         if (nozzle_target_ > 0 && nozzle_current_ >= nozzle_target_ - 5 &&
             nozzle_current_ <= nozzle_target_ + 5) {
-            status_icon = "✓"; // Ready
+            status_icon = "\xE2\x9C\x93"; // Ready (checkmark)
         } else {
-            status_icon = "✓"; // Hot enough
+            status_icon = "\xE2\x9C\x93"; // Hot enough (checkmark)
         }
     } else if (nozzle_target_ >= AppConstants::Temperature::MIN_EXTRUSION_TEMP) {
-        status_icon = "⚠"; // Heating
+        status_icon = "\xE2\x9A\xA0"; // Heating (warning)
     } else {
-        status_icon = "✗"; // Too cold
+        status_icon = "\xE2\x9C\x97"; // Too cold (x)
     }
 
-    std::snprintf(temp_status_buf_, sizeof(temp_status_buf_), "%d / %d°C %s", nozzle_current_,
+    std::snprintf(temp_status_buf_, sizeof(temp_status_buf_), "%d / %dC %s", nozzle_current_,
                   nozzle_target_, status_icon);
     lv_subject_copy_string(&temp_status_subject_, temp_status_buf_);
 }
 
 void ExtrusionPanel::update_warning_text() {
-    std::snprintf(warning_temps_buf_, sizeof(warning_temps_buf_), "Current: %d°C\nTarget: %d°C",
+    std::snprintf(warning_temps_buf_, sizeof(warning_temps_buf_), "Current: %dC\nTarget: %dC",
                   nozzle_current_, nozzle_target_);
     lv_subject_copy_string(&warning_temps_subject_, warning_temps_buf_);
 }
@@ -195,7 +276,7 @@ void ExtrusionPanel::update_safety_state() {
     // 2. Action button disabled state (bind_state_if_eq disabled when value=1)
     lv_subject_set_int(&safety_warning_visible_subject_, allowed ? 0 : 1);
 
-    spdlog::trace("[{}] Safety state updated: allowed={} (temp={}°C)", get_name(), allowed,
+    spdlog::trace("[{}] Safety state updated: allowed={} (temp={}C)", get_name(), allowed,
                   nozzle_current_);
 }
 
@@ -234,7 +315,7 @@ void ExtrusionPanel::handle_amount_button(lv_obj_t* btn) {
 
 void ExtrusionPanel::handle_extrude() {
     if (!is_extrusion_allowed()) {
-        NOTIFY_WARNING("Nozzle too cold for extrusion ({}°C, min: {}°C)", nozzle_current_,
+        NOTIFY_WARNING("Nozzle too cold for extrusion ({}C, min: {}C)", nozzle_current_,
                        AppConstants::Temperature::MIN_EXTRUSION_TEMP);
         return;
     }
@@ -244,10 +325,11 @@ void ExtrusionPanel::handle_extrude() {
 
     start_extrusion_animation(true);
 
-    if (api_) {
+    MoonrakerAPI* api = get_moonraker_api();
+    if (api) {
         // M83 = relative extrusion mode, G1 E{amount} F{speed}
         std::string gcode = fmt::format("M83\nG1 E{} F{}", selected_amount_, extrusion_speed_mmpm_);
-        api_->execute_gcode(
+        api->execute_gcode(
             gcode,
             [this, amount = selected_amount_]() {
                 stop_extrusion_animation();
@@ -262,7 +344,7 @@ void ExtrusionPanel::handle_extrude() {
 
 void ExtrusionPanel::handle_retract() {
     if (!is_extrusion_allowed()) {
-        NOTIFY_WARNING("Nozzle too cold for retraction ({}°C, min: {}°C)", nozzle_current_,
+        NOTIFY_WARNING("Nozzle too cold for retraction ({}C, min: {}C)", nozzle_current_,
                        AppConstants::Temperature::MIN_EXTRUSION_TEMP);
         return;
     }
@@ -272,11 +354,12 @@ void ExtrusionPanel::handle_retract() {
 
     start_extrusion_animation(false);
 
-    if (api_) {
+    MoonrakerAPI* api = get_moonraker_api();
+    if (api) {
         // M83 = relative extrusion mode, G1 E-{amount} F{speed}
         std::string gcode =
             fmt::format("M83\nG1 E-{} F{}", selected_amount_, extrusion_speed_mmpm_);
-        api_->execute_gcode(
+        api->execute_gcode(
             gcode,
             [this, amount = selected_amount_]() {
                 stop_extrusion_animation();
@@ -291,7 +374,7 @@ void ExtrusionPanel::handle_retract() {
 
 void ExtrusionPanel::handle_purge() {
     if (!is_extrusion_allowed()) {
-        NOTIFY_WARNING("Nozzle too cold for purge ({}°C, min: {}°C)", nozzle_current_,
+        NOTIFY_WARNING("Nozzle too cold for purge ({}C, min: {}C)", nozzle_current_,
                        AppConstants::Temperature::MIN_EXTRUSION_TEMP);
         return;
     }
@@ -301,10 +384,11 @@ void ExtrusionPanel::handle_purge() {
 
     start_extrusion_animation(true);
 
-    if (api_) {
+    MoonrakerAPI* api = get_moonraker_api();
+    if (api) {
         // M83 = relative extrusion mode, G1 E{amount} F{speed}
         std::string gcode = fmt::format("M83\nG1 E{} F{}", PURGE_AMOUNT_MM, extrusion_speed_mmpm_);
-        api_->execute_gcode(
+        api->execute_gcode(
             gcode,
             [this]() {
                 stop_extrusion_animation();
@@ -337,7 +421,7 @@ void ExtrusionPanel::on_nozzle_temp_changed(lv_observer_t* observer, lv_subject_
     // The subject may be int or float depending on implementation
     int new_temp = lv_subject_get_int(subject);
 
-    spdlog::debug("[{}] Nozzle temp update from subject: {}°C", self->get_name(), new_temp);
+    spdlog::debug("[{}] Nozzle temp update from subject: {}C", self->get_name(), new_temp);
 
     // Update our local state and refresh UI
     self->nozzle_current_ = new_temp;
@@ -349,12 +433,12 @@ void ExtrusionPanel::on_nozzle_temp_changed(lv_observer_t* observer, lv_subject_
 void ExtrusionPanel::set_temp(int current, int target) {
     // Validate temperature ranges using dynamic limits
     if (current < nozzle_min_temp_ || current > nozzle_max_temp_) {
-        spdlog::warn("[{}] Invalid nozzle current temperature {}°C (valid: {}-{}°C), clamping",
+        spdlog::warn("[{}] Invalid nozzle current temperature {}C (valid: {}-{}C), clamping",
                      get_name(), current, nozzle_min_temp_, nozzle_max_temp_);
         current = (current < nozzle_min_temp_) ? nozzle_min_temp_ : nozzle_max_temp_;
     }
     if (target < nozzle_min_temp_ || target > nozzle_max_temp_) {
-        spdlog::warn("[{}] Invalid nozzle target temperature {}°C (valid: {}-{}°C), clamping",
+        spdlog::warn("[{}] Invalid nozzle target temperature {}C (valid: {}-{}C), clamping",
                      get_name(), target, nozzle_min_temp_, nozzle_max_temp_);
         target = (target < nozzle_min_temp_) ? nozzle_min_temp_ : nozzle_max_temp_;
     }
@@ -374,11 +458,11 @@ bool ExtrusionPanel::is_extrusion_allowed() const {
 void ExtrusionPanel::set_limits(int min_temp, int max_temp) {
     nozzle_min_temp_ = min_temp;
     nozzle_max_temp_ = max_temp;
-    spdlog::info("[{}] Nozzle temperature limits updated: {}-{}°C", get_name(), min_temp, max_temp);
+    spdlog::info("[{}] Nozzle temperature limits updated: {}-{}C", get_name(), min_temp, max_temp);
 }
 
 void ExtrusionPanel::setup_speed_slider() {
-    lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
+    lv_obj_t* overlay_content = lv_obj_find_by_name(overlay_root_, "overlay_content");
     if (!overlay_content)
         return;
 
@@ -404,7 +488,7 @@ void ExtrusionPanel::set_speed(int speed_mmpm) {
 }
 
 void ExtrusionPanel::setup_animation_widget() {
-    lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
+    lv_obj_t* overlay_content = lv_obj_find_by_name(overlay_root_, "overlay_content");
     if (!overlay_content)
         return;
 
@@ -470,22 +554,4 @@ void ExtrusionPanel::stop_extrusion_animation() {
     lv_obj_add_flag(filament_anim_obj_, LV_OBJ_FLAG_HIDDEN);
 
     spdlog::debug("[{}] Animation stopped", get_name());
-}
-
-static std::unique_ptr<ExtrusionPanel> g_extrusion_panel;
-
-ExtrusionPanel& get_global_extrusion_panel() {
-    if (!g_extrusion_panel) {
-        g_extrusion_panel = std::make_unique<ExtrusionPanel>(get_printer_state(), nullptr);
-    }
-    return *g_extrusion_panel;
-}
-
-static std::unique_ptr<ExtrusionPanel> g_controls_extrusion_panel;
-
-ExtrusionPanel& get_global_controls_extrusion_panel() {
-    if (!g_controls_extrusion_panel) {
-        g_controls_extrusion_panel = std::make_unique<ExtrusionPanel>(get_printer_state(), nullptr);
-    }
-    return *g_controls_extrusion_panel;
 }

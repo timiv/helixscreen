@@ -4,11 +4,13 @@
 #include "ui_panel_history_dashboard.h"
 
 #include "ui_nav.h"
+#include "ui_nav_manager.h"
 #include "ui_panel_common.h"
 #include "ui_panel_history_list.h"
 #include "ui_theme.h"
 #include "ui_toast.h"
 
+#include "app_globals.h"
 #include "format_utils.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
@@ -21,54 +23,24 @@
 #include <ctime>
 #include <map>
 
-// Global instance (singleton pattern)
-static std::unique_ptr<HistoryDashboardPanel> g_history_dashboard_panel;
-static lv_obj_t* g_history_dashboard_panel_obj = nullptr;
+// ============================================================================
+// Global Instance
+// ============================================================================
 
-// Forward declaration
-static void on_history_row_clicked(lv_event_t* e);
+static std::unique_ptr<HistoryDashboardPanel> g_history_dashboard_panel;
 
 HistoryDashboardPanel& get_global_history_dashboard_panel() {
     if (!g_history_dashboard_panel) {
-        spdlog::error("[History Dashboard] get_global_history_dashboard_panel() called before "
-                      "initialization!");
-        throw std::runtime_error("HistoryDashboardPanel not initialized");
+        g_history_dashboard_panel = std::make_unique<HistoryDashboardPanel>();
     }
     return *g_history_dashboard_panel;
-}
-
-void init_global_history_dashboard_panel(PrinterState& printer_state, MoonrakerAPI* api,
-                                         PrintHistoryManager* history_manager) {
-    g_history_dashboard_panel =
-        std::make_unique<HistoryDashboardPanel>(printer_state, api, history_manager);
-
-    // Register XML event callbacks (must be done before XML is created)
-    lv_xml_register_event_cb(nullptr, "history_filter_day_clicked",
-                             HistoryDashboardPanel::on_filter_day_clicked);
-    lv_xml_register_event_cb(nullptr, "history_filter_week_clicked",
-                             HistoryDashboardPanel::on_filter_week_clicked);
-    lv_xml_register_event_cb(nullptr, "history_filter_month_clicked",
-                             HistoryDashboardPanel::on_filter_month_clicked);
-    lv_xml_register_event_cb(nullptr, "history_filter_year_clicked",
-                             HistoryDashboardPanel::on_filter_year_clicked);
-    lv_xml_register_event_cb(nullptr, "history_filter_all_clicked",
-                             HistoryDashboardPanel::on_filter_all_clicked);
-    lv_xml_register_event_cb(nullptr, "history_view_full_clicked",
-                             HistoryDashboardPanel::on_view_history_clicked);
-
-    // Register row click callback for opening from Advanced panel
-    lv_xml_register_event_cb(nullptr, "on_history_row_clicked", on_history_row_clicked);
-
-    spdlog::debug("[History Dashboard] Event callbacks registered (including row click)");
 }
 
 // ============================================================================
 // CONSTRUCTOR
 // ============================================================================
 
-HistoryDashboardPanel::HistoryDashboardPanel(PrinterState& printer_state, MoonrakerAPI* api,
-                                             PrintHistoryManager* history_manager)
-    : PanelBase(printer_state, api), history_manager_(history_manager) {
+HistoryDashboardPanel::HistoryDashboardPanel() : history_manager_(get_print_history_manager()) {
     spdlog::trace("[{}] Constructor", get_name());
 }
 
@@ -81,10 +53,17 @@ HistoryDashboardPanel::~HistoryDashboardPanel() {
 }
 
 // ============================================================================
-// PANELBASE IMPLEMENTATION
+// Subject Initialization
 // ============================================================================
 
 void HistoryDashboardPanel::init_subjects() {
+    if (subjects_initialized_) {
+        spdlog::debug("[{}] Subjects already initialized", get_name());
+        return;
+    }
+
+    spdlog::debug("[{}] Initializing subjects", get_name());
+
     // Initialize subject for empty state visibility binding
     // 0 = no history (show empty state), 1 = has history (show stats grid)
     lv_subject_init_int(&history_has_jobs_subject_, 0);
@@ -120,37 +99,117 @@ void HistoryDashboardPanel::init_subjects() {
     spdlog::debug("[{}] Subjects initialized", get_name());
 }
 
-void HistoryDashboardPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
-    PanelBase::setup(panel, parent_screen);
+// ============================================================================
+// Callback Registration
+// ============================================================================
 
-    if (!panel_) {
-        spdlog::error("[{}] NULL panel", get_name());
+void HistoryDashboardPanel::register_callbacks() {
+    if (callbacks_registered_) {
+        spdlog::debug("[{}] Callbacks already registered", get_name());
         return;
     }
 
+    spdlog::debug("[{}] Registering event callbacks", get_name());
+
+    // Register XML event callbacks
+    lv_xml_register_event_cb(nullptr, "history_filter_day_clicked",
+                             HistoryDashboardPanel::on_filter_day_clicked);
+    lv_xml_register_event_cb(nullptr, "history_filter_week_clicked",
+                             HistoryDashboardPanel::on_filter_week_clicked);
+    lv_xml_register_event_cb(nullptr, "history_filter_month_clicked",
+                             HistoryDashboardPanel::on_filter_month_clicked);
+    lv_xml_register_event_cb(nullptr, "history_filter_year_clicked",
+                             HistoryDashboardPanel::on_filter_year_clicked);
+    lv_xml_register_event_cb(nullptr, "history_filter_all_clicked",
+                             HistoryDashboardPanel::on_filter_all_clicked);
+    lv_xml_register_event_cb(nullptr, "history_view_full_clicked",
+                             HistoryDashboardPanel::on_view_history_clicked);
+
+    // Register row click callback for opening from Advanced panel
+    lv_xml_register_event_cb(nullptr, "on_history_row_clicked", [](lv_event_t* /*e*/) {
+        spdlog::debug("[History Dashboard] History row clicked");
+
+        auto& overlay = get_global_history_dashboard_panel();
+
+        // Ensure subjects and callbacks are initialized
+        if (!overlay.are_subjects_initialized()) {
+            overlay.init_subjects();
+        }
+        overlay.register_callbacks();
+
+        // Create the overlay if not already created
+        lv_obj_t* screen = lv_screen_active();
+        lv_obj_t* overlay_root = overlay.get_root();
+        if (!overlay_root) {
+            overlay_root = overlay.create(screen);
+            if (!overlay_root) {
+                spdlog::error("[History Dashboard] Failed to create dashboard panel");
+                ui_toast_show(ToastSeverity::ERROR, "Failed to open history", 2000);
+                return;
+            }
+            // Register with NavigationManager for lifecycle callbacks
+            NavigationManager::instance().register_overlay_instance(overlay_root, &overlay);
+        }
+
+        // Push as overlay (slides in from right)
+        ui_nav_push_overlay(overlay_root);
+
+        spdlog::debug("[History Dashboard] Dashboard panel opened");
+    });
+
+    callbacks_registered_ = true;
+    spdlog::debug("[{}] Event callbacks registered", get_name());
+}
+
+// ============================================================================
+// Create
+// ============================================================================
+
+lv_obj_t* HistoryDashboardPanel::create(lv_obj_t* parent) {
+    if (!parent) {
+        spdlog::error("[{}] Cannot create: null parent", get_name());
+        return nullptr;
+    }
+
+    spdlog::debug("[{}] Creating overlay from XML", get_name());
+
+    parent_screen_ = parent;
+
+    // Reset cleanup flag when (re)creating
+    cleanup_called_ = false;
+
+    // Create overlay from XML
+    overlay_root_ =
+        static_cast<lv_obj_t*>(lv_xml_create(parent, "history_dashboard_panel", nullptr));
+
+    if (!overlay_root_) {
+        spdlog::error("[{}] Failed to create from XML", get_name());
+        return nullptr;
+    }
+
     // Find widget references - Filter buttons
-    filter_day_ = lv_obj_find_by_name(panel_, "filter_day");
-    filter_week_ = lv_obj_find_by_name(panel_, "filter_week");
-    filter_month_ = lv_obj_find_by_name(panel_, "filter_month");
-    filter_year_ = lv_obj_find_by_name(panel_, "filter_year");
-    filter_all_ = lv_obj_find_by_name(panel_, "filter_all");
+    filter_day_ = lv_obj_find_by_name(overlay_root_, "filter_day");
+    filter_week_ = lv_obj_find_by_name(overlay_root_, "filter_week");
+    filter_month_ = lv_obj_find_by_name(overlay_root_, "filter_month");
+    filter_year_ = lv_obj_find_by_name(overlay_root_, "filter_year");
+    filter_all_ = lv_obj_find_by_name(overlay_root_, "filter_all");
 
     // Stat labels (2x2 grid)
-    stat_total_prints_ = lv_obj_find_by_name(panel_, "stat_total_prints");
-    stat_print_time_ = lv_obj_find_by_name(panel_, "stat_print_time");
-    stat_filament_ = lv_obj_find_by_name(panel_, "stat_filament");
-    stat_success_rate_ = lv_obj_find_by_name(panel_, "stat_success_rate");
+    stat_total_prints_ = lv_obj_find_by_name(overlay_root_, "stat_total_prints");
+    stat_print_time_ = lv_obj_find_by_name(overlay_root_, "stat_print_time");
+    stat_filament_ = lv_obj_find_by_name(overlay_root_, "stat_filament");
+    stat_success_rate_ = lv_obj_find_by_name(overlay_root_, "stat_success_rate");
 
     // Containers
-    stats_grid_ = lv_obj_find_by_name(panel_, "stats_grid");
-    charts_section_ = lv_obj_find_by_name(panel_, "charts_section");
-    empty_state_ = lv_obj_find_by_name(panel_, "empty_state");
-    btn_view_history_ = lv_obj_find_by_name(panel_, "btn_view_history");
+    stats_grid_ = lv_obj_find_by_name(overlay_root_, "stats_grid");
+    charts_section_ = lv_obj_find_by_name(overlay_root_, "charts_section");
+    empty_state_ = lv_obj_find_by_name(overlay_root_, "empty_state");
+    btn_view_history_ = lv_obj_find_by_name(overlay_root_, "btn_view_history");
 
     // Chart containers
-    trend_chart_container_ = lv_obj_find_by_name(panel_, "trend_chart_container");
-    trend_period_label_ = lv_obj_find_by_name(panel_, "trend_period");
-    filament_chart_container_ = lv_obj_find_by_name(panel_, "filament_chart_container");
+    trend_chart_container_ = lv_obj_find_by_name(overlay_root_, "trend_chart_container");
+    trend_period_label_ = lv_obj_find_by_name(overlay_root_, "trend_period");
+    filament_chart_container_ = lv_obj_find_by_name(overlay_root_, "filament_chart_container");
 
     // Log found widgets
     spdlog::debug("[{}] Widget refs - filters: {}/{}/{}/{}/{}, stats: {}/{}/{}/{}", get_name(),
@@ -168,7 +227,7 @@ void HistoryDashboardPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Register connection state observer to auto-refresh when connected
     // This handles the case where the panel is opened before connection is established
     // ObserverGuard handles cleanup automatically in destructor
-    lv_subject_t* conn_subject = printer_state_.get_printer_connection_state_subject();
+    lv_subject_t* conn_subject = get_printer_state().get_printer_connection_state_subject();
     connection_observer_ = ObserverGuard(
         conn_subject,
         [](lv_observer_t* observer, lv_subject_t* subject) {
@@ -182,10 +241,21 @@ void HistoryDashboardPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         },
         this);
 
-    spdlog::info("[{}] Setup complete", get_name());
+    // Initially hidden
+    lv_obj_add_flag(overlay_root_, LV_OBJ_FLAG_HIDDEN);
+
+    spdlog::info("[{}] Overlay created successfully", get_name());
+    return overlay_root_;
 }
 
+// ============================================================================
+// Lifecycle Hooks
+// ============================================================================
+
 void HistoryDashboardPanel::on_activate() {
+    // Call base class first
+    OverlayBase::on_activate();
+
     is_active_ = true;
 
     // Register as observer of history manager to refresh when data changes
@@ -206,6 +276,8 @@ void HistoryDashboardPanel::on_activate() {
 }
 
 void HistoryDashboardPanel::on_deactivate() {
+    spdlog::debug("[{}] on_deactivate()", get_name());
+
     is_active_ = false;
 
     // Remove observer to prevent callbacks when panel is not visible
@@ -214,7 +286,8 @@ void HistoryDashboardPanel::on_deactivate() {
         history_observer_ = nullptr;
     }
 
-    spdlog::debug("[{}] Deactivated", get_name());
+    // Call base class last
+    OverlayBase::on_deactivate();
 }
 
 // ============================================================================
@@ -616,7 +689,7 @@ void HistoryDashboardPanel::update_filament_chart(const std::vector<PrintHistory
         }
 
         // Rotate hue by hash-based offset (evenly distributed around color wheel)
-        // Use golden ratio angle (137.5°) for good distribution
+        // Use golden ratio angle (137.5 deg) for good distribution
         uint16_t hue_offset = static_cast<uint16_t>((hash * 137) % 360);
         uint16_t new_hue = (primary_hsv.h + hue_offset) % 360;
 
@@ -761,7 +834,9 @@ void HistoryDashboardPanel::on_view_history_clicked(lv_event_t* e) {
     list_panel.set_jobs(dashboard.get_cached_jobs());
 
     // Ensure subjects and callbacks are initialized
-    list_panel.init_subjects();
+    if (!list_panel.are_subjects_initialized()) {
+        list_panel.init_subjects();
+    }
     list_panel.register_callbacks();
 
     // Create the overlay if not already created
@@ -774,54 +849,12 @@ void HistoryDashboardPanel::on_view_history_clicked(lv_event_t* e) {
             ui_toast_show(ToastSeverity::ERROR, "Failed to open history list", 2000);
             return;
         }
+        // Register with NavigationManager for lifecycle callbacks
+        NavigationManager::instance().register_overlay_instance(overlay_root, &list_panel);
     }
 
     // Push as overlay (slides in from right)
     ui_nav_push_overlay(overlay_root);
 
-    // Manually trigger activation since ui_nav_push_overlay doesn't know about OverlayBase
-    list_panel.on_activate();
-
     spdlog::debug("[History Dashboard] History list panel opened");
-}
-
-// ============================================================================
-// Row Click Handler (for opening from Advanced panel)
-// ============================================================================
-
-/**
- * @brief Row click handler for opening history dashboard from Advanced panel
- *
- * Registered in init_global_history_dashboard_panel().
- * Lazy-creates the dashboard panel on first click.
- */
-static void on_history_row_clicked(lv_event_t* e) {
-    (void)e;
-    spdlog::debug("[History Dashboard] History row clicked");
-
-    if (!g_history_dashboard_panel) {
-        spdlog::error("[History Dashboard] Global instance not initialized!");
-        return;
-    }
-
-    // Lazy-create the dashboard panel
-    if (!g_history_dashboard_panel_obj) {
-        spdlog::debug("[History Dashboard] Creating dashboard panel...");
-        g_history_dashboard_panel_obj = static_cast<lv_obj_t*>(
-            lv_xml_create(lv_display_get_screen_active(NULL), "history_dashboard_panel", nullptr));
-
-        if (g_history_dashboard_panel_obj) {
-            g_history_dashboard_panel->setup(g_history_dashboard_panel_obj,
-                                             lv_display_get_screen_active(NULL));
-            lv_obj_add_flag(g_history_dashboard_panel_obj, LV_OBJ_FLAG_HIDDEN);
-            spdlog::info("[History Dashboard] Panel created and setup complete");
-        } else {
-            spdlog::error("[History Dashboard] Failed to create history_dashboard_panel");
-            return;
-        }
-    }
-
-    // Show the overlay and activate it
-    ui_nav_push_overlay(g_history_dashboard_panel_obj);
-    g_history_dashboard_panel->on_activate();
 }

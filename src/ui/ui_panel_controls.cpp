@@ -10,9 +10,12 @@
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
 #include "ui_notification.h"
+#include "ui_panel_bed_mesh.h"
+#include "ui_panel_calibration_zoffset.h"
 #include "ui_panel_extrusion.h"
 #include "ui_panel_fan.h"
 #include "ui_panel_motion.h"
+#include "ui_panel_screws_tilt.h"
 #include "ui_panel_temp_control.h"
 #include "ui_subject_registry.h"
 #include "ui_temperature_utils.h"
@@ -855,25 +858,20 @@ void ControlsPanel::handle_calibration_modal_close() {
 
 void ControlsPanel::handle_calibration_bed_mesh() {
     spdlog::debug("[{}] Bed Mesh button clicked", get_name());
-
-    // Hide modal first
     handle_calibration_modal_close();
 
-    // Create bed mesh panel on first access (lazy initialization)
     if (!bed_mesh_panel_ && parent_screen_) {
-        spdlog::debug("[{}] Creating bed mesh panel...", get_name());
-
-        bed_mesh_panel_ =
-            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "bed_mesh_panel", nullptr));
-
-        if (bed_mesh_panel_) {
-            // Panel starts hidden via XML hidden="true" attribute
-            spdlog::info("[{}] Bed mesh panel created", get_name());
-        } else {
-            LOG_ERROR_INTERNAL("Failed to create bed mesh panel from XML");
-            NOTIFY_ERROR("Failed to load bed mesh panel");
+        auto& overlay = get_global_bed_mesh_panel();
+        if (!overlay.are_subjects_initialized()) {
+            overlay.init_subjects();
+        }
+        overlay.register_callbacks();
+        bed_mesh_panel_ = overlay.create(parent_screen_);
+        if (!bed_mesh_panel_) {
+            NOTIFY_ERROR("Failed to create bed mesh panel");
             return;
         }
+        NavigationManager::instance().register_overlay_instance(bed_mesh_panel_, &overlay);
     }
 
     if (bed_mesh_panel_) {
@@ -883,25 +881,20 @@ void ControlsPanel::handle_calibration_bed_mesh() {
 
 void ControlsPanel::handle_calibration_zoffset() {
     spdlog::debug("[{}] Z-Offset Calibration button clicked", get_name());
-
-    // Hide modal first
     handle_calibration_modal_close();
 
-    // Create z-offset panel on first access (lazy initialization)
     if (!zoffset_panel_ && parent_screen_) {
-        spdlog::debug("[{}] Creating z-offset panel...", get_name());
-
-        zoffset_panel_ = static_cast<lv_obj_t*>(
-            lv_xml_create(parent_screen_, "calibration_zoffset_panel", nullptr));
-
-        if (zoffset_panel_) {
-            // Panel starts hidden via XML hidden="true" attribute
-            spdlog::info("[{}] Z-offset panel created", get_name());
-        } else {
-            LOG_ERROR_INTERNAL("Failed to create z-offset panel from XML");
-            NOTIFY_ERROR("Failed to load Z-offset panel");
+        auto& overlay = get_global_zoffset_cal_panel();
+        if (!overlay.are_subjects_initialized()) {
+            overlay.init_subjects();
+        }
+        overlay.register_callbacks();
+        zoffset_panel_ = overlay.create(parent_screen_);
+        if (!zoffset_panel_) {
+            NOTIFY_ERROR("Failed to create Z-offset panel");
             return;
         }
+        NavigationManager::instance().register_overlay_instance(zoffset_panel_, &overlay);
     }
 
     if (zoffset_panel_) {
@@ -911,25 +904,20 @@ void ControlsPanel::handle_calibration_zoffset() {
 
 void ControlsPanel::handle_calibration_screws() {
     spdlog::debug("[{}] Bed Screws button clicked", get_name());
-
-    // Hide modal first
     handle_calibration_modal_close();
 
-    // Create screws tilt panel on first access (lazy initialization)
     if (!screws_panel_ && parent_screen_) {
-        spdlog::debug("[{}] Creating screws tilt panel...", get_name());
-
-        screws_panel_ =
-            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "screws_tilt_panel", nullptr));
-
-        if (screws_panel_) {
-            // Panel starts hidden via XML hidden="true" attribute
-            spdlog::info("[{}] Screws tilt panel created", get_name());
-        } else {
-            LOG_ERROR_INTERNAL("Failed to create screws tilt panel from XML");
-            NOTIFY_ERROR("Failed to load screws tilt panel");
+        auto& overlay = get_global_screws_tilt_panel();
+        if (!overlay.are_subjects_initialized()) {
+            overlay.init_subjects();
+        }
+        overlay.register_callbacks();
+        screws_panel_ = overlay.create(parent_screen_);
+        if (!screws_panel_) {
+            NOTIFY_ERROR("Failed to create screws tilt panel");
             return;
         }
+        NavigationManager::instance().register_overlay_instance(screws_panel_, &overlay);
     }
 
     if (screws_panel_) {

@@ -4,8 +4,8 @@
 #pragma once
 
 #include "ui_observer_guard.h"
-#include "ui_panel_base.h"
 
+#include "overlay_base.h"
 #include "print_history_data.h"
 #include "print_history_manager.h"
 
@@ -20,7 +20,7 @@
  * - Success rate, longest print, failed/cancelled count
  *
  * ## Navigation:
- * - Entry: Advanced Panel → "Print History" action row
+ * - Entry: Advanced Panel -> "Print History" action row
  * - Back: Returns to Advanced Panel
  * - "View Full History": Opens HistoryListPanel (Stage 3)
  *
@@ -37,24 +37,24 @@
  * so we calculate success/fail/cancelled from the job list.
  *
  * @see print_history_data.h for data structures
- * @see PanelBase for base class documentation
+ * @see OverlayBase for base class documentation
  */
-class HistoryDashboardPanel : public PanelBase {
+class HistoryDashboardPanel : public OverlayBase {
   public:
     /**
-     * @brief Construct HistoryDashboardPanel with injected dependencies
+     * @brief Default constructor
      *
-     * @param printer_state Reference to PrinterState
-     * @param api Pointer to MoonrakerAPI
-     * @param history_manager Pointer to PrintHistoryManager (shared cache)
+     * Dependencies are obtained from global accessors:
+     * - get_printer_state()
+     * - get_moonraker_api()
+     * - get_print_history_manager()
      */
-    HistoryDashboardPanel(PrinterState& printer_state, MoonrakerAPI* api,
-                          PrintHistoryManager* history_manager);
+    HistoryDashboardPanel();
 
     ~HistoryDashboardPanel() override;
 
     //
-    // === PanelBase Implementation ===
+    // === OverlayBase Implementation ===
     //
 
     /**
@@ -66,18 +66,20 @@ class HistoryDashboardPanel : public PanelBase {
     void init_subjects() override;
 
     /**
-     * @brief Setup the dashboard panel with widget references and event handlers
-     *
-     * @param panel Root panel object from lv_xml_create()
-     * @param parent_screen Parent screen for overlay creation
+     * @brief Register XML event callbacks
      */
-    void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
+    void register_callbacks() override;
 
-    const char* get_name() const override {
+    /**
+     * @brief Create the dashboard panel from XML
+     *
+     * @param parent Parent widget (screen)
+     * @return Root widget of the overlay
+     */
+    lv_obj_t* create(lv_obj_t* parent) override;
+
+    [[nodiscard]] const char* get_name() const override {
         return "History Dashboard";
-    }
-    const char* get_xml_component_name() const override {
-        return "history_dashboard_panel";
     }
 
     //
@@ -184,6 +186,12 @@ class HistoryDashboardPanel : public PanelBase {
     std::vector<PrintHistoryJob> cached_jobs_; ///< Time-filtered subset for get_cached_jobs()
     bool is_active_ = false;                   ///< Track if panel is currently visible
 
+    // Parent screen reference
+    lv_obj_t* parent_screen_ = nullptr;
+
+    // Callback registration tracking
+    bool callbacks_registered_ = false;
+
     // Connection state observer to auto-refresh when connected (ObserverGuard handles cleanup)
     ObserverGuard connection_observer_;
 
@@ -286,18 +294,6 @@ class HistoryDashboardPanel : public PanelBase {
 /**
  * @brief Global instance accessor
  *
- * Returns reference to singleton HistoryDashboardPanel used by main.cpp.
+ * Creates instance on first call. Used by static callbacks.
  */
 HistoryDashboardPanel& get_global_history_dashboard_panel();
-
-/**
- * @brief Initialize the global HistoryDashboardPanel instance
- *
- * Must be called by main.cpp before accessing get_global_history_dashboard_panel().
- *
- * @param printer_state Reference to PrinterState
- * @param api Pointer to MoonrakerAPI
- * @param history_manager Pointer to PrintHistoryManager (shared cache)
- */
-void init_global_history_dashboard_panel(PrinterState& printer_state, MoonrakerAPI* api,
-                                         PrintHistoryManager* history_manager);
