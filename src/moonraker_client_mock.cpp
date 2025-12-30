@@ -1541,6 +1541,9 @@ void MoonrakerClientMock::dispatch_print_state_notification(const std::string& s
         std::lock_guard<std::mutex> lock(print_mutex_);
         filename = print_filename_;
     }
+    spdlog::debug(
+        "[MoonrakerClientMock] dispatch_print_state_notification: state='{}' filename='{}'", state,
+        filename);
     json notification_status = {{"print_stats", {{"state", state}, {"filename", filename}}}};
     dispatch_status_update(notification_status);
 }
@@ -1896,8 +1899,11 @@ void MoonrakerClientMock::dispatch_method_callback(const std::string& method, co
 
 void MoonrakerClientMock::start_temperature_simulation() {
     // Use exchange for atomic check-and-set - prevents race condition if called concurrently
-    if (simulation_running_.exchange(true)) {
-        return; // Was already running
+    bool was_running = simulation_running_.exchange(true);
+    spdlog::info("[MoonrakerClientMock] start_temperature_simulation: was_running={}", was_running);
+    if (was_running) {
+        spdlog::warn("[MoonrakerClientMock] Simulation already running, skipping thread start");
+        return;
     }
 
     simulation_thread_ = std::thread(&MoonrakerClientMock::temperature_simulation_loop, this);
@@ -1921,6 +1927,7 @@ void MoonrakerClientMock::stop_temperature_simulation(bool during_destruction) {
 }
 
 void MoonrakerClientMock::temperature_simulation_loop() {
+    spdlog::info("[MoonrakerClientMock] temperature_simulation_loop ENTERED");
     const double base_dt = SIMULATION_INTERVAL_MS / 1000.0; // Base time step (0.5s)
 
     while (simulation_running_.load()) {
@@ -1936,6 +1943,16 @@ void MoonrakerClientMock::temperature_simulation_loop() {
         double bed_temp_val = bed_temp_.load();
         double bed_target_val = bed_target_.load();
 
+        // Continuous variation parameters for idle/room temp state
+        // Uses sinusoidal waves with different periods to create natural-looking fluctuation
+        // This ensures graphs always have data to display during testing
+        constexpr double IDLE_VARIATION_AMPLITUDE = 1.5; // +/- 1.5°C variation
+        constexpr double EXTRUDER_WAVE_PERIOD = 45.0;    // 45 second period for extruder
+        constexpr double BED_WAVE_PERIOD = 60.0;         // 60 second period for bed
+        constexpr double PHASE_OFFSET = 1.57;            // Phase offset between heaters (pi/2)
+
+        double sim_time = tick * base_dt; // Simulated elapsed time in seconds
+
         // Simulate extruder temperature change (scaled by speedup)
         if (ext_target > 0) {
             if (ext_temp < ext_target) {
@@ -1948,10 +1965,13 @@ void MoonrakerClientMock::temperature_simulation_loop() {
                     ext_temp = ext_target;
             }
         } else {
-            if (ext_temp > ROOM_TEMP) {
+            // Cool toward room temp, then add continuous variation
+            if (ext_temp > ROOM_TEMP + IDLE_VARIATION_AMPLITUDE) {
                 ext_temp -= EXTRUDER_COOL_RATE * effective_dt;
-                if (ext_temp < ROOM_TEMP)
-                    ext_temp = ROOM_TEMP;
+            } else {
+                // At room temp: apply sinusoidal variation for continuous graph updates
+                double wave = std::sin(2.0 * M_PI * sim_time / EXTRUDER_WAVE_PERIOD);
+                ext_temp = ROOM_TEMP + IDLE_VARIATION_AMPLITUDE * wave;
             }
         }
         extruder_temp_.store(ext_temp);
@@ -1968,10 +1988,13 @@ void MoonrakerClientMock::temperature_simulation_loop() {
                     bed_temp_val = bed_target_val;
             }
         } else {
-            if (bed_temp_val > ROOM_TEMP) {
+            // Cool toward room temp, then add continuous variation
+            if (bed_temp_val > ROOM_TEMP + IDLE_VARIATION_AMPLITUDE) {
                 bed_temp_val -= BED_COOL_RATE * effective_dt;
-                if (bed_temp_val < ROOM_TEMP)
-                    bed_temp_val = ROOM_TEMP;
+            } else {
+                // At room temp: apply sinusoidal variation (phase offset from extruder)
+                double wave = std::sin(2.0 * M_PI * sim_time / BED_WAVE_PERIOD + PHASE_OFFSET);
+                bed_temp_val = ROOM_TEMP + IDLE_VARIATION_AMPLITUDE * wave;
             }
         }
         bed_temp_.store(bed_temp_val);
@@ -2178,9 +2201,16 @@ void MoonrakerClientMock::temperature_simulation_loop() {
             }
         }
 
+        // Log every 40 ticks (~10 seconds) to confirm loop is running
+        if (tick % 40 == 0) {
+            spdlog::trace("[MoonrakerClientMock] Simulation tick {} - callbacks={}", tick,
+                          callbacks_copy.size());
+        }
+
         // Sleep wall-clock interval (unchanged by speedup factor)
         std::this_thread::sleep_for(std::chrono::milliseconds(SIMULATION_INTERVAL_MS));
     }
+    spdlog::info("[MoonrakerClientMock] temperature_simulation_loop EXITED");
 }
 
 // ============================================================================

@@ -13,6 +13,7 @@
 #include <array>
 #include <functional>
 #include <string>
+#include <vector>
 
 // Forward declarations
 class PrinterState;
@@ -186,6 +187,22 @@ class TempControlPanel {
     int mini_nozzle_series_id_ = -1;
     int mini_bed_series_id_ = -1;
     float mini_graph_y_max_ = 150.0f; // Dynamic Y-max, starts at 150°C
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Graph Registration System
+    // Allows multiple graphs to receive temperature updates with a single loop
+    // ─────────────────────────────────────────────────────────────────────────
+    struct RegisteredGraph {
+        ui_temp_graph_t* graph;
+        int series_id;
+    };
+    std::vector<RegisteredGraph> nozzle_temp_graphs_; // Graphs receiving nozzle temp updates
+    std::vector<RegisteredGraph> bed_temp_graphs_;    // Graphs receiving bed temp updates
+
+    // Internal helpers for unified graph updates
+    void update_nozzle_graphs(float temp_deg, int64_t now_ms);
+    void update_bed_graphs(float temp_deg, int64_t now_ms);
+    void update_mini_graph_y_axis(float nozzle_deg, float bed_deg);
 
     // Graph update throttling (1 sample per second max)
     // Moonraker sends at ~4Hz, but we only graph at 1Hz to show 20 minutes
