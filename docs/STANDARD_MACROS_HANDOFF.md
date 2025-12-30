@@ -13,13 +13,13 @@
 | 3 | Settings Overlay UI | ✅ Complete | `96cc536b` |
 | 4 | Settings Panel Handlers | ✅ Complete | `96cc536b` |
 | 5 | Controls Panel Integration | ✅ Complete | `96cc536b` |
-| 6 | Filament Panel Integration | ✅ Complete | (pending) |
-| 7 | Print Status Panel Integration | 🔲 Next | — |
-| 8 | Testing & Polish | 🔲 Pending | — |
+| 6 | Filament Panel Integration | ✅ Complete | `6214ff88` + `4840ebb8` |
+| 7 | Print Status Panel Integration | ✅ Complete | — |
+| 8 | Testing & Polish | 🔲 Next | — |
 
 ---
 
-## What Was Built (Stages 1-6)
+## What Was Built (Stages 1-7)
 
 ### Files Created
 - `include/standard_macros.h` - Header with `StandardMacros` singleton, `StandardMacroSlot` enum, `StandardMacroInfo` struct
@@ -35,6 +35,7 @@
 - `src/moonraker_api_advanced.cpp` - Implemented `execute_macro()` (was stub)
 - `include/ui_panel_controls.h` - Added StandardMacros integration, `refresh_macro_buttons()`
 - `src/ui_panel_controls.cpp` - Quick buttons now use StandardMacros slots instead of hardcoded G-code
+- `src/ui_panel_print_status.cpp` - Pause/Resume/Cancel use StandardMacros, buttons disabled if slot empty
 
 ### Key Implementation Details
 
@@ -84,12 +85,30 @@ enum class StandardMacroSlot {
 - `handle_purge_button()` uses `StandardMacroSlot::Purge` with fallback to inline G-code (`M83\nG1 E{amount} F300`)
 - Removed unused `load_filament_gcode_` and `unload_filament_gcode_` member variables
 
+### Stage 7 Implementation Details
+- Added `#include "standard_macros.h"` to print status panel
+- `handle_pause_button()`:
+  - Checks `StandardMacroSlot::Pause` availability when in Printing state
+  - Checks `StandardMacroSlot::Resume` availability when in Paused state
+  - Uses `StandardMacros::instance().execute()` for both pause and resume
+  - Shows warning notification if slot is empty
+- `handle_cancel_button()`:
+  - Checks `StandardMacroSlot::Cancel` availability before showing confirmation dialog
+  - Uses `StandardMacros::instance().execute()` instead of `api_->cancel_print()`
+- `show_runout_guidance_modal()`:
+  - Resume callback uses `StandardMacroSlot::Resume` via StandardMacros
+  - Cancel callback uses `StandardMacroSlot::Cancel` via StandardMacros
+- `update_button_states()`:
+  - Pause button disabled if Pause slot empty (when printing) or Resume slot empty (when paused)
+  - Cancel button disabled if Cancel slot empty
+  - Enhanced debug logging shows individual button states
+
 ---
 
-## Handoff Prompt for Stage 7
+## Handoff Prompt for Stage 8
 
 ```
-I'm continuing the "Standard Macros" system for HelixScreen. Stages 1-6 are complete.
+I'm continuing the "Standard Macros" system for HelixScreen. Stages 1-7 are complete.
 
 ## Quick Context
 
@@ -174,17 +193,13 @@ Filament panel now uses StandardMacros for load/unload/purge:
 - `handle_purge_button()` uses `StandardMacroSlot::Purge` with inline G-code fallback
 - Removed unused `load_filament_gcode_` and `unload_filament_gcode_` member variables
 
-### Stage 7: Print Status Panel Integration
-```
-Continue with Stage 7 of the Standard Macros system.
-
-Task: Integrate Print Status Panel with StandardMacros
-- Pause/Resume/Cancel buttons use StandardMacros::execute()
-- Disable (grey out) buttons if slot is empty
-- Don't hide - user needs to see the button exists but is unavailable
-
-Files: src/ui_panel_print_status.cpp
-```
+### Stage 7: Print Status Panel Integration ✅ COMPLETE
+Print status panel now uses StandardMacros for pause/resume/cancel:
+- `handle_pause_button()` uses `StandardMacroSlot::Pause` or `StandardMacroSlot::Resume` based on state
+- `handle_cancel_button()` uses `StandardMacroSlot::Cancel` via StandardMacros
+- `show_runout_guidance_modal()` callbacks use StandardMacros for resume/cancel
+- `update_button_states()` disables buttons if corresponding slot is empty
+- Buttons are greyed out (not hidden) when slots are empty
 
 ### Stage 8: Testing & Polish
 ```
