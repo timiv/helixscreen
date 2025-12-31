@@ -372,6 +372,179 @@ TEST_CASE("PrinterState: Homed axes variations", "[state][motion]") {
         const char* homed = lv_subject_get_string(state.get_homed_axes_subject());
         REQUIRE(std::string(homed) == "");
     }
+
+    SECTION("Only Z homed") {
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"toolhead", {{"homed_axes", "z"}}}}, 0.0}}};
+        state.update_from_status(notification["params"][0]);
+        const char* homed = lv_subject_get_string(state.get_homed_axes_subject());
+        REQUIRE(std::string(homed) == "z");
+    }
+
+    SECTION("XYZ homed") {
+        json notification = {{"method", "notify_status_update"},
+                             {"params", {{{"toolhead", {{"homed_axes", "xyz"}}}}, 0.0}}};
+        state.update_from_status(notification["params"][0]);
+        const char* homed = lv_subject_get_string(state.get_homed_axes_subject());
+        REQUIRE(std::string(homed) == "xyz");
+    }
+}
+
+// Helper function for testing homed axes derivation logic
+// This mirrors the logic in ControlsPanel::on_homed_axes_changed()
+static void derive_homed_states(const char* axes, int& xy_homed, int& z_homed, int& all_homed) {
+    if (!axes)
+        axes = "";
+    bool has_x = strchr(axes, 'x') != nullptr;
+    bool has_y = strchr(axes, 'y') != nullptr;
+    bool has_z = strchr(axes, 'z') != nullptr;
+
+    xy_homed = (has_x && has_y) ? 1 : 0;
+    z_homed = has_z ? 1 : 0;
+    all_homed = (has_x && has_y && has_z) ? 1 : 0;
+}
+
+TEST_CASE("PrinterState: Homed axes derivation logic", "[state][motion][homing]") {
+    // Test the derivation logic used by ControlsPanel to create boolean subjects
+    // from the homed_axes string subject. This logic is critical for bind_style
+    // to work correctly on home buttons.
+
+    SECTION("Empty string - nothing homed") {
+        int xy = 0, z = 0, all = 0;
+        derive_homed_states("", xy, z, all);
+        REQUIRE(xy == 0);
+        REQUIRE(z == 0);
+        REQUIRE(all == 0);
+    }
+
+    SECTION("Only X homed - XY not complete") {
+        int xy = 0, z = 0, all = 0;
+        derive_homed_states("x", xy, z, all);
+        REQUIRE(xy == 0); // Need both X and Y
+        REQUIRE(z == 0);
+        REQUIRE(all == 0);
+    }
+
+    SECTION("Only Y homed - XY not complete") {
+        int xy = 0, z = 0, all = 0;
+        derive_homed_states("y", xy, z, all);
+        REQUIRE(xy == 0); // Need both X and Y
+        REQUIRE(z == 0);
+        REQUIRE(all == 0);
+    }
+
+    SECTION("Only Z homed") {
+        int xy = 0, z = 0, all = 0;
+        derive_homed_states("z", xy, z, all);
+        REQUIRE(xy == 0);
+        REQUIRE(z == 1);
+        REQUIRE(all == 0);
+    }
+
+    SECTION("XY homed (typical after G28 X Y)") {
+        int xy = 0, z = 0, all = 0;
+        derive_homed_states("xy", xy, z, all);
+        REQUIRE(xy == 1);
+        REQUIRE(z == 0);
+        REQUIRE(all == 0);
+    }
+
+    SECTION("XZ homed") {
+        int xy = 0, z = 0, all = 0;
+        derive_homed_states("xz", xy, z, all);
+        REQUIRE(xy == 0); // Missing Y
+        REQUIRE(z == 1);
+        REQUIRE(all == 0);
+    }
+
+    SECTION("YZ homed") {
+        int xy = 0, z = 0, all = 0;
+        derive_homed_states("yz", xy, z, all);
+        REQUIRE(xy == 0); // Missing X
+        REQUIRE(z == 1);
+        REQUIRE(all == 0);
+    }
+
+    SECTION("All axes homed (typical after G28)") {
+        int xy = 0, z = 0, all = 0;
+        derive_homed_states("xyz", xy, z, all);
+        REQUIRE(xy == 1);
+        REQUIRE(z == 1);
+        REQUIRE(all == 1);
+    }
+
+    SECTION("Null input treated as empty") {
+        int xy = 0, z = 0, all = 0;
+        derive_homed_states(nullptr, xy, z, all);
+        REQUIRE(xy == 0);
+        REQUIRE(z == 0);
+        REQUIRE(all == 0);
+    }
+}
+
+TEST_CASE("PrinterState: Homed axes observer pattern for derived subjects",
+          "[state][motion][homing][observer]") {
+    // This tests the observer pattern that panels use to derive boolean subjects
+    // from homed_axes. ControlsPanel uses this to update xy_homed_, z_homed_,
+    // all_homed_ subjects for bind_style on home buttons.
+
+    lv_init();
+    PrinterState& state = get_printer_state();
+    state.reset_for_testing();
+    state.init_subjects(false);
+
+    // Track derived values via observer
+    struct HomingState {
+        int xy_homed = 0;
+        int z_homed = 0;
+        int all_homed = 0;
+        int callback_count = 0;
+    } homing;
+
+    auto observer_cb = [](lv_observer_t* observer, lv_subject_t* subject) {
+        auto* state = static_cast<HomingState*>(lv_observer_get_user_data(observer));
+        const char* axes = lv_subject_get_string(subject);
+        derive_homed_states(axes, state->xy_homed, state->z_homed, state->all_homed);
+        state->callback_count++;
+    };
+
+    lv_subject_add_observer(state.get_homed_axes_subject(), observer_cb, &homing);
+
+    // Initial callback fires immediately (LVGL behavior)
+    REQUIRE(homing.callback_count == 1);
+    REQUIRE(homing.xy_homed == 0);
+    REQUIRE(homing.z_homed == 0);
+    REQUIRE(homing.all_homed == 0);
+
+    // Simulate G28 X Y
+    json notification = {{"method", "notify_status_update"},
+                         {"params", {{{"toolhead", {{"homed_axes", "xy"}}}}, 0.0}}};
+    state.update_from_status(notification["params"][0]);
+
+    REQUIRE(homing.callback_count == 2);
+    REQUIRE(homing.xy_homed == 1);
+    REQUIRE(homing.z_homed == 0);
+    REQUIRE(homing.all_homed == 0);
+
+    // Simulate G28 Z (now all homed)
+    notification = {{"method", "notify_status_update"},
+                    {"params", {{{"toolhead", {{"homed_axes", "xyz"}}}}, 0.0}}};
+    state.update_from_status(notification["params"][0]);
+
+    REQUIRE(homing.callback_count == 3);
+    REQUIRE(homing.xy_homed == 1);
+    REQUIRE(homing.z_homed == 1);
+    REQUIRE(homing.all_homed == 1);
+
+    // Simulate unhoming (e.g., SET_KINEMATIC_POSITION or restart)
+    notification = {{"method", "notify_status_update"},
+                    {"params", {{{"toolhead", {{"homed_axes", ""}}}}, 0.0}}};
+    state.update_from_status(notification["params"][0]);
+
+    REQUIRE(homing.callback_count == 4);
+    REQUIRE(homing.xy_homed == 0);
+    REQUIRE(homing.z_homed == 0);
+    REQUIRE(homing.all_homed == 0);
 }
 
 // ============================================================================
