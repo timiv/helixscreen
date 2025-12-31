@@ -19,6 +19,7 @@
 #include "ui_panel_filament.h"
 
 #include "ams_state.h"
+#include "app_constants.h"
 #include "app_globals.h"
 #include "config.h"
 #include "macro_modification_manager.h"
@@ -36,7 +37,7 @@
 
 #include <cstdlib>
 
-MoonrakerManager::MoonrakerManager() = default;
+MoonrakerManager::MoonrakerManager() : m_startup_time(std::chrono::steady_clock::now()) {}
 
 MoonrakerManager::~MoonrakerManager() {
     shutdown();
@@ -308,6 +309,15 @@ void MoonrakerManager::register_callbacks() {
                 NOTIFY_ERROR_T(title, "{}", evt.message);
             }
         } else {
+            // Suppress "Klipper ready" toast during startup (expected at boot)
+            auto now = std::chrono::steady_clock::now();
+            bool within_grace_period =
+                (now - m_startup_time) < AppConstants::Startup::NOTIFICATION_GRACE_PERIOD;
+
+            if (evt.type == MoonrakerEventType::KLIPPY_READY && within_grace_period) {
+                spdlog::info("[MoonrakerManager] Suppressing startup Klipper ready notification");
+                return;
+            }
             NOTIFY_WARNING("{}", evt.message);
         }
     });

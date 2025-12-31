@@ -6,6 +6,7 @@
 #include "ui_error_reporting.h"
 #include "ui_update_queue.h"
 
+#include "app_constants.h"
 #include "config.h"
 #include "spdlog/spdlog.h"
 
@@ -425,9 +426,9 @@ bool FilamentSensorManager::is_motion_active() const {
 void FilamentSensorManager::update_from_status(const json& status) {
     // Suppress toast notifications for initial state at startup
     // (similar to USB manager - users don't need to be told filament is present)
-    constexpr auto STARTUP_GRACE_PERIOD = std::chrono::seconds(3);
     auto now = std::chrono::steady_clock::now();
-    bool within_grace_period = (now - startup_time_) < STARTUP_GRACE_PERIOD;
+    bool within_grace_period =
+        (now - startup_time_) < AppConstants::Startup::NOTIFICATION_GRACE_PERIOD;
 
     // Collect notifications to send after releasing lock (avoid deadlock)
     struct Notification {

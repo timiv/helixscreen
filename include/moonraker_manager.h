@@ -8,6 +8,7 @@
 #include "runtime_config.h"
 
 #include <atomic>
+#include <chrono>
 #include <memory>
 #include <queue>
 
@@ -203,6 +204,9 @@ class MoonrakerManager {
 
     // Destruction flag for async callback safety [L012]
     std::shared_ptr<std::atomic<bool>> m_alive = std::make_shared<std::atomic<bool>>(true);
+
+    // Startup time for suppressing initial notifications (Klipper ready toast)
+    std::chrono::steady_clock::time_point m_startup_time;
 
     bool m_initialized = false;
 };

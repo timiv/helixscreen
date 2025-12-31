@@ -16,6 +16,8 @@
 
 #include "lvgl.h"
 
+#include <chrono>
+
 /**
  * @brief Application-wide constants shared between UI and backend
  */
@@ -72,4 +74,15 @@ constexpr int PETG = 240;
 constexpr int ABS = 250;
 constexpr int CUSTOM_DEFAULT = 200;
 } // namespace MaterialPresets
+
+/**
+ * @brief Startup timing constants
+ *
+ * Grace periods for suppressing notifications during initial boot.
+ * On embedded devices, Moonraker connection may take 10+ seconds.
+ */
+namespace Startup {
+/// Grace period for suppressing initial state notifications (filament, Klipper ready)
+constexpr std::chrono::seconds NOTIFICATION_GRACE_PERIOD{10};
+} // namespace Startup
 } // namespace AppConstants
