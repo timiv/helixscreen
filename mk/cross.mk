@@ -525,6 +525,23 @@ deploy-ad5m:
 	@if [ -d build/assets/images/printers/prerendered ]; then \
 		rsync -avz --checksum build/assets/images/printers/prerendered/ $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/assets/images/printers/prerendered/; \
 	fi
+	@# Update init script in /etc/init.d/ if it differs from deployed version
+	@echo "$(DIM)Checking init script...$(RESET)"
+	@ssh $(AD5M_SSH_TARGET) '\
+		INIT_SCRIPT=""; \
+		if [ -f /etc/init.d/S80helixscreen ]; then INIT_SCRIPT="/etc/init.d/S80helixscreen"; \
+		elif [ -f /etc/init.d/S90helixscreen ]; then INIT_SCRIPT="/etc/init.d/S90helixscreen"; fi; \
+		if [ -n "$$INIT_SCRIPT" ]; then \
+			if ! cmp -s "$$INIT_SCRIPT" "$(AD5M_DEPLOY_DIR)/config/helixscreen.init" 2>/dev/null; then \
+				echo "Updating $$INIT_SCRIPT..."; \
+				cp "$(AD5M_DEPLOY_DIR)/config/helixscreen.init" "$$INIT_SCRIPT"; \
+				sed -i "s|DAEMON_DIR=\"/opt/helixscreen\"|DAEMON_DIR=\"$(AD5M_DEPLOY_DIR)\"|" "$$INIT_SCRIPT"; \
+				chmod +x "$$INIT_SCRIPT"; \
+				echo "Init script updated"; \
+			else \
+				echo "Init script unchanged"; \
+			fi; \
+		fi'
 	@echo "$(GREEN)✓ Deployed to $(AD5M_HOST):$(AD5M_DEPLOY_DIR)$(RESET)"
 	@echo "$(CYAN)Restarting helix-screen on $(AD5M_HOST)...$(RESET)"
 	ssh $(AD5M_SSH_TARGET) "killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; sleep 1; cd $(AD5M_DEPLOY_DIR) && ./config/helix-launcher.sh >/dev/null 2>&1 &"
@@ -562,6 +579,23 @@ deploy-ad5m-legacy:
 		ssh $(AD5M_SSH_TARGET) "mkdir -p $(AD5M_DEPLOY_DIR)/assets/images/printers/prerendered"; \
 		scp -O build/assets/images/printers/prerendered/*.bin $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/assets/images/printers/prerendered/; \
 	fi
+	@# Update init script in /etc/init.d/ if it differs from deployed version
+	@echo "$(DIM)Checking init script...$(RESET)"
+	@ssh $(AD5M_SSH_TARGET) '\
+		INIT_SCRIPT=""; \
+		if [ -f /etc/init.d/S80helixscreen ]; then INIT_SCRIPT="/etc/init.d/S80helixscreen"; \
+		elif [ -f /etc/init.d/S90helixscreen ]; then INIT_SCRIPT="/etc/init.d/S90helixscreen"; fi; \
+		if [ -n "$$INIT_SCRIPT" ]; then \
+			if ! cmp -s "$$INIT_SCRIPT" "$(AD5M_DEPLOY_DIR)/config/helixscreen.init" 2>/dev/null; then \
+				echo "Updating $$INIT_SCRIPT..."; \
+				cp "$(AD5M_DEPLOY_DIR)/config/helixscreen.init" "$$INIT_SCRIPT"; \
+				sed -i "s|DAEMON_DIR=\"/opt/helixscreen\"|DAEMON_DIR=\"$(AD5M_DEPLOY_DIR)\"|" "$$INIT_SCRIPT"; \
+				chmod +x "$$INIT_SCRIPT"; \
+				echo "Init script updated"; \
+			else \
+				echo "Init script unchanged"; \
+			fi; \
+		fi'
 	@echo "$(GREEN)✓ Deployed to $(AD5M_HOST):$(AD5M_DEPLOY_DIR)$(RESET)"
 	@echo "$(CYAN)Restarting helix-screen on $(AD5M_HOST)...$(RESET)"
 	ssh $(AD5M_SSH_TARGET) "killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; sleep 1; cd $(AD5M_DEPLOY_DIR) && ./config/helix-launcher.sh >/dev/null 2>&1 &"
