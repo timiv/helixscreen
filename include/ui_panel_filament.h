@@ -244,11 +244,16 @@ class FilamentPanel : public PanelBase {
     // Temperature graph (managed by TempControlPanel)
     TempControlPanel* temp_control_panel_ = nullptr;
 
+    // Temperature layout widgets (for dynamic sizing when AMS hidden)
+    lv_obj_t* temp_group_ = nullptr;
+    lv_obj_t* temp_graph_card_ = nullptr;
+
     // Observers for printer state temperature updates
     ObserverGuard extruder_temp_observer_;
     ObserverGuard extruder_target_observer_;
     ObserverGuard bed_temp_observer_;
     ObserverGuard bed_target_observer_;
+    ObserverGuard ams_type_observer_; ///< Adjusts temp card size when AMS hidden
 
     //
     // === Private Helpers ===
