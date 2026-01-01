@@ -59,8 +59,9 @@ static constexpr int FRAME_DELAY_US = 16000; // ~60 FPS
 // Read brightness from config file (simple parsing, no JSON library)
 // Returns configured brightness (10-100) or default_value on failure
 static int read_config_brightness(int default_value = 100) {
-    // Try common config paths
-    const char* paths[] = {"helixconfig.json", "/opt/helixscreen/helixconfig.json"};
+    // Try config paths (new location first, then legacy)
+    const char* paths[] = {"config/helixconfig.json", "helixconfig.json",
+                           "/opt/helixscreen/helixconfig.json"};
 
     for (const char* path : paths) {
         std::ifstream file(path);
@@ -137,6 +138,10 @@ static lv_obj_t* create_splash_ui(lv_obj_t* screen, int width, int height) {
 
     // Create logo image
     lv_obj_t* logo = lv_image_create(container);
+
+    // Ensure image widget has no visible background/border (fix edge artifact)
+    lv_obj_set_style_bg_opa(logo, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_width(logo, 0, LV_PART_MAIN);
 
     // Check for pre-rendered image first (AD5M = 800x480 = "small" category)
     // Pre-rendered = exact 400x400 pixels, no decode/scale needed → 60+ FPS
@@ -229,6 +234,14 @@ int main(int argc, char** argv) {
         lv_timer_handler();
         usleep(FRAME_DELAY_US);
     }
+
+    // Clear framebuffer to background color before exit
+    // This prevents visual artifacts during handoff to helix-screen
+    lv_obj_clean(screen);                                              // Remove all children
+    lv_obj_set_style_bg_color(screen, lv_color_hex(BG_COLOR_DARK), 0); // Ensure bg color
+    lv_obj_invalidate(screen);                                         // Mark for redraw
+    lv_timer_handler();                                                // Render the clear
+    lv_refr_now(nullptr);                                              // Force immediate refresh
 
     // Cleanup is handled automatically by destructors
     return 0;
