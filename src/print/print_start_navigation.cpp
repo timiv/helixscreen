@@ -31,41 +31,21 @@ static void on_print_state_changed_for_navigation(lv_observer_t* observer, lv_su
     bool is_now_printing = (current == PrintJobState::PRINTING);
 
     if (was_not_printing && is_now_printing) {
-        spdlog::debug("[PrintStartNav] Print started (navigation handled by print select panel)");
-
-        // NOTE: Auto-navigation disabled - PrintSelectPanel handles navigation explicitly
-        // Kept for potential future use (e.g., prints started via API/console)
-#if 0
-        // A print just started - check if we should auto-navigate
+        // A print just started - auto-navigate to print status from any panel
         auto& nav = NavigationManager::instance();
-        ui_panel_id_t active_panel = nav.get_active();
+        lv_obj_t* print_status_widget = get_global_print_status_panel().get_panel();
 
-        spdlog::debug("[PrintStartNav] Print started - active_panel={} (PRINT_SELECT={})",
-                      static_cast<int>(active_panel), static_cast<int>(UI_PANEL_PRINT_SELECT));
-
-        // Only auto-navigate if we're on the print select panel (user just started a print)
-        // Don't auto-navigate from home or other panels - handles restart mid-print gracefully
-        if (active_panel == UI_PANEL_PRINT_SELECT) {
-            // Get the print status panel widget
-            lv_obj_t* print_status_widget = get_global_print_status_panel().get_panel();
-
-            if (print_status_widget) {
-                // Make sure it's not already showing
-                if (!nav.is_panel_in_stack(print_status_widget)) {
-                    spdlog::info("[PrintStartNav] Auto-navigating to print status (print started "
-                                 "from print select)");
-                    nav.push_overlay(print_status_widget);
-                } else {
-                    spdlog::debug(
-                        "[PrintStartNav] Print status already showing, skipping navigation");
-                }
+        if (print_status_widget) {
+            // Only navigate if print status isn't already showing
+            if (!nav.is_panel_in_stack(print_status_widget)) {
+                spdlog::info("[PrintStartNav] Auto-navigating to print status (print started)");
+                nav.push_overlay(print_status_widget);
             } else {
-                spdlog::warn("[PrintStartNav] Print status panel widget not available");
+                spdlog::debug("[PrintStartNav] Print status already showing, skipping navigation");
             }
         } else {
-            spdlog::debug("[PrintStartNav] Not on print select panel, skipping auto-navigation");
+            spdlog::warn("[PrintStartNav] Print status panel widget not available");
         }
-#endif
     }
 
     prev_print_state = current;
