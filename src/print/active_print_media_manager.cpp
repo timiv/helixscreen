@@ -185,12 +185,17 @@ void ActivePrintMediaManager::load_thumbnail_for_file(const std::string& filenam
 
             spdlog::debug("[ActivePrintMediaManager] Found thumbnail: {}", thumbnail_rel_path);
 
-            // Use ThumbnailCache for download and pre-scaling
-            ThumbnailTarget target = ThumbnailProcessor::get_target_for_display();
-            get_thumbnail_cache().fetch_optimized(
-                api_, thumbnail_rel_path, target,
+            // Use semantic API for card-sized thumbnails (HomePanel status card)
+            ThumbnailLoadContext ctx;
+            ctx.alive = alive_;
+            ctx.generation = nullptr; // Using manual gen check below
+            ctx.captured_gen = current_gen;
+
+            get_thumbnail_cache().fetch_for_card_view(
+                api_, thumbnail_rel_path, ctx,
                 [this, current_gen](const std::string& lvgl_path) {
-                    // Check if this callback is still relevant
+                    // Note: alive check is done by fetch_for_card_view's guard.
+                    // We still need generation check since we passed nullptr for generation.
                     if (current_gen != thumbnail_load_generation_) {
                         spdlog::trace(
                             "[ActivePrintMediaManager] Stale thumbnail callback, ignoring");

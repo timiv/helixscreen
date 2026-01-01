@@ -8,6 +8,8 @@
 #include "moonraker_api.h"
 #include "printer_state.h"
 
+#include <atomic>
+#include <memory>
 #include <string>
 
 namespace helix {
@@ -78,6 +80,9 @@ class ActivePrintMediaManager {
     std::string last_effective_filename_;
     std::string last_loaded_thumbnail_filename_;
     uint32_t thumbnail_load_generation_ = 0;
+
+    /// Alive flag for ThumbnailLoadContext compatibility (always true for singleton)
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
 };
 
 /**

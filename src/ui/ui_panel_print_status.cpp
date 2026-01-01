@@ -2135,16 +2135,19 @@ void PrintStatusPanel::load_thumbnail_for_file(const std::string& filename) {
             // causes a race condition where Print Status deletes thumbnails that
             // Print Select just cached, resulting in placeholder thumbnails.
 
-            // Use fetch() to get full-resolution PNG for better display quality
-            // (pre-scaled .bin files are too small for the large detail view area)
-            get_thumbnail_cache().fetch(
-                api_, thumbnail_rel_path,
-                [this, alive, current_gen](const std::string& lvgl_path) {
-                    // Abort if panel was destroyed during async operation [L012]
-                    if (!alive->load()) {
-                        return;
-                    }
-                    // Check if this callback is still relevant
+            // Use fetch_for_detail_view() for full-resolution PNG (not pre-scaled .bin)
+            // The semantic API ensures we always get the right format for large views.
+            // Create context with captured generation for validity checking.
+            ThumbnailLoadContext ctx;
+            ctx.alive = alive;
+            ctx.generation = nullptr; // Using manual gen check below
+            ctx.captured_gen = current_gen;
+
+            get_thumbnail_cache().fetch_for_detail_view(
+                api_, thumbnail_rel_path, ctx,
+                [this, current_gen](const std::string& lvgl_path) {
+                    // Note: alive check is done by fetch_for_detail_view's guard.
+                    // We still need generation check since we passed nullptr for generation.
                     if (current_gen != thumbnail_load_generation_) {
                         spdlog::trace("[{}] Stale thumbnail callback (gen {} != {}), ignoring",
                                       get_name(), current_gen, thumbnail_load_generation_);
@@ -2166,10 +2169,7 @@ void PrintStatusPanel::load_thumbnail_for_file(const std::string& filename) {
                                      get_name(), lvgl_path);
                     }
                 },
-                [this, alive](const std::string& error) {
-                    if (!alive->load()) {
-                        return;
-                    }
+                [this](const std::string& error) {
                     spdlog::warn("[{}] Failed to fetch thumbnail: {}", get_name(), error);
                 });
         },

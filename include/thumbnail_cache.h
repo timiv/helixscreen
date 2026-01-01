@@ -4,6 +4,7 @@
 #pragma once
 
 #include "moonraker_api.h"
+#include "thumbnail_load_context.h"
 #include "thumbnail_processor.h"
 
 #include <filesystem>
@@ -201,6 +202,68 @@ class ThumbnailCache {
     [[nodiscard]] std::string get_if_optimized(const std::string& relative_path,
                                                const helix::ThumbnailTarget& target,
                                                time_t source_modified = 0) const;
+
+    // =========================================================================
+    // HIGH-LEVEL SEMANTIC METHODS
+    // =========================================================================
+    // These methods encode the correct strategy for each use case, preventing
+    // accidental use of the wrong format (e.g., using pre-scaled .bin for a
+    // detail view where full PNG quality is needed).
+
+    /**
+     * @brief Fetch thumbnail for a detail/large view (full PNG for quality)
+     *
+     * Use this for:
+     * - Print Status panel thumbnail
+     * - Print File Detail view
+     * - Any large thumbnail display that benefits from full resolution
+     *
+     * Internally uses fetch() to get full-resolution PNG.
+     *
+     * The success callback is automatically guarded by ctx.is_valid() - it will
+     * only be invoked if the caller is still alive and the generation matches.
+     * This eliminates the need for manual validity checks in each callback.
+     *
+     * @param api MoonrakerAPI instance for downloading
+     * @param relative_path Moonraker relative path (e.g., ".thumbnails/file.png")
+     * @param ctx Async safety context (created via ThumbnailLoadContext::create())
+     * @param on_success Called with LVGL path on success (only if ctx.is_valid())
+     * @param on_error Optional error callback (NOT guarded - always called on error)
+     *
+     * @note Callbacks may be invoked from background thread - use ui_async_call_safe for UI updates
+     * @see ThumbnailLoadContext::create
+     */
+    void fetch_for_detail_view(MoonrakerAPI* api, const std::string& relative_path,
+                               ThumbnailLoadContext ctx, SuccessCallback on_success,
+                               ErrorCallback on_error = nullptr);
+
+    /**
+     * @brief Fetch thumbnail for a card/small view (pre-scaled .bin for speed)
+     *
+     * Use this for:
+     * - Print Select file cards
+     * - History list items
+     * - Any small thumbnail where rendering speed matters more than quality
+     *
+     * Internally uses fetch_optimized() with display-appropriate dimensions.
+     *
+     * The success callback is automatically guarded by ctx.is_valid() - it will
+     * only be invoked if the caller is still alive and the generation matches.
+     * This eliminates the need for manual validity checks in each callback.
+     *
+     * @param api MoonrakerAPI instance for downloading
+     * @param relative_path Moonraker relative path (e.g., ".thumbnails/file.png")
+     * @param ctx Async safety context (created via ThumbnailLoadContext::create())
+     * @param on_success Called with LVGL path on success (only if ctx.is_valid())
+     * @param on_error Optional error callback (NOT guarded - always called on error)
+     * @param source_modified Optional source file modification time for cache invalidation
+     *
+     * @note Callbacks may be invoked from background thread - use ui_async_call_safe for UI updates
+     * @see ThumbnailLoadContext::create
+     */
+    void fetch_for_card_view(MoonrakerAPI* api, const std::string& relative_path,
+                             ThumbnailLoadContext ctx, SuccessCallback on_success,
+                             ErrorCallback on_error = nullptr, time_t source_modified = 0);
 
     /**
      * @brief Clear all cached thumbnails

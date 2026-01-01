@@ -764,3 +764,61 @@ void ThumbnailCache::process_and_callback(const std::string& png_lvgl_path,
             }
         });
 }
+
+// ============================================================================
+// High-Level Semantic Methods
+// ============================================================================
+
+void ThumbnailCache::fetch_for_detail_view(MoonrakerAPI* api, const std::string& relative_path,
+                                           ThumbnailLoadContext ctx, SuccessCallback on_success,
+                                           ErrorCallback on_error) {
+    // Detail views need full-resolution PNG for quality upscaling.
+    // Pre-scaled .bin files are too small (e.g., 160x160) and look bad when
+    // displayed at larger sizes.
+
+    // Wrap the success callback with validity check to reduce boilerplate
+    auto guarded_success = [ctx, on_success = std::move(on_success)](const std::string& path) {
+        if (!ctx.is_valid()) {
+            spdlog::trace("[ThumbnailCache] Detail view callback skipped (context invalid)");
+            return;
+        }
+        if (on_success) {
+            on_success(path);
+        }
+    };
+
+    fetch(
+        api, relative_path, std::move(guarded_success),
+        on_error ? std::move(on_error) : [relative_path](const std::string& error) {
+            spdlog::warn("[ThumbnailCache] Detail view fetch failed for {}: {}", relative_path,
+                         error);
+        });
+}
+
+void ThumbnailCache::fetch_for_card_view(MoonrakerAPI* api, const std::string& relative_path,
+                                         ThumbnailLoadContext ctx, SuccessCallback on_success,
+                                         ErrorCallback on_error, time_t source_modified) {
+    // Card views benefit from pre-scaled .bin files for faster rendering.
+    // The small display size (e.g., 120x120 or 160x160) means full PNG
+    // resolution is wasted - pre-scaling once and caching is more efficient.
+
+    // Wrap the success callback with validity check to reduce boilerplate
+    auto guarded_success = [ctx, on_success = std::move(on_success)](const std::string& path) {
+        if (!ctx.is_valid()) {
+            spdlog::trace("[ThumbnailCache] Card view callback skipped (context invalid)");
+            return;
+        }
+        if (on_success) {
+            on_success(path);
+        }
+    };
+
+    helix::ThumbnailTarget target = helix::ThumbnailProcessor::get_target_for_display();
+
+    fetch_optimized(api, relative_path, target, std::move(guarded_success),
+                    on_error ? std::move(on_error) : [relative_path](const std::string& error) {
+                        spdlog::warn("[ThumbnailCache] Card view fetch failed for {}: {}",
+                                     relative_path, error);
+                    },
+                    source_modified);
+}

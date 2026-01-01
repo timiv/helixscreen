@@ -923,18 +923,24 @@ void PrintSelectPanel::fetch_metadata_range(size_t start, size_t end) {
                                               self->get_name(), d->filename,
                                               self->file_list_[d->index].thumbnail_path);
                             } else {
-                                // Remote path - fetch with pre-scaling for optimal display
-                                spdlog::trace("[{}] Fetching optimized thumbnail for {}: {}",
+                                // Remote path - use semantic API for card view thumbnails
+                                spdlog::trace("[{}] Fetching card thumbnail for {}: {}",
                                               self->get_name(), d->filename, d->thumb_path);
 
                                 size_t file_idx = d->index;
                                 std::string filename_copy = d->filename;
-                                helix::ThumbnailTarget target = d->thumb_target;
                                 time_t modified_ts = self->file_list_[d->index].modified_timestamp;
 
-                                get_thumbnail_cache().fetch_optimized(
-                                    self->api_, d->thumb_path, target,
+                                // Create context with alive flag for destruction safety
+                                ThumbnailLoadContext ctx;
+                                ctx.alive = self->alive_;
+                                ctx.generation = nullptr; // Using index/filename validation instead
+                                ctx.captured_gen = 0;
+
+                                get_thumbnail_cache().fetch_for_card_view(
+                                    self->api_, d->thumb_path, ctx,
                                     // Success callback - receives pre-scaled .bin path
+                                    // Note: alive check is done by fetch_for_card_view's guard
                                     [self, file_idx, filename_copy](const std::string& lvgl_path) {
                                         struct ThumbUpdate {
                                             PrintSelectPanel* panel;
@@ -951,11 +957,10 @@ void PrintSelectPanel::fetch_metadata_range(size_t start, size_t end) {
                                                         t->filename) {
                                                     t->panel->file_list_[t->index].thumbnail_path =
                                                         t->lvgl_path;
-                                                    spdlog::debug(
-                                                        "[{}] Optimized thumbnail for {}: {}",
-                                                        t->panel->get_name(), t->filename,
-                                                        t->panel->file_list_[t->index]
-                                                            .thumbnail_path);
+                                                    spdlog::debug("[{}] Card thumbnail for {}: {}",
+                                                                  t->panel->get_name(), t->filename,
+                                                                  t->panel->file_list_[t->index]
+                                                                      .thumbnail_path);
                                                     t->panel->schedule_view_refresh();
                                                 }
                                             });
