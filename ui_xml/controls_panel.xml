@@ -249,12 +249,13 @@
           <!-- Row 1: Bed Mesh | Z-Offset -->
           <lv_obj width="100%"
                   flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_flex_main_place="center" style_pad_gap="#space_xs" scrollable="false">
+                  style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs" scrollable="false">
             <!-- Bed Mesh Button -->
             <lv_button name="btn_bed_mesh"
                        height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0"
                        style_shadow_width="0" style_bg_color="#card_bg" flex_flow="column"
-                       style_flex_main_place="center" style_flex_cross_place="center" style_pad_all="#space_xs">
+                       style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
+                       style_pad_all="#space_xs">
               <event_cb trigger="clicked" callback="on_calibration_bed_mesh"/>
               <icon src="grid_large" size="md" variant="accent"/>
               <text_small text="Bed Mesh" style_pad_top="#space_xxs"/>
@@ -263,7 +264,8 @@
             <lv_button name="btn_zoffset"
                        height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0"
                        style_shadow_width="0" style_bg_color="#card_bg" flex_flow="column"
-                       style_flex_main_place="center" style_flex_cross_place="center" style_pad_all="#space_xs">
+                       style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
+                       style_pad_all="#space_xs">
               <event_cb trigger="clicked" callback="on_calibration_zoffset"/>
               <icon src="z_closer" size="md" variant="accent"/>
               <text_small text="Z-Offset" style_pad_top="#space_xxs"/>
@@ -272,12 +274,13 @@
           <!-- Row 2: Bed Screws | Motors Off -->
           <lv_obj width="100%"
                   flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_flex_main_place="center" style_pad_gap="#space_xs" scrollable="false">
+                  style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs" scrollable="false">
             <!-- Bed Screws Button -->
             <lv_button name="btn_screws"
                        height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0"
                        style_shadow_width="0" style_bg_color="#card_bg" flex_flow="column"
-                       style_flex_main_place="center" style_flex_cross_place="center" style_pad_all="#space_xs">
+                       style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
+                       style_pad_all="#space_xs">
               <event_cb trigger="clicked" callback="on_calibration_screws"/>
               <icon src="wrench" size="md" variant="accent"/>
               <text_small text="Bed Screws" style_pad_top="#space_xxs"/>
@@ -286,7 +289,8 @@
             <lv_button name="btn_motors"
                        height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0"
                        style_shadow_width="0" style_bg_color="#card_bg" flex_flow="column"
-                       style_flex_main_place="center" style_flex_cross_place="center" style_pad_all="#space_xs">
+                       style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
+                       style_pad_all="#space_xs">
               <lv_obj-bind_state_if_eq subject="motors_enabled" state="disabled" ref_value="0"/>
               <event_cb trigger="clicked" callback="on_calibration_motors"/>
               <lv_label text="#icon_engine_off" style_text_font="#icon_font_md">
