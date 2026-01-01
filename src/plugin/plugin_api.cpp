@@ -231,7 +231,9 @@ bool PluginAPI::inject_widget(const std::string& point_id, const std::string& xm
 
 bool PluginAPI::register_xml_component(const std::string& plugin_dir, const std::string& filename) {
     // Build full path to the XML file
-    std::string full_path = plugin_dir;
+    // LVGL uses virtual filesystem with 'A:' prefix for POSIX driver
+    std::string full_path = "A:";
+    full_path += plugin_dir;
     if (!full_path.empty() && full_path.back() != '/') {
         full_path += '/';
     }
