@@ -88,13 +88,11 @@ lv_obj_t* FanControlOverlay::create(lv_obj_t* parent) {
         return nullptr;
     }
 
-    // Find container widgets
-    controllable_row_ = lv_obj_find_by_name(overlay_root_, "controllable_row");
-    auto_row_ = lv_obj_find_by_name(overlay_root_, "auto_row");
+    // Find container widget
+    fans_container_ = lv_obj_find_by_name(overlay_root_, "fans_container");
 
-    if (!controllable_row_ || !auto_row_) {
-        spdlog::error("[{}] Failed to find container widgets: controllable_row={} auto_row={}",
-                      get_name(), controllable_row_ != nullptr, auto_row_ != nullptr);
+    if (!fans_container_) {
+        spdlog::error("[{}] Failed to find fans_container widget", get_name());
     }
 
     // Populate fans from current PrinterState
@@ -145,14 +143,13 @@ void FanControlOverlay::cleanup() {
 // ============================================================================
 
 void FanControlOverlay::populate_fans() {
-    if (!controllable_row_ || !auto_row_) {
-        spdlog::warn("[{}] Cannot populate fans - containers not found", get_name());
+    if (!fans_container_) {
+        spdlog::warn("[{}] Cannot populate fans - container not found", get_name());
         return;
     }
 
     // Clear existing widgets
-    lv_obj_clean(controllable_row_);
-    lv_obj_clean(auto_row_);
+    lv_obj_clean(fans_container_);
 
     // Clear tracking vectors
     fan_dials_.clear();
@@ -160,10 +157,10 @@ void FanControlOverlay::populate_fans() {
 
     const auto& fans = printer_state_.get_fans();
 
+    // First pass: create controllable fans (FanDial widgets)
     for (const auto& fan : fans) {
         if (fan.is_controllable) {
-            // Create FanDial for controllable fans
-            auto dial = std::make_unique<FanDial>(controllable_row_, fan.display_name,
+            auto dial = std::make_unique<FanDial>(fans_container_, fan.display_name,
                                                   fan.object_name, fan.speed_percent);
 
             // Set callback for speed changes
@@ -175,8 +172,12 @@ void FanControlOverlay::populate_fans() {
 
             spdlog::debug("[{}] Created FanDial for '{}' ({}%)", get_name(), fan.display_name,
                           fan.speed_percent);
-        } else {
-            // Create fan_status_card for auto-controlled fans
+        }
+    }
+
+    // Second pass: create auto-controlled fans (fan_status_card widgets)
+    for (const auto& fan : fans) {
+        if (!fan.is_controllable) {
             // Pass numeric value for arc, then format label with % suffix
             char speed_num_str[16];
             std::snprintf(speed_num_str, sizeof(speed_num_str), "%d", fan.speed_percent);
@@ -185,7 +186,7 @@ void FanControlOverlay::populate_fans() {
                                    speed_num_str, nullptr};
 
             lv_obj_t* card =
-                static_cast<lv_obj_t*>(lv_xml_create(auto_row_, "fan_status_card", attrs));
+                static_cast<lv_obj_t*>(lv_xml_create(fans_container_, "fan_status_card", attrs));
 
             if (card) {
                 // Find speed label and format with % suffix

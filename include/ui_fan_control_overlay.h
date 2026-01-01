@@ -137,8 +137,7 @@ class FanControlOverlay : public OverlayBase {
     // === Widget References ===
     //
 
-    lv_obj_t* controllable_row_ = nullptr; ///< Container for FanDial widgets
-    lv_obj_t* auto_row_ = nullptr;         ///< Container for fan_status_card widgets
+    lv_obj_t* fans_container_ = nullptr; ///< Single flex-wrap container for all fans
 
     //
     // === FanDial Instances ===
