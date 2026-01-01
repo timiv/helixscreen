@@ -4,6 +4,7 @@
 #pragma once
 
 #include "capability_overrides.h"
+#include "hardware_validator.h"
 #include "lvgl/lvgl.h"
 #include "spdlog/spdlog.h"
 
@@ -12,11 +13,6 @@
 #include <vector>
 
 #include "hv/json.hpp" // libhv's nlohmann json (via cpputil/)
-
-using json = nlohmann::json;
-
-// Forward declarations
-struct HardwareValidationResult;
 
 /**
  * @brief Network connection status states
@@ -1002,11 +998,31 @@ class PrinterState {
     }
 
     /**
+     * @brief Get the hardware issues label subject
+     *
+     * String subject with formatted label like "1 Hardware Issue" or "5 Hardware Issues".
+     * Used for settings panel row label binding.
+     */
+    lv_subject_t* get_hardware_issues_label_subject() {
+        return &hardware_issues_label_;
+    }
+
+    /**
      * @brief Check if hardware validation has any issues
      */
     bool has_hardware_issues() {
         return lv_subject_get_int(&hardware_has_issues_) != 0;
     }
+
+    /**
+     * @brief Get the stored hardware validation result
+     *
+     * Returns the most recent validation result set via set_hardware_validation_result().
+     * Use this to access detailed issue information for UI display.
+     *
+     * @return Reference to the stored validation result
+     */
+    const HardwareValidationResult& get_hardware_validation_result() const;
 
   private:
     // Temperature subjects
@@ -1132,6 +1148,14 @@ class PrinterState {
     lv_subject_t hardware_issue_count_;        // Integer: total number of issues
     lv_subject_t hardware_max_severity_;       // Integer: 0=info, 1=warning, 2=critical
     lv_subject_t hardware_validation_version_; // Integer: incremented on validation change
+    lv_subject_t hardware_critical_count_;     // Integer: count of critical issues
+    lv_subject_t hardware_warning_count_;      // Integer: count of warning issues
+    lv_subject_t hardware_info_count_;         // Integer: count of info issues
+    lv_subject_t hardware_session_count_;      // Integer: count of session change issues
+    lv_subject_t hardware_status_title_;       // String: e.g., "All Healthy" or "3 Issues Detected"
+    lv_subject_t hardware_status_detail_;      // String: e.g., "1 critical, 2 warnings"
+    lv_subject_t hardware_issues_label_;       // String: "1 Hardware Issue" or "5 Hardware Issues"
+    HardwareValidationResult hardware_validation_result_; // Stored result for UI access
 
     // Tracked LED name (e.g., "neopixel chamber_light")
     std::string tracked_led_name_;
@@ -1146,6 +1170,9 @@ class PrinterState {
     char klipper_version_buf_[64];
     char moonraker_version_buf_[64];
     char print_start_message_buf_[64]; // "Heating Nozzle...", "Homing...", etc.
+    char hardware_status_title_buf_[64];
+    char hardware_status_detail_buf_[128];
+    char hardware_issues_label_buf_[32]; // "1 Hardware Issue" / "5 Hardware Issues"
 
     // JSON cache for complex data
     json json_state_;

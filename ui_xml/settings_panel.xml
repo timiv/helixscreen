@@ -74,8 +74,7 @@
     </lv_obj>
     <!-- Completion Alert Dropdown (Off/Notification/Alert) -->
     <setting_dropdown_row name="row_completion_alert"
-                          label="Print Completion Alert" icon="notifications"
-                          description="Notify when print finishes"
+                          label="Print Completion Alert" icon="notifications" description="Notify when print finishes"
                           callback="on_completion_alert_changed"/>
     <!-- ================================================================== -->
     <!-- MOTION SECTION -->
@@ -83,8 +82,7 @@
     <setting_section_header title="MOTION" icon="speed"/>
     <!-- Machine Limits -->
     <setting_action_row name="row_machine_limits"
-                        label="Machine Limits" icon="dashboard"
-                        description="Velocity and acceleration limits"
+                        label="Machine Limits" icon="dashboard" description="Velocity and acceleration limits"
                         callback="on_machine_limits_clicked"/>
     <!-- ================================================================== -->
     <!-- SYSTEM SECTION -->
@@ -98,6 +96,15 @@
     <setting_action_row name="row_factory_reset"
                         label="Factory Reset" icon="refresh" description="Reset all settings and restart wizard"
                         callback="on_factory_reset_clicked"/>
+    <!-- Hardware Issues (hidden when no issues) -->
+    <lv_obj name="container_hardware_health"
+            width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
+      <lv_obj-bind_flag_if_eq subject="hardware_has_issues" flag="hidden" ref_value="0"/>
+      <!-- Label bound to hardware_issues_label subject in C++ for reactive updates -->
+      <setting_action_row name="row_hardware_health"
+                          label="Hardware Issues" icon="alert" description="Review detected hardware validation issues"
+                          callback="on_hardware_health_clicked"/>
+    </lv_obj>
     <!-- ================================================================== -->
     <!-- ABOUT SECTION -->
     <!-- ================================================================== -->

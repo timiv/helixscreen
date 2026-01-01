@@ -3,7 +3,9 @@
 
 #include "hardware_validator.h"
 
-#include "ui_notification.h"
+#include "ui_nav_manager.h"
+#include "ui_panel_settings.h"
+#include "ui_toast_manager.h"
 
 #include "config.h"
 #include "moonraker_client.h"
@@ -146,12 +148,20 @@ HardwareValidationResult HardwareValidator::validate(Config* config, const Moonr
     return result;
 }
 
+// Static callback for toast action button - navigates to Settings and opens overlay
+static void on_hardware_toast_view_clicked(void* /*user_data*/) {
+    spdlog::debug("[HardwareValidator] Toast 'View' clicked - opening Hardware Health overlay");
+    ui_nav_set_active(UI_PANEL_SETTINGS);
+    get_global_settings_panel().handle_hardware_health_clicked();
+}
+
 void HardwareValidator::notify_user(const HardwareValidationResult& result) {
     if (!result.has_issues()) {
         return;
     }
 
     std::string message;
+    ToastSeverity severity = ToastSeverity::INFO;
 
     if (result.has_critical()) {
         if (result.critical_missing.size() == 1) {
@@ -159,19 +169,24 @@ void HardwareValidator::notify_user(const HardwareValidationResult& result) {
         } else {
             message = std::to_string(result.critical_missing.size()) + " critical hardware issues";
         }
-        // TODO: Add action button support to navigate to Hardware Health section
-        ui_notification_error("Hardware", message.c_str(), false); // Toast, not modal
-        spdlog::debug("[HardwareValidator] Notified user (error): {}", message);
+        severity = ToastSeverity::ERROR;
     } else if (!result.expected_missing.empty() || !result.changed_from_last_session.empty()) {
         size_t count = result.expected_missing.size() + result.changed_from_last_session.size();
         message = std::to_string(count) + " configured hardware not found";
-        ui_notification_warning("Hardware", message.c_str());
-        spdlog::debug("[HardwareValidator] Notified user (warning): {}", message);
+        severity = ToastSeverity::WARNING;
     } else {
         message = std::to_string(result.newly_discovered.size()) + " new hardware discovered";
-        ui_notification_info("Hardware", message.c_str());
-        spdlog::debug("[HardwareValidator] Notified user (info): {}", message);
+        severity = ToastSeverity::INFO;
     }
+
+    // Show toast with action button to navigate to Hardware Health section
+    ui_toast_show_with_action(severity, message.c_str(), "View", on_hardware_toast_view_clicked,
+                              nullptr, 8000);
+    spdlog::debug("[HardwareValidator] Notified user ({}): {}",
+                  severity == ToastSeverity::ERROR     ? "error"
+                  : severity == ToastSeverity::WARNING ? "warning"
+                                                       : "info",
+                  message);
 }
 
 void HardwareValidator::save_session_snapshot(Config* config, const MoonrakerClient* client) {
@@ -300,6 +315,34 @@ void HardwareValidator::set_hardware_optional(Config* config, const std::string&
 
     } catch (const std::exception& e) {
         spdlog::warn("[HardwareValidator] Failed to set optional status: {}", e.what());
+    }
+}
+
+void HardwareValidator::add_expected_hardware(Config* config, const std::string& hardware_name) {
+    if (!config || hardware_name.empty()) {
+        return;
+    }
+
+    try {
+        // Ensure the hardware/expected array exists
+        json& expected_list = config->get_json("/hardware/expected");
+        if (expected_list.is_null() || !expected_list.is_array()) {
+            config->set<json>("/hardware/expected", json::array());
+            expected_list = config->get_json("/hardware/expected");
+        }
+
+        // Check if already in list
+        auto it = std::find(expected_list.begin(), expected_list.end(), hardware_name);
+        if (it == expected_list.end()) {
+            expected_list.push_back(hardware_name);
+            spdlog::info("[HardwareValidator] Added '{}' to expected hardware", hardware_name);
+            config->save();
+        } else {
+            spdlog::debug("[HardwareValidator] '{}' already in expected list", hardware_name);
+        }
+
+    } catch (const std::exception& e) {
+        spdlog::warn("[HardwareValidator] Failed to add expected hardware: {}", e.what());
     }
 }
 

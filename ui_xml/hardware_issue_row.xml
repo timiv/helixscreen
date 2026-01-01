@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<!-- Copyright 2025 356C LLC -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Hardware Issue Row - Displays a single hardware validation issue -->
+<!-- Styled to match notification_history_item with 4px left border and severity icon -->
+<!-- After creating, call ui_severity_card_finalize(row) to show correct icon -->
+<component>
+  <api>
+    <prop name="severity" type="string"/>
+    <!-- "error", "warning", "info" -->
+  </api>
+  <!-- Card with colored left border (severity_card handles border color based on severity) -->
+  <view name="hardware_issue_row"
+        extends="severity_card" width="100%" height="content" severity="$severity" style_pad_left="#space_md"
+        style_pad_right="#space_md" style_pad_top="#space_sm" style_pad_bottom="#space_sm" style_bg_color="#card_bg"
+        style_bg_opa="255" style_border_width="4" style_border_side="left" style_radius="#border_radius"
+        scrollable="false" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="start"
+        style_pad_gap="#space_sm">
+    <!-- Icon column (fixed width for severity icon) -->
+    <lv_obj width="28"
+            height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_xxs"
+            scrollable="false">
+      <!-- Severity icons - all hidden by default, finalize() shows the correct one -->
+      <lv_label name="icon_info"
+                text="#icon_info_circle" hidden="true" style_text_font="mdi_icons_24" style_text_color="#info_color"/>
+      <lv_label name="icon_success"
+                text="#icon_check" hidden="true" style_text_font="mdi_icons_24" style_text_color="#success_color"/>
+      <lv_label name="icon_warning"
+                text="#icon_triangle_exclamation" hidden="true" style_text_font="mdi_icons_24"
+                style_text_color="#warning_color"/>
+      <lv_label name="icon_error"
+                text="#icon_triangle_exclamation" hidden="true" style_text_font="mdi_icons_24"
+                style_text_color="#error_color"/>
+    </lv_obj>
+    <!-- Content column -->
+    <lv_obj height="content"
+            flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+            flex_flow="column" style_pad_gap="#space_xxs">
+      <text_body name="hardware_name" text="Hardware Name" style_text_color="#text_primary"/>
+      <text_small name="issue_message" text="Issue description" style_text_color="#text_secondary"/>
+    </lv_obj>
+    <!-- Action button (hidden by default, shown by C++ for warning/info issues) -->
+    <lv_button name="action_btn"
+               width="content" height="32" hidden="true" style_min_width="56" style_radius="#border_radius_small"
+               style_border_width="0" style_bg_color="#secondary_color" style_pad_left="#space_sm"
+               style_pad_right="#space_sm" style_pad_top="0" style_pad_bottom="0">
+      <text_small name="action_label" text="Action" style_text_color="#text_on_secondary" align="center"/>
+    </lv_button>
+  </view>
+</component>

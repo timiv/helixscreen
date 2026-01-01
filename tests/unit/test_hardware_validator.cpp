@@ -417,3 +417,181 @@ TEST_CASE("HardwareValidator - Snapshot roundtrip", "[hardware][validator]") {
         REQUIRE(restored.filament_sensors == original.filament_sensors);
     }
 }
+
+// ============================================================================
+// Config Integration Tests (Optional/Expected Hardware)
+// ============================================================================
+
+#include "config.h"
+
+// Test fixture for Config-dependent HardwareValidator tests
+class HardwareValidatorConfigFixture {
+  protected:
+    Config config;
+
+    void setup_empty_hardware_config() {
+        config.data = {
+            {"default_printer", "test_printer"},
+            {"printers",
+             {{"test_printer", {{"moonraker_host", "127.0.0.1"}, {"moonraker_port", 7125}}}}},
+            {"hardware", {{"optional", json::array()}, {"expected", json::array()}}}};
+        config.default_printer = "/printers/test_printer/";
+    }
+
+    void setup_hardware_with_optional() {
+        config.data = {
+            {"default_printer", "test_printer"},
+            {"printers",
+             {{"test_printer", {{"moonraker_host", "127.0.0.1"}, {"moonraker_port", 7125}}}}},
+            {"hardware",
+             {{"optional", {"neopixel chamber_light", "fan exhaust"}},
+              {"expected", json::array()}}}};
+        config.default_printer = "/printers/test_printer/";
+    }
+
+    void setup_hardware_with_expected() {
+        config.data = {
+            {"default_printer", "test_printer"},
+            {"printers",
+             {{"test_printer", {{"moonraker_host", "127.0.0.1"}, {"moonraker_port", 7125}}}}},
+            {"hardware",
+             {{"optional", json::array()},
+              {"expected", {"temperature_sensor chamber", "neopixel status"}}}}};
+        config.default_printer = "/printers/test_printer/";
+    }
+};
+
+TEST_CASE_METHOD(HardwareValidatorConfigFixture,
+                 "HardwareValidator - is_hardware_optional with empty config",
+                 "[hardware][validator][config]") {
+    setup_empty_hardware_config();
+
+    REQUIRE_FALSE(HardwareValidator::is_hardware_optional(&config, "neopixel chamber_light"));
+    REQUIRE_FALSE(HardwareValidator::is_hardware_optional(&config, "anything"));
+}
+
+TEST_CASE_METHOD(HardwareValidatorConfigFixture,
+                 "HardwareValidator - is_hardware_optional detects optional hardware",
+                 "[hardware][validator][config]") {
+    setup_hardware_with_optional();
+
+    REQUIRE(HardwareValidator::is_hardware_optional(&config, "neopixel chamber_light"));
+    REQUIRE(HardwareValidator::is_hardware_optional(&config, "fan exhaust"));
+    REQUIRE_FALSE(HardwareValidator::is_hardware_optional(&config, "not_in_list"));
+}
+
+TEST_CASE_METHOD(HardwareValidatorConfigFixture,
+                 "HardwareValidator - set_hardware_optional adds to list",
+                 "[hardware][validator][config]") {
+    setup_empty_hardware_config();
+
+    // Initially not optional
+    REQUIRE_FALSE(HardwareValidator::is_hardware_optional(&config, "new_hardware"));
+
+    // Mark as optional
+    HardwareValidator::set_hardware_optional(&config, "new_hardware", true);
+
+    // Now should be optional
+    REQUIRE(HardwareValidator::is_hardware_optional(&config, "new_hardware"));
+}
+
+TEST_CASE_METHOD(HardwareValidatorConfigFixture,
+                 "HardwareValidator - set_hardware_optional removes from list",
+                 "[hardware][validator][config]") {
+    setup_hardware_with_optional();
+
+    // Initially optional
+    REQUIRE(HardwareValidator::is_hardware_optional(&config, "neopixel chamber_light"));
+
+    // Unmark as optional
+    HardwareValidator::set_hardware_optional(&config, "neopixel chamber_light", false);
+
+    // Should no longer be optional
+    REQUIRE_FALSE(HardwareValidator::is_hardware_optional(&config, "neopixel chamber_light"));
+}
+
+TEST_CASE_METHOD(HardwareValidatorConfigFixture,
+                 "HardwareValidator - set_hardware_optional handles duplicates",
+                 "[hardware][validator][config]") {
+    setup_empty_hardware_config();
+
+    // Add twice - should only appear once
+    HardwareValidator::set_hardware_optional(&config, "test_hw", true);
+    HardwareValidator::set_hardware_optional(&config, "test_hw", true);
+
+    // Check the list only has one entry
+    json& optional_list = config.get_json("/hardware/optional");
+    int count = 0;
+    for (const auto& item : optional_list) {
+        if (item == "test_hw") {
+            count++;
+        }
+    }
+    REQUIRE(count == 1);
+}
+
+TEST_CASE_METHOD(HardwareValidatorConfigFixture,
+                 "HardwareValidator - add_expected_hardware adds to list",
+                 "[hardware][validator][config]") {
+    setup_empty_hardware_config();
+
+    // Add expected hardware
+    HardwareValidator::add_expected_hardware(&config, "temperature_sensor chamber");
+
+    // Verify it's in the list
+    json& expected_list = config.get_json("/hardware/expected");
+    bool found = false;
+    for (const auto& item : expected_list) {
+        if (item == "temperature_sensor chamber") {
+            found = true;
+            break;
+        }
+    }
+    REQUIRE(found);
+}
+
+TEST_CASE_METHOD(HardwareValidatorConfigFixture,
+                 "HardwareValidator - add_expected_hardware handles duplicates",
+                 "[hardware][validator][config]") {
+    setup_empty_hardware_config();
+
+    // Add same hardware twice
+    HardwareValidator::add_expected_hardware(&config, "neopixel test");
+    HardwareValidator::add_expected_hardware(&config, "neopixel test");
+
+    // Check the list only has one entry
+    json& expected_list = config.get_json("/hardware/expected");
+    int count = 0;
+    for (const auto& item : expected_list) {
+        if (item == "neopixel test") {
+            count++;
+        }
+    }
+    REQUIRE(count == 1);
+}
+
+TEST_CASE_METHOD(HardwareValidatorConfigFixture,
+                 "HardwareValidator - add_expected_hardware ignores empty names",
+                 "[hardware][validator][config]") {
+    setup_empty_hardware_config();
+
+    // Try to add empty name - should be ignored
+    HardwareValidator::add_expected_hardware(&config, "");
+
+    json& expected_list = config.get_json("/hardware/expected");
+    REQUIRE(expected_list.empty());
+}
+
+TEST_CASE_METHOD(HardwareValidatorConfigFixture,
+                 "HardwareValidator - handles nullptr config gracefully",
+                 "[hardware][validator][config]") {
+    // These should not crash with nullptr
+    REQUIRE_FALSE(HardwareValidator::is_hardware_optional(nullptr, "anything"));
+
+    // These should be no-ops with nullptr (no crash)
+    HardwareValidator::set_hardware_optional(nullptr, "test", true);
+    HardwareValidator::add_expected_hardware(nullptr, "test");
+
+    // If we got here without crashing, the test passes
+    REQUIRE(true);
+}

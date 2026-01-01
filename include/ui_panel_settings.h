@@ -137,6 +137,9 @@ class SettingsPanel : public PanelBase {
     // Note: PID calibration panel managed by get_global_pid_cal_panel()
     // Note: factory_reset_dialog_ and theme_restart_dialog_ are public (for static callbacks)
 
+    // Pending hardware name for save confirmation dialog
+    std::string pending_hardware_save_;
+
     //
     // === Setup Helpers ===
     //
@@ -177,6 +180,10 @@ class SettingsPanel : public PanelBase {
     // Called by toast action to navigate and open overlay
     void handle_hardware_health_clicked();
 
+    // Called by hardware issue row action buttons
+    // is_ignore: true="Ignore" (mark optional), false="Save" (add to config with confirmation)
+    void handle_hardware_action(const char* hardware_name, bool is_ignore);
+
     // Dialog pointers accessible to static callbacks
     lv_obj_t* theme_restart_dialog_ = nullptr;
     lv_obj_t* factory_reset_dialog_ = nullptr;
@@ -211,6 +218,14 @@ class SettingsPanel : public PanelBase {
     static void on_restart_now_clicked(lv_event_t* e);
     static void on_header_back_clicked(lv_event_t* e);
     static void on_brightness_changed(lv_event_t* e);
+
+    // Static callbacks for hardware save confirmation dialog
+    static void on_hardware_save_confirm(lv_event_t* e);
+    static void on_hardware_save_cancel(lv_event_t* e);
+
+    // Instance methods called by static callbacks
+    void handle_hardware_save_confirm();
+    void handle_hardware_save_cancel();
 };
 
 // Global instance accessor (needed by main.cpp)

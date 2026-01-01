@@ -306,6 +306,17 @@ class HardwareValidator {
     static void set_hardware_optional(Config* config, const std::string& hardware_name,
                                       bool optional);
 
+    /**
+     * @brief Add hardware to expected list (save to config)
+     *
+     * Adds newly discovered hardware to the expected hardware list in
+     * helixconfig.json so future sessions will warn if it's missing.
+     *
+     * @param config Config instance to modify
+     * @param hardware_name Full hardware name to add
+     */
+    static void add_expected_hardware(Config* config, const std::string& hardware_name);
+
   private:
     /**
      * @brief Validate critical hardware exists (extruder, heater_bed)

@@ -64,8 +64,9 @@ class Config {
     json data;
     std::string default_printer;
 
-    /// Allow test fixture to access protected members
+    /// Allow test fixtures to access protected members
     friend class ConfigTestFixture;
+    friend class HardwareValidatorConfigFixture;
 
   public:
     /**

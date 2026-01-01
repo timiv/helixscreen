@@ -10,6 +10,7 @@
 #include "ui_nav_manager.h"
 #include "ui_overlay_network_settings.h"
 #include "ui_panel_memory_stats.h"
+#include "ui_severity_card.h"
 #include "ui_theme.h"
 #include "ui_toast.h"
 
@@ -525,6 +526,18 @@ void SettingsPanel::setup_action_handlers() {
     factory_reset_row_ = lv_obj_find_by_name(panel_, "row_factory_reset");
     if (factory_reset_row_) {
         spdlog::debug("[{}]   ✓ Factory reset action row", get_name());
+    }
+
+    // === Hardware Health Row (reactive label binding) ===
+    lv_obj_t* hardware_health_row = lv_obj_find_by_name(panel_, "row_hardware_health");
+    if (hardware_health_row) {
+        lv_obj_t* label = lv_obj_find_by_name(hardware_health_row, "label");
+        if (label) {
+            // Bind to subject with %s format (string passthrough)
+            lv_label_bind_text(label, get_printer_state().get_hardware_issues_label_subject(),
+                               "%s");
+            spdlog::debug("[{}]   ✓ Hardware health row with reactive label", get_name());
+        }
     }
 }
 
@@ -1235,35 +1248,16 @@ void SettingsPanel::populate_hardware_issues() {
 
     const auto& result = printer_state_.get_hardware_validation_result();
 
-    // Helper to get severity color
-    auto get_severity_color = [](HardwareIssueSeverity sev) -> lv_color_t {
+    // Helper to convert severity enum to string for XML attribute
+    auto severity_to_string = [](HardwareIssueSeverity sev) -> const char* {
         switch (sev) {
         case HardwareIssueSeverity::CRITICAL:
-            return ui_theme_get_color("error_color");
+            return "error";
         case HardwareIssueSeverity::WARNING:
-            return ui_theme_get_color("warning_color");
+            return "warning";
         case HardwareIssueSeverity::INFO:
         default:
-            return ui_theme_get_color("info_color");
-        }
-    };
-
-    // Helper to get icon name for hardware type
-    auto get_hardware_icon = [](HardwareType type) -> const char* {
-        switch (type) {
-        case HardwareType::HEATER:
-            return "thermometer";
-        case HardwareType::SENSOR:
-            return "thermometer";
-        case HardwareType::FAN:
-            return "fan";
-        case HardwareType::LED:
-            return "lightbulb";
-        case HardwareType::FILAMENT_SENSOR:
-            return "printer_3d_nozzle";
-        case HardwareType::OTHER:
-        default:
-            return "settings";
+            return "info";
         }
     };
 
@@ -1280,17 +1274,16 @@ void SettingsPanel::populate_hardware_issues() {
 
         // Add issue rows
         for (const auto& issue : issues) {
+            // Create row with severity attribute for colored left border
+            const char* attrs[] = {"severity", severity_to_string(issue.severity), nullptr};
             lv_obj_t* row =
-                static_cast<lv_obj_t*>(lv_xml_create(list, "hardware_issue_row", nullptr));
+                static_cast<lv_obj_t*>(lv_xml_create(list, "hardware_issue_row", attrs));
             if (!row) {
                 continue;
             }
 
-            // Set severity indicator color
-            lv_obj_t* indicator = lv_obj_find_by_name(row, "severity_indicator");
-            if (indicator) {
-                lv_obj_set_style_bg_color(indicator, get_severity_color(issue.severity), 0);
-            }
+            // Finalize severity_card to show correct icon
+            ui_severity_card_finalize(row);
 
             // Set hardware name
             lv_obj_t* name_label = lv_obj_find_by_name(row, "hardware_name");
@@ -1304,8 +1297,60 @@ void SettingsPanel::populate_hardware_issues() {
                 lv_label_set_text(message_label, issue.message.c_str());
             }
 
-            // Note: Icon setting requires special handling - leaving default for now
-            (void)get_hardware_icon; // Suppress unused warning
+            // Configure action button for non-critical issues
+            if (issue.severity != HardwareIssueSeverity::CRITICAL) {
+                lv_obj_t* action_btn = lv_obj_find_by_name(row, "action_btn");
+                lv_obj_t* action_label = lv_obj_find_by_name(row, "action_label");
+                if (action_btn && action_label) {
+                    // Show button
+                    lv_obj_clear_flag(action_btn, LV_OBJ_FLAG_HIDDEN);
+
+                    // Set label based on severity
+                    if (issue.severity == HardwareIssueSeverity::WARNING) {
+                        lv_label_set_text(action_label, "Ignore");
+                    } else {
+                        lv_label_set_text(action_label, "Save");
+                    }
+
+                    // Store hardware name in row for callback (freed on row delete)
+                    char* name_copy = strdup(issue.hardware_name.c_str());
+                    lv_obj_set_user_data(row, name_copy);
+
+                    // Add delete handler to free the strdup'd name
+                    lv_obj_add_event_cb(
+                        row,
+                        [](lv_event_t* e) {
+                            auto* obj = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+                            void* data = lv_obj_get_user_data(obj);
+                            if (data) {
+                                free(data);
+                            }
+                        },
+                        LV_EVENT_DELETE, nullptr);
+
+                    // Add click handler
+                    lv_obj_add_event_cb(
+                        action_btn,
+                        [](lv_event_t* e) {
+                            LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] hardware_action_clicked");
+                            auto* btn = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+                            lv_obj_t* row = lv_obj_get_parent(btn);
+                            const char* hw_name =
+                                static_cast<const char*>(lv_obj_get_user_data(row));
+                            bool is_ignore = static_cast<bool>(
+                                reinterpret_cast<uintptr_t>(lv_event_get_user_data(e)));
+
+                            if (hw_name) {
+                                get_global_settings_panel().handle_hardware_action(hw_name,
+                                                                                   is_ignore);
+                            }
+                            LVGL_SAFE_EVENT_CB_END();
+                        },
+                        LV_EVENT_CLICKED,
+                        reinterpret_cast<void*>(static_cast<uintptr_t>(
+                            issue.severity == HardwareIssueSeverity::WARNING)));
+                }
+            }
         }
     };
 
@@ -1318,6 +1363,74 @@ void SettingsPanel::populate_hardware_issues() {
     spdlog::debug("[{}] Populated hardware issues: {} critical, {} warning, {} info, {} session",
                   get_name(), result.critical_missing.size(), result.expected_missing.size(),
                   result.newly_discovered.size(), result.changed_from_last_session.size());
+}
+
+void SettingsPanel::handle_hardware_action(const char* hardware_name, bool is_ignore) {
+    if (!hardware_name) {
+        return;
+    }
+
+    Config* config = Config::get_instance();
+    std::string hw_name(hardware_name);
+
+    if (is_ignore) {
+        // "Ignore" - Mark hardware as optional (no confirmation needed)
+        HardwareValidator::set_hardware_optional(config, hw_name, true);
+        ui_toast_show(ToastSeverity::SUCCESS, "Hardware marked as optional", 2000);
+        spdlog::info("[{}] Marked hardware '{}' as optional", get_name(), hw_name);
+
+        // Refresh the overlay
+        populate_hardware_issues();
+    } else {
+        // "Save" - Add to expected hardware (with confirmation)
+        // Store name for confirmation callback
+        pending_hardware_save_ = hw_name;
+
+        // Static message buffer (safe since we close existing dialogs first)
+        static char message_buf[256];
+        snprintf(message_buf, sizeof(message_buf),
+                 "Add '%s' to expected hardware?\n\nYou'll be notified if it's removed later.",
+                 hw_name.c_str());
+
+        // Show confirmation dialog
+        ui_modal_show_confirmation("Save Hardware", message_buf, ModalSeverity::Info, "Save",
+                                   on_hardware_save_confirm, on_hardware_save_cancel, this);
+    }
+}
+
+void SettingsPanel::on_hardware_save_confirm(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_hardware_save_confirm");
+    auto* self = static_cast<SettingsPanel*>(lv_event_get_user_data(e));
+    if (self) {
+        self->handle_hardware_save_confirm();
+    }
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void SettingsPanel::on_hardware_save_cancel(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_hardware_save_cancel");
+    auto* self = static_cast<SettingsPanel*>(lv_event_get_user_data(e));
+    if (self) {
+        self->handle_hardware_save_cancel();
+    }
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void SettingsPanel::handle_hardware_save_confirm() {
+    Config* cfg = Config::get_instance();
+
+    // Add to expected hardware list
+    HardwareValidator::add_expected_hardware(cfg, pending_hardware_save_);
+    ui_toast_show(ToastSeverity::SUCCESS, "Hardware saved to config", 2000);
+    spdlog::info("[{}] Added hardware '{}' to expected list", get_name(), pending_hardware_save_);
+
+    // Refresh the overlay
+    populate_hardware_issues();
+    pending_hardware_save_.clear();
+}
+
+void SettingsPanel::handle_hardware_save_cancel() {
+    pending_hardware_save_.clear();
 }
 
 // ============================================================================
