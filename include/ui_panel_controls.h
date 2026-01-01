@@ -178,6 +178,7 @@ class ControlsPanel : public PanelBase {
     lv_obj_t* nozzle_temp_panel_ = nullptr;
     lv_obj_t* bed_temp_panel_ = nullptr;
     lv_obj_t* fan_panel_ = nullptr;
+    lv_obj_t* fan_control_panel_ = nullptr;
     lv_obj_t* bed_mesh_panel_ = nullptr;
     lv_obj_t* zoffset_panel_ = nullptr;
     lv_obj_t* screws_panel_ = nullptr;
@@ -206,10 +207,50 @@ class ControlsPanel : public PanelBase {
     // === Homing Status Subjects (for bind_style visual feedback) ===
     //
 
+    lv_subject_t x_homed_{};            // 1 if X is homed (for position indicator)
+    lv_subject_t y_homed_{};            // 1 if Y is homed (for position indicator)
     lv_subject_t xy_homed_{};           // 1 if X and Y are homed
     lv_subject_t z_homed_{};            // 1 if Z is homed
     lv_subject_t all_homed_{};          // 1 if all axes are homed
     ObserverGuard homed_axes_observer_; // Observer for PrinterState::homed_axes_
+
+    //
+    // === Position Display Subjects (for Position card) ===
+    //
+
+    lv_subject_t controls_pos_x_subject_{};
+    lv_subject_t controls_pos_y_subject_{};
+    lv_subject_t controls_pos_z_subject_{};
+    char controls_pos_x_buf_[32] = {};
+    char controls_pos_y_buf_[32] = {};
+    char controls_pos_z_buf_[32] = {};
+    ObserverGuard position_x_observer_;
+    ObserverGuard position_y_observer_;
+    ObserverGuard position_z_observer_;
+
+    //
+    // === Speed/Flow Override Subjects ===
+    //
+
+    lv_subject_t speed_override_subject_{};
+    lv_subject_t flow_override_subject_{};
+    char speed_override_buf_[16] = {};
+    char flow_override_buf_[16] = {};
+    ObserverGuard speed_factor_observer_;
+    // Note: Flow factor observer uses extrude_factor from PrinterState
+
+    //
+    // === Macro Slots 3 & 4 ===
+    //
+
+    std::optional<StandardMacroSlot> macro_3_slot_;
+    std::optional<StandardMacroSlot> macro_4_slot_;
+    lv_subject_t macro_3_visible_{};
+    lv_subject_t macro_4_visible_{};
+    lv_subject_t macro_3_name_{};
+    lv_subject_t macro_4_name_{};
+    char macro_3_name_buf_[64] = {};
+    char macro_4_name_buf_[64] = {};
 
     //
     // === Private Helpers ===
@@ -237,6 +278,7 @@ class ControlsPanel : public PanelBase {
     void handle_nozzle_temp_clicked();
     void handle_bed_temp_clicked();
     void handle_cooling_clicked();
+    void handle_secondary_fans_clicked();
 
     //
     // === Quick Action Button Handlers ===
@@ -247,6 +289,19 @@ class ControlsPanel : public PanelBase {
     void handle_home_z();
     void handle_macro_1();
     void handle_macro_2();
+    void handle_macro_3();
+    void handle_macro_4();
+
+    //
+    // === Speed/Flow Override Handlers ===
+    //
+
+    void handle_speed_up();
+    void handle_speed_down();
+    void handle_flow_up();
+    void handle_flow_down();
+    void update_speed_display();
+    void update_flow_display();
 
     //
     // === Fan Slider Handler ===
@@ -275,6 +330,7 @@ class ControlsPanel : public PanelBase {
     static void on_nozzle_temp_clicked(lv_event_t* e);
     static void on_bed_temp_clicked(lv_event_t* e);
     static void on_cooling_clicked(lv_event_t* e);
+    static void on_secondary_fans_clicked(lv_event_t* e);
     static void on_motors_confirm(lv_event_t* e);
     static void on_motors_cancel(lv_event_t* e);
 
@@ -296,8 +352,14 @@ class ControlsPanel : public PanelBase {
     static void on_home_z(lv_event_t* e);
     static void on_macro_1(lv_event_t* e);
     static void on_macro_2(lv_event_t* e);
+    static void on_macro_3(lv_event_t* e);
+    static void on_macro_4(lv_event_t* e);
     static void on_fan_slider_changed(lv_event_t* e);
     static void on_save_z_offset(lv_event_t* e);
+    static void on_speed_up(lv_event_t* e);
+    static void on_speed_down(lv_event_t* e);
+    static void on_flow_up(lv_event_t* e);
+    static void on_flow_down(lv_event_t* e);
 
     //
     // === Observer Callbacks (static - update dashboard display) ===
@@ -311,6 +373,11 @@ class ControlsPanel : public PanelBase {
     static void on_fans_version_changed(lv_observer_t* obs, lv_subject_t* subject);
     static void on_pending_z_offset_changed(lv_observer_t* obs, lv_subject_t* subject);
     static void on_homed_axes_changed(lv_observer_t* obs, lv_subject_t* subject);
+    static void on_position_x_changed(lv_observer_t* obs, lv_subject_t* subject);
+    static void on_position_y_changed(lv_observer_t* obs, lv_subject_t* subject);
+    static void on_position_z_changed(lv_observer_t* obs, lv_subject_t* subject);
+    static void on_speed_factor_changed(lv_observer_t* obs, lv_subject_t* subject);
+    static void on_extrude_factor_changed(lv_observer_t* obs, lv_subject_t* subject);
 };
 
 // Global instance accessor (needed by main.cpp and XML event_cb trampolines)

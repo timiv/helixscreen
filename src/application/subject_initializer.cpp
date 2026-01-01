@@ -6,7 +6,9 @@
 #include "ui_component_keypad.h"
 #include "ui_emergency_stop.h"
 #include "ui_error_reporting.h"
+#include "ui_fan_control_overlay.h"
 #include "ui_nav.h"
+#include "ui_nav_manager.h"
 #include "ui_notification.h"
 #include "ui_overlay_retraction_settings.h"
 #include "ui_overlay_timelapse_settings.h"
@@ -40,8 +42,10 @@
 #include "print_completion.h"
 #include "print_start_navigation.h"
 #include "printer_state.h"
+#include "static_panel_registry.h"
 #include "usb_backend_mock.h"
 #include "usb_manager.h"
+#include "xml_registration.h"
 
 #include <spdlog/spdlog.h>
 
@@ -175,6 +179,10 @@ void SubjectInitializer::init_panel_subjects() {
     init_global_retraction_settings(get_printer_state(), nullptr);
     get_global_retraction_settings().init_subjects();
 
+    // Fan control overlay (opened from Controls panel secondary fans list)
+    init_fan_control_overlay(get_printer_state());
+    get_fan_control_overlay().init_subjects();
+
     // ConsolePanel is now lazy-initialized by AdvancedPanel (OverlayBase pattern)
 
     // Row handlers for advanced features
@@ -183,9 +191,19 @@ void SubjectInitializer::init_panel_subjects() {
     init_zoffset_row_handler();
     init_zoffset_event_callbacks();
 
-    // Wizard and keypad
+    // Wizard and keypad - register cleanup with StaticPanelRegistry
     ui_wizard_init_subjects();
+    StaticPanelRegistry::instance().register_destroy("WizardSubjects", ui_wizard_deinit_subjects);
+
     ui_keypad_init_subjects();
+    StaticPanelRegistry::instance().register_destroy("KeypadSubjects", ui_keypad_deinit_subjects);
+
+    // Global subjects cleanup
+    StaticPanelRegistry::instance().register_destroy("AppGlobalsSubjects",
+                                                     app_globals_deinit_subjects);
+    StaticPanelRegistry::instance().register_destroy("XmlSubjects", helix::deinit_xml_subjects);
+    StaticPanelRegistry::instance().register_destroy("StatusBarSubjects",
+                                                     ui_status_bar_deinit_subjects);
 
     // Panels that need deferred API injection
     m_print_select_panel = get_print_select_panel(get_printer_state(), nullptr);
@@ -219,6 +237,12 @@ void SubjectInitializer::init_panel_subjects() {
 
     // E-Stop overlay
     EmergencyStopOverlay::instance().init_subjects();
+    StaticPanelRegistry::instance().register_destroy(
+        "EmergencyStopSubjects", []() { EmergencyStopOverlay::instance().deinit_subjects(); });
+
+    // Navigation manager (must be deinitialized after panels that may use it during cleanup)
+    StaticPanelRegistry::instance().register_destroy(
+        "NavigationManagerSubjects", []() { NavigationManager::instance().deinit_subjects(); });
 }
 
 void SubjectInitializer::init_observers() {

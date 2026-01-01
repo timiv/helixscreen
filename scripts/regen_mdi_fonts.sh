@@ -115,6 +115,7 @@ MDI_ICONS+=",0xF0450"    # refresh
 MDI_ICONS+=",0xF0465"    # rotate-left (CCW rotation)
 MDI_ICONS+=",0xF0467"    # rotate-right (CW rotation)
 MDI_ICONS+=",0xF0469"    # router-wireless
+MDI_ICONS+=",0xF06A9"    # robot (auto-controlled fan indicator)
 MDI_ICONS+=",0xF0479"    # sd (SD card)
 MDI_ICONS+=",0xF048A"    # send (for console input)
 MDI_ICONS+=",0xF0493"    # cog (settings)

@@ -5,7 +5,9 @@
 
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
+#include "ui_fan_control_overlay.h"
 #include "ui_fonts.h"
+#include "ui_icon_codepoints.h"
 #include "ui_modal.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
@@ -78,6 +80,10 @@ ControlsPanel::~ControlsPanel() {
         lv_obj_del(fan_panel_);
         fan_panel_ = nullptr;
     }
+    if (fan_control_panel_) {
+        lv_obj_del(fan_control_panel_);
+        fan_control_panel_ = nullptr;
+    }
     if (bed_mesh_panel_) {
         lv_obj_del(bed_mesh_panel_);
         bed_mesh_panel_ = nullptr;
@@ -149,9 +155,37 @@ void ControlsPanel::init_subjects() {
                                         z_offset_delta_display_buf_, "", "z_offset_delta_display");
 
     // Homing status subjects for bind_style visual feedback
+    UI_SUBJECT_INIT_AND_REGISTER_INT(x_homed_, 0, "x_homed");
+    UI_SUBJECT_INIT_AND_REGISTER_INT(y_homed_, 0, "y_homed");
     UI_SUBJECT_INIT_AND_REGISTER_INT(xy_homed_, 0, "xy_homed");
     UI_SUBJECT_INIT_AND_REGISTER_INT(z_homed_, 0, "z_homed");
     UI_SUBJECT_INIT_AND_REGISTER_INT(all_homed_, 0, "all_homed");
+
+    // Position display subjects for Position card
+    // Format: numeric value only (axis label is static in XML for proper alignment)
+    std::strcpy(controls_pos_x_buf_, "   --   mm");
+    std::strcpy(controls_pos_y_buf_, "   --   mm");
+    std::strcpy(controls_pos_z_buf_, "   --   mm");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(controls_pos_x_subject_, controls_pos_x_buf_, "   --   mm",
+                                        "controls_pos_x");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(controls_pos_y_subject_, controls_pos_y_buf_, "   --   mm",
+                                        "controls_pos_y");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(controls_pos_z_subject_, controls_pos_z_buf_, "   --   mm",
+                                        "controls_pos_z");
+
+    // Speed/Flow override display subjects
+    std::strcpy(speed_override_buf_, "100%");
+    std::strcpy(flow_override_buf_, "100%");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(speed_override_subject_, speed_override_buf_, "100%",
+                                        "controls_speed_pct");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(flow_override_subject_, flow_override_buf_, "100%",
+                                        "controls_flow_pct");
+
+    // Macro buttons 3 & 4 visibility and names
+    UI_SUBJECT_INIT_AND_REGISTER_INT(macro_3_visible_, 0, "macro_3_visible");
+    UI_SUBJECT_INIT_AND_REGISTER_INT(macro_4_visible_, 0, "macro_4_visible");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(macro_3_name_, macro_3_name_buf_, "", "macro_3_name");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(macro_4_name_, macro_4_name_buf_, "", "macro_4_name");
 
     // Observe homed_axes from PrinterState to update homing subjects
     if (auto* homed = printer_state_.get_homed_axes_subject()) {
@@ -173,6 +207,14 @@ void ControlsPanel::init_subjects() {
     // Quick Actions: Macro buttons
     lv_xml_register_event_cb(nullptr, "on_controls_macro_1", on_macro_1);
     lv_xml_register_event_cb(nullptr, "on_controls_macro_2", on_macro_2);
+    lv_xml_register_event_cb(nullptr, "on_controls_macro_3", on_macro_3);
+    lv_xml_register_event_cb(nullptr, "on_controls_macro_4", on_macro_4);
+
+    // Speed/Flow override buttons
+    lv_xml_register_event_cb(nullptr, "on_controls_speed_up", on_speed_up);
+    lv_xml_register_event_cb(nullptr, "on_controls_speed_down", on_speed_down);
+    lv_xml_register_event_cb(nullptr, "on_controls_flow_up", on_flow_up);
+    lv_xml_register_event_cb(nullptr, "on_controls_flow_down", on_flow_down);
 
     // Cooling: Fan slider
     lv_xml_register_event_cb(nullptr, "on_controls_fan_slider", on_fan_slider_changed);
@@ -207,16 +249,25 @@ void ControlsPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
             config->get<std::string>("/standard_macros/quick_button_1", "clean_nozzle");
         std::string slot2_name =
             config->get<std::string>("/standard_macros/quick_button_2", "bed_level");
+        std::string slot3_name = config->get<std::string>("/standard_macros/quick_button_3", "");
+        std::string slot4_name = config->get<std::string>("/standard_macros/quick_button_4", "");
 
         macro_1_slot_ = StandardMacros::slot_from_name(slot1_name);
         macro_2_slot_ = StandardMacros::slot_from_name(slot2_name);
+        macro_3_slot_ =
+            slot3_name.empty() ? std::nullopt : StandardMacros::slot_from_name(slot3_name);
+        macro_4_slot_ =
+            slot4_name.empty() ? std::nullopt : StandardMacros::slot_from_name(slot4_name);
 
-        spdlog::debug("[{}] Quick buttons configured: slot1='{}', slot2='{}'", get_name(),
-                      slot1_name, slot2_name);
+        spdlog::debug(
+            "[{}] Quick buttons configured: slot1='{}', slot2='{}', slot3='{}', slot4='{}'",
+            get_name(), slot1_name, slot2_name, slot3_name, slot4_name);
     } else {
-        // Fallback: use CleanNozzle and BedLevel slots
+        // Fallback: use CleanNozzle and BedLevel slots for 1 & 2, none for 3 & 4
         macro_1_slot_ = StandardMacroSlot::CleanNozzle;
         macro_2_slot_ = StandardMacroSlot::BedLevel;
+        macro_3_slot_ = std::nullopt;
+        macro_4_slot_ = std::nullopt;
         spdlog::warn("[{}] Config not available, using default macro slots", get_name());
     }
 
@@ -227,6 +278,11 @@ void ControlsPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     secondary_fans_list_ = lv_obj_find_by_name(panel_, "secondary_fans_list");
     if (!secondary_fans_list_) {
         spdlog::warn("[{}] Could not find secondary_fans_list container", get_name());
+    } else {
+        // Make the secondary fans list clickable to open the fan control overlay
+        lv_obj_add_flag(secondary_fans_list_, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(secondary_fans_list_, on_secondary_fans_clicked, LV_EVENT_CLICKED,
+                            this);
     }
 
     // Wire up card click handlers (cards need manual wiring for navigation)
@@ -307,6 +363,22 @@ void ControlsPanel::register_observers() {
     if (auto* pending_delta = printer_state_.get_pending_z_offset_delta_subject()) {
         pending_z_offset_observer_ =
             ObserverGuard(pending_delta, on_pending_z_offset_changed, this);
+    }
+
+    // Subscribe to position updates for Position card
+    if (auto* pos_x = printer_state_.get_position_x_subject()) {
+        position_x_observer_ = ObserverGuard(pos_x, on_position_x_changed, this);
+    }
+    if (auto* pos_y = printer_state_.get_position_y_subject()) {
+        position_y_observer_ = ObserverGuard(pos_y, on_position_y_changed, this);
+    }
+    if (auto* pos_z = printer_state_.get_position_z_subject()) {
+        position_z_observer_ = ObserverGuard(pos_z, on_position_z_changed, this);
+    }
+
+    // Subscribe to speed/flow factor updates
+    if (auto* speed = printer_state_.get_speed_factor_subject()) {
+        speed_factor_observer_ = ObserverGuard(speed, on_speed_factor_changed, this);
     }
 
     spdlog::debug("[{}] Observers registered for dashboard live data", get_name());
@@ -428,6 +500,40 @@ void ControlsPanel::refresh_macro_buttons() {
     } else {
         lv_subject_set_int(&macro_2_visible_, 0);
     }
+
+    // Update macro button 3 via subjects
+    if (macro_3_slot_) {
+        const auto& info = macros.get(*macro_3_slot_);
+        if (info.is_empty()) {
+            lv_subject_set_int(&macro_3_visible_, 0);
+            spdlog::debug("[{}] Macro 3 slot '{}' is empty, hiding button", get_name(),
+                          info.slot_name);
+        } else {
+            lv_subject_set_int(&macro_3_visible_, 1);
+            lv_subject_copy_string(&macro_3_name_, info.display_name.c_str());
+            spdlog::debug("[{}] Macro 3: '{}' → {}", get_name(), info.display_name,
+                          info.get_macro());
+        }
+    } else {
+        lv_subject_set_int(&macro_3_visible_, 0);
+    }
+
+    // Update macro button 4 via subjects
+    if (macro_4_slot_) {
+        const auto& info = macros.get(*macro_4_slot_);
+        if (info.is_empty()) {
+            lv_subject_set_int(&macro_4_visible_, 0);
+            spdlog::debug("[{}] Macro 4 slot '{}' is empty, hiding button", get_name(),
+                          info.slot_name);
+        } else {
+            lv_subject_set_int(&macro_4_visible_, 1);
+            lv_subject_copy_string(&macro_4_name_, info.display_name.c_str());
+            spdlog::debug("[{}] Macro 4: '{}' → {}", get_name(), info.display_name,
+                          info.get_macro());
+        }
+    } else {
+        lv_subject_set_int(&macro_4_visible_, 0);
+    }
 }
 
 void ControlsPanel::populate_secondary_fans() {
@@ -490,13 +596,14 @@ void ControlsPanel::populate_secondary_fans() {
         lv_obj_set_style_text_color(speed_label, ui_theme_get_color("text_secondary"), 0);
         lv_obj_set_style_text_font(speed_label, UI_FONT_SMALL, 0);
 
-        // Indicator icon: ⚙ for auto-controlled, › for controllable
+        // Indicator icon: robot for auto-controlled, › for controllable
         // Uses MDI icon font for proper glyph rendering
         lv_obj_t* indicator = lv_label_create(right_container);
         if (fan.is_controllable) {
             lv_label_set_text(indicator, LV_SYMBOL_RIGHT);
         } else {
-            lv_label_set_text(indicator, LV_SYMBOL_SETTINGS);
+            // Robot icon indicates "auto-controlled by system"
+            lv_label_set_text(indicator, ui_icon::lookup_codepoint("robot"));
         }
         lv_obj_set_style_text_color(indicator, ui_theme_get_color("text_secondary"), 0);
         lv_obj_set_style_text_font(indicator, &mdi_icons_16, 0);
@@ -692,6 +799,40 @@ void ControlsPanel::handle_cooling_clicked() {
     }
 }
 
+void ControlsPanel::handle_secondary_fans_clicked() {
+    spdlog::debug("[{}] Secondary fans clicked - opening Fan Control overlay", get_name());
+
+    // Create fan control overlay on first access (lazy initialization)
+    if (!fan_control_panel_ && parent_screen_) {
+        auto& overlay = get_fan_control_overlay();
+
+        // Initialize subjects and callbacks if not already done
+        if (!overlay.are_subjects_initialized()) {
+            overlay.init_subjects();
+        }
+        overlay.register_callbacks();
+
+        // Pass the API reference for fan commands
+        overlay.set_api(api_);
+
+        // Create overlay UI
+        fan_control_panel_ = overlay.create(parent_screen_);
+        if (!fan_control_panel_) {
+            NOTIFY_ERROR("Failed to load fan control overlay");
+            return;
+        }
+
+        // Register with NavigationManager for lifecycle callbacks
+        NavigationManager::instance().register_overlay_instance(fan_control_panel_, &overlay);
+    }
+
+    if (fan_control_panel_) {
+        // Update API reference in case it changed
+        get_fan_control_overlay().set_api(api_);
+        ui_nav_push_overlay(fan_control_panel_);
+    }
+}
+
 // ============================================================================
 // QUICK ACTION BUTTON HANDLERS
 // ============================================================================
@@ -765,6 +906,162 @@ void ControlsPanel::handle_macro_2() {
             })) {
         NOTIFY_WARNING("{} macro not configured", info.display_name);
     }
+}
+
+void ControlsPanel::handle_macro_3() {
+    if (!macro_3_slot_) {
+        spdlog::debug("[{}] Macro 3 clicked but no slot configured", get_name());
+        return;
+    }
+
+    const auto& info = StandardMacros::instance().get(*macro_3_slot_);
+    spdlog::debug("[{}] Macro 3 clicked, executing slot '{}' → {}", get_name(), info.slot_name,
+                  info.get_macro());
+
+    if (!StandardMacros::instance().execute(
+            *macro_3_slot_, api_, []() { NOTIFY_SUCCESS("Macro started"); },
+            [](const MoonrakerError& err) {
+                NOTIFY_ERROR("Macro failed: {}", err.user_message());
+            })) {
+        NOTIFY_WARNING("{} macro not configured", info.display_name);
+    }
+}
+
+void ControlsPanel::handle_macro_4() {
+    if (!macro_4_slot_) {
+        spdlog::debug("[{}] Macro 4 clicked but no slot configured", get_name());
+        return;
+    }
+
+    const auto& info = StandardMacros::instance().get(*macro_4_slot_);
+    spdlog::debug("[{}] Macro 4 clicked, executing slot '{}' → {}", get_name(), info.slot_name,
+                  info.get_macro());
+
+    if (!StandardMacros::instance().execute(
+            *macro_4_slot_, api_, []() { NOTIFY_SUCCESS("Macro started"); },
+            [](const MoonrakerError& err) {
+                NOTIFY_ERROR("Macro failed: {}", err.user_message());
+            })) {
+        NOTIFY_WARNING("{} macro not configured", info.display_name);
+    }
+}
+
+// ============================================================================
+// SPEED/FLOW OVERRIDE HANDLERS
+// ============================================================================
+
+void ControlsPanel::update_speed_display() {
+    int speed_pct = 100;
+    if (auto* speed_subj = printer_state_.get_speed_factor_subject()) {
+        speed_pct = lv_subject_get_int(speed_subj);
+    }
+    std::snprintf(speed_override_buf_, sizeof(speed_override_buf_), "%d%%", speed_pct);
+    lv_subject_copy_string(&speed_override_subject_, speed_override_buf_);
+}
+
+void ControlsPanel::update_flow_display() {
+    // Flow factor is stored as percentage (100 = 100%)
+    int flow_pct = 100;
+    // Note: PrinterState may need a get_extrude_factor_subject() method
+    // For now, we'll initialize to 100% and update when that's available
+    std::snprintf(flow_override_buf_, sizeof(flow_override_buf_), "%d%%", flow_pct);
+    lv_subject_copy_string(&flow_override_subject_, flow_override_buf_);
+}
+
+void ControlsPanel::handle_speed_up() {
+    if (!api_) {
+        NOTIFY_ERROR("No printer connection");
+        return;
+    }
+
+    int current = 100;
+    if (auto* speed_subj = printer_state_.get_speed_factor_subject()) {
+        current = lv_subject_get_int(speed_subj);
+    }
+
+    int new_speed = std::min(current + 10, 200); // Cap at 200%
+    spdlog::debug("[{}] Speed up: {} → {}", get_name(), current, new_speed);
+
+    char gcode[32];
+    std::snprintf(gcode, sizeof(gcode), "M220 S%d", new_speed);
+    api_->execute_gcode(
+        gcode, []() { /* Silent success */ },
+        [](const MoonrakerError& err) {
+            NOTIFY_ERROR("Speed change failed: {}", err.user_message());
+        });
+}
+
+void ControlsPanel::handle_speed_down() {
+    if (!api_) {
+        NOTIFY_ERROR("No printer connection");
+        return;
+    }
+
+    int current = 100;
+    if (auto* speed_subj = printer_state_.get_speed_factor_subject()) {
+        current = lv_subject_get_int(speed_subj);
+    }
+
+    int new_speed = std::max(current - 10, 10); // Floor at 10%
+    spdlog::debug("[{}] Speed down: {} → {}", get_name(), current, new_speed);
+
+    char gcode[32];
+    std::snprintf(gcode, sizeof(gcode), "M220 S%d", new_speed);
+    api_->execute_gcode(
+        gcode, []() { /* Silent success */ },
+        [](const MoonrakerError& err) {
+            NOTIFY_ERROR("Speed change failed: {}", err.user_message());
+        });
+}
+
+void ControlsPanel::handle_flow_up() {
+    if (!api_) {
+        NOTIFY_ERROR("No printer connection");
+        return;
+    }
+
+    // For now, track locally; ideally this would come from PrinterState
+    static int current_flow = 100;
+    int new_flow = std::min(current_flow + 5, 150); // Cap at 150%
+    spdlog::debug("[{}] Flow up: {} → {}", get_name(), current_flow, new_flow);
+    current_flow = new_flow;
+
+    char gcode[32];
+    std::snprintf(gcode, sizeof(gcode), "M221 S%d", new_flow);
+    api_->execute_gcode(
+        gcode,
+        [this, new_flow]() {
+            std::snprintf(flow_override_buf_, sizeof(flow_override_buf_), "%d%%", new_flow);
+            lv_subject_copy_string(&flow_override_subject_, flow_override_buf_);
+        },
+        [](const MoonrakerError& err) {
+            NOTIFY_ERROR("Flow change failed: {}", err.user_message());
+        });
+}
+
+void ControlsPanel::handle_flow_down() {
+    if (!api_) {
+        NOTIFY_ERROR("No printer connection");
+        return;
+    }
+
+    // For now, track locally; ideally this would come from PrinterState
+    static int current_flow = 100;
+    int new_flow = std::max(current_flow - 5, 50); // Floor at 50%
+    spdlog::debug("[{}] Flow down: {} → {}", get_name(), current_flow, new_flow);
+    current_flow = new_flow;
+
+    char gcode[32];
+    std::snprintf(gcode, sizeof(gcode), "M221 S%d", new_flow);
+    api_->execute_gcode(
+        gcode,
+        [this, new_flow]() {
+            std::snprintf(flow_override_buf_, sizeof(flow_override_buf_), "%d%%", new_flow);
+            lv_subject_copy_string(&flow_override_subject_, flow_override_buf_);
+        },
+        [](const MoonrakerError& err) {
+            NOTIFY_ERROR("Flow change failed: {}", err.user_message());
+        });
 }
 
 // ============================================================================
@@ -943,6 +1240,13 @@ void ControlsPanel::on_cooling_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
+void ControlsPanel::on_secondary_fans_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_secondary_fans_clicked");
+    (void)e;
+    get_global_controls_panel().handle_secondary_fans_clicked();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
 void ControlsPanel::on_motors_confirm(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_motors_confirm");
     auto* self = static_cast<ControlsPanel*>(lv_event_get_user_data(e));
@@ -1029,6 +1333,48 @@ void ControlsPanel::on_macro_2(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_macro_2");
     (void)e;
     get_global_controls_panel().handle_macro_2();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ControlsPanel::on_macro_3(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_macro_3");
+    (void)e;
+    get_global_controls_panel().handle_macro_3();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ControlsPanel::on_macro_4(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_macro_4");
+    (void)e;
+    get_global_controls_panel().handle_macro_4();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ControlsPanel::on_speed_up(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_speed_up");
+    (void)e;
+    get_global_controls_panel().handle_speed_up();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ControlsPanel::on_speed_down(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_speed_down");
+    (void)e;
+    get_global_controls_panel().handle_speed_down();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ControlsPanel::on_flow_up(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_flow_up");
+    (void)e;
+    get_global_controls_panel().handle_flow_up();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ControlsPanel::on_flow_down(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_flow_down");
+    (void)e;
+    get_global_controls_panel().handle_flow_down();
     LVGL_SAFE_EVENT_CB_END();
 }
 
@@ -1119,12 +1465,22 @@ void ControlsPanel::on_homed_axes_changed(lv_observer_t* obs, lv_subject_t* subj
     bool has_y = strchr(axes, 'y') != nullptr;
     bool has_z = strchr(axes, 'z') != nullptr;
 
+    int x = has_x ? 1 : 0;
+    int y = has_y ? 1 : 0;
     int xy = (has_x && has_y) ? 1 : 0;
     int z = has_z ? 1 : 0;
     int all = (has_x && has_y && has_z) ? 1 : 0;
 
     // Only update if changed (avoid unnecessary redraws)
     bool changed = false;
+    if (lv_subject_get_int(&self->x_homed_) != x) {
+        lv_subject_set_int(&self->x_homed_, x);
+        changed = true;
+    }
+    if (lv_subject_get_int(&self->y_homed_) != y) {
+        lv_subject_set_int(&self->y_homed_, y);
+        changed = true;
+    }
     if (lv_subject_get_int(&self->xy_homed_) != xy) {
         lv_subject_set_int(&self->xy_homed_, xy);
         changed = true;
@@ -1139,9 +1495,57 @@ void ControlsPanel::on_homed_axes_changed(lv_observer_t* obs, lv_subject_t* subj
     }
 
     if (changed) {
-        spdlog::info("[ControlsPanel] Homing status changed: xy={}, z={}, all={} (axes='{}')", xy,
-                     z, all, axes);
+        spdlog::info("[ControlsPanel] Homing status changed: x={}, y={}, z={}, all={} (axes='{}')",
+                     x, y, z, all, axes);
     }
+}
+
+void ControlsPanel::on_position_x_changed(lv_observer_t* obs, lv_subject_t* subject) {
+    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
+    if (!self)
+        return;
+
+    float x = static_cast<float>(lv_subject_get_int(subject));
+    std::snprintf(self->controls_pos_x_buf_, sizeof(self->controls_pos_x_buf_), "%7.1f mm", x);
+    lv_subject_copy_string(&self->controls_pos_x_subject_, self->controls_pos_x_buf_);
+}
+
+void ControlsPanel::on_position_y_changed(lv_observer_t* obs, lv_subject_t* subject) {
+    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
+    if (!self)
+        return;
+
+    float y = static_cast<float>(lv_subject_get_int(subject));
+    std::snprintf(self->controls_pos_y_buf_, sizeof(self->controls_pos_y_buf_), "%7.1f mm", y);
+    lv_subject_copy_string(&self->controls_pos_y_subject_, self->controls_pos_y_buf_);
+}
+
+void ControlsPanel::on_position_z_changed(lv_observer_t* obs, lv_subject_t* subject) {
+    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
+    if (!self)
+        return;
+
+    float z = static_cast<float>(lv_subject_get_int(subject));
+    std::snprintf(self->controls_pos_z_buf_, sizeof(self->controls_pos_z_buf_), "%7.2f mm", z);
+    lv_subject_copy_string(&self->controls_pos_z_subject_, self->controls_pos_z_buf_);
+}
+
+void ControlsPanel::on_speed_factor_changed(lv_observer_t* obs, lv_subject_t* subject) {
+    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
+    if (!self)
+        return;
+
+    int speed_pct = lv_subject_get_int(subject);
+    self->update_speed_display();
+    (void)speed_pct; // Already handled by update_speed_display
+}
+
+void ControlsPanel::on_extrude_factor_changed(lv_observer_t* obs, lv_subject_t* /* subject */) {
+    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
+    if (!self)
+        return;
+
+    self->update_flow_display();
 }
 
 // ============================================================================

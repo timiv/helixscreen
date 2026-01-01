@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!-- Copyright 2025 356C LLC -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Fan Status Card: Compact card for auto-controlled fans (heater_fan, controller_fan) -->
+<!-- Not interactive - displays fan status with AUTO badge -->
+<!-- Usage: <fan_status_card fan_name="Heater Fan" speed_percent="32"/> -->
+<component>
+  <api>
+    <prop name="fan_name" type="string" default="Fan"/>
+    <prop name="speed_percent" type="string" default="0"/>
+  </api>
+  <view name="fan_status_card_root"
+        extends="lv_obj" width="100" height="100" flex_flow="column"
+        style_flex_main_place="start" style_flex_cross_place="center"
+        style_bg_color="#card_bg" style_bg_opa="180" style_radius="#border_radius_large"
+        style_pad_all="#space_sm" style_pad_gap="#space_xxs" scrollable="false">
+    <!-- Fan icon at top -->
+    <icon name="fan_icon" src="fan" size="md" variant="secondary"/>
+    <!-- Fan name label -->
+    <text_small name="name_label" text="$fan_name" style_text_color="#text_primary"
+                style_text_align="center" width="100%"/>
+    <!-- AUTO badge -->
+    <lv_obj name="auto_badge"
+            width="content" height="content" style_bg_color="#info_color" style_bg_opa="255"
+            style_radius="#border_radius_small" style_pad_left="#space_xs" style_pad_right="#space_xs"
+            style_pad_top="#space_xxs" style_pad_bottom="#space_xxs" style_border_width="0"
+            scrollable="false">
+      <text_small text="AUTO" style_text_color="#FFFFFF"/>
+    </lv_obj>
+    <!-- Speed percentage -->
+    <text_body name="speed_label" text="$speed_percent" style_text_color="#text_primary"/>
+  </view>
+</component>

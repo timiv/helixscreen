@@ -1,0 +1,178 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+
+#include "ui_fan_dial.h"
+#include "ui_observer_guard.h"
+
+#include "overlay_base.h"
+#include "printer_state.h"
+
+#include <memory>
+#include <vector>
+
+class MoonrakerAPI;
+
+/**
+ * @file ui_fan_control_overlay.h
+ * @brief Full-screen overlay for controlling all printer fans
+ *
+ * Displays all discovered fans with appropriate controls:
+ * - Controllable fans (part fan, generic fans): FanDial widgets with arc control
+ * - Auto-controlled fans (heater_fan, controller_fan): Status cards with AUTO badge
+ *
+ * Layout:
+ * - Top section (~55%): Controllable fans with rotary dial controls
+ * - Divider: "Auto-Controlled" label
+ * - Bottom section: Auto fans with status display
+ *
+ * @see FanDial for the rotary dial widget
+ * @see fan_control_overlay.xml for layout definition
+ */
+class FanControlOverlay : public OverlayBase {
+  public:
+    /**
+     * @brief Construct FanControlOverlay with injected dependencies
+     * @param printer_state Reference to PrinterState for fan data
+     */
+    explicit FanControlOverlay(PrinterState& printer_state);
+    ~FanControlOverlay() override;
+
+    //
+    // === OverlayBase Implementation ===
+    //
+
+    /**
+     * @brief Initialize subjects for XML binding
+     *
+     * No local subjects needed - we use PrinterState's fans_version subject.
+     */
+    void init_subjects() override;
+
+    /**
+     * @brief Create overlay UI from XML
+     * @param parent Parent widget to attach overlay to (usually screen)
+     * @return Root object of overlay, or nullptr on failure
+     */
+    lv_obj_t* create(lv_obj_t* parent) override;
+
+    /**
+     * @brief Register XML event callbacks
+     *
+     * Registers back button callback.
+     */
+    void register_callbacks() override;
+
+    /**
+     * @brief Get human-readable overlay name
+     * @return "Fan Control"
+     */
+    [[nodiscard]] const char* get_name() const override {
+        return "Fan Control";
+    }
+
+    /**
+     * @brief Called when overlay becomes visible
+     *
+     * Subscribes to fans_version subject and refreshes fan display.
+     */
+    void on_activate() override;
+
+    /**
+     * @brief Called when overlay is hidden
+     *
+     * Unsubscribes from fans_version subject.
+     */
+    void on_deactivate() override;
+
+    /**
+     * @brief Clean up resources for async-safe destruction
+     */
+    void cleanup() override;
+
+    /**
+     * @brief Set MoonrakerAPI for sending fan commands
+     * @param api Pointer to MoonrakerAPI (may be nullptr)
+     */
+    void set_api(MoonrakerAPI* api) {
+        api_ = api;
+    }
+
+  private:
+    /**
+     * @brief Populate fan widgets from PrinterState
+     *
+     * Creates FanDial widgets for controllable fans and
+     * fan_status_card components for auto-controlled fans.
+     */
+    void populate_fans();
+
+    /**
+     * @brief Update fan speed displays from PrinterState
+     *
+     * Called when fans_version subject changes to refresh
+     * current speed values on all fan widgets.
+     */
+    void update_fan_speeds();
+
+    /**
+     * @brief Send fan speed command to printer
+     * @param object_name Moonraker object name (e.g., "fan", "fan_generic chamber")
+     * @param speed_percent Speed 0-100%
+     */
+    void send_fan_speed(const std::string& object_name, int speed_percent);
+
+    /**
+     * @brief Observer callback for fans_version changes
+     */
+    static void on_fans_version_changed(lv_observer_t* obs, lv_subject_t* subject);
+
+    //
+    // === Injected Dependencies ===
+    //
+
+    PrinterState& printer_state_;
+    MoonrakerAPI* api_ = nullptr;
+
+    //
+    // === Widget References ===
+    //
+
+    lv_obj_t* controllable_row_ = nullptr; ///< Container for FanDial widgets
+    lv_obj_t* auto_row_ = nullptr;         ///< Container for fan_status_card widgets
+
+    //
+    // === FanDial Instances ===
+    //
+
+    std::vector<std::unique_ptr<FanDial>> fan_dials_;
+
+    //
+    // === Auto Fan Card Tracking ===
+    //
+
+    struct AutoFanCard {
+        std::string object_name;
+        lv_obj_t* card = nullptr;
+        lv_obj_t* speed_label = nullptr;
+    };
+    std::vector<AutoFanCard> auto_fan_cards_;
+
+    //
+    // === Observer Guard ===
+    //
+
+    ObserverGuard fans_observer_;
+};
+
+/**
+ * @brief Get global FanControlOverlay instance
+ * @return Reference to singleton instance
+ * @throws std::runtime_error if not initialized
+ */
+FanControlOverlay& get_fan_control_overlay();
+
+/**
+ * @brief Initialize global FanControlOverlay instance
+ * @param printer_state Reference to global PrinterState
+ */
+void init_fan_control_overlay(PrinterState& printer_state);

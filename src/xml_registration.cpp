@@ -3,6 +3,7 @@
 #include "xml_registration.h"
 
 #include "ui_ams_current_tool.h"
+#include "ui_fan_dial.h"
 #include "ui_fonts.h"
 #include "ui_gcode_viewer.h"
 #include "ui_hsv_picker.h"
@@ -36,6 +37,7 @@ static void noop_event_callback(lv_event_t* /*e*/) {
  * Registering this no-op subject silences those warnings.
  */
 static lv_subject_t s_noop_subject;
+static bool s_noop_subject_initialized = false;
 
 /**
  * Register responsive constants for color picker sizing based on screen dimensions
@@ -88,6 +90,7 @@ void register_xml_components() {
     lv_xml_register_event_cb(nullptr, "", noop_event_callback);
     lv_subject_init_int(&s_noop_subject, 0);
     lv_xml_register_subject(nullptr, "", &s_noop_subject);
+    s_noop_subject_initialized = true;
 
     // Register custom widgets (BEFORE components that use them)
     ui_gcode_viewer_register();
@@ -141,6 +144,10 @@ void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/nozzle_temp_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/bed_temp_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/extrusion_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/fan_dial.xml");
+    register_fan_dial_callbacks(); // Register FanDial event callbacks
+    lv_xml_register_component_from_file("A:ui_xml/fan_status_card.xml");
+    lv_xml_register_component_from_file("A:ui_xml/fan_control_overlay.xml");
     lv_xml_register_component_from_file("A:ui_xml/fan_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/ams_current_tool.xml");
     lv_xml_register_component_from_file("A:ui_xml/print_status_panel.xml");
@@ -226,6 +233,14 @@ void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/wizard_summary.xml");
 
     spdlog::debug("[XML Registration] XML component registration complete");
+}
+
+void deinit_xml_subjects() {
+    if (s_noop_subject_initialized) {
+        lv_subject_deinit(&s_noop_subject);
+        s_noop_subject_initialized = false;
+        spdlog::debug("[XML Registration] No-op subject deinitialized");
+    }
 }
 
 } // namespace helix
