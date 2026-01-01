@@ -64,8 +64,11 @@ static std::unique_ptr<PrintSelectPanel> g_print_select_panel;
 PrintSelectPanel* get_print_select_panel(PrinterState& printer_state, MoonrakerAPI* api) {
     if (!g_print_select_panel) {
         g_print_select_panel = std::make_unique<PrintSelectPanel>(printer_state, api);
-        StaticPanelRegistry::instance().register_destroy("PrintSelectPanel",
-                                                         []() { g_print_select_panel.reset(); });
+        // Register both deinit AND destruction in one callback (consistent with other panels)
+        StaticPanelRegistry::instance().register_destroy("PrintSelectPanel", []() {
+            g_print_select_panel->deinit_subjects();
+            g_print_select_panel.reset();
+        });
     }
     return g_print_select_panel.get();
 }

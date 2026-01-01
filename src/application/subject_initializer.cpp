@@ -239,14 +239,9 @@ void SubjectInitializer::init_panel_subjects() {
                                                      ui_status_bar_deinit_subjects);
 
     // Panels that need deferred API injection
+    // Note: PrintSelectPanel registers its own deinit+destroy callback in get_print_select_panel()
     m_print_select_panel = get_print_select_panel(get_printer_state(), nullptr);
     m_print_select_panel->init_subjects();
-    StaticSubjectRegistry::instance().register_deinit("PrintSelectPanelSubjects", []() {
-        auto* panel = get_print_select_panel(get_printer_state(), nullptr);
-        if (panel) {
-            panel->deinit_subjects();
-        }
-    });
 
     m_print_status_panel = &get_global_print_status_panel();
     m_print_status_panel->init_subjects();
