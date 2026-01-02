@@ -1034,18 +1034,26 @@ bool Application::connect_moonraker() {
                 caps, {api, client}));
     });
 
-    // Capture plugin_manager pointer for callback
-    helix::plugin::PluginManager* plugin_mgr = m_plugin_manager.get();
+    // Capture Application pointer for callback - used to check shutdown state and access plugin
+    // manager
+    Application* app = this;
 
-    client->set_on_discovery_complete([api, client, plugin_mgr](const PrinterCapabilities& caps) {
+    client->set_on_discovery_complete([api, client, app](const PrinterCapabilities& caps) {
         ui_async_call(
             [](void* user_data) {
                 auto* ctx = static_cast<
                     std::tuple<PrinterCapabilities, std::pair<MoonrakerAPI*, MoonrakerClient*>,
-                               helix::plugin::PluginManager*>*>(user_data);
+                               Application*>*>(user_data);
                 auto* api_ptr = std::get<1>(*ctx).first;
                 auto* client_ptr = std::get<1>(*ctx).second;
-                auto* plugin_mgr_ptr = std::get<2>(*ctx);
+                auto* app_ptr = std::get<2>(*ctx);
+
+                // Safety check: if Application is shutting down, skip all processing
+                // This prevents use-after-free if shutdown races with callback delivery
+                if (app_ptr->m_shutdown_complete) {
+                    delete ctx;
+                    return;
+                }
 
                 get_printer_state().set_printer_capabilities(std::get<0>(*ctx));
                 get_printer_state().init_fans(client_ptr->get_fans());
@@ -1071,14 +1079,14 @@ bool Application::connect_moonraker() {
                     });
 
                 // Notify plugins that Moonraker is connected
-                if (plugin_mgr_ptr) {
-                    plugin_mgr_ptr->on_moonraker_connected();
+                if (app_ptr->m_plugin_manager) {
+                    app_ptr->m_plugin_manager->on_moonraker_connected();
                 }
 
                 delete ctx;
             },
             new std::tuple<PrinterCapabilities, std::pair<MoonrakerAPI*, MoonrakerClient*>,
-                           helix::plugin::PluginManager*>(caps, {api, client}, plugin_mgr));
+                           Application*>(caps, {api, client}, app));
     });
 
     // Set HTTP base URL for API

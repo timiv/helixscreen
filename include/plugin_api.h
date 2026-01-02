@@ -27,7 +27,9 @@
 #include "plugin_events.h"
 
 #include <functional>
+#include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 // Forward declarations - plugins don't need full definitions
@@ -398,11 +400,19 @@ class PluginAPI {
     std::vector<MoonrakerSubscriptionId> active_moonraker_subscriptions_;
     MoonrakerSubscriptionId next_moonraker_sub_id_ = 1;
 
+    // Mapping from our plugin subscription IDs to MoonrakerClient's subscription IDs
+    // This allows proper cleanup when a plugin unloads
+    std::unordered_map<MoonrakerSubscriptionId, uint64_t> moonraker_id_map_;
+
     // Registered subjects (for cleanup)
     std::vector<std::string> registered_subjects_;
 
     // Registered services (for cleanup)
     std::vector<std::string> registered_services_;
+
+    // Alive flag for use-after-free prevention in Moonraker callbacks
+    // When plugin unloads, this becomes false and callbacks skip execution
+    std::shared_ptr<bool> alive_flag_;
 
     mutable std::mutex mutex_;
 };

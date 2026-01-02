@@ -46,6 +46,11 @@ bool EventDispatcher::unsubscribe(EventSubscriptionId id) {
 }
 
 void EventDispatcher::emit(const std::string& event_name, const json& payload) {
+    // NOTE: Events should be emitted from the main thread only.
+    // LVGL is not thread-safe, and plugin callbacks may interact with LVGL widgets.
+    // If you need to emit events from a background thread (e.g., network callbacks),
+    // use ui_async_call() to defer to the main thread first.
+
     // Create event data with timestamp
     EventData event = make_event(event_name, payload);
 
@@ -80,6 +85,16 @@ void EventDispatcher::clear() {
     std::lock_guard<std::mutex> lock(mutex_);
     subscriptions_.clear();
     spdlog::debug("[plugin] All event subscriptions cleared");
+}
+
+void EventDispatcher::reset_for_testing() {
+    auto& inst = instance();
+    std::lock_guard<std::mutex> lock(inst.mutex_);
+
+    inst.subscriptions_.clear();
+    inst.next_id_ = 1;
+
+    spdlog::debug("[plugin] EventDispatcher reset for testing - all state cleared");
 }
 
 // ============================================================================

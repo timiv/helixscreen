@@ -75,6 +75,9 @@ void InjectionPointManager::unregister_point(const std::string& point_id) {
             spdlog::debug("[InjectionPointManager] Removing tracking for widget from unregistered "
                           "point '{}' (plugin: {})",
                           point_id, widget_it->plugin_id);
+            // Invalidate pointer before removal as a defensive measure
+            // Prevents any racing code from using a potentially stale pointer
+            widget_it->widget = nullptr;
             widget_it = injected_widgets_.erase(widget_it);
         } else {
             ++widget_it;
@@ -280,6 +283,16 @@ size_t InjectionPointManager::get_widget_count(const std::string& point_id) cons
     }
 
     return count;
+}
+
+void InjectionPointManager::reset_for_testing() {
+    auto& inst = instance();
+    std::lock_guard<std::mutex> lock(inst.mutex_);
+
+    inst.points_.clear();
+    inst.injected_widgets_.clear();
+
+    spdlog::debug("[InjectionPointManager] Reset for testing - all state cleared");
 }
 
 } // namespace helix::plugin

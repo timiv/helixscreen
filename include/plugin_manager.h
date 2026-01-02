@@ -269,10 +269,14 @@ class PluginManager {
 
     /**
      * @brief Loaded plugin state
+     *
+     * Ownership: The `handle` pointer is a dlopen() handle that MUST be closed
+     * via dlclose() when the plugin is unloaded. This is handled by unload_plugin()
+     * and unload_all(). Do not copy LoadedPlugin or let handles leak.
      */
     struct LoadedPlugin {
         PluginInfo info;
-        void* handle = nullptr; ///< dlopen() handle
+        void* handle = nullptr; ///< dlopen() handle - owned, closed by unload_plugin()
         PluginInitFunc init_func = nullptr;
         PluginDeinitFunc deinit_func = nullptr;
         std::unique_ptr<PluginAPI> api; ///< Plugin's API instance

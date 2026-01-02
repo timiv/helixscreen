@@ -45,13 +45,19 @@ static void led_toggle_cb(lv_event_t* e) {
     // Send gcode to control LED via Moonraker
     auto* moonraker = g_api->moonraker_api();
     if (moonraker) {
+        // TODO: Get LED name from PrinterState capabilities or printer_database.json
+        // Currently hardcoded to "chamber_light" - works for Adventurer 5M but not all printers.
+        // Future: Query available LEDs from PrinterState and use first available,
+        // or allow user configuration via plugin settings.
+        const char* led_name = "chamber_light";
+
         std::string gcode;
         if (s_led_on) {
             // Turn on - white at full brightness
-            gcode = "SET_LED LED=chamber_light RED=1.0 GREEN=1.0 BLUE=1.0";
+            gcode = fmt::format("SET_LED LED={} RED=1.0 GREEN=1.0 BLUE=1.0", led_name);
         } else {
             // Turn off
-            gcode = "SET_LED LED=chamber_light RED=0 GREEN=0 BLUE=0";
+            gcode = fmt::format("SET_LED LED={} RED=0 GREEN=0 BLUE=0", led_name);
         }
 
         moonraker->execute_gcode(

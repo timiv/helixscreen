@@ -178,6 +178,14 @@ class EventDispatcher {
      */
     void clear();
 
+    /**
+     * @brief Reset all internal state for testing
+     *
+     * Clears all subscriptions and resets the subscription ID counter.
+     * Use only in test teardown to ensure clean state between tests.
+     */
+    static void reset_for_testing();
+
   private:
     EventDispatcher() = default;
 
