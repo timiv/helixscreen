@@ -427,147 +427,185 @@
     <!-- ===================================================================== -->
     <!-- Material Design Icon constants - MDI codepoints (U+F0000 range)       -->
     <!-- Source: https://pictogrammers.com/library/mdi/                        -->
+    <!-- Generated from ui_icon_codepoints.h - DO NOT EDIT MANUALLY            -->
+    <!-- Run: python3 scripts/gen_icon_consts.py                               -->
     <!-- ===================================================================== -->
-    <str name="icon_advanced" value="󰇙"/>
-    <!-- U+F01D9 dots-vertical -->
+    <!-- BEGIN GENERATED ICON CONSTS -->
+    <str name="icon_alert" value="󰀦"/>
+    <str name="icon_alert_octagon" value="󰀩"/>
+    <str name="icon_animation" value="󰗘"/>
+    <str name="icon_animation_play" value="󰤺"/>
     <str name="icon_arrow_down" value="󰁅"/>
-    <!-- U+F0045 arrow-down -->
-    <str name="icon_arrow_down_left" value="󰁁"/>
-    <!-- U+F0041 arrow-bottom-left -->
-    <str name="icon_arrow_down_right" value="󰁃"/>
-    <!-- U+F0043 arrow-bottom-right -->
-    <str name="icon_arrow_down_to_line" value="󰜮"/>
-    <!-- U+F072E arrow-down-bold (load) -->
-    <str name="icon_arrow_expand_down" value="󰞓"/>
-    <!-- U+F0793 arrow-expand-down (bed dropping - CoreXY Z closer) -->
-    <str name="icon_arrow_expand_up" value="󰞖"/>
-    <!-- U+F0796 arrow-expand-up (bed rising - CoreXY Z farther) -->
+    <str name="icon_arrow_expand_down" value="󰞖"/>
+    <str name="icon_arrow_expand_up" value="󰞙"/>
     <str name="icon_arrow_left" value="󰁍"/>
-    <!-- U+F004D arrow-left -->
+    <str name="icon_arrow_left_bold" value="󰜱"/>
+    <str name="icon_arrow_left_right" value="󰹳"/>
+    <str name="icon_arrow_left_thick" value="󰁎"/>
     <str name="icon_arrow_right" value="󰁔"/>
-    <!-- U+F0054 arrow-right -->
+    <str name="icon_arrow_right_bold" value="󰜴"/>
     <str name="icon_arrow_up" value="󰁝"/>
-    <!-- U+F005D arrow-up -->
-    <str name="icon_arrow_up_left" value="󰁜"/>
-    <!-- U+F005C arrow-top-left -->
-    <str name="icon_arrow_up_line" value="󰜷"/>
-    <!-- U+F0737 arrow-up-bold (unload) -->
-    <str name="icon_arrow_up_right" value="󰁞"/>
-    <!-- U+F005E arrow-top-right -->
-    <str name="icon_arrows_all" value="󰀦"/>
-    <!-- U+F0026 arrow-all -->
+    <str name="icon_arrow_up_bold_circle" value="󰁟"/>
+    <str name="icon_arrow_up_circle" value="󰳡"/>
+    <str name="icon_arrow_up_down" value="󰹹"/>
+    <str name="icon_arrow_up_right" value="󱞿"/>
+    <str name="icon_axis_arrow" value="󰵉"/>
+    <str name="icon_axis_x_arrow" value="󰵌"/>
+    <str name="icon_axis_y_arrow" value="󰵑"/>
+    <str name="icon_axis_z_arrow" value="󰵕"/>
+    <str name="icon_back" value="󰅁"/>
     <str name="icon_backspace" value="󰭜"/>
-    <!-- U+F0B5C backspace-outline (key with X pointing left) -->
+    <str name="icon_bed" value="󰋣"/>
     <str name="icon_bell" value="󰂚"/>
-    <!-- U+F009A bell (notifications) -->
-    <str name="icon_bluetooth" value="󰂯"/>
-    <!-- U+F00AF bluetooth -->
+    <str name="icon_block_helper" value="󰂭"/>
+    <str name="icon_camera_timer" value="󰄉"/>
+    <str name="icon_cancel" value="󰜺"/>
+    <str name="icon_chart_line" value="󰄪"/>
     <str name="icon_check" value="󰄬"/>
-    <!-- U+F012C check (OK/confirm) -->
     <str name="icon_check_circle" value="󰗡"/>
-    <!-- U+F05E1 check-circle-outline (connected) -->
     <str name="icon_chevron_down" value="󰅀"/>
-    <!-- U+F0140 chevron-down -->
     <str name="icon_chevron_left" value="󰅁"/>
-    <!-- U+F0141 chevron-left -->
+    <str name="icon_chevron_right" value="󰅂"/>
     <str name="icon_chevron_up" value="󰅃"/>
-    <!-- U+F0143 chevron-up -->
     <str name="icon_clock" value="󰅐"/>
-    <!-- U+F0150 clock-outline -->
-    <str name="icon_controls" value="󰣩"/>
-    <!-- U+F08E9 tune-variant -->
-    <str name="icon_cube" value="󱨯"/>
-    <!-- U+F1A2F cube-outline (PETG) -->
-    <str name="icon_droplet" value="󰖌"/>
-    <!-- U+F058C water (purge) -->
-    <str name="icon_edit" value="󰏫"/>
-    <!-- U+F0A46 engine-off (motors disabled) -->
+    <str name="icon_close" value="󰅖"/>
+    <str name="icon_close_circle" value="󰅙"/>
+    <str name="icon_code_braces" value="󰅩"/>
+    <str name="icon_code_tags" value="󰅴"/>
+    <str name="icon_cog" value="󰒓"/>
+    <str name="icon_console" value="󰆍"/>
+    <str name="icon_cooldown" value="󰜗"/>
+    <str name="icon_cube" value="󰆧"/>
+    <str name="icon_cursor_move" value="󰆾"/>
+    <str name="icon_dashboard" value="󰕮"/>
+    <str name="icon_delete" value="󰆴"/>
+    <str name="icon_dots_vertical" value="󰇙"/>
+    <str name="icon_download" value="󰇚"/>
+    <str name="icon_engine" value="󰇺"/>
     <str name="icon_engine_off" value="󰩆"/>
-    <!-- U+F03EB pencil (custom) -->
     <str name="icon_ethernet" value="󰈀"/>
-    <!-- U+F0200 ethernet -->
+    <str name="icon_expand_all" value="󰁌"/>
     <str name="icon_fan" value="󰈐"/>
-    <!-- U+F0210 fan -->
-    <str name="icon_filament" value="󰥺"/>
-    <!-- U+F097A film -->
+    <str name="icon_fan_off" value="󰠝"/>
+    <str name="icon_filament" value="󰹛"/>
+    <str name="icon_fine_tune" value="󰘮"/>
     <str name="icon_fire" value="󰈸"/>
-    <!-- U+F0238 fire -->
-    <str name="icon_folder" value="󰝰"/>
-    <!-- U+F0770 folder-open -->
+    <str name="icon_folder" value="󰉋"/>
+    <str name="icon_folder_open" value="󰝰"/>
+    <str name="icon_folder_upload" value="󰉙"/>
+    <str name="icon_grid_large" value="󰝘"/>
+    <str name="icon_grid_view" value="󰕰"/>
+    <str name="icon_heat_wave" value="󱩅"/>
+    <str name="icon_heater" value="󱢸"/>
+    <str name="icon_help_circle" value="󰋗"/>
     <str name="icon_home" value="󰋜"/>
-    <!-- U+F02DC home -->
-    <str name="icon_keyboard_caps" value="󰘲"/>
-    <!-- U+F0632 apple-keyboard-caps (caps lock indicator) -->
-    <str name="icon_keyboard_close" value="󰌏"/>
-    <!-- U+F030F keyboard-close (dismiss keyboard) -->
-    <str name="icon_keyboard_return" value="󰌑"/>
-    <!-- U+F0311 keyboard-return (enter key) -->
-    <str name="icon_keyboard_shift" value="󰘶"/>
-    <!-- U+F0636 apple-keyboard-shift (shift key) -->
-    <str name="icon_leaf" value="󰐶"/>
-    <!-- U+F0436 leaf -->
-    <str name="icon_lightbulb" value="󰌵"/>
-    <!-- U+F0335 lightbulb -->
-    <str name="icon_list" value="󰉹"/>
-    <!-- U+F0279 format-list-bulleted -->
-    <str name="icon_lock" value="󰌾"/>
-    <!-- U+F033E lock (encrypted) -->
-    <str name="icon_pause" value="󰏤"/>
-    <!-- U+F03E4 pause -->
-    <str name="icon_play" value="󰐊"/>
-    <!-- U+F040A play (start/resume) -->
-    <str name="icon_redo" value="󰑎"/>
-    <!-- U+F044E redo (clockwise arrow - tighten) -->
-    <str name="icon_undo" value="󰕌"/>
-    <!-- U+F054C undo (counter-clockwise arrow - loosen) -->
-    <str name="icon_rotate_right" value="󰑧"/>
-    <!-- U+F0467 rotate-right (clockwise - tighten) -->
-    <str name="icon_rotate_left" value="󰑥"/>
-    <!-- U+F0465 rotate-left (counter-clockwise - loosen) -->
-    <str name="icon_rotate_3d" value="󰻇"/>
-    <!-- U+F0EC7 rotate-3d (orbit/3D view rotation hint) -->
-    <str name="icon_power_off" value="󰐥"/>
-    <!-- U+F0425 power -->
-    <str name="icon_question_circle" value="󰋗"/>
-    <!-- U+F02D7 help-circle -->
-    <str name="icon_settings" value="󰒓"/>
-    <!-- U+F0493 cog -->
-    <str name="icon_signal_wifi_1" value="󰤟"/>
-    <!-- U+F091F wifi-strength-1 (0-25% signal) -->
-    <str name="icon_signal_wifi_2" value="󰤢"/>
-    <!-- U+F0922 wifi-strength-2 (26-50% signal) -->
-    <str name="icon_signal_wifi_3" value="󰤥"/>
-    <!-- U+F0925 wifi-strength-3 (51-75% signal) -->
-    <str name="icon_signal_wifi_4" value="󰖩"/>
-    <!-- U+F05A9 wifi (76-100% signal) -->
-    <str name="icon_stop" value="󰓛"/>
-    <!-- U+F04DB stop (cancel) -->
-    <str name="icon_temperature" value="󰔏"/>
-    <!-- U+F050F thermometer -->
-    <str name="icon_th_large" value="󰖈"/>
-    <!-- U+F0588 view-grid -->
-    <str name="icon_trash" value="󰆴"/>
-    <!-- U+F01B4 delete -->
-    <str name="icon_triangle_exclamation" value="󰀦"/>
-    <!-- U+F0026 alert (warning) -->
-    <str name="icon_usb" value="󰗠"/>
-    <!-- U+F05E0 usb -->
-    <str name="icon_video" value="󰕧"/>
-    <!-- U+F0567 video (timelapse enabled) -->
-    <str name="icon_video_off" value="󰕨"/>
-    <!-- U+F0568 video-off (timelapse disabled) -->
-    <str name="icon_wifi" value="󰖩"/>
-    <!-- U+F05A9 wifi -->
-    <str name="icon_wifi_slash" value="󰖪"/>
-    <!-- U+F05AA wifi-off -->
-    <str name="icon_xmark_circle" value="󰅙"/>
-    <!-- U+F0159 close-circle (error/failed) -->
-    <str name="icon_xmark" value="󰅖"/>
-    <!-- U+F0156 close -->
-    <str name="icon_check" value="󰄬"/>
-    <!-- U+F012C check (ok/success) -->
+    <str name="icon_home_import" value="󰾜"/>
+    <str name="icon_hourglass" value="󰔟"/>
+    <str name="icon_image_broken_variant" value="󰋮"/>
+    <str name="icon_info" value="󰋼"/>
     <str name="icon_info_circle" value="󰋼"/>
-    <!-- U+F02FC information (info) -->
+    <str name="icon_info_outline" value="󰋽"/>
+    <str name="icon_inputshaper" value="󰥛"/>
+    <str name="icon_inventory" value="󰏖"/>
+    <str name="icon_lan" value="󰌗"/>
+    <str name="icon_layers" value="󰌨"/>
+    <str name="icon_leaf" value="󰌪"/>
+    <str name="icon_light" value="󰌵"/>
+    <str name="icon_light_off" value="󰹏"/>
+    <str name="icon_lightbulb_on" value="󰛨"/>
+    <str name="icon_lightbulb_on_10" value="󱩎"/>
+    <str name="icon_lightbulb_on_20" value="󱩏"/>
+    <str name="icon_lightbulb_on_30" value="󱩐"/>
+    <str name="icon_lightbulb_on_40" value="󱩑"/>
+    <str name="icon_lightbulb_on_50" value="󱩒"/>
+    <str name="icon_lightbulb_on_60" value="󱩓"/>
+    <str name="icon_lightbulb_on_70" value="󱩔"/>
+    <str name="icon_lightbulb_on_80" value="󱩕"/>
+    <str name="icon_lightbulb_on_90" value="󱩖"/>
+    <str name="icon_lightbulb_outline" value="󰌶"/>
+    <str name="icon_limit" value="󰹏"/>
+    <str name="icon_list" value="󰉹"/>
+    <str name="icon_lock" value="󰌾"/>
+    <str name="icon_minus" value="󰍴"/>
+    <str name="icon_move" value="󰁌"/>
+    <str name="icon_network" value="󰈀"/>
+    <str name="icon_notifications" value="󰂚"/>
+    <str name="icon_pause" value="󰏤"/>
+    <str name="icon_pencil" value="󰏫"/>
+    <str name="icon_play" value="󰐊"/>
+    <str name="icon_play_circle" value="󰐌"/>
+    <str name="icon_plus" value="󰐕"/>
+    <str name="icon_power" value="󰐥"/>
+    <str name="icon_power_plug" value="󰚥"/>
+    <str name="icon_print" value="󰐪"/>
+    <str name="icon_printer_3d" value="󰐫"/>
+    <str name="icon_progress_clock" value="󰦖"/>
+    <str name="icon_prohibited" value="󰂭"/>
+    <str name="icon_puzzle_outline" value="󰩦"/>
+    <str name="icon_question_circle" value="󰋗"/>
+    <str name="icon_rabbit" value="󰤇"/>
+    <str name="icon_radiator" value="󰐸"/>
+    <str name="icon_redo" value="󰑎"/>
+    <str name="icon_refresh" value="󰑐"/>
+    <str name="icon_resume" value="󰐌"/>
+    <str name="icon_robot" value="󰚩"/>
+    <str name="icon_rotate_3d" value="󰻇"/>
+    <str name="icon_rotate_left" value="󰑥"/>
+    <str name="icon_rotate_right" value="󰑧"/>
+    <str name="icon_router" value="󰑩"/>
+    <str name="icon_ruler" value="󰑭"/>
+    <str name="icon_script_text" value="󰯂"/>
+    <str name="icon_sd" value="󰑹"/>
+    <str name="icon_send" value="󰒊"/>
+    <str name="icon_settings" value="󰒓"/>
+    <str name="icon_sine_wave" value="󰥛"/>
+    <str name="icon_source_branch" value="󰘬"/>
+    <str name="icon_speed" value="󰓅"/>
+    <str name="icon_speed_down" value="󰾆"/>
+    <str name="icon_speed_up" value="󰾅"/>
+    <str name="icon_spoolman" value="󰈯"/>
+    <str name="icon_stop" value="󰓛"/>
+    <str name="icon_sysinfo" value="󰋼"/>
+    <str name="icon_thermometer" value="󰔏"/>
+    <str name="icon_thermometer_minus" value="󰸄"/>
+    <str name="icon_thermometer_plus" value="󰸅"/>
+    <str name="icon_tortoise" value="󰴻"/>
+    <str name="icon_toy_brick_outline" value="󱊍"/>
+    <str name="icon_train_flatbed" value="󱬵"/>
+    <str name="icon_trash_can_outline" value="󰩺"/>
+    <str name="icon_tray_arrow_up" value="󰄝"/>
+    <str name="icon_triangle_exclamation" value="󰀦"/>
+    <str name="icon_tune" value="󰘮"/>
+    <str name="icon_tune_variant" value="󱕂"/>
+    <str name="icon_tune_vertical_variant" value="󱕃"/>
+    <str name="icon_undo" value="󰕌"/>
+    <str name="icon_update" value="󰚰"/>
+    <str name="icon_vibrate" value="󰕦"/>
+    <str name="icon_video" value="󰕧"/>
+    <str name="icon_view_dashboard" value="󰕮"/>
+    <str name="icon_view_grid" value="󰕰"/>
+    <str name="icon_view_list" value="󰕲"/>
+    <str name="icon_water" value="󰖌"/>
+    <str name="icon_weight" value="󰖡"/>
+    <str name="icon_wifi" value="󰖩"/>
+    <str name="icon_wifi_alert" value="󱚵"/>
+    <str name="icon_wifi_check" value="󱚽"/>
+    <str name="icon_wifi_lock" value="󱚿"/>
+    <str name="icon_wifi_off" value="󰖪"/>
+    <str name="icon_wifi_strength_1" value="󰤟"/>
+    <str name="icon_wifi_strength_1_alert" value="󰤠"/>
+    <str name="icon_wifi_strength_1_lock" value="󰤡"/>
+    <str name="icon_wifi_strength_2" value="󰤢"/>
+    <str name="icon_wifi_strength_2_lock" value="󰤤"/>
+    <str name="icon_wifi_strength_3" value="󰤥"/>
+    <str name="icon_wifi_strength_3_lock" value="󰤧"/>
+    <str name="icon_wifi_strength_4" value="󰤨"/>
+    <str name="icon_wifi_strength_4_lock" value="󰤪"/>
+    <str name="icon_wrench" value="󱌣"/>
+    <str name="icon_xmark" value="󰅖"/>
+    <str name="icon_z_closer" value="󰜮"/>
+    <str name="icon_z_farther" value="󰜷"/>
+    <!-- END GENERATED ICON CONSTS -->
   </consts>
   <view extends="lv_obj"/>
 </component>

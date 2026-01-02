@@ -59,6 +59,7 @@ static const IconMapping ICON_MAP[] = {
 
     // Back/navigation
     {"back",               "\xF3\xB0\x85\x81"},  // F0141 chevron-left (back)
+    {"backspace",          "\xF3\xB0\xAD\x9C"},  // F0B5C backspace-outline
     {"bed",                "\xF3\xB0\x8B\xA3"},  // F02E3 bed
     {"bell",               "\xF3\xB0\x82\x9A"},  // F009A bell/notifications
     {"block_helper",       "\xF3\xB0\x82\xAD"},  // F00AD block-helper/prohibited
@@ -123,6 +124,7 @@ static const IconMapping ICON_MAP[] = {
     // Info/Image
     {"image_broken_variant", "\xF3\xB0\x8B\xAE"}, // F02EE image-broken-variant (fallback)
     {"info",               "\xF3\xB0\x8B\xBC"},  // F02FC information
+    {"info_circle",        "\xF3\xB0\x8B\xBC"},  // F02FC information (alias for FontAwesome compat)
     {"info_outline",       "\xF3\xB0\x8B\xBD"},  // F02FD information-outline
     {"inputshaper",        "\xF3\xB0\xA5\x9B"},  // F095B sine-wave
     {"inventory",          "\xF3\xB0\x8F\x96"},  // F03D6 package-variant
@@ -167,6 +169,7 @@ static const IconMapping ICON_MAP[] = {
     {"progress_clock",     "\xF3\xB0\xA6\x96"},  // F0996 progress-clock (phase tracking)
     {"prohibited",         "\xF3\xB0\x82\xAD"},  // F00AD block-helper
     {"puzzle_outline",     "\xF3\xB0\xA9\xA6"},  // F0A66 puzzle-outline (plugin)
+    {"question_circle",    "\xF3\xB0\x8B\x97"},  // F02D7 help-circle (alias for FontAwesome compat)
     {"rabbit",             "\xF3\xB0\xA4\x87"},  // F0907 rabbit (Happy Hare logo)
 
     // Radiator/Heating
@@ -204,6 +207,7 @@ static const IconMapping ICON_MAP[] = {
     {"train_flatbed",      "\xF3\xB1\xAC\xB5"},  // F1B35 train-car-flatbed (print bed base)
     {"trash_can_outline",  "\xF3\xB0\xA9\xBA"},  // F0A7A trash-can-outline (delete)
     {"tray_arrow_up",      "\xF3\xB0\x84\x9D"},  // F011D tray-arrow-up (unload/eject)
+    {"triangle_exclamation", "\xF3\xB0\x80\xA6"}, // F0026 alert (alias for FontAwesome compat)
     {"tune",               "\xF3\xB0\x98\xAE"},  // F062E tune
     {"tune_variant",       "\xF3\xB1\x95\x82"},  // F1542 tune-variant
     {"tune_vertical_variant", "\xF3\xB1\x95\x83"},  // F1543 tune-vertical-variant
@@ -239,6 +243,9 @@ static const IconMapping ICON_MAP[] = {
 
     // Wrench/Tools
     {"wrench",             "\xF3\xB1\x8C\xA3"},  // F1323 hammer-wrench
+
+    // X (xmark alias)
+    {"xmark",              "\xF3\xB0\x85\x96"},  // F0156 close (alias for FontAwesome compat)
 
     // Z-axis
     {"z_closer",           "\xF3\xB0\x9C\xAE"},  // F072E arrow-down-bold (z closer)

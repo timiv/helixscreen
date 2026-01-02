@@ -79,7 +79,15 @@
                        flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
                        style_pad_gap="#space_xs">
               <event_cb trigger="clicked" callback="on_tune_z_offset"/>
-              <lv_label name="icon_z_closer_01" text="#icon_arrow_down" style_text_font="mdi_icons_16"/>
+              <!-- Dual icons: show based on printer kinematics -->
+              <lv_obj style_bg_opa="0" style_border_width="0" width="content" height="content" style_pad_all="0">
+                <icon src="arrow_expand_up" size="sm">
+                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
+                </icon>
+                <icon src="arrow_down" size="sm">
+                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
+                </icon>
+              </lv_obj>
               <text_small text="0.1" align="center"/>
             </lv_button>
             <lv_button name="btn_z_closer_005"
@@ -87,7 +95,15 @@
                        flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
                        style_pad_gap="#space_xs">
               <event_cb trigger="clicked" callback="on_tune_z_offset"/>
-              <lv_label name="icon_z_closer_005" text="#icon_arrow_down" style_text_font="mdi_icons_16"/>
+              <!-- Dual icons: show based on printer kinematics -->
+              <lv_obj style_bg_opa="0" style_border_width="0" width="content" height="content" style_pad_all="0">
+                <icon src="arrow_expand_up" size="sm">
+                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
+                </icon>
+                <icon src="arrow_down" size="sm">
+                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
+                </icon>
+              </lv_obj>
               <text_small text="0.05" align="center"/>
             </lv_button>
             <lv_button name="btn_z_closer_001"
@@ -95,7 +111,15 @@
                        flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
                        style_pad_gap="#space_xs">
               <event_cb trigger="clicked" callback="on_tune_z_offset"/>
-              <lv_label name="icon_z_closer_001" text="#icon_arrow_down" style_text_font="mdi_icons_16"/>
+              <!-- Dual icons: show based on printer kinematics -->
+              <lv_obj style_bg_opa="0" style_border_width="0" width="content" height="content" style_pad_all="0">
+                <icon src="arrow_expand_up" size="sm">
+                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
+                </icon>
+                <icon src="arrow_down" size="sm">
+                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
+                </icon>
+              </lv_obj>
               <text_small text="0.01" align="center"/>
             </lv_button>
           </lv_obj>
@@ -108,7 +132,15 @@
                        flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
                        style_pad_gap="#space_xs">
               <event_cb trigger="clicked" callback="on_tune_z_offset"/>
-              <lv_label name="icon_z_farther_001" text="#icon_arrow_up" style_text_font="mdi_icons_16"/>
+              <!-- Dual icons: show based on printer kinematics -->
+              <lv_obj style_bg_opa="0" style_border_width="0" width="content" height="content" style_pad_all="0">
+                <icon src="arrow_expand_down" size="sm">
+                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
+                </icon>
+                <icon src="arrow_up" size="sm">
+                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
+                </icon>
+              </lv_obj>
               <text_small text="0.01" align="center"/>
             </lv_button>
             <lv_button name="btn_z_farther_005"
@@ -116,7 +148,15 @@
                        flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
                        style_pad_gap="#space_xs">
               <event_cb trigger="clicked" callback="on_tune_z_offset"/>
-              <lv_label name="icon_z_farther_005" text="#icon_arrow_up" style_text_font="mdi_icons_16"/>
+              <!-- Dual icons: show based on printer kinematics -->
+              <lv_obj style_bg_opa="0" style_border_width="0" width="content" height="content" style_pad_all="0">
+                <icon src="arrow_expand_down" size="sm">
+                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
+                </icon>
+                <icon src="arrow_up" size="sm">
+                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
+                </icon>
+              </lv_obj>
               <text_small text="0.05" align="center"/>
             </lv_button>
             <lv_button name="btn_z_farther_01"
@@ -124,7 +164,15 @@
                        flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
                        style_pad_gap="#space_xs">
               <event_cb trigger="clicked" callback="on_tune_z_offset"/>
-              <lv_label name="icon_z_farther_01" text="#icon_arrow_up" style_text_font="mdi_icons_16"/>
+              <!-- Dual icons: show based on printer kinematics -->
+              <lv_obj style_bg_opa="0" style_border_width="0" width="content" height="content" style_pad_all="0">
+                <icon src="arrow_expand_down" size="sm">
+                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
+                </icon>
+                <icon src="arrow_up" size="sm">
+                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
+                </icon>
+              </lv_obj>
               <text_small text="0.1" align="center"/>
             </lv_button>
           </lv_obj>

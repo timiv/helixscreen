@@ -48,6 +48,13 @@ regen-fonts:
 		exit 1; \
 	fi
 
+# Regenerate icon constants in globals.xml from ui_icon_codepoints.h
+# Single source of truth: C++ header -> XML constants
+regen-icon-consts:
+	$(ECHO) "$(CYAN)Regenerating icon constants in globals.xml...$(RESET)"
+	$(Q)python3 scripts/gen_icon_consts.py
+	$(ECHO) "$(GREEN)✓ Icon constants regenerated$(RESET)"
+
 # Update MDI icon metadata cache from Pictogrammers GitHub
 # Run periodically when MDI library updates, or when adding new icons
 update-mdi-cache:
