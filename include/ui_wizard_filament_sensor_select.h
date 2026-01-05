@@ -72,6 +72,14 @@ class WizardFilamentSensorSelectStep {
     void cleanup();
 
     /**
+     * @brief Refresh sensor list and auto-selection
+     *
+     * Call this when sensors may have been discovered after initial create().
+     * Re-filters sensors and runs auto-selection if no sensor is selected.
+     */
+    void refresh();
+
+    /**
      * @brief Check if step should be skipped
      *
      * Returns true if there are fewer than 2 non-AMS sensors.

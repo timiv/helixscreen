@@ -184,6 +184,28 @@ class PrinterHardware {
      */
     std::string guess_main_led_strip() const;
 
+    // ========================================================================
+    // Filament Sensor Guessing
+    // ========================================================================
+
+    /**
+     * @brief Guess the most likely runout sensor from available sensors
+     *
+     * This is a static method that operates on a provided list of sensor names,
+     * since filament sensors are discovered separately from heaters/fans.
+     *
+     * Priority order:
+     * 1. Exact match: "runout_sensor" or "filament_runout"
+     * 2. Contains: "runout"
+     * 3. Contains: "tool_start" (AFC pattern - filament at toolhead entry)
+     * 4. Contains: "filament"
+     * 5. Contains: "switch" or "motion" (sensor type keywords)
+     *
+     * @param filament_sensors List of standalone (non-AMS) sensor names
+     * @return Best guess sensor name, or empty string if no match
+     */
+    static std::string guess_runout_sensor(const std::vector<std::string>& filament_sensors);
+
   private:
     const std::vector<std::string>& heaters_;
     const std::vector<std::string>& sensors_;

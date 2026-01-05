@@ -12,6 +12,7 @@
 #include "filament_sensor_manager.h"
 #include "lvgl/lvgl.h"
 #include "moonraker_client.h"
+#include "printer_hardware.h"
 #include "static_panel_registry.h"
 
 #include <spdlog/spdlog.h>
@@ -284,14 +285,47 @@ lv_obj_t* WizardFilamentSensorSelectStep::create(lv_obj_t* parent) {
     }
 
     // Restore selection from existing FilamentSensorManager config
+    bool has_configured_runout = false;
     for (size_t i = 0; i < standalone_sensors_.size(); i++) {
         const auto& sensor = standalone_sensors_[i];
         int dropdown_index = static_cast<int>(i + 1); // +1 because index 0 is "None"
 
         if (sensor.role == helix::FilamentSensorRole::RUNOUT) {
             lv_subject_set_int(&runout_sensor_selected_, dropdown_index);
+            has_configured_runout = true;
+            spdlog::debug("[{}] Restored RUNOUT sensor from config: {}", get_name(),
+                          sensor.sensor_name);
             break;
         }
+    }
+
+    // If no sensor is configured with RUNOUT role, try to guess the best one
+    if (!has_configured_runout && !standalone_sensors_.empty()) {
+        std::vector<std::string> sensor_names;
+        sensor_names.reserve(standalone_sensors_.size());
+        for (const auto& s : standalone_sensors_) {
+            sensor_names.push_back(s.sensor_name);
+            spdlog::debug("[{}] Sensor candidate for guessing: {}", get_name(), s.sensor_name);
+        }
+
+        std::string guess = PrinterHardware::guess_runout_sensor(sensor_names);
+        spdlog::debug("[{}] guess_runout_sensor returned: '{}'", get_name(),
+                      guess.empty() ? "(empty)" : guess);
+
+        if (!guess.empty()) {
+            // Find the index of the guessed sensor
+            for (size_t i = 0; i < standalone_sensors_.size(); i++) {
+                if (standalone_sensors_[i].sensor_name == guess) {
+                    int dropdown_index = static_cast<int>(i + 1); // +1 because index 0 is "None"
+                    lv_subject_set_int(&runout_sensor_selected_, dropdown_index);
+                    spdlog::info("[{}] Auto-selected runout sensor: {} (index {})", get_name(),
+                                 guess, dropdown_index);
+                    break;
+                }
+            }
+        }
+    } else if (standalone_sensors_.empty()) {
+        spdlog::debug("[{}] No standalone sensors available for guessing", get_name());
     }
 
     // Populate dropdowns
@@ -299,6 +333,52 @@ lv_obj_t* WizardFilamentSensorSelectStep::create(lv_obj_t* parent) {
 
     spdlog::debug("[{}] Screen created successfully", get_name());
     return screen_root_;
+}
+
+// ============================================================================
+// Refresh
+// ============================================================================
+
+void WizardFilamentSensorSelectStep::refresh() {
+    if (!screen_root_) {
+        return; // No screen to refresh
+    }
+
+    // Re-filter sensors (may have been discovered since create())
+    size_t old_count = standalone_sensors_.size();
+    filter_standalone_sensors();
+
+    // If sensors were just discovered and none selected, run auto-selection
+    if (old_count == 0 && !standalone_sensors_.empty()) {
+        spdlog::info("[{}] Sensors discovered after create(), running auto-selection", get_name());
+
+        // Check if still at "None" selection
+        if (lv_subject_get_int(&runout_sensor_selected_) == 0) {
+            std::vector<std::string> sensor_names;
+            sensor_names.reserve(standalone_sensors_.size());
+            for (const auto& s : standalone_sensors_) {
+                sensor_names.push_back(s.sensor_name);
+            }
+
+            std::string guess = PrinterHardware::guess_runout_sensor(sensor_names);
+            if (!guess.empty()) {
+                for (size_t i = 0; i < standalone_sensors_.size(); i++) {
+                    if (standalone_sensors_[i].sensor_name == guess) {
+                        int dropdown_index = static_cast<int>(i + 1);
+                        lv_subject_set_int(&runout_sensor_selected_, dropdown_index);
+                        spdlog::info("[{}] Auto-selected runout sensor on refresh: {} (index {})",
+                                     get_name(), guess, dropdown_index);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // Re-populate dropdown
+    populate_dropdowns();
+    spdlog::debug("[{}] Refreshed with {} standalone sensors", get_name(),
+                  standalone_sensors_.size());
 }
 
 // ============================================================================

@@ -333,3 +333,63 @@ std::string PrinterHardware::guess_main_led_strip() const {
     spdlog::debug("[PrinterHardware] guess_main_led_strip() -> '{}' (fallback)", leds_[0]);
     return leds_[0];
 }
+
+// ============================================================================
+// Filament Sensor Guessing
+// ============================================================================
+
+std::string PrinterHardware::guess_runout_sensor(const std::vector<std::string>& filament_sensors) {
+    if (filament_sensors.empty()) {
+        spdlog::debug("[PrinterHardware] guess_runout_sensor() -> no sensors provided");
+        return "";
+    }
+
+    // Priority 1: Exact match for canonical names
+    if (has_exact(filament_sensors, "runout_sensor")) {
+        spdlog::debug("[PrinterHardware] guess_runout_sensor() -> 'runout_sensor' (exact)");
+        return "runout_sensor";
+    }
+    if (has_exact(filament_sensors, "filament_runout")) {
+        spdlog::debug("[PrinterHardware] guess_runout_sensor() -> 'filament_runout' (exact)");
+        return "filament_runout";
+    }
+
+    // Priority 2: Contains "runout"
+    std::string match = find_containing(filament_sensors, "runout");
+    if (!match.empty()) {
+        spdlog::debug("[PrinterHardware] guess_runout_sensor() -> '{}' (contains 'runout')", match);
+        return match;
+    }
+
+    // Priority 3: Contains "tool_start" (AFC pattern - filament at toolhead entry)
+    match = find_containing(filament_sensors, "tool_start");
+    if (!match.empty()) {
+        spdlog::debug("[PrinterHardware] guess_runout_sensor() -> '{}' (contains 'tool_start')",
+                      match);
+        return match;
+    }
+
+    // Priority 4: Contains "filament" (generic)
+    match = find_containing(filament_sensors, "filament");
+    if (!match.empty()) {
+        spdlog::debug("[PrinterHardware] guess_runout_sensor() -> '{}' (contains 'filament')",
+                      match);
+        return match;
+    }
+
+    // Priority 5: Contains "switch" or "motion" (sensor type keywords)
+    match = find_containing(filament_sensors, "switch");
+    if (!match.empty()) {
+        spdlog::debug("[PrinterHardware] guess_runout_sensor() -> '{}' (contains 'switch')", match);
+        return match;
+    }
+    match = find_containing(filament_sensors, "motion");
+    if (!match.empty()) {
+        spdlog::debug("[PrinterHardware] guess_runout_sensor() -> '{}' (contains 'motion')", match);
+        return match;
+    }
+
+    // No match found
+    spdlog::debug("[PrinterHardware] guess_runout_sensor() -> no match found");
+    return "";
+}
