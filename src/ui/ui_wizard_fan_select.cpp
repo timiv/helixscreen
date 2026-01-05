@@ -211,8 +211,8 @@ lv_obj_t* WizardFanSelectStep::create(lv_obj_t* parent) {
     std::string hotend_options_str =
         helix::ui::wizard::build_dropdown_options(hotend_fan_items_, nullptr, true);
 
-    // Add "None" to items vector to match dropdown
-    hotend_fan_items_.push_back("None");
+    // Add "None" FIRST in items vector to match dropdown order
+    hotend_fan_items_.insert(hotend_fan_items_.begin(), "None");
 
     // Build part cooling fan options with custom filter (has "fan" but NOT heater/hotend)
     part_fan_items_.clear();
@@ -231,8 +231,8 @@ lv_obj_t* WizardFanSelectStep::create(lv_obj_t* parent) {
     std::string part_options_str =
         helix::ui::wizard::build_dropdown_options(part_fan_items_, nullptr, true);
 
-    // Add "None" to items vector to match dropdown
-    part_fan_items_.push_back("None");
+    // Add "None" FIRST in items vector to match dropdown order
+    part_fan_items_.insert(part_fan_items_.begin(), "None");
 
     // Create PrinterHardware for guessing
     std::unique_ptr<PrinterHardware> hw;
@@ -285,8 +285,8 @@ lv_obj_t* WizardFanSelectStep::create(lv_obj_t* parent) {
         std::string chamber_options_str =
             helix::ui::wizard::build_dropdown_options(chamber_fan_items_, nullptr, true);
 
-        // Add "None" to items vector to match dropdown
-        chamber_fan_items_.push_back("None");
+        // Add "None" FIRST in items vector to match dropdown order
+        chamber_fan_items_.insert(chamber_fan_items_.begin(), "None");
 
         // Build exhaust fan options - show ALL fans
         exhaust_fan_items_.clear();
@@ -301,8 +301,8 @@ lv_obj_t* WizardFanSelectStep::create(lv_obj_t* parent) {
         std::string exhaust_options_str =
             helix::ui::wizard::build_dropdown_options(exhaust_fan_items_, nullptr, true);
 
-        // Add "None" to items vector to match dropdown
-        exhaust_fan_items_.push_back("None");
+        // Add "None" FIRST in items vector to match dropdown order
+        exhaust_fan_items_.insert(exhaust_fan_items_.begin(), "None");
 
         // Find and configure chamber fan dropdown
         lv_obj_t* chamber_dropdown = lv_obj_find_by_name(screen_root_, "chamber_fan_dropdown");

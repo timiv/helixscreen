@@ -62,9 +62,9 @@ bool wizard_populate_hardware_dropdown(
         nullptr, // No additional filter (already filtered above)
         allow_none);
 
-    // Add "None" to items vector if needed (to match dropdown)
+    // Add "None" to items vector FIRST if needed (to match dropdown order)
     if (allow_none) {
-        items_out.push_back("None");
+        items_out.insert(items_out.begin(), "None");
     }
 
     // Find and configure dropdown

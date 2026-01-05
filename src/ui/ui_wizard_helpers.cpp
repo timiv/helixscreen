@@ -17,6 +17,11 @@ std::string build_dropdown_options(const std::vector<std::string>& items,
                                    bool include_none) {
     std::string options_str;
 
+    // "None" goes FIRST for optional hardware (makes index 0 = safe default)
+    if (include_none) {
+        options_str = "None";
+    }
+
     // Add filtered items
     for (const auto& item : items) {
         // Apply filter if provided
@@ -28,14 +33,6 @@ std::string build_dropdown_options(const std::vector<std::string>& items,
             options_str += "\n";
         }
         options_str += item;
-    }
-
-    // Optionally append "None" option
-    if (include_none) {
-        if (!options_str.empty()) {
-            options_str += "\n";
-        }
-        options_str += "None";
     }
 
     return options_str;
@@ -75,6 +72,9 @@ int restore_dropdown_selection(lv_obj_t* dropdown, lv_subject_t* subject,
         return false;
     };
 
+    // Find "None" index for optional hardware fallback
+    int none_index = find_item_index(items, "None", -1);
+
     // Priority 1: If only ONE real hardware option, auto-select it
     // (handles non-standard names like "bed_heater" instead of "heater_bed")
     if (real_item_count == 1 && !items.empty() && items[0] != "None") {
@@ -92,7 +92,12 @@ int restore_dropdown_selection(lv_obj_t* dropdown, lv_subject_t* subject,
                               log_prefix, saved);
             }
             if (hw && guess_method_fn) {
-                try_select(guess_method_fn(*hw), "Auto-selected");
+                std::string guessed = guess_method_fn(*hw);
+                if (!try_select(guessed, "Auto-selected") && none_index >= 0) {
+                    // Guess returned empty or not found - select "None" for optional hardware
+                    selected_index = none_index;
+                    spdlog::debug("{} No match found, defaulting to None", log_prefix);
+                }
             }
         }
     }
