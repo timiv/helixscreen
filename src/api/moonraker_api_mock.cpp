@@ -626,19 +626,45 @@ void MoonrakerAPIMock::reset_mock_bed_state() {
 void MoonrakerAPIMock::start_bed_mesh_calibrate(BedMeshProgressCallback on_progress,
                                                 SuccessCallback on_complete,
                                                 ErrorCallback /*on_error*/) {
-    spdlog::info("[MoonrakerAPIMock] start_bed_mesh_calibrate() - simulating quick progress");
+    spdlog::info("[MoonrakerAPIMock] start_bed_mesh_calibrate() - simulating probe sequence");
 
-    // Simulate 25 probe points with rapid progress for testing
-    constexpr int total_points = 25;
-    for (int i = 1; i <= total_points; i++) {
-        if (on_progress) {
-            on_progress(i, total_points);
+    // Context struct to track state across timer callbacks
+    struct ProbeSimContext {
+        BedMeshProgressCallback on_progress;
+        SuccessCallback on_complete;
+        int current = 0;
+        int total = 25;
+    };
+
+    auto* ctx = new ProbeSimContext{std::move(on_progress), std::move(on_complete)};
+
+    // Timer callback - advances probe simulation one step at a time
+    auto timer_cb = [](lv_timer_t* t) {
+        auto* c = static_cast<ProbeSimContext*>(lv_timer_get_user_data(t));
+        c->current++;
+
+        if (c->current <= c->total) {
+            // Report progress
+            spdlog::debug("[MoonrakerAPIMock] Probe {}/{}", c->current, c->total);
+            if (c->on_progress) {
+                c->on_progress(c->current, c->total);
+            }
         }
-    }
 
-    if (on_complete) {
-        on_complete();
-    }
+        if (c->current >= c->total) {
+            // Simulation complete
+            spdlog::info("[MoonrakerAPIMock] Probe simulation complete");
+            lv_timer_delete(t);
+            if (c->on_complete) {
+                c->on_complete();
+            }
+            delete c;
+        }
+    };
+
+    // Create timer - 100ms between each probe point (2.5 seconds total for 25 points)
+    lv_timer_t* timer = lv_timer_create(timer_cb, 100, ctx);
+    lv_timer_set_repeat_count(timer, ctx->total + 1); // +1 for final completion check
 }
 
 // ============================================================================
