@@ -157,3 +157,8 @@
 ### [L044] [**---|-----] Targeted tests during development
 - **Uses**: 4 | **Velocity**: 0.01 | **Learned**: 2026-01-04 | **Last**: 2026-01-04 | **Category**: preference | **Type**: informational
 > Run targeted tests with specific tags during implementation (e.g., ./build/bin/helix-tests "[tag]"). Only run full test suite (make test-run) at the end of a feature or phase. Full suite is SLOW - save it for final verification.
+
+### [L045] [*----|-----] LVGL dropdown options
+- **Uses**: 1 | **Velocity**: 0 | **Learned**: 2026-01-06 | **Last**: 2026-01-06 | **Category**: correction
+> LVGL dropdowns do NOT support bind_options in XML. Always use lv_dropdown_set_options() directly in C++ code to set dropdown options dynamically. All other dropdowns in the codebase follow this pattern.
+
