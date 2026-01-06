@@ -162,3 +162,8 @@
 ### [L045] [*----|-----] LVGL dropdown options
 - **Uses**: 1 | **Velocity**: 0.0 | **Learned**: 2026-01-06 | **Last**: 2026-01-06 | **Category**: correction | **Type**: constraint
 > LVGL dropdowns do NOT support bind_options in XML. Always use lv_dropdown_set_options() directly in C++ code to set dropdown options dynamically. All other dropdowns in the codebase follow this pattern.
+
+### [L046] [*----|-----] XML subject shadows C++ subject
+- **Uses**: 1 | **Velocity**: 0 | **Learned**: 2026-01-06 | **Last**: 2026-01-06 | **Category**: correction
+> When XML <subjects> declares a subject with the same name as a C++-registered subject (UI_SUBJECT_INIT_AND_REGISTER_*), the XML component-local subject shadows the global C++ one. XML bindings will find the local subject (stuck at default value) instead of the C++ one. Solution: Don't declare XML subjects for values managed entirely by C++.
+

@@ -6,7 +6,7 @@
 <component>
   <subjects>
     <!-- WiFi subjects -->
-    <subject name="wifi_hardware_available" type="int" value="1"/>
+    <!-- NOTE: wifi_hardware_available is managed by C++ only (not declared here) -->
     <subject name="wifi_enabled" type="int" value="0"/>
     <subject name="wifi_connected" type="int" value="0"/>
     <subject name="wifi_only_24ghz" type="int" value="0"/>
@@ -57,10 +57,10 @@
                     flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                     flex_flow="column" style_pad_gap="#space_xxs">
               <text_body text="WiFi" style_text_color="#text_primary"/>
-              <!-- Only show band limitation if hardware doesn't support 5GHz AND hardware available -->
+              <!-- Only show band limitation if hardware doesn't support 5GHz -->
               <text_small text="2.4GHz only" style_text_color="#text_secondary">
                 <lv_obj-bind_flag_if_eq subject="wifi_only_24ghz" flag="hidden" ref_value="0"/>
-                <lv_obj-bind_flag_if_eq subject="wifi_hardware_available" flag="hidden" ref_value="0"/>
+                <lv_obj-bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
               </text_small>
             </lv_obj>
             <!-- Toggle Switch (fixed width, won't shrink) -->
@@ -275,11 +275,11 @@
             <text_small text="Scanning for networks..." style_text_color="#text_secondary" style_margin_top="#space_sm"/>
           </lv_obj>
         </lv_obj>
-        <!-- Add Hidden Network Button (hidden when hardware unavailable) -->
+        <!-- Add Hidden Network Button -->
         <lv_button name="add_other_btn"
                    width="100%" height="content" style_radius="#border_radius" style_border_width="0"
                    style_pad_ver="#space_sm">
-          <lv_obj-bind_flag_if_eq subject="wifi_hardware_available" flag="hidden" ref_value="0"/>
+          <lv_obj-bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
           <lv_obj width="100%"
                   height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                   flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
