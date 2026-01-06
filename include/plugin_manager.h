@@ -200,6 +200,18 @@ class PluginManager {
      */
     bool unload_plugin(const std::string& plugin_id);
 
+    /**
+     * @brief Disable a plugin in config
+     *
+     * Removes the plugin from the enabled list and persists to config.
+     * For failed plugins that never loaded, this is just a config update.
+     * No restart required.
+     *
+     * @param plugin_id Plugin ID to disable
+     * @return true if plugin was found and disabled
+     */
+    bool disable_plugin(const std::string& plugin_id);
+
     // ========================================================================
     // Moonraker Connection Events
     // ========================================================================

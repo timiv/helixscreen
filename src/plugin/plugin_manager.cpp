@@ -3,6 +3,7 @@
 
 #include "plugin_manager.h"
 
+#include "config.h"
 #include "helix_version.h"
 #include "injection_point_manager.h"
 #include "version.h"
@@ -107,31 +108,40 @@ bool PluginManager::discover_plugins(const std::string& plugins_dir) {
             continue;
         }
 
-        // Check helix_version compatibility
+        // Check if plugin is enabled FIRST - only report errors for enabled plugins
+        bool enabled = !enabled_ids_.empty() && std::find(enabled_ids_.begin(), enabled_ids_.end(),
+                                                          manifest.id) != enabled_ids_.end();
+
+        // Check helix_version compatibility (only error if enabled)
         if (!manifest.helix_version.empty()) {
             if (!version::check_version_constraint(manifest.helix_version, HELIX_VERSION)) {
-                add_error(manifest.id, PluginError::Type::VERSION_MISMATCH,
-                          fmt::format("Requires HelixScreen {}, running {}", manifest.helix_version,
-                                      HELIX_VERSION));
-                error_count++;
+                if (enabled) {
+                    add_error(manifest.id, PluginError::Type::VERSION_MISMATCH,
+                              fmt::format("Requires HelixScreen {}, running {}",
+                                          manifest.helix_version, HELIX_VERSION));
+                    error_count++;
+                } else {
+                    spdlog::debug("[plugin] Skipping disabled plugin {} (version mismatch)",
+                                  manifest.id);
+                }
                 continue;
             }
             spdlog::debug("[plugin] {} version constraint {} satisfied by {}", manifest.id,
                           manifest.helix_version, HELIX_VERSION);
         }
 
-        // Find library file
+        // Find library file (only error if enabled)
         std::string library_path = find_library(plugin_dir, manifest.id);
         if (library_path.empty()) {
-            add_error(manifest.id, PluginError::Type::LIBRARY_NOT_FOUND,
-                      "No .so/.dylib file found in plugin directory");
-            error_count++;
+            if (enabled) {
+                add_error(manifest.id, PluginError::Type::LIBRARY_NOT_FOUND,
+                          "No .so/.dylib file found in plugin directory");
+                error_count++;
+            } else {
+                spdlog::debug("[plugin] Skipping disabled plugin {} (no library)", manifest.id);
+            }
             continue;
         }
-
-        // Check if plugin is enabled (must be explicitly in enabled list)
-        bool enabled = !enabled_ids_.empty() && std::find(enabled_ids_.begin(), enabled_ids_.end(),
-                                                          manifest.id) != enabled_ids_.end();
 
         PluginInfo info;
         info.manifest = manifest;
@@ -349,6 +359,56 @@ bool PluginManager::unload_plugin(const std::string& plugin_id) {
     loaded_.erase(it);
 
     spdlog::info("[plugin] Unloaded: {}", plugin_id);
+    return true;
+}
+
+bool PluginManager::disable_plugin(const std::string& plugin_id) {
+    if (!config_) {
+        spdlog::error("[plugin] Cannot disable {}: no config", plugin_id);
+        return false;
+    }
+
+    // Read current enabled list from config (in-memory enabled_ids_ may be stale
+    // for plugins that failed during discovery before being tracked)
+    auto current_enabled = config_->get<std::vector<std::string>>("/plugins/enabled", {});
+
+    // Debug: log what we're looking for and what's in config
+    spdlog::info("[plugin] Trying to disable '{}', config has {} enabled plugins:", plugin_id,
+                 current_enabled.size());
+    for (const auto& id : current_enabled) {
+        spdlog::info("[plugin]   - '{}'", id);
+    }
+
+    auto cfg_it = std::find(current_enabled.begin(), current_enabled.end(), plugin_id);
+    if (cfg_it == current_enabled.end()) {
+        spdlog::warn("[plugin] Cannot disable {}: not in config enabled list", plugin_id);
+        return false;
+    }
+
+    // Remove from config's enabled list
+    current_enabled.erase(cfg_it);
+    config_->set<std::vector<std::string>>("/plugins/enabled", current_enabled);
+    config_->save();
+
+    // Sync in-memory state
+    auto mem_it = std::find(enabled_ids_.begin(), enabled_ids_.end(), plugin_id);
+    if (mem_it != enabled_ids_.end()) {
+        enabled_ids_.erase(mem_it);
+    }
+
+    // Update discovered state if present
+    auto disc_it = discovered_.find(plugin_id);
+    if (disc_it != discovered_.end()) {
+        disc_it->second.enabled = false;
+    }
+
+    // Remove from errors list (no longer relevant)
+    errors_.erase(
+        std::remove_if(errors_.begin(), errors_.end(),
+                       [&plugin_id](const PluginError& err) { return err.plugin_id == plugin_id; }),
+        errors_.end());
+
+    spdlog::info("[plugin] Disabled plugin: {}", plugin_id);
     return true;
 }
 

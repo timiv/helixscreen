@@ -59,6 +59,7 @@
 #include "ui_panel_print_select.h"
 #include "ui_panel_print_status.h"
 #include "ui_panel_screws_tilt.h"
+#include "ui_panel_settings.h"
 #include "ui_panel_spoolman.h"
 #include "ui_panel_step_test.h"
 #include "ui_panel_temp_control.h"
@@ -799,7 +800,7 @@ bool Application::init_plugins() {
     // Load all enabled plugins
     bool all_loaded = m_plugin_manager->load_all();
 
-    // Log any errors and show toast notification
+    // Log any errors and show toast notification with action buttons
     auto errors = m_plugin_manager->get_load_errors();
     if (!errors.empty()) {
         spdlog::warn("[Application] {} plugin(s) failed to load", errors.size());
@@ -807,14 +808,42 @@ bool Application::init_plugins() {
             spdlog::warn("[Application]   - {}: {}", err.plugin_id, err.message);
         }
 
-        // Show toast notification for failed plugins
-        char toast_msg[64];
         if (errors.size() == 1) {
-            snprintf(toast_msg, sizeof(toast_msg), "1 plugin failed to load");
+            // Single failure: Show [Disable] button for quick action
+            // Context struct to pass plugin_id and manager pointer to callback
+            struct PluginDisableContext {
+                helix::plugin::PluginManager* manager;
+                std::string plugin_id;
+            };
+            auto* ctx = new PluginDisableContext{m_plugin_manager.get(), errors[0].plugin_id};
+
+            char toast_msg[96];
+            snprintf(toast_msg, sizeof(toast_msg), "\"%s\" failed to load",
+                     errors[0].plugin_id.c_str());
+
+            ToastManager::instance().show_with_action(
+                ToastSeverity::WARNING, toast_msg, "Disable",
+                [](void* user_data) {
+                    auto* ctx = static_cast<PluginDisableContext*>(user_data);
+                    if (ctx->manager && ctx->manager->disable_plugin(ctx->plugin_id)) {
+                        ui_toast_show(ToastSeverity::SUCCESS, "Plugin disabled", 3000);
+                    }
+                    delete ctx;
+                },
+                ctx, 8000);
         } else {
-            snprintf(toast_msg, sizeof(toast_msg), "%zu plugin(s) failed to load", errors.size());
+            // Multiple failures: Show [Manage] button to open Settings > Plugins
+            char toast_msg[64];
+            snprintf(toast_msg, sizeof(toast_msg), "%zu plugins failed to load", errors.size());
+
+            ToastManager::instance().show_with_action(
+                ToastSeverity::WARNING, toast_msg, "Manage",
+                [](void* /*user_data*/) {
+                    ui_nav_set_active(UI_PANEL_SETTINGS);
+                    get_global_settings_panel().handle_plugins_clicked();
+                },
+                nullptr, 8000);
         }
-        ToastManager::instance().show(ToastSeverity::WARNING, toast_msg, 5000);
     }
 
     auto loaded = m_plugin_manager->get_loaded_plugins();

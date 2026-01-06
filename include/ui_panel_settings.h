@@ -187,7 +187,6 @@ class SettingsPanel : public PanelBase {
     void handle_machine_limits_clicked();
     void handle_network_clicked();
     void handle_factory_reset_clicked();
-    void handle_plugins_clicked();
     void show_theme_restart_dialog();
     void populate_sensor_list();
     void populate_macro_dropdowns();
@@ -199,6 +198,9 @@ class SettingsPanel : public PanelBase {
 
     // Called by toast action to navigate and open overlay
     void handle_hardware_health_clicked();
+
+    // Called by plugin failure toast action to open plugins overlay
+    void handle_plugins_clicked();
 
     // Called by hardware issue row action buttons
     // is_ignore: true="Ignore" (mark optional), false="Save" (add to config with confirmation)

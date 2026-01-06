@@ -217,6 +217,43 @@ The plugin manager searches for libraries in this order:
 
 ## Plugin Lifecycle
 
+### Plugin States
+
+Plugins exist in one of four states:
+
+| State | Description |
+|-------|-------------|
+| **Discovered** | Plugin found in plugins directory with valid manifest |
+| **Disabled** | Discovered but not in config's enabled list - silently skipped |
+| **Enabled** | In config's enabled list, will attempt to load |
+| **Loaded** | Successfully initialized and running |
+| **Failed** | Enabled but failed to load (version mismatch, missing library, init error) |
+
+### Enabling and Disabling Plugins
+
+Plugins must be **explicitly enabled** in the configuration file. Simply placing a plugin in the `plugins/` directory does not activate it.
+
+**Config file location:** `~/.config/helix-screen/helixconfig.json` (or platform equivalent)
+
+**Enable a plugin:**
+```json
+{
+  "plugins": {
+    "enabled": ["hello-world", "led-effects", "spoolman"]
+  }
+}
+```
+
+**Disable a plugin:**
+Remove it from the `enabled` array, or use the UI:
+- If a plugin fails to load, a toast notification appears with a **[Disable]** button
+- Go to **Settings > Plugins** to see all plugins and disable failed ones
+
+**Why explicit enable?**
+- Security: prevents accidentally running unknown code
+- Performance: only loads what you need
+- Control: easily test plugins by toggling in config
+
 ### Lifecycle Stages
 
 ```
@@ -226,18 +263,23 @@ The plugin manager searches for libraries in this order:
        │
        ▼
 ┌─────────────┐
-│    Load     │  dlopen() loads the shared library
+│ Enable Check│  Is plugin ID in config's /plugins/enabled list?
 └──────┬──────┘
+       │ Yes                          │ No
+       ▼                              ▼
+┌─────────────┐                ┌─────────────┐
+│    Load     │                │  (Skipped)  │  Plugin stays discovered but inactive
+└──────┬──────┘                └─────────────┘
        │
        ▼
 ┌─────────────┐
 │    Init     │  helix_plugin_init() called with PluginAPI
 └──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Running   │  Plugin is active, receives events and callbacks
-└──────┬──────┘
+       │ Success                      │ Failure
+       ▼                              ▼
+┌─────────────┐                ┌─────────────┐
+│   Running   │                │   Failed    │  Error logged, toast shown with [Disable]
+└──────┬──────┘                └─────────────┘
        │
        ▼
 ┌─────────────┐
@@ -249,6 +291,21 @@ The plugin manager searches for libraries in this order:
 │   Unload    │  dlclose() unloads the library
 └─────────────┘
 ```
+
+### Handling Load Failures
+
+When an enabled plugin fails to load:
+
+1. **Toast notification** appears:
+   - Single failure: `"plugin-id" failed to load [Disable]`
+   - Multiple failures: `N plugins failed to load [Manage]`
+
+2. **[Disable] button** removes the plugin from config's enabled list (no restart needed)
+
+3. **Settings > Plugins** shows all plugins organized by state:
+   - ✅ **Loaded** - Running plugins
+   - ⚠️ **Disabled** - Discovered but not enabled
+   - ❌ **Failed** - Enabled but couldn't load (with error details and disable button)
 
 ### Entry Point Contract
 
