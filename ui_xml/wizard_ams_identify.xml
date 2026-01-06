@@ -17,7 +17,8 @@
     <!-- Info card -->
     <ui_card width="100%"
              flex_grow="1" style_radius="#border_radius_large" style_pad_all="#space_xl" style_pad_gap="#space_sm"
-             flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+             flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" 
+             style_flex_track_place="center">
 
       <!-- Logo image - 64x64 icons, use min_width/min_height to prevent clipping -->
       <lv_image name="ams_logo" width="64" height="64" min_width="64" min_height="64"
@@ -39,7 +40,7 @@
 
       <!-- Integration message - static text -->
       <text_body width="85%" style_text_align="center" style_text_color="#text_secondary"
-                 text="HelixScreen will integrate with your filament changer for multi-material print operations."/>
+                 text="HelixScreen will integrate with your filament changer for multi-spool/color print operations."/>
 
     </ui_card>
 
