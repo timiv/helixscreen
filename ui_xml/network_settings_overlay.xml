@@ -4,27 +4,8 @@
 <!-- Network Settings Overlay Panel -->
 <!-- Displays WiFi and Ethernet status with available networks for connection -->
 <component>
-  <subjects>
-    <!-- WiFi subjects -->
-    <!-- NOTE: wifi_hardware_available is managed by C++ only (not declared here) -->
-    <subject name="wifi_enabled" type="int" value="0"/>
-    <subject name="wifi_connected" type="int" value="0"/>
-    <subject name="wifi_only_24ghz" type="int" value="0"/>
-    <subject name="connected_ssid" type="string" value=""/>
-    <subject name="ip_address" type="string" value=""/>
-    <subject name="mac_address" type="string" value=""/>
-    <subject name="network_count" type="string" value="(0)"/>
-    <subject name="wifi_scanning" type="int" value="0"/>
-    <!-- Ethernet subjects -->
-    <subject name="eth_connected" type="int" value="0"/>
-    <subject name="eth_ip_address" type="string" value=""/>
-    <subject name="eth_mac_address" type="string" value=""/>
-    <!-- Network test subjects -->
-    <subject name="any_network_connected" type="int" value="0"/>
-    <subject name="test_running" type="int" value="0"/>
-    <subject name="test_gateway_status" type="int" value="0"/>
-    <subject name="test_internet_status" type="int" value="0"/>
-  </subjects>
+  <!-- NOTE: All subjects for this overlay are managed by C++ (NetworkSettingsOverlay::init_subjects).
+       Do NOT declare subjects here - XML declarations shadow C++ subjects [L046]. -->
   <view name="network_settings_overlay"
         extends="overlay_panel" width="#overlay_panel_width_full" title="Network Settings" bg_color="#app_bg_color">
     <!-- Two-Column Content Area -->
@@ -72,7 +53,7 @@
           </lv_obj>
           <!-- Divider line -->
           <lv_obj width="100%"
-                  height="1" style_bg_color="#card_border" style_bg_opa="80" style_border_width="0" scrollable="false"
+                  height="1" style_bg_color="#text_secondary" style_bg_opa="80" style_border_width="0" scrollable="false"
                   style_margin_top="#space_xs" style_margin_bottom="#space_xs"/>
           <!-- Hardware Unavailable State (shown when wifi_hardware_available == 0) -->
           <lv_obj name="wifi_unavailable_state"
@@ -140,7 +121,7 @@
           </lv_obj>
           <!-- Divider line -->
           <lv_obj width="100%"
-                  height="1" style_bg_color="#card_border" style_bg_opa="80" style_border_width="0" scrollable="false"
+                  height="1" style_bg_color="#text_secondary" style_bg_opa="80" style_border_width="0" scrollable="false"
                   style_margin_top="#space_xs" style_margin_bottom="#space_xs"/>
           <!-- Connected State (shown when eth_connected == 1) -->
           <lv_obj name="eth_connected_state"
@@ -193,7 +174,7 @@
                   height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                   flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
                   style_pad_gap="#space_sm" clickable="false">
-            <icon src="lan_check" size="sm" variant="primary"/>
+            <icon src="lan" size="sm" variant="primary"/>
             <text_body text="Test Network" style_text_color="#text_primary"/>
           </lv_obj>
           <event_cb trigger="clicked" callback="on_test_network_clicked"/>
@@ -201,7 +182,7 @@
       </lv_obj>
       <!-- Vertical Divider -->
       <lv_obj width="1"
-              height="100%" style_bg_color="#card_border" style_bg_opa="100" style_border_width="0" scrollable="false"/>
+              height="100%" style_bg_color="#text_secondary" style_bg_opa="100" style_border_width="0" scrollable="false"/>
       <!-- ================================================================== -->
       <!-- RIGHT COLUMN (60%) - Available networks list -->
       <!-- ================================================================== -->

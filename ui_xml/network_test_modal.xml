@@ -36,7 +36,7 @@
     <lv_obj width="100%"
             height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_lg" flex_flow="row"
             style_flex_cross_place="center" style_pad_gap="#space_sm">
-      <icon src="lan_check" size="md" variant="accent"/>
+      <icon src="lan" size="md" variant="accent"/>
       <text_heading text="Network Test" style_text_align="left" flex_grow="1"/>
     </lv_obj>
     <!-- Step progress container - widget created dynamically in C++ -->
