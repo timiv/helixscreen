@@ -48,6 +48,9 @@ static lv_subject_t g_notification_subject;
 // Application quit flag
 static bool g_quit_requested = false;
 
+// Wizard active flag
+static bool g_wizard_active = false;
+
 // Stored command-line arguments for restart capability
 static std::vector<char*> g_stored_argv;
 static std::string g_executable_path;
@@ -312,6 +315,15 @@ void app_request_restart_for_theme() {
 
 bool app_quit_requested() {
     return g_quit_requested;
+}
+
+bool is_wizard_active() {
+    return g_wizard_active;
+}
+
+void set_wizard_active(bool active) {
+    g_wizard_active = active;
+    spdlog::debug("[App Globals] Wizard active state set to: {}", active);
 }
 
 // ============================================================================

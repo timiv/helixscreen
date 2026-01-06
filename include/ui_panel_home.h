@@ -78,6 +78,14 @@ class HomePanel : public PanelBase {
     void reload_from_config();
 
     /**
+     * @brief Trigger a deferred runout check (used after wizard completes)
+     *
+     * Resets the shown flag and re-checks runout condition.
+     * This allows the modal to show after wizard if conditions are met.
+     */
+    void trigger_idle_runout_check();
+
+    /**
      * @brief Set reference to TempControlPanel for temperature overlay
      *
      * Must be called before temp icon click handler can work.

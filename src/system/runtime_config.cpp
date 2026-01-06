@@ -4,6 +4,9 @@
 #include "runtime_config.h"
 
 #include "ams_state.h"
+#include "app_globals.h"
+
+#include <spdlog/spdlog.h>
 
 #include <cstdlib>
 
@@ -19,10 +22,27 @@ bool RuntimeConfig::should_show_runout_modal() const {
     if (std::getenv("HELIX_FORCE_RUNOUT_MODAL") != nullptr) {
         return true;
     }
-    // If AMS/MMU present (mock or real), suppress modal (runout during swaps is normal)
-    if (AmsState::instance().is_available()) {
+
+    // Suppress during wizard setup
+    if (is_wizard_active()) {
+        spdlog::debug("[RuntimeConfig] Suppressing runout modal - wizard active");
         return false;
     }
-    // Otherwise, show modal
+
+    // Check AMS state
+    auto& ams = AmsState::instance();
+    if (ams.is_available()) {
+        // AMS present - check bypass state
+        // bypass_active=1: external spool (show modal - toolhead sensor matters)
+        // bypass_active=0: AMS managing filament (suppress - runout during swaps normal)
+        int bypass_active = lv_subject_get_int(ams.get_bypass_active_subject());
+        if (bypass_active == 0) {
+            spdlog::debug("[RuntimeConfig] Suppressing runout modal - AMS managing filament");
+            return false;
+        }
+        spdlog::debug("[RuntimeConfig] AMS bypass active - showing runout modal");
+    }
+
+    // No AMS or AMS with bypass active - show modal
     return true;
 }

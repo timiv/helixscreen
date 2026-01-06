@@ -173,6 +173,18 @@ void app_request_restart_for_theme();
 bool app_quit_requested();
 
 /**
+ * @brief Check if setup wizard is currently active
+ * @return true if wizard is running, false otherwise
+ */
+bool is_wizard_active();
+
+/**
+ * @brief Set wizard active state
+ * @param active true when wizard starts, false when it completes
+ */
+void set_wizard_active(bool active);
+
+/**
  * @brief Get appropriate cache directory for temp files
  *
  * Determines best location for cache/temp files with priority:

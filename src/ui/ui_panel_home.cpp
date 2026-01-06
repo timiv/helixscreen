@@ -29,6 +29,7 @@
 #include "prerendered_images.h"
 #include "printer_detector.h"
 #include "printer_state.h"
+#include "runtime_config.h"
 #include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "wifi_manager.h"
@@ -1249,6 +1250,12 @@ void HomePanel::check_and_show_idle_runout_modal() {
         return;
     }
 
+    // Check suppression logic (AMS without bypass, wizard active, etc.)
+    if (!get_runtime_config()->should_show_runout_modal()) {
+        spdlog::debug("[{}] Runout modal suppressed by runtime config", get_name());
+        return;
+    }
+
     // Only show modal if not already shown
     if (runout_modal_shown_) {
         spdlog::debug("[{}] Runout modal already shown - skipping", get_name());
@@ -1268,6 +1275,12 @@ void HomePanel::check_and_show_idle_runout_modal() {
     spdlog::info("[{}] Showing idle runout modal", get_name());
     show_idle_runout_modal();
     runout_modal_shown_ = true;
+}
+
+void HomePanel::trigger_idle_runout_check() {
+    spdlog::debug("[{}] Triggering deferred runout check", get_name());
+    runout_modal_shown_ = false; // Allow modal to show again
+    check_and_show_idle_runout_modal();
 }
 
 void HomePanel::show_idle_runout_modal() {

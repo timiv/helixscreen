@@ -20,11 +20,13 @@
 #include "ams_state.h"
 #include "app_globals.h"
 #include "config.h"
+#include "filament_sensor_manager.h"
 #include "hardware_validator.h"
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
+#include "runtime_config.h"
 #include "wizard_config_paths.h"
 
 #include <spdlog/spdlog.h>
@@ -686,7 +688,22 @@ void ui_wizard_complete() {
         wizard_container = nullptr;
     }
 
-    // 4. Connect to Moonraker using saved configuration
+    // 4. Clear global wizard state
+    set_wizard_active(false);
+
+    // 5. Schedule deferred runout check - modal may need to show after wizard
+    lv_timer_create(
+        [](lv_timer_t* timer) {
+            auto& fsm = helix::FilamentSensorManager::instance();
+            if (fsm.has_any_runout() && get_runtime_config()->should_show_runout_modal()) {
+                spdlog::debug("[Wizard] Deferred runout check - triggering modal");
+                get_global_home_panel().trigger_idle_runout_check();
+            }
+            lv_timer_delete(timer);
+        },
+        500, nullptr); // 500ms delay for UI to stabilize
+
+    // 6. Connect to Moonraker using saved configuration
     if (!config) {
         config = Config::get_instance();
     }

@@ -229,6 +229,7 @@ int Application::run(int argc, char** argv) {
     if (run_wizard()) {
         // Wizard is active - it handles its own flow
         m_wizard_active = true;
+        set_wizard_active(true);
     }
 
     // Phase 13: Create overlay panels (if not in wizard)
