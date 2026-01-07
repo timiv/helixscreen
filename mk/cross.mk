@@ -355,6 +355,49 @@ help-cross:
 	echo "  SDL enabled: $(ENABLE_SDL)"
 
 # =============================================================================
+# Common Deployment Settings
+# =============================================================================
+
+# Rsync flags for asset sync: delete stale files, checksum-based skip, exclude junk
+DEPLOY_RSYNC_FLAGS := -avz --delete --checksum
+DEPLOY_ASSET_EXCLUDES := --exclude='test_gcodes' --exclude='gcode' --exclude='.DS_Store' --exclude='*.pyc' --exclude='helixconfig.json'
+DEPLOY_ASSET_DIRS := ui_xml assets config moonraker-plugin
+
+# Common deploy recipe (called with: $(call deploy-common,SSH_TARGET,DEPLOY_DIR,BIN_DIR))
+# Usage: $(call deploy-common,$(PI_SSH_TARGET),$(PI_DEPLOY_DIR),build/pi/bin)
+define deploy-common
+	@echo "$(CYAN)Deploying HelixScreen to $(1):$(2)...$(RESET)"
+	@# Generate pre-rendered images if missing
+	@if [ ! -f build/assets/images/prerendered/splash-logo-small.bin ]; then \
+		echo "$(DIM)Generating pre-rendered splash images...$(RESET)"; \
+		$(MAKE) gen-images-ad5m; \
+	fi
+	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+		echo "$(DIM)Generating pre-rendered printer images...$(RESET)"; \
+		$(MAKE) gen-printer-images; \
+	fi
+	@if [ ! -f build/assets/images/prerendered/thumbnail-placeholder-160.bin ]; then \
+		echo "$(DIM)Generating placeholder images...$(RESET)"; \
+		$(MAKE) gen-placeholder-images; \
+	fi
+	@# Stop running processes and prepare directory
+	ssh $(1) "killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; mkdir -p $(2)"
+	ssh $(1) "rm -f $(2)/*.xml 2>/dev/null || true"
+	@# Sync binaries
+	rsync -avz --progress $(3)/helix-screen $(3)/helix-splash $(1):$(2)/
+	@if [ -f $(3)/helix-watchdog ]; then rsync -avz $(3)/helix-watchdog $(1):$(2)/; fi
+	@# Sync assets (--delete removes stale files)
+	rsync $(DEPLOY_RSYNC_FLAGS) $(DEPLOY_ASSET_EXCLUDES) $(DEPLOY_ASSET_DIRS) $(1):$(2)/
+	@# Sync pre-rendered images
+	@if [ -d build/assets/images/prerendered ]; then \
+		rsync $(DEPLOY_RSYNC_FLAGS) build/assets/images/prerendered/ $(1):$(2)/assets/images/prerendered/; \
+	fi
+	@if [ -d build/assets/images/printers/prerendered ]; then \
+		rsync $(DEPLOY_RSYNC_FLAGS) build/assets/images/printers/prerendered/ $(1):$(2)/assets/images/printers/prerendered/; \
+	fi
+endef
+
+# =============================================================================
 # Pi Deployment Configuration
 # =============================================================================
 
@@ -380,85 +423,31 @@ endif
 .PHONY: deploy-pi deploy-pi-fg deploy-pi-quiet pi-ssh pi-test
 
 # Deploy full application to Pi and restart in background
-# Uses rsync for efficient delta transfers - only changed files are sent
-# Kills any existing instance and restarts automatically
-# Includes pre-rendered .bin assets from build/ if they exist (for splash performance)
 deploy-pi:
 	@test -f build/pi/bin/helix-screen || { echo "$(RED)Error: build/pi/bin/helix-screen not found. Run 'make pi-docker' first.$(RESET)"; exit 1; }
 	@test -f build/pi/bin/helix-splash || { echo "$(RED)Error: build/pi/bin/helix-splash not found. Run 'make pi-docker' first.$(RESET)"; exit 1; }
-	@echo "$(CYAN)Deploying HelixScreen to $(PI_SSH_TARGET):$(PI_DEPLOY_DIR)...$(RESET)"
-	@echo "  Binaries: helix-screen, helix-splash, helix-watchdog"
-	@echo "  Assets: ui_xml/, assets/, config/, moonraker-plugin/"
-	ssh $(PI_SSH_TARGET) "mkdir -p $(PI_DEPLOY_DIR)"
-	rsync -avz --progress \
-		build/pi/bin/helix-screen \
-		build/pi/bin/helix-splash \
-		$(if $(wildcard build/pi/bin/helix-watchdog),build/pi/bin/helix-watchdog) \
-		ui_xml \
-		assets \
-		config \
-		moonraker-plugin \
-		$(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/
-	@# Use --checksum for pre-rendered images (regenerated with new timestamps but same content)
-	@if [ -d build/assets/images/prerendered ]; then \
-		echo "$(DIM)Transferring pre-rendered splash images...$(RESET)"; \
-		ssh $(PI_SSH_TARGET) "mkdir -p $(PI_DEPLOY_DIR)/assets/images/prerendered"; \
-		rsync -avz --checksum build/assets/images/prerendered/ $(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/assets/images/prerendered/; \
-	fi
-	@if [ -d build/assets/images/printers/prerendered ]; then \
-		echo "$(DIM)Transferring pre-rendered printer images...$(RESET)"; \
-		ssh $(PI_SSH_TARGET) "mkdir -p $(PI_DEPLOY_DIR)/assets/images/printers/prerendered"; \
-		rsync -avz --checksum build/assets/images/printers/prerendered/ $(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/assets/images/printers/prerendered/; \
-	fi
+	$(call deploy-common,$(PI_SSH_TARGET),$(PI_DEPLOY_DIR),build/pi/bin)
 	@echo "$(GREEN)✓ Deployed to $(PI_HOST):$(PI_DEPLOY_DIR)$(RESET)"
 	@echo "$(CYAN)Restarting helix-screen on $(PI_HOST)...$(RESET)"
-	ssh $(PI_SSH_TARGET) "cd $(PI_DEPLOY_DIR) && killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; sleep 0.5; setsid ./config/helix-launcher.sh </dev/null >/dev/null 2>&1 &"
+	ssh $(PI_SSH_TARGET) "cd $(PI_DEPLOY_DIR) && setsid ./config/helix-launcher.sh </dev/null >/dev/null 2>&1 &"
 	@echo "$(GREEN)✓ helix-screen restarted in background$(RESET)"
 	@echo "$(DIM)Logs: ssh $(PI_SSH_TARGET) 'journalctl -t helix-screen -f'$(RESET)"
 
 # Deploy and run in foreground with debug logging (for interactive debugging)
-# Uses --debug for debug-level logging and --log-dest=console for immediate output
 deploy-pi-fg:
 	@test -f build/pi/bin/helix-screen || { echo "$(RED)Error: build/pi/bin/helix-screen not found. Run 'make pi-docker' first.$(RESET)"; exit 1; }
 	@test -f build/pi/bin/helix-splash || { echo "$(RED)Error: build/pi/bin/helix-splash not found. Run 'make pi-docker' first.$(RESET)"; exit 1; }
-	@echo "$(CYAN)Deploying HelixScreen to $(PI_SSH_TARGET):$(PI_DEPLOY_DIR)...$(RESET)"
-	ssh $(PI_SSH_TARGET) "mkdir -p $(PI_DEPLOY_DIR)"
-	rsync -avz --progress \
-		build/pi/bin/helix-screen \
-		build/pi/bin/helix-splash \
-		$(if $(wildcard build/pi/bin/helix-watchdog),build/pi/bin/helix-watchdog) \
-		ui_xml \
-		assets \
-		config \
-		$(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/
-	@if [ -d build/assets/images/prerendered ]; then \
-		echo "$(DIM)Transferring pre-rendered images...$(RESET)"; \
-		ssh $(PI_SSH_TARGET) "mkdir -p $(PI_DEPLOY_DIR)/assets/images/prerendered"; \
-		rsync -avz build/assets/images/prerendered/ $(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/assets/images/prerendered/; \
-	fi
+	$(call deploy-common,$(PI_SSH_TARGET),$(PI_DEPLOY_DIR),build/pi/bin)
 	@echo "$(CYAN)Starting helix-screen on $(PI_HOST) (foreground, debug mode)...$(RESET)"
-	ssh -t $(PI_SSH_TARGET) "cd $(PI_DEPLOY_DIR) && killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; sleep 0.5; ./config/helix-launcher.sh --debug --log-dest=console"
+	ssh -t $(PI_SSH_TARGET) "cd $(PI_DEPLOY_DIR) && ./config/helix-launcher.sh --debug --log-dest=console"
 
 # Deploy and run in foreground without debug logging (production mode)
 deploy-pi-quiet:
 	@test -f build/pi/bin/helix-screen || { echo "$(RED)Error: build/pi/bin/helix-screen not found. Run 'make pi-docker' first.$(RESET)"; exit 1; }
 	@test -f build/pi/bin/helix-splash || { echo "$(RED)Error: build/pi/bin/helix-splash not found. Run 'make pi-docker' first.$(RESET)"; exit 1; }
-	ssh $(PI_SSH_TARGET) "mkdir -p $(PI_DEPLOY_DIR)"
-	rsync -avz --progress \
-		build/pi/bin/helix-screen \
-		build/pi/bin/helix-splash \
-		$(if $(wildcard build/pi/bin/helix-watchdog),build/pi/bin/helix-watchdog) \
-		ui_xml \
-		assets \
-		config \
-		$(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/
-	@if [ -d build/assets/images/prerendered ]; then \
-		echo "$(DIM)Transferring pre-rendered images...$(RESET)"; \
-		ssh $(PI_SSH_TARGET) "mkdir -p $(PI_DEPLOY_DIR)/assets/images/prerendered"; \
-		rsync -avz build/assets/images/prerendered/ $(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/assets/images/prerendered/; \
-	fi
+	$(call deploy-common,$(PI_SSH_TARGET),$(PI_DEPLOY_DIR),build/pi/bin)
 	@echo "$(CYAN)Starting helix-screen on $(PI_HOST) (foreground)...$(RESET)"
-	ssh -t $(PI_SSH_TARGET) "cd $(PI_DEPLOY_DIR) && killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; sleep 0.5; ./config/helix-launcher.sh"
+	ssh -t $(PI_SSH_TARGET) "cd $(PI_DEPLOY_DIR) && ./config/helix-launcher.sh"
 
 # Convenience: SSH into the Pi
 pi-ssh:
@@ -497,38 +486,11 @@ AD5M_DEPLOY_DIR ?= $(shell ssh -o ConnectTimeout=5 $(AD5M_SSH_TARGET) \
 .PHONY: deploy-ad5m deploy-ad5m-fg deploy-ad5m-bin ad5m-ssh ad5m-test
 
 # Deploy full application to AD5M using rsync (fast incremental sync)
-# Only transfers changed files, much faster than tar/scp for iterative development
 deploy-ad5m:
 	@test -f build/ad5m/bin/helix-screen || { echo "$(RED)Error: build/ad5m/bin/helix-screen not found. Run 'make remote-ad5m' first.$(RESET)"; exit 1; }
 	@test -f build/ad5m/bin/helix-splash || { echo "$(RED)Error: build/ad5m/bin/helix-splash not found. Run 'make remote-ad5m' first.$(RESET)"; exit 1; }
-	@# Generate pre-rendered images if missing (requires Python/PIL)
-	@if [ ! -f build/assets/images/prerendered/splash-logo-small.bin ]; then \
-		echo "$(CYAN)Generating pre-rendered splash images for AD5M...$(RESET)"; \
-		$(MAKE) gen-images-ad5m; \
-	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
-		echo "$(CYAN)Generating pre-rendered printer images...$(RESET)"; \
-		$(MAKE) gen-printer-images; \
-	fi
-	@echo "$(CYAN)Deploying HelixScreen to $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR) (rsync)...$(RESET)"
-	ssh $(AD5M_SSH_TARGET) "killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; mkdir -p $(AD5M_DEPLOY_DIR)"
-	@# Clean up stale XML files from root (should be in ui_xml/)
-	ssh $(AD5M_SSH_TARGET) "rm -f $(AD5M_DEPLOY_DIR)/*.xml 2>/dev/null || true"
-	@# Sync binaries
-	rsync -avz --progress build/ad5m/bin/helix-screen build/ad5m/bin/helix-splash $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/
-	@if [ -f build/ad5m/bin/helix-watchdog ]; then rsync -avz build/ad5m/bin/helix-watchdog $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/; fi
-	@# Sync assets (excluding test files and macOS junk)
-	@# Use --checksum to skip files with same content (avoids re-transferring regenerated assets)
-	rsync -avz --checksum --exclude='test_gcodes' --exclude='gcode' --exclude='.DS_Store' --exclude='*.pyc' --exclude='helixconfig.json' \
-		ui_xml assets config moonraker-plugin $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/
-	@# Sync pre-rendered images if they exist
-	@if [ -d build/assets/images/prerendered ]; then \
-		rsync -avz --checksum build/assets/images/prerendered/ $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/assets/images/prerendered/; \
-	fi
-	@if [ -d build/assets/images/printers/prerendered ]; then \
-		rsync -avz --checksum build/assets/images/printers/prerendered/ $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/assets/images/printers/prerendered/; \
-	fi
-	@# Update init script in /etc/init.d/ if it differs from deployed version
+	$(call deploy-common,$(AD5M_SSH_TARGET),$(AD5M_DEPLOY_DIR),build/ad5m/bin)
+	@# AD5M-specific: Update init script in /etc/init.d/ if it differs
 	@echo "$(DIM)Checking init script...$(RESET)"
 	@ssh $(AD5M_SSH_TARGET) '\
 		INIT_SCRIPT=""; \
@@ -547,7 +509,7 @@ deploy-ad5m:
 		fi'
 	@echo "$(GREEN)✓ Deployed to $(AD5M_HOST):$(AD5M_DEPLOY_DIR)$(RESET)"
 	@echo "$(CYAN)Restarting helix-screen on $(AD5M_HOST)...$(RESET)"
-	ssh $(AD5M_SSH_TARGET) "killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; sleep 1; cd $(AD5M_DEPLOY_DIR) && ./config/helix-launcher.sh >/dev/null 2>&1 &"
+	ssh $(AD5M_SSH_TARGET) "cd $(AD5M_DEPLOY_DIR) && ./config/helix-launcher.sh >/dev/null 2>&1 &"
 	@echo "$(GREEN)✓ helix-screen restarted in background$(RESET)"
 	@echo "$(DIM)Logs: ssh $(AD5M_SSH_TARGET) 'tail -f /var/log/messages | grep helix'$(RESET)"
 
@@ -609,33 +571,9 @@ deploy-ad5m-legacy:
 deploy-ad5m-fg:
 	@test -f build/ad5m/bin/helix-screen || { echo "$(RED)Error: build/ad5m/bin/helix-screen not found. Run 'make remote-ad5m' first.$(RESET)"; exit 1; }
 	@test -f build/ad5m/bin/helix-splash || { echo "$(RED)Error: build/ad5m/bin/helix-splash not found. Run 'make remote-ad5m' first.$(RESET)"; exit 1; }
-	@# Generate pre-rendered images if missing (requires Python/PIL)
-	@if [ ! -f build/assets/images/prerendered/splash-logo-small.bin ]; then \
-		echo "$(CYAN)Generating pre-rendered splash images for AD5M...$(RESET)"; \
-		$(MAKE) gen-images-ad5m; \
-	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
-		echo "$(CYAN)Generating pre-rendered printer images...$(RESET)"; \
-		$(MAKE) gen-printer-images; \
-	fi
-	@echo "$(CYAN)Deploying HelixScreen to $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)...$(RESET)"
-	ssh $(AD5M_SSH_TARGET) "killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; mkdir -p $(AD5M_DEPLOY_DIR)"
-	scp -O build/ad5m/bin/helix-screen build/ad5m/bin/helix-splash $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/
-	@if [ -f build/ad5m/bin/helix-watchdog ]; then scp -O build/ad5m/bin/helix-watchdog $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/; fi
-	@echo "$(DIM)Transferring assets (excluding test files)...$(RESET)"
-	tar -cf - --exclude='test_gcodes' --exclude='gcode' --exclude='.DS_Store' ui_xml assets config | ssh $(AD5M_SSH_TARGET) "cd $(AD5M_DEPLOY_DIR) && tar -xf -"
-	@if [ -d build/assets/images/prerendered ] && ls build/assets/images/prerendered/*.bin >/dev/null 2>&1; then \
-		echo "$(DIM)Transferring pre-rendered splash images...$(RESET)"; \
-		ssh $(AD5M_SSH_TARGET) "mkdir -p $(AD5M_DEPLOY_DIR)/assets/images/prerendered"; \
-		scp -O build/assets/images/prerendered/*.bin $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/assets/images/prerendered/; \
-	fi
-	@if [ -d build/assets/images/printers/prerendered ] && ls build/assets/images/printers/prerendered/*.bin >/dev/null 2>&1; then \
-		echo "$(DIM)Transferring pre-rendered printer images...$(RESET)"; \
-		ssh $(AD5M_SSH_TARGET) "mkdir -p $(AD5M_DEPLOY_DIR)/assets/images/printers/prerendered"; \
-		scp -O build/assets/images/printers/prerendered/*.bin $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/assets/images/printers/prerendered/; \
-	fi
+	$(call deploy-common,$(AD5M_SSH_TARGET),$(AD5M_DEPLOY_DIR),build/ad5m/bin)
 	@echo "$(CYAN)Starting helix-screen on $(AD5M_HOST) (foreground, verbose)...$(RESET)"
-	ssh -t $(AD5M_SSH_TARGET) "killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; sleep 1; cd $(AD5M_DEPLOY_DIR) && ./config/helix-launcher.sh --debug"
+	ssh -t $(AD5M_SSH_TARGET) "cd $(AD5M_DEPLOY_DIR) && ./config/helix-launcher.sh --debug"
 
 # Deploy binaries only (fast, for quick iteration)
 deploy-ad5m-bin:
