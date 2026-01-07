@@ -309,3 +309,34 @@ std::vector<std::string> ui_theme_find_xml_files(const char* directory);
 std::unordered_map<std::string, std::string>
 ui_theme_parse_all_xml_for_suffix(const char* directory, const char* element_type,
                                   const char* suffix);
+
+/**
+ * @brief Parse all XML files in a directory for ALL elements of a given type
+ *
+ * Aggregates constants from all XML files in the directory. Files are processed
+ * in alphabetical order, so later files (by name) override earlier ones.
+ * Unlike ui_theme_parse_all_xml_for_suffix(), this returns ALL elements regardless
+ * of suffix, with the full name as the key.
+ *
+ * @param directory Directory containing XML files
+ * @param element_type Element type to match ("px", "color", "string")
+ * @return Map of name → value for all matching constants
+ */
+std::unordered_map<std::string, std::string>
+ui_theme_parse_all_xml_for_element(const char* directory, const char* element_type);
+
+/**
+ * @brief Validate that responsive/themed constant sets are complete
+ *
+ * Checks for incomplete sets:
+ * - Responsive px: If ANY of foo_small, foo_medium, foo_large exist but NOT ALL -> warn
+ * - Themed colors: If ONLY bar_light OR ONLY bar_dark exists -> warn
+ *
+ * This function is useful for:
+ * - Unit tests to catch incomplete constant sets
+ * - Pre-commit hooks to validate XML files before committing
+ *
+ * @param directory Directory containing XML files to validate
+ * @return Vector of warning messages (empty if all valid)
+ */
+std::vector<std::string> ui_theme_validate_constant_sets(const char* directory);

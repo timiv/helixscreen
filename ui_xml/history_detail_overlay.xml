@@ -186,7 +186,7 @@
           </lv_obj>
           <!-- View Timelapse button -->
           <lv_button name="view_timelapse_btn"
-                     width="100%" height="#button_height_small" style_radius="#border_radius"
+                     width="100%" height="#button_height_sm" style_radius="#border_radius"
                      style_bg_color="#app_bg_color">
             <text_body text="View Timelapse" align="center"/>
             <event_cb trigger="clicked" callback="history_detail_view_timelapse"/>

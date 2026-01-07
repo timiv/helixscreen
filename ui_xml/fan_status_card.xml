@@ -12,7 +12,7 @@
   <view name="fan_status_card_root"
         extends="lv_obj" width="175" height="190" flex_flow="column"
         style_flex_main_place="start" style_flex_cross_place="center"
-        style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_large"
+        style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius"
         style_pad_all="#space_sm" style_pad_gap="#space_xs" scrollable="false">
     <!-- Fan name label at top -->
     <text_small name="name_label" text="$fan_name" style_text_color="#text_primary"/>

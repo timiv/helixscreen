@@ -61,7 +61,7 @@
             style_pad_all="0" scrollable="false" style_bg_opa="255" style_border_width="2" style_border_color="0xcc0000">
      
       <!-- BACK BUTTON (hidden on step 1 via conditional binding) -->
-      <lv_button name="btn_back" width="#wizard_button_width" height="#button_height" align="bottom">
+      <lv_button name="btn_back" width="#wizard_button_width" height="#button_height">
         <text_body text="Back" align="center"/>
         <event_cb trigger="clicked" callback="on_back_clicked"/>
         <!-- Hide when current_step == 1 -->
@@ -73,7 +73,7 @@
               width="0" height="#button_height" style_border_width="0" style_bg_opa="0" flex_grow="1"/>
      
       <!-- NEXT/FINISH BUTTON (text bound to subject, clickable only when connection_test_passed == 1) -->
-      <lv_button name="btn_next" width="#wizard_button_width" height="#button_height" align="bottom"
+      <lv_button name="btn_next" width="#wizard_button_width" height="#button_height"
                  style_bg_color="#primary_color">
         <text_body name="btn_next_label"
                    bind_text="wizard_next_button_text" align="center" style_text_color="#text_primary"

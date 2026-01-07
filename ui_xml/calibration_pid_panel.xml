@@ -4,6 +4,10 @@
 <!-- PID Tuning Calibration Panel -->
 <!-- Interactive calibration using PID_CALIBRATE command for extruder or bed -->
 <component>
+  <consts>
+    <!-- Section background for input groups -->
+    <color name="section_bg" value="#1E1E1E"/>
+  </consts>
   <view name="calibration_pid_panel"
         extends="lv_obj" width="#overlay_panel_width" height="100%" align="right_mid" style_bg_opa="255"
         style_bg_color="#card_bg" style_pad_all="0" style_border_width="0" scrollable="false" flex_flow="column">
@@ -31,7 +35,7 @@
         </lv_obj>
         <!-- Heater Selection -->
         <lv_obj width="100%"
-                height="content" style_bg_color="#card_bg_dark" style_radius="#border_radius" style_pad_all="#space_lg"
+                height="content" style_bg_color="#section_bg" style_radius="#border_radius" style_pad_all="#space_lg"
                 style_border_width="0" flex_flow="column" style_pad_gap="#space_sm">
           <text_body text="Select Heater"/>
           <lv_obj width="100%"
@@ -51,7 +55,7 @@
         </lv_obj>
         <!-- Target Temperature -->
         <lv_obj width="100%"
-                height="content" style_bg_color="#card_bg_dark" style_radius="#border_radius" style_pad_all="#space_lg"
+                height="content" style_bg_color="#section_bg" style_radius="#border_radius" style_pad_all="#space_lg"
                 style_border_width="0" flex_flow="column" style_pad_gap="#space_sm">
           <text_body text="Target Temperature"/>
           <lv_obj width="100%"
@@ -105,7 +109,7 @@
                    text="Extruder PID Tuning" style_text_color="#text_secondary" bind_text="pid_calibrating_heater"/>
         <!-- Temperature Display -->
         <lv_obj width="80%"
-                height="content" style_bg_color="#card_bg_dark" style_radius="#border_radius" style_pad_all="#space_lg"
+                height="content" style_bg_color="#section_bg" style_radius="#border_radius" style_pad_all="#space_lg"
                 style_border_width="0" flex_flow="column" style_flex_cross_place="center" style_pad_gap="#space_xs">
           <text_small text="Current Temperature" style_text_color="#text_secondary"/>
           <lv_label name="current_temp_display"
@@ -148,7 +152,7 @@
         <text_heading text="Calibration Complete!" style_text_align="center"/>
         <!-- PID Values Display -->
         <lv_obj width="80%"
-                height="content" style_bg_color="#card_bg_dark" style_radius="#border_radius" style_pad_all="#space_lg"
+                height="content" style_bg_color="#section_bg" style_radius="#border_radius" style_pad_all="#space_lg"
                 style_border_width="0" flex_flow="column" style_pad_gap="#space_xs">
           <text_body width="100%" text="New PID Values" style_text_align="center"/>
           <lv_obj width="100%"

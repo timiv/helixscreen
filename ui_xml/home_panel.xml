@@ -13,6 +13,8 @@
     <px name="accent_bar_gap" value="18"/>
     <!-- Printer image container: percentage of parent for responsive sizing -->
     <percentage name="printer_container_width" value="40%"/>
+    <!-- Subtitle text color for badge counts -->
+    <color name="subtitle_text" value="#B0B0B0"/>
   </consts>
   <!-- Styles for printer image connection state -->
   <styles>
@@ -262,7 +264,7 @@
                 </lv_obj>
                 <text_small name="notification_badge_count"
                             bind_text="notification_count_text" style_pad_top="0" align="center"
-                            style_text_color="#keyboard_key_light"/>
+                            style_text_color="#subtitle_text"/>
               </lv_obj>
             </lv_obj>
           </lv_obj>
@@ -281,7 +283,7 @@
             <lv_obj-bind_flag_if_eq subject="estop_visible" flag="hidden" ref_value="0"/>
             <!-- Circular button: radius=24 is half of button_height_small (48px) -->
             <lv_button name="estop_button_home"
-                       width="#button_height_small" height="#button_height_small" style_radius="24"
+                       width="#button_height_sm" height="#button_height_sm" style_radius="24"
                        style_bg_color="#error_color" style_border_width="2" style_border_color="#text_primary"
                        style_shadow_width="0" style_pad_all="0" align="center">
               <icon src="alert_octagon" size="sm" color="#text_primary" align="center"/>
@@ -303,7 +305,7 @@
             <lv_obj-bind_flag_if_not_eq subject="klippy_state" flag="hidden" ref_value="2"/>
             <!-- Circular button: uses primary_color to indicate "safe" recovery action -->
             <lv_button name="firmware_restart_button_home"
-                       width="#button_height_small" height="#button_height_small" style_radius="24"
+                       width="#button_height_sm" height="#button_height_sm" style_radius="24"
                        style_bg_color="#primary_color" style_border_width="2" style_border_color="#text_primary"
                        style_shadow_width="0" style_pad_all="0" align="center">
               <icon src="refresh" size="sm" color="#text_primary" align="center"/>

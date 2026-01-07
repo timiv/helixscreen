@@ -160,6 +160,28 @@ fi
 echo ""
 
 # ====================================================================
+# XML Constant Set Validation
+# ====================================================================
+echo "🔤 Validating XML constant sets..."
+
+if [ -x "build/bin/validate-xml-constants" ]; then
+  if ./build/bin/validate-xml-constants; then
+    : # Success message already printed by tool
+  else
+    echo ""
+    echo "   Incomplete constant sets can cause runtime warnings."
+    echo "   - Responsive px: Need ALL of _small, _medium, _large (or none)"
+    echo "   - Theme colors: Need BOTH _light and _dark (or neither)"
+    EXIT_CODE=1
+  fi
+else
+  echo "⚠️  validate-xml-constants not built - skipping"
+  echo "   Run 'make' to build validation tools"
+fi
+
+echo ""
+
+# ====================================================================
 # Phase 2: Code Quality Checks
 # ====================================================================
 

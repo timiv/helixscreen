@@ -15,7 +15,7 @@
         flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center">
     <!-- Selection container -->
     <ui_card width="100%"
-             flex_grow="1" style_radius="#border_radius_large" style_pad_all="#space_lg" style_pad_gap="#space_md"
+             flex_grow="1" style_radius="#border_radius" style_pad_all="#space_lg" style_pad_gap="#space_md"
              flex_flow="column" style_flex_main_place="start" style_flex_cross_place="start">
       <!-- Row 1: Required fans (Hotend + Part Cooling) -->
       <lv_obj width="100%"

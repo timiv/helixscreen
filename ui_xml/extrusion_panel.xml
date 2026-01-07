@@ -18,7 +18,7 @@
               flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_md">
         <!-- Extruder Visualization Card -->
         <ui_card name="viz_container"
-                 width="100%" flex_grow="2" style_radius="#border_radius_large" flex_flow="column"
+                 width="100%" flex_grow="2" style_radius="#border_radius" flex_flow="column"
                  style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
           <!-- Nozzle icon with filament (not heating icon) -->
           <icon name="nozzle_icon" src="filament" size="xl" variant="accent"/>

@@ -19,7 +19,7 @@
               flex_flow="column" style_flex_main_place="start" style_pad_gap="#space_lg">
         <!-- Temperature Status Card - shows both nozzle and bed -->
         <ui_card name="temp_status_card"
-                 width="100%" height="content" style_radius="#border_radius_large" style_pad_all="#space_lg"
+                 width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_lg"
                  flex_flow="column" style_flex_main_place="start" style_flex_cross_place="start"
                  style_pad_gap="#space_md">
           <!-- Header -->
@@ -193,17 +193,17 @@
                 style_pad_gap="#space_sm">
           <text_small text="Length:"/>
           <lv_button name="purge_5mm"
-                     height="#button_height_small" flex_grow="1" style_radius="#border_radius" style_border_width="0">
+                     height="#button_height_sm" flex_grow="1" style_radius="#border_radius" style_border_width="0">
             <event_cb trigger="clicked" callback="on_filament_purge_5mm"/>
             <text_small text="5mm" align="center"/>
           </lv_button>
           <lv_button name="purge_10mm"
-                     height="#button_height_small" flex_grow="1" style_radius="#border_radius" style_border_width="0">
+                     height="#button_height_sm" flex_grow="1" style_radius="#border_radius" style_border_width="0">
             <event_cb trigger="clicked" callback="on_filament_purge_10mm"/>
             <text_small text="10mm" align="center"/>
           </lv_button>
           <lv_button name="purge_25mm"
-                     height="#button_height_small" flex_grow="1" style_radius="#border_radius" style_border_width="0">
+                     height="#button_height_sm" flex_grow="1" style_radius="#border_radius" style_border_width="0">
             <event_cb trigger="clicked" callback="on_filament_purge_25mm"/>
             <text_small text="25mm" align="center"/>
           </lv_button>

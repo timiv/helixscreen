@@ -93,14 +93,66 @@ endif
 		exit 1; \
 	}
 
+# ==============================================================================
+# XML Constants Validator Tool
+# ==============================================================================
+# Pre-commit validation tool for checking responsive px and theme color pairs
+# Usage: validate-xml-constants (run from repo root)
+#
+# This tool reuses the main application's object files, so it's built after
+# the main app build. This avoids duplicating LVGL and other large dependencies.
+
+VALIDATE_XML_SRC := $(TOOLS_DIR)/validate_xml_constants.cpp
+VALIDATE_XML_BIN := $(BIN_DIR)/validate-xml-constants
+VALIDATE_XML_OBJ := $(OBJ_DIR)/tools/validate_xml_constants.o
+
+# Validator reuses main app objects - filter out main.o to avoid duplicate main symbol
+VALIDATE_XML_APP_OBJS := $(filter-out $(OBJ_DIR)/main.o,$(APP_OBJS) $(APP_C_OBJS) $(OBJCPP_OBJS))
+
+# Full dependencies (app objects + LVGL + fonts)
+VALIDATE_XML_DEPS := \
+	$(VALIDATE_XML_APP_OBJS) \
+	$(LVGL_OBJS) \
+	$(THORVG_OBJS) \
+	$(FONT_OBJS)
+
+# Linker flags (same as main app for full compatibility)
+VALIDATE_XML_LDFLAGS := $(LDFLAGS)
+
+# Build rule for validator - depends on TARGET being built first for objects
+$(VALIDATE_XML_BIN): $(TARGET) $(VALIDATE_XML_OBJ)
+	$(Q)mkdir -p $(BIN_DIR)
+	$(ECHO) "$(MAGENTA)$(BOLD)[LD]$(RESET) $@"
+	$(Q)$(CXX) $(CXXFLAGS) $(VALIDATE_XML_OBJ) $(VALIDATE_XML_DEPS) -o $@ $(VALIDATE_XML_LDFLAGS) || { \
+		echo "$(RED)$(BOLD)✗ Linking failed!$(RESET)"; \
+		exit 1; \
+	}
+	$(ECHO) "$(GREEN)✓ XML Constants Validator built: $@$(RESET)"
+
+# Compile validator source
+$(VALIDATE_XML_OBJ): $(VALIDATE_XML_SRC)
+	$(Q)mkdir -p $(dir $@)
+	$(ECHO) "$(BLUE)[CXX]$(RESET) $<"
+ifeq ($(V),1)
+	$(Q)echo "$(YELLOW)Command:$(RESET) $(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@"
+endif
+	$(Q)$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@ || { \
+		echo "$(RED)$(BOLD)✗ Compilation failed:$(RESET) $<"; \
+		exit 1; \
+	}
+
 # Phony targets
-.PHONY: tools moonraker-inspector
+.PHONY: tools moonraker-inspector validate-xml-constants
 
 # Build all tools
-tools: moonraker-inspector
+tools: moonraker-inspector validate-xml-constants
 
 # Individual tool targets
 moonraker-inspector: $(MOONRAKER_INSPECTOR)
 	$(ECHO) "$(CYAN)Usage: $(YELLOW)./$(MOONRAKER_INSPECTOR) <ip_address> [port] [options]$(RESET)"
 	$(ECHO) "$(CYAN)Example: $(YELLOW)./$(MOONRAKER_INSPECTOR) 192.168.1.100 7125 -i$(RESET)"
 	$(ECHO) "$(CYAN)Options: $(YELLOW)-i/--interactive$(RESET) for TUI mode with collapsible sections"
+
+validate-xml-constants: $(VALIDATE_XML_BIN)
+	$(ECHO) "$(CYAN)Usage: $(YELLOW)./$(VALIDATE_XML_BIN)$(RESET)"
+	$(ECHO) "$(CYAN)Run from repo root to validate ui_xml/ constant sets$(RESET)"

@@ -47,7 +47,7 @@
       <!-- Card 1: Position (Toolhead Position + Motion) -->
       <ui_card name="card_position"
                height="100%" flex_grow="1" flex_flow="column" style_flex_main_place="space_between"
-               style_radius="#border_radius_large" style_pad_all="#space_sm" scrollable="false">
+               style_radius="#border_radius" style_pad_all="#space_sm" scrollable="false">
         <!-- Header -->
         <lv_obj height="content"
                 flex_flow="row" style_flex_cross_place="center" style_flex_track_place="center" style_pad_all="0"
@@ -147,7 +147,7 @@
         </lv_obj>
         <!-- Motion panel navigation button -->
         <lv_button name="btn_motion"
-                   width="100%" height="#button_height_small" style_radius="#border_radius" style_pad_left="#space_sm"
+                   width="100%" height="#button_height_sm" style_radius="#border_radius" style_pad_left="#space_sm"
                    style_pad_right="#space_sm" style_bg_color="#primary_color" style_bg_opa="80" style_border_width="0"
                    flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
                    style_flex_track_place="center" style_pad_gap="#space_xs">
@@ -162,7 +162,7 @@
               style_pad_gap="#space_xs" scrollable="false">
         <!-- Emergency Stop Banner (conditional, compact) -->
         <lv_button name="estop_button_controls"
-                   width="100%" height="#button_height_small" hidden="true" style_radius="#border_radius"
+                   width="100%" height="#button_height_sm" hidden="true" style_radius="#border_radius"
                    style_border_width="0" style_bg_color="#error_color" flex_flow="row" style_flex_main_place="center"
                    style_flex_cross_place="center" style_pad_gap="#space_sm">
           <lv_obj-bind_flag_if_eq subject="estop_visible" flag="hidden" ref_value="0"/>
@@ -177,7 +177,7 @@
           <!-- Card 2: Temperatures (Combined Nozzle + Bed) -->
           <ui_card name="card_temperatures"
                    height="100%" flex_grow="1" flex_flow="column" style_flex_main_place="center"
-                   style_flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#space_sm"
+                   style_flex_cross_place="center" style_radius="#border_radius" style_pad_all="#space_sm"
                    scrollable="false" clickable="true">
             <event_cb trigger="clicked" callback="on_controls_temperatures"/>
             <lv_obj height="content"
@@ -214,7 +214,7 @@
           <!-- Card 3: Cooling (Multi-Fan) -->
           <ui_card name="card_cooling"
                    height="100%" flex_grow="1" flex_flow="column" style_flex_main_place="center"
-                   style_flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#space_sm"
+                   style_flex_cross_place="center" style_radius="#border_radius" style_pad_all="#space_sm"
                    scrollable="false" clickable="true">
             <event_cb trigger="clicked" callback="on_controls_cooling"/>
             <lv_obj height="content"
@@ -250,7 +250,7 @@
       <!-- Card 4: Calibration & Tools (40% width, 2x2 grid) -->
       <ui_card name="card_calibration"
                width="0" height="100%" flex_grow="2" flex_flow="column" style_flex_main_place="start"
-               style_radius="#border_radius_large" style_border_width="0" style_pad_all="#space_sm"
+               style_radius="#border_radius" style_border_width="0" style_pad_all="#space_sm"
                style_pad_gap="#space_xs" scrollable="false">
         <!-- Header Row -->
         <lv_obj width="100%"
@@ -324,7 +324,7 @@
       <!-- Card 5: Quick Actions (60% width) -->
       <ui_card name="card_quick_actions"
                width="0" height="100%" flex_grow="3" flex_flow="column" style_flex_main_place="space_between"
-               style_radius="#border_radius_large" style_pad_all="#space_sm" scrollable="false">
+               style_radius="#border_radius" style_pad_all="#space_sm" scrollable="false">
         <!-- Header -->
         <lv_obj height="content"
                 flex_flow="row" style_flex_cross_place="center" style_flex_track_place="center" style_pad_all="0"
@@ -339,7 +339,7 @@
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                 flex_flow="row" style_flex_main_place="center" style_pad_gap="#space_xs">
           <lv_button name="btn_home_all"
-                     width="0" height="#button_height_small" flex_grow="1" style_radius="#border_radius"
+                     width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                      style_border_width="1" style_border_color="#text_secondary" style_border_opa="60">
             <bind_style name="home_btn_homed" subject="all_homed" ref_value="1"/>
             <bind_style name="home_btn_unhomed" subject="all_homed" ref_value="0"/>
@@ -347,7 +347,7 @@
             <text_small text="All" align="center"/>
           </lv_button>
           <lv_button name="btn_home_xy"
-                     width="0" height="#button_height_small" flex_grow="1" style_radius="#border_radius"
+                     width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                      style_border_width="1" style_border_color="#text_secondary" style_border_opa="60">
             <bind_style name="home_btn_homed" subject="xy_homed" ref_value="1"/>
             <bind_style name="home_btn_unhomed" subject="xy_homed" ref_value="0"/>
@@ -355,7 +355,7 @@
             <text_small text="XY" align="center"/>
           </lv_button>
           <lv_button name="btn_home_z"
-                     width="0" height="#button_height_small" flex_grow="1" style_radius="#border_radius"
+                     width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                      style_border_width="1" style_border_color="#text_secondary" style_border_opa="60">
             <bind_style name="home_btn_homed" subject="z_homed" ref_value="1"/>
             <bind_style name="home_btn_unhomed" subject="z_homed" ref_value="0"/>
@@ -372,14 +372,14 @@
                   height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                   flex_flow="row" style_pad_gap="#space_xs">
             <lv_button name="btn_macro_1"
-                       width="0" height="#button_height_small" flex_grow="1" style_radius="#border_radius"
+                       width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                        style_bg_color="#secondary_color" style_bg_opa="40" style_border_width="0">
               <lv_obj-bind_flag_if_eq subject="macro_1_visible" flag="hidden" ref_value="0"/>
               <event_cb trigger="clicked" callback="on_controls_macro_1"/>
               <text_small name="macro_1_label" bind_text="macro_1_name" style_text_color="#text_primary" align="center"/>
             </lv_button>
             <lv_button name="btn_macro_2"
-                       width="0" height="#button_height_small" flex_grow="1" style_radius="#border_radius"
+                       width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                        style_bg_color="#secondary_color" style_bg_opa="40" style_border_width="0">
               <lv_obj-bind_flag_if_eq subject="macro_2_visible" flag="hidden" ref_value="0"/>
               <event_cb trigger="clicked" callback="on_controls_macro_2"/>
@@ -391,14 +391,14 @@
                   height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                   flex_flow="row" style_pad_gap="#space_xs">
             <lv_button name="btn_macro_3"
-                       width="0" height="#button_height_small" flex_grow="1" style_radius="#border_radius"
+                       width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                        style_bg_color="#secondary_color" style_bg_opa="40" style_border_width="0">
               <lv_obj-bind_flag_if_eq subject="macro_3_visible" flag="hidden" ref_value="0"/>
               <event_cb trigger="clicked" callback="on_controls_macro_3"/>
               <text_small name="macro_3_label" bind_text="macro_3_name" style_text_color="#text_primary" align="center"/>
             </lv_button>
             <lv_button name="btn_macro_4"
-                       width="0" height="#button_height_small" flex_grow="1" style_radius="#border_radius"
+                       width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                        style_bg_color="#secondary_color" style_bg_opa="40" style_border_width="0">
               <lv_obj-bind_flag_if_eq subject="macro_4_visible" flag="hidden" ref_value="0"/>
               <event_cb trigger="clicked" callback="on_controls_macro_4"/>

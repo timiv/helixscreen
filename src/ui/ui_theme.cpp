@@ -68,6 +68,54 @@ static void ui_theme_register_color_pairs(lv_xml_component_scope_t* scope, bool 
 }
 
 /**
+ * Register static constants from all XML files
+ *
+ * Parses all XML files for <color>, <px>, and <string> elements and registers
+ * any that do NOT have dynamic suffixes (_light, _dark, _small, _medium, _large).
+ * These static constants are registered first so dynamic variants can override them.
+ */
+static void ui_theme_register_static_constants(lv_xml_component_scope_t* scope) {
+    const std::vector<std::string> skip_suffixes = {"_light", "_dark", "_small", "_medium",
+                                                    "_large"};
+
+    auto has_dynamic_suffix = [&](const std::string& name) {
+        for (const auto& suffix : skip_suffixes) {
+            if (name.size() > suffix.size() &&
+                name.compare(name.size() - suffix.size(), suffix.size(), suffix) == 0) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    int color_count = 0, px_count = 0, string_count = 0;
+
+    for (const auto& [name, value] : ui_theme_parse_all_xml_for_element("ui_xml", "color")) {
+        if (!has_dynamic_suffix(name)) {
+            lv_xml_register_const(scope, name.c_str(), value.c_str());
+            color_count++;
+        }
+    }
+
+    for (const auto& [name, value] : ui_theme_parse_all_xml_for_element("ui_xml", "px")) {
+        if (!has_dynamic_suffix(name)) {
+            lv_xml_register_const(scope, name.c_str(), value.c_str());
+            px_count++;
+        }
+    }
+
+    for (const auto& [name, value] : ui_theme_parse_all_xml_for_element("ui_xml", "string")) {
+        if (!has_dynamic_suffix(name)) {
+            lv_xml_register_const(scope, name.c_str(), value.c_str());
+            string_count++;
+        }
+    }
+
+    spdlog::debug("[Theme] Registered {} static colors, {} static px, {} static strings",
+                  color_count, px_count, string_count);
+}
+
+/**
  * Get the breakpoint suffix for a given resolution
  *
  * @param max_resolution The maximum of horizontal and vertical resolution
@@ -250,9 +298,16 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
         std::exit(EXIT_FAILURE);
     }
 
+    // Register static constants first (colors, px, strings without dynamic suffixes)
+    ui_theme_register_static_constants(scope);
+
     // Auto-register all color pairs from globals.xml (xxx_light/xxx_dark -> xxx)
     // This handles app_bg_color, text_primary, header_text, theme_grey, card_bg, etc.
     ui_theme_register_color_pairs(scope, use_dark_mode);
+
+    // Register responsive constants (must be before helix_theme_init so fonts are available)
+    ui_theme_register_responsive_spacing(display);
+    ui_theme_register_responsive_fonts(display);
 
     // Validate critical color pairs were registered (fail-fast if missing)
     static const char* required_colors[] = {"app_bg_color", "text_primary", "header_text", nullptr};
@@ -331,10 +386,6 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
                      use_dark_mode ? "dark" : "light");
         spdlog::debug("[Theme] Colors: primary={}, secondary={}, screen={}, card={}, grey={}",
                       primary_str, secondary_str, screen_bg_str, card_bg_str, theme_grey_str);
-
-        // Register responsive constants AFTER theme init
-        ui_theme_register_responsive_spacing(display);
-        ui_theme_register_responsive_fonts(display);
     } else {
         spdlog::error("[Theme] Failed to initialize HelixScreen theme");
     }
@@ -666,6 +717,30 @@ static bool ends_with_suffix(const char* str, const char* suffix) {
     return strcmp(str + str_len - suffix_len, suffix) == 0;
 }
 
+// Parser callback for ALL elements of a given type (no suffix matching)
+struct AllElementParserData {
+    const char* element_type;
+    std::unordered_map<std::string, std::string>* token_values;
+};
+
+static void XMLCALL all_element_start(void* userData, const XML_Char* name, const XML_Char** atts) {
+    auto* data = static_cast<AllElementParserData*>(userData);
+    if (strcmp(name, data->element_type) != 0)
+        return;
+
+    const char* elem_name = nullptr;
+    const char* elem_value = nullptr;
+    for (int i = 0; atts[i]; i += 2) {
+        if (strcmp(atts[i], "name") == 0)
+            elem_name = atts[i + 1];
+        else if (strcmp(atts[i], "value") == 0)
+            elem_value = atts[i + 1];
+    }
+    if (elem_name && elem_value) {
+        (*data->token_values)[elem_name] = elem_value;
+    }
+}
+
 // Expat element start handler - extracts name and value for matching elements
 static void XMLCALL suffix_value_element_start(void* user_data, const XML_Char* name,
                                                const XML_Char** attrs) {
@@ -697,6 +772,33 @@ static void XMLCALL suffix_value_element_start(void* user_data, const XML_Char* 
         // Store in results (overwrites any existing value - last-wins)
         (*data->results)[base_name] = const_value;
     }
+}
+
+void ui_theme_parse_xml_file_for_all(const char* filepath, const char* element_type,
+                                     std::unordered_map<std::string, std::string>& token_values) {
+    if (!filepath)
+        return;
+
+    std::ifstream file(filepath);
+    if (!file.is_open())
+        return;
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string xml_content = buffer.str();
+    file.close();
+    if (xml_content.empty())
+        return;
+
+    AllElementParserData parser_data = {element_type, &token_values};
+    XML_Parser parser = XML_ParserCreate(nullptr);
+    if (!parser)
+        return;
+
+    XML_SetUserData(parser, &parser_data);
+    XML_SetElementHandler(parser, all_element_start, nullptr);
+    XML_Parse(parser, xml_content.c_str(), static_cast<int>(xml_content.size()), XML_TRUE);
+    XML_ParserFree(parser);
 }
 
 void ui_theme_parse_xml_file_for_suffix(
@@ -785,6 +887,16 @@ std::vector<std::string> ui_theme_find_xml_files(const char* directory) {
 }
 
 std::unordered_map<std::string, std::string>
+ui_theme_parse_all_xml_for_element(const char* directory, const char* element_type) {
+    std::unordered_map<std::string, std::string> token_values;
+    std::vector<std::string> files = ui_theme_find_xml_files(directory);
+    for (const auto& filepath : files) {
+        ui_theme_parse_xml_file_for_all(filepath.c_str(), element_type, token_values);
+    }
+    return token_values;
+}
+
+std::unordered_map<std::string, std::string>
 ui_theme_parse_all_xml_for_suffix(const char* directory, const char* element_type,
                                   const char* suffix) {
     std::unordered_map<std::string, std::string> token_values;
@@ -798,4 +910,101 @@ ui_theme_parse_all_xml_for_suffix(const char* directory, const char* element_typ
     }
 
     return token_values;
+}
+
+std::vector<std::string> ui_theme_validate_constant_sets(const char* directory) {
+    std::vector<std::string> warnings;
+
+    if (!directory) {
+        return warnings;
+    }
+
+    // Validate responsive px sets (_small/_medium/_large)
+    {
+        auto small_tokens = ui_theme_parse_all_xml_for_suffix(directory, "px", "_small");
+        auto medium_tokens = ui_theme_parse_all_xml_for_suffix(directory, "px", "_medium");
+        auto large_tokens = ui_theme_parse_all_xml_for_suffix(directory, "px", "_large");
+
+        // Collect all base names that have at least one responsive suffix
+        std::unordered_map<std::string, int> base_names;
+        for (const auto& [name, _] : small_tokens) {
+            base_names[name] |= 1; // bit 0 = _small
+        }
+        for (const auto& [name, _] : medium_tokens) {
+            base_names[name] |= 2; // bit 1 = _medium
+        }
+        for (const auto& [name, _] : large_tokens) {
+            base_names[name] |= 4; // bit 2 = _large
+        }
+
+        // Check for incomplete sets
+        for (const auto& [base_name, flags] : base_names) {
+            if (flags != 7) { // Not all three present (111 in binary)
+                std::vector<std::string> found;
+                std::vector<std::string> missing;
+
+                if (flags & 1)
+                    found.push_back("_small");
+                else
+                    missing.push_back("_small");
+
+                if (flags & 2)
+                    found.push_back("_medium");
+                else
+                    missing.push_back("_medium");
+
+                if (flags & 4)
+                    found.push_back("_large");
+                else
+                    missing.push_back("_large");
+
+                std::string found_str;
+                for (size_t i = 0; i < found.size(); ++i) {
+                    if (i > 0)
+                        found_str += ", ";
+                    found_str += found[i];
+                }
+
+                std::string missing_str;
+                for (size_t i = 0; i < missing.size(); ++i) {
+                    if (i > 0)
+                        missing_str += ", ";
+                    missing_str += missing[i];
+                }
+
+                warnings.push_back("Incomplete responsive set for '" + base_name + "': found " +
+                                   found_str + " but missing " + missing_str);
+            }
+        }
+    }
+
+    // Validate themed color pairs (_light/_dark)
+    {
+        auto light_tokens = ui_theme_parse_all_xml_for_suffix(directory, "color", "_light");
+        auto dark_tokens = ui_theme_parse_all_xml_for_suffix(directory, "color", "_dark");
+
+        // Collect all base names that have at least one theme suffix
+        std::unordered_map<std::string, int> base_names;
+        for (const auto& [name, _] : light_tokens) {
+            base_names[name] |= 1; // bit 0 = _light
+        }
+        for (const auto& [name, _] : dark_tokens) {
+            base_names[name] |= 2; // bit 1 = _dark
+        }
+
+        // Check for incomplete pairs
+        for (const auto& [base_name, flags] : base_names) {
+            if (flags != 3) { // Not both present (11 in binary)
+                if (flags == 1) {
+                    warnings.push_back("Incomplete theme pair for '" + base_name +
+                                       "': found _light but missing _dark");
+                } else if (flags == 2) {
+                    warnings.push_back("Incomplete theme pair for '" + base_name +
+                                       "': found _dark but missing _light");
+                }
+            }
+        }
+    }
+
+    return warnings;
 }

@@ -19,7 +19,7 @@
         <lv_obj-bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="0"/>
         <!-- Hero section: icon + title + help button -->
         <lv_obj width="100%"
-                height="content" style_bg_color="#app_bg_color" style_bg_opa="255" style_radius="#border_radius_large"
+                height="content" style_bg_color="#app_bg_color" style_bg_opa="255" style_radius="#border_radius"
                 style_border_width="0" style_pad_all="#space_lg" flex_flow="column" style_flex_main_place="center"
                 style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false">
           <!-- Top row: icon and help button -->
@@ -84,7 +84,7 @@
         <!-- Spinner and status container -->
         <lv_obj width="100%"
                 height="content" style_min_height="160" style_bg_color="#app_bg_color" style_bg_opa="255"
-                style_radius="#border_radius_large" style_border_width="0" style_pad_all="#space_xl" flex_flow="column"
+                style_radius="#border_radius" style_border_width="0" style_pad_all="#space_xl" flex_flow="column"
                 style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_md"
                 scrollable="false">
           <!-- Animated spinner -->
@@ -263,7 +263,7 @@
         <lv_obj-bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="3"/>
         <!-- Error card -->
         <lv_obj width="100%"
-                height="content" style_bg_color="#error_color" style_bg_opa="25" style_radius="#border_radius_large"
+                height="content" style_bg_color="#error_color" style_bg_opa="25" style_radius="#border_radius"
                 style_border_width="1" style_border_color="#error_color" style_pad_all="#space_lg" flex_flow="column"
                 style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm"
                 scrollable="false">

@@ -4,6 +4,10 @@
 <!-- Timelapse Settings Overlay Panel -->
 <!-- Configure Moonraker-Timelapse plugin settings for recording prints -->
 <component>
+  <consts>
+    <!-- Panel background for info boxes -->
+    <color name="panel_bg" value="#1E1E1E"/>
+  </consts>
   <view name="timelapse_settings_overlay"
         extends="overlay_panel" width="#overlay_panel_width_full" title="Timelapse Settings" bg_color="#app_bg_color">
     <!-- Content Area - no padding, rows handle their own -->
@@ -25,7 +29,7 @@
                             callback="on_timelapse_mode_changed"/>
       <!-- Mode info box -->
       <lv_obj name="mode_info_container"
-              width="100%" height="content" style_bg_color="#card_bg_dark" style_radius="#border_radius"
+              width="100%" height="content" style_bg_color="#panel_bg" style_radius="#border_radius"
               style_pad_all="#space_md" style_border_width="0" scrollable="false" flex_flow="column"
               style_pad_gap="#space_xs" style_margin_left="#space_lg" style_margin_right="#space_lg"
               style_margin_bottom="#space_md">

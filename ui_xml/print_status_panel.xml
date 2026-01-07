@@ -2,6 +2,11 @@
 <!-- Copyright (C) 2025-2026 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <component>
+  <consts>
+    <!-- Overlay colors for preparing state (dark theme-like appearance) -->
+    <color name="overlay_bg" value="#1E1E1E"/>
+    <color name="overlay_text" value="#E0E0E0"/>
+  </consts>
   <!-- Print Status Panel - Active print monitoring with G-code 3D viewer -->
   <!-- Uses same sizing as print_file_detail: overlay_panel_width_large, 5:4 flex ratio -->
   <view name="print_status_panel"
@@ -47,7 +52,7 @@
         </lv_label>
         <!-- PREPARING OVERLAY: Shown during pre-print operations (homing, etc) -->
         <lv_obj name="preparing_overlay"
-                width="100%" height="100%" align="center" style_bg_color="#card_bg_dark" style_bg_opa="220"
+                width="100%" height="100%" align="center" style_bg_color="#overlay_bg" style_bg_opa="220"
                 style_border_width="0" style_radius="0" style_pad_all="#space_lg" flex_flow="column"
                 style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_md"
                 scrollable="false">
@@ -55,7 +60,7 @@
           <spinner name="preparing_spinner" size="lg"/>
           <text_heading name="preparing_operation_label"
                         width="100%" bind_text="preparing_operation" text="Preparing..."
-                        style_text_color="#text_primary_dark" style_text_align="center"/>
+                        style_text_color="#overlay_text" style_text_align="center"/>
           <lv_bar name="preparing_progress_bar"
                   width="80%" height="#space_md" bind_value="preparing_progress" style_bg_opa="255"
                   style_radius="#space_xs" style_border_width="0"/>
@@ -108,7 +113,7 @@
                   scrollable="false">
             <!-- Print Progress Bar -->
             <lv_bar name="print_progress"
-                    width="100%" height="#space_md" style_bg_opa="255" style_bg_color="#card_bg_dark"
+                    width="100%" height="#space_md" style_bg_opa="255" style_bg_color="#overlay_bg"
                     style_border_width="0" style_radius="#space_xs" min_value="0" max_value="100"
                     bind_value="print_progress"/>
             <!-- Layer Progress (Layer X / Y) -->
