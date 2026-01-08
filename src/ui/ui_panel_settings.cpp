@@ -114,15 +114,44 @@ static void on_time_format_changed(lv_event_t* e) {
     SettingsManager::instance().set_time_format(format);
 }
 
-// Static callback for version row long-press (memory debug toggle)
+// Static callback for version row tap (memory debug toggle via 7-tap secret)
 // This provides a touch-based way to enable memory debugging on Pi (no keyboard)
-static void on_version_long_pressed(lv_event_t*) {
-    MemoryStatsOverlay::instance().toggle();
-    bool is_visible = MemoryStatsOverlay::instance().is_visible();
-    ui_toast_show(ToastSeverity::SUCCESS, is_visible ? "Memory debug: ON" : "Memory debug: OFF",
-                  1500);
-    spdlog::info("[SettingsPanel] Memory debug toggled via long-press: {}",
-                 is_visible ? "ON" : "OFF");
+// Like Android's "tap build number 7 times" to enable developer mode
+static constexpr int kSecretTapCount = 7;
+static constexpr uint32_t kSecretTapTimeoutMs = 2000; // Reset counter after 2s of no taps
+
+static void on_version_clicked(lv_event_t*) {
+    static int tap_count = 0;
+    static uint32_t last_tap_time = 0;
+
+    uint32_t now = lv_tick_get();
+
+    // Reset counter if too much time has passed
+    if (now - last_tap_time > kSecretTapTimeoutMs) {
+        tap_count = 0;
+    }
+    last_tap_time = now;
+    tap_count++;
+
+    int remaining = kSecretTapCount - tap_count;
+
+    if (remaining > 0 && remaining <= 3) {
+        // Show countdown when close
+        ui_toast_show(ToastSeverity::INFO,
+                      fmt::format("{} more tap{} to toggle memory debug", remaining,
+                                  remaining == 1 ? "" : "s")
+                          .c_str(),
+                      1000);
+    } else if (remaining == 0) {
+        // Toggle memory debug
+        MemoryStatsOverlay::instance().toggle();
+        bool is_visible = MemoryStatsOverlay::instance().is_visible();
+        ui_toast_show(ToastSeverity::SUCCESS, is_visible ? "Memory debug: ON" : "Memory debug: OFF",
+                      1500);
+        spdlog::info("[SettingsPanel] Memory debug toggled via 7-tap secret: {}",
+                     is_visible ? "ON" : "OFF");
+        tap_count = 0; // Reset for next time
+    }
 }
 
 // Static callback for filament sensor master toggle (XML event_cb)
@@ -319,7 +348,7 @@ void SettingsPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_bed_mesh_mode_changed", on_bed_mesh_mode_changed);
     lv_xml_register_event_cb(nullptr, "on_gcode_mode_changed", on_gcode_mode_changed);
     lv_xml_register_event_cb(nullptr, "on_time_format_changed", on_time_format_changed);
-    lv_xml_register_event_cb(nullptr, "on_version_long_pressed", on_version_long_pressed);
+    lv_xml_register_event_cb(nullptr, "on_version_clicked", on_version_clicked);
 
     // Register XML event callbacks for toggle switches
     lv_xml_register_event_cb(nullptr, "on_dark_mode_changed", on_dark_mode_changed);
