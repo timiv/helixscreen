@@ -37,6 +37,7 @@ struct PrintFileData {
     std::string thumbnail_path;         ///< Pre-scaled .bin path for cards (fast rendering)
     std::string original_thumbnail_url; ///< Moonraker relative URL (for detail view PNG lookup)
     size_t file_size_bytes;             ///< File size in bytes
+    std::string uuid;                   ///< Slicer UUID from metadata (empty if not available)
     time_t modified_timestamp;          ///< Last modified timestamp
     int print_time_minutes;             ///< Print time in minutes
     float filament_grams;               ///< Filament weight in grams

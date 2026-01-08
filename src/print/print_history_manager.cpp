@@ -148,6 +148,8 @@ void PrintHistoryManager::build_filename_stats() {
         if (job.start_time > stats.last_print_time) {
             stats.last_print_time = job.start_time;
             stats.last_status = job.status;
+            stats.uuid = job.uuid;
+            stats.size_bytes = job.size_bytes;
         }
     }
 

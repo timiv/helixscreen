@@ -27,6 +27,8 @@ struct PrintHistoryStats {
     int failure_count = 0; ///< Count of CANCELLED + ERROR jobs
     PrintJobStatus last_status = PrintJobStatus::UNKNOWN; ///< Status of most recent job
     double last_print_time = 0.0;                         ///< Unix timestamp of most recent job
+    std::string uuid;      ///< UUID from most recent job for this filename
+    size_t size_bytes = 0; ///< Size from most recent job for this filename
 };
 
 /// Observer callback when history data changes
