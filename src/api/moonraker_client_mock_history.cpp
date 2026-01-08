@@ -83,6 +83,12 @@ void register_history_handlers(std::unordered_map<std::string, MethodHandler>& r
             }
             std::string thumb_path = ".thumbnails/" + base_name + "-300x300.png";
 
+            // Generate mock UUID and file size for history matching
+            std::string mock_uuid =
+                fmt::format("mock-uuid-{:08x}", static_cast<unsigned int>(i * 12345 + 67890));
+            size_t mock_file_size =
+                static_cast<size_t>(m.filament_mm * 10 + 50000); // Reasonable file size
+
             json job = {{"job_id", fmt::format("mock_job_{:03d}", i)},
                         {"filename", m.filename},
                         {"status", m.status},
@@ -98,6 +104,8 @@ void register_history_handlers(std::unordered_map<std::string, MethodHandler>& r
                           {"layer_height", 0.2},
                           {"first_layer_extr_temp", 210.0},
                           {"first_layer_bed_temp", 60.0},
+                          {"uuid", mock_uuid},
+                          {"size", mock_file_size},
                           {"thumbnails", json::array({{{"relative_path", thumb_path},
                                                        {"width", 300},
                                                        {"height", 300},

@@ -131,6 +131,10 @@ PrintHistoryJob parse_history_job(const json& job_json) {
             !meta["thumbnails"].empty()) {
             job.thumbnail_path = meta["thumbnails"][0].value("relative_path", "");
         }
+
+        // UUID and file size for precise history matching
+        job.uuid = meta.value("uuid", "");
+        job.size_bytes = json_number_or(meta, "size", static_cast<size_t>(0));
     }
 
     // Pre-format display strings

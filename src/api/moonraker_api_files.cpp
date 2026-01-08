@@ -1002,6 +1002,9 @@ FileMetadata MoonrakerAPI::parse_file_metadata(const json& response) {
     metadata.gcode_start_byte = get_uint64("gcode_start_byte");
     metadata.gcode_end_byte = get_uint64("gcode_end_byte");
 
+    // UUID for history matching (slicer-generated unique identifier)
+    metadata.uuid = get_string("uuid");
+
     // Thumbnails - parse with dimensions for selecting largest
     if (result.contains("thumbnails") && result["thumbnails"].is_array()) {
         for (const auto& thumb : result["thumbnails"]) {

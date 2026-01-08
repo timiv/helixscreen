@@ -18,6 +18,7 @@
 #include "../../include/printer_state.h"
 #include "../../include/ui_update_queue.h"
 #include "../../lvgl/lvgl.h"
+#include "../ui_test_utils.h"
 
 #include <atomic>
 #include <chrono>
@@ -25,7 +26,6 @@
 #include <vector>
 
 #include "../catch_amalgamated.hpp"
-#include "../ui_test_utils.h"
 
 // ============================================================================
 // Global LVGL Initialization
@@ -348,4 +348,116 @@ TEST_CASE_METHOD(HistoryManagerTestFixture, "PrintHistoryManager handles empty h
     const auto& stats = manager_->get_filename_stats();
     // Just verify we can access it without crash
     (void)stats.size();
+}
+
+// ============================================================================
+// UUID/Size-Based Matching Tests
+// ============================================================================
+// These tests verify the UUID and file size fields that enable precise
+// history matching (prevents false positives with same-named files).
+
+TEST_CASE("PrintHistoryJob has uuid field", "[history][uuid]") {
+    PrintHistoryJob job;
+    job.uuid = "test-uuid-12345";
+    REQUIRE(job.uuid == "test-uuid-12345");
+
+    job.uuid = "";
+    REQUIRE(job.uuid.empty());
+}
+
+TEST_CASE("PrintHistoryJob has size_bytes field", "[history][uuid]") {
+    PrintHistoryJob job;
+    job.size_bytes = 807487;
+    REQUIRE(job.size_bytes == 807487);
+
+    job.size_bytes = 0;
+    REQUIRE(job.size_bytes == 0);
+}
+
+TEST_CASE("PrintHistoryStats has uuid field", "[history][uuid]") {
+    PrintHistoryStats stats;
+    stats.uuid = "stats-uuid-67890";
+    REQUIRE(stats.uuid == "stats-uuid-67890");
+}
+
+TEST_CASE("PrintHistoryStats has size_bytes field", "[history][uuid]") {
+    PrintHistoryStats stats;
+    stats.size_bytes = 2178649;
+    REQUIRE(stats.size_bytes == 2178649);
+}
+
+TEST_CASE_METHOD(HistoryManagerTestFixture, "UUID field is populated from history response",
+                 "[history][uuid]") {
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+
+    const auto& jobs = manager_->get_jobs();
+    REQUIRE_FALSE(jobs.empty());
+
+    // At least one job should have uuid populated (mock returns uuid in metadata)
+    bool found_uuid = false;
+    for (const auto& job : jobs) {
+        if (!job.uuid.empty()) {
+            found_uuid = true;
+            break;
+        }
+    }
+    REQUIRE(found_uuid);
+}
+
+TEST_CASE_METHOD(HistoryManagerTestFixture, "size_bytes field is populated from history response",
+                 "[history][uuid]") {
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+
+    const auto& jobs = manager_->get_jobs();
+    REQUIRE_FALSE(jobs.empty());
+
+    // At least one job should have size_bytes populated
+    bool found_size = false;
+    for (const auto& job : jobs) {
+        if (job.size_bytes > 0) {
+            found_size = true;
+            break;
+        }
+    }
+    REQUIRE(found_size);
+}
+
+TEST_CASE_METHOD(HistoryManagerTestFixture, "PrintHistoryStats includes uuid from most recent job",
+                 "[history][uuid]") {
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+
+    const auto& stats = manager_->get_filename_stats();
+    REQUIRE_FALSE(stats.empty());
+
+    // Stats entries should include uuid from the most recent job
+    bool found_stats_with_uuid = false;
+    for (const auto& [filename, stat] : stats) {
+        if (!stat.uuid.empty()) {
+            found_stats_with_uuid = true;
+            break;
+        }
+    }
+    REQUIRE(found_stats_with_uuid);
+}
+
+TEST_CASE_METHOD(HistoryManagerTestFixture,
+                 "PrintHistoryStats includes size_bytes from most recent job", "[history][uuid]") {
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+
+    const auto& stats = manager_->get_filename_stats();
+    REQUIRE_FALSE(stats.empty());
+
+    // Stats entries should include size from the most recent job
+    bool found_stats_with_size = false;
+    for (const auto& [filename, stat] : stats) {
+        if (stat.size_bytes > 0) {
+            found_stats_with_size = true;
+            break;
+        }
+    }
+    REQUIRE(found_stats_with_size);
 }

@@ -904,6 +904,7 @@ void PrintSelectPanel::process_metadata_result(size_t i, const std::string& file
     uint32_t layer_count = metadata.layer_count;
     double object_height = metadata.object_height;
     double layer_height = metadata.layer_height;
+    std::string uuid = metadata.uuid;
 
     // Smart thumbnail selection: pick smallest that meets display requirements
     // This reduces download size while ensuring adequate resolution
@@ -947,16 +948,18 @@ void PrintSelectPanel::process_metadata_result(size_t i, const std::string& file
         std::string print_height_str;
         double layer_height;
         std::string layer_height_str;
+        std::string uuid;
         std::string thumb_path;
         bool thumb_is_local;
         helix::ThumbnailTarget thumb_target;
     };
 
     ui_queue_update<MetadataUpdate>(
-        std::make_unique<MetadataUpdate>(MetadataUpdate{
-            this, i, filename, print_time_minutes, filament_grams, filament_type, filament_name,
-            print_time_str, filament_str, layer_count, layer_count_str, object_height,
-            print_height_str, layer_height, layer_height_str, thumb_path, thumb_is_local, target}),
+        std::make_unique<MetadataUpdate>(
+            MetadataUpdate{this, i, filename, print_time_minutes, filament_grams, filament_type,
+                           filament_name, print_time_str, filament_str, layer_count,
+                           layer_count_str, object_height, print_height_str, layer_height,
+                           layer_height_str, uuid, thumb_path, thumb_is_local, target}),
         [](MetadataUpdate* d) {
             auto* self = d->panel;
 
@@ -981,6 +984,7 @@ void PrintSelectPanel::process_metadata_result(size_t i, const std::string& file
             self->file_list_[d->index].print_height_str = d->print_height_str;
             self->file_list_[d->index].layer_height = d->layer_height;
             self->file_list_[d->index].layer_height_str = d->layer_height_str;
+            self->file_list_[d->index].uuid = d->uuid;
 
             spdlog::trace("[{}] Updated metadata for {}: {}min, {}g, {} layers", self->get_name(),
                           d->filename, d->print_time_minutes, d->filament_grams, d->layer_count);
@@ -1719,6 +1723,30 @@ void PrintSelectPanel::merge_history_into_file_list() {
         }
 
         const auto& stats = it->second;
+
+        // Verify match with UUID or size (prevent false positives)
+        bool match_confirmed = false;
+
+        // Priority 1: UUID match (most reliable)
+        if (!file.uuid.empty() && !stats.uuid.empty()) {
+            match_confirmed = (file.uuid == stats.uuid);
+        }
+        // Priority 2: Size match (fallback when UUID unavailable)
+        else if (file.file_size_bytes > 0 && stats.size_bytes > 0) {
+            match_confirmed = (file.file_size_bytes == stats.size_bytes);
+        }
+        // Priority 3: Basename only (legacy fallback for old entries without metadata)
+        else {
+            match_confirmed = true;
+        }
+
+        if (!match_confirmed) {
+            // Same name but different file - treat as never printed
+            file.history_status = FileHistoryStatus::NEVER_PRINTED;
+            file.success_count = 0;
+            continue;
+        }
+
         file.success_count = stats.success_count;
 
         // Determine status based on most recent print

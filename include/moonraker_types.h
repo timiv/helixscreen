@@ -105,6 +105,7 @@ struct FileMetadata {
     double first_layer_extr_temp = 0.0;
     uint64_t gcode_start_byte = 0;
     uint64_t gcode_end_byte = 0;
+    std::string uuid;                      // Slicer-generated UUID (for history matching)
     std::vector<ThumbnailInfo> thumbnails; // Thumbnails with dimensions
 
     /**
