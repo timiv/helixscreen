@@ -60,9 +60,9 @@ void PrintSelectFileProvider::refresh_files(const std::string& current_path,
     auto on_err = on_error_;
     auto path_copy = current_path;
 
-    // Request file list from current directory (non-recursive)
-    api_->list_files(
-        "gcodes", current_path, false,
+    // Request directory contents (includes both files AND directories)
+    api_->get_directory(
+        "gcodes", current_path,
         // Success callback
         [self, existing_data = std::move(existing_data), path_copy, on_ready,
          on_err](const std::vector<FileInfo>& files) {
@@ -78,8 +78,9 @@ void PrintSelectFileProvider::refresh_files(const std::string& current_path,
 
             // Convert FileInfo to PrintFileData, preserving existing data where available
             for (const auto& file : files) {
-                // Skip .helix_temp directory (internal temp files for modified prints)
-                if (file.filename == ".helix_temp" || file.filename.find(".helix_temp/") == 0) {
+                // Skip hidden directories and files (starting with '.')
+                // This includes: .helix_temp, .thumbs, .helix_print, ._macOSmetadata, etc.
+                if (!file.filename.empty() && file.filename[0] == '.') {
                     continue;
                 }
 

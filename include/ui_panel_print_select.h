@@ -211,6 +211,19 @@ class PrintSelectPanel : public PanelBase {
     void fetch_metadata_range(size_t start, size_t end);
 
     /**
+     * @brief Process metadata result and update file list
+     *
+     * Extracted from fetch_metadata_range to allow reuse from metascan fallback.
+     * Handles thumbnail fetching, UI updates, and detail view synchronization.
+     *
+     * @param i Index in file_list_
+     * @param filename Filename for validation
+     * @param metadata Metadata to process
+     */
+    void process_metadata_result(size_t i, const std::string& filename,
+                                 const FileMetadata& metadata);
+
+    /**
      * @brief Navigate into a subdirectory
      *
      * @param dirname Directory name to navigate into

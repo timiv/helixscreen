@@ -24,6 +24,11 @@ using Catch::Approx;
 
 bool compare_files(const PrintFileData& a, const PrintFileData& b, PrintSelectSortColumn column,
                    PrintSelectSortDirection direction) {
+    // Directories always sort to top (users expect folders first when browsing)
+    if (a.is_dir != b.is_dir) {
+        return a.is_dir; // dirs always first
+    }
+
     bool result = false;
 
     switch (column) {
@@ -63,6 +68,7 @@ PrintFileData create_test_file(const std::string& name, size_t size_bytes, int d
     file.modified_timestamp = time(nullptr) - (days_ago * 86400);
     file.print_time_minutes = print_mins;
     file.filament_grams = filament_g;
+    file.is_dir = false;
 
     file.size_str = format_file_size(size_bytes);
     file.modified_str = format_modified_date(file.modified_timestamp);
@@ -70,6 +76,24 @@ PrintFileData create_test_file(const std::string& name, size_t size_bytes, int d
     file.filament_str = format_filament_weight(filament_g);
 
     return file;
+}
+
+PrintFileData create_test_directory(const std::string& name, int days_ago = 1) {
+    PrintFileData dir;
+    dir.filename = name;
+    dir.thumbnail_path = "";
+    dir.file_size_bytes = 0;
+    dir.modified_timestamp = time(nullptr) - (days_ago * 86400);
+    dir.print_time_minutes = 0;
+    dir.filament_grams = 0.0f;
+    dir.is_dir = true;
+
+    dir.size_str = "";
+    dir.modified_str = format_modified_date(dir.modified_timestamp);
+    dir.print_time_str = "";
+    dir.filament_str = "";
+
+    return dir;
 }
 
 // ============================================================================
@@ -629,4 +653,155 @@ TEST_CASE("Print Select: Sort stability - equal elements maintain order", "[ui][
     REQUIRE(files[0].filename == "first.gcode");
     REQUIRE(files[1].filename == "second.gcode");
     REQUIRE(files[2].filename == "third.gcode");
+}
+
+// ============================================================================
+// Directory Sorting Tests (directories always at top)
+// ============================================================================
+
+TEST_CASE("Print Select: Directories sort to top - ascending", "[ui][sort][directory]") {
+    std::vector<PrintFileData> files;
+    files.push_back(create_test_file("zebra.gcode", 1024, 1, 100, 50.0f));
+    files.push_back(create_test_directory("folder_a"));
+    files.push_back(create_test_file("apple.gcode", 1024, 2, 100, 50.0f));
+    files.push_back(create_test_directory("folder_b"));
+
+    std::sort(files.begin(), files.end(), [](const auto& a, const auto& b) {
+        return compare_files(a, b, PrintSelectSortColumn::FILENAME,
+                             PrintSelectSortDirection::ASCENDING);
+    });
+
+    // Directories should be first, then files
+    REQUIRE(files[0].is_dir == true);
+    REQUIRE(files[1].is_dir == true);
+    REQUIRE(files[2].is_dir == false);
+    REQUIRE(files[3].is_dir == false);
+
+    // Directories sorted among themselves
+    REQUIRE(files[0].filename == "folder_a");
+    REQUIRE(files[1].filename == "folder_b");
+
+    // Files sorted among themselves
+    REQUIRE(files[2].filename == "apple.gcode");
+    REQUIRE(files[3].filename == "zebra.gcode");
+}
+
+TEST_CASE("Print Select: Directories sort to top - descending", "[ui][sort][directory]") {
+    std::vector<PrintFileData> files;
+    files.push_back(create_test_file("apple.gcode", 1024, 30, 100, 50.0f)); // oldest
+    files.push_back(create_test_directory("old_folder", 20));
+    files.push_back(create_test_file("zebra.gcode", 1024, 1, 100, 50.0f)); // newest
+    files.push_back(create_test_directory("new_folder", 5));
+
+    std::sort(files.begin(), files.end(), [](const auto& a, const auto& b) {
+        return compare_files(a, b, PrintSelectSortColumn::MODIFIED,
+                             PrintSelectSortDirection::DESCENDING);
+    });
+
+    // Directories should STILL be first even with descending sort
+    REQUIRE(files[0].is_dir == true);
+    REQUIRE(files[1].is_dir == true);
+    REQUIRE(files[2].is_dir == false);
+    REQUIRE(files[3].is_dir == false);
+
+    // Directories sorted by modified (newest first within directories)
+    REQUIRE(files[0].filename == "new_folder");
+    REQUIRE(files[1].filename == "old_folder");
+
+    // Files sorted by modified (newest first within files)
+    REQUIRE(files[2].filename == "zebra.gcode");
+    REQUIRE(files[3].filename == "apple.gcode");
+}
+
+TEST_CASE("Print Select: Parent directory (..) sorts to top", "[ui][sort][directory]") {
+    std::vector<PrintFileData> files;
+    files.push_back(create_test_file("benchy.gcode", 1024, 1, 100, 50.0f));
+    files.push_back(create_test_directory("subdir"));
+    files.push_back(create_test_directory(".."));
+
+    std::sort(files.begin(), files.end(), [](const auto& a, const auto& b) {
+        return compare_files(a, b, PrintSelectSortColumn::FILENAME,
+                             PrintSelectSortDirection::ASCENDING);
+    });
+
+    // All directories first, ".." sorts before other dirs alphabetically
+    REQUIRE(files[0].is_dir == true);
+    REQUIRE(files[0].filename == "..");
+    REQUIRE(files[1].is_dir == true);
+    REQUIRE(files[1].filename == "subdir");
+    REQUIRE(files[2].is_dir == false);
+}
+
+TEST_CASE("Print Select: Mixed files and directories by size", "[ui][sort][directory]") {
+    std::vector<PrintFileData> files;
+    files.push_back(create_test_file("large.gcode", 1024 * 1024, 1, 100, 50.0f));
+    files.push_back(create_test_directory("folder"));
+    files.push_back(create_test_file("small.gcode", 1024, 2, 100, 50.0f));
+
+    std::sort(files.begin(), files.end(), [](const auto& a, const auto& b) {
+        return compare_files(a, b, PrintSelectSortColumn::SIZE,
+                             PrintSelectSortDirection::DESCENDING);
+    });
+
+    // Directory first regardless of size sort
+    REQUIRE(files[0].is_dir == true);
+    REQUIRE(files[0].filename == "folder");
+    // Files sorted by size descending
+    REQUIRE(files[1].filename == "large.gcode");
+    REQUIRE(files[2].filename == "small.gcode");
+}
+
+// ============================================================================
+// Folder Type Determination Tests
+// ============================================================================
+
+TEST_CASE("Print Select: Folder type determination", "[ui][folder_type]") {
+    // folder_type: 0=file, 1=directory, 2=parent directory (..)
+
+    SECTION("Regular file has folder_type 0") {
+        PrintFileData file = create_test_file("test.gcode", 1024, 1, 100, 50.0f);
+        int folder_type = file.is_dir ? (file.filename == ".." ? 2 : 1) : 0;
+        REQUIRE(folder_type == 0);
+    }
+
+    SECTION("Regular directory has folder_type 1") {
+        PrintFileData dir = create_test_directory("subdir");
+        int folder_type = dir.is_dir ? (dir.filename == ".." ? 2 : 1) : 0;
+        REQUIRE(folder_type == 1);
+    }
+
+    SECTION("Parent directory has folder_type 2") {
+        PrintFileData parent = create_test_directory("..");
+        int folder_type = parent.is_dir ? (parent.filename == ".." ? 2 : 1) : 0;
+        REQUIRE(folder_type == 2);
+    }
+}
+
+// ============================================================================
+// Metadata Path Construction Tests
+// ============================================================================
+
+TEST_CASE("Print Select: Metadata path construction", "[ui][metadata]") {
+    // Simulates the path construction logic in fetch_metadata_range()
+
+    SECTION("Root directory - no path prefix") {
+        std::string current_path = "";
+        std::string filename = "benchy.gcode";
+        std::string file_path = current_path.empty() ? filename : current_path + "/" + filename;
+        REQUIRE(file_path == "benchy.gcode");
+    }
+
+    SECTION("Subdirectory - path prefix added") {
+        std::string current_path = "usb";
+        std::string filename = "flowrate_0.gcode";
+        std::string file_path = current_path.empty() ? filename : current_path + "/" + filename;
+        REQUIRE(file_path == "usb/flowrate_0.gcode");
+    }
+
+    SECTION("Nested subdirectory - full path constructed") {
+        std::string current_path = "projects/voron";
+        std::string filename = "toolhead.gcode";
+        std::string file_path = current_path.empty() ? filename : current_path + "/" + filename;
+        REQUIRE(file_path == "projects/voron/toolhead.gcode");
+    }
 }

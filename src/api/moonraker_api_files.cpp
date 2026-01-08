@@ -61,6 +61,41 @@ void MoonrakerAPI::list_files(const std::string& root, const std::string& path, 
         on_error);
 }
 
+void MoonrakerAPI::get_directory(const std::string& root, const std::string& path,
+                                 FileListCallback on_success, ErrorCallback on_error) {
+    // Validate root
+    if (reject_invalid_identifier(root, "get_directory", on_error))
+        return;
+
+    // Validate path if provided
+    if (!path.empty() && reject_invalid_path(path, "get_directory", on_error))
+        return;
+
+    // Build the full path for the request
+    std::string full_path = root;
+    if (!path.empty()) {
+        full_path += "/" + path;
+    }
+
+    json params = {{"path", full_path}};
+
+    spdlog::debug("[Moonraker API] Getting directory contents: {}", full_path);
+
+    client_.send_jsonrpc(
+        "server.files.get_directory", params,
+        [this, on_success](json response) {
+            try {
+                std::vector<FileInfo> files = parse_file_list(response);
+                spdlog::debug("[Moonraker API] Directory has {} items", files.size());
+                on_success(files);
+            } catch (const std::exception& e) {
+                LOG_ERROR_INTERNAL("Failed to parse directory: {}", e.what());
+                on_success(std::vector<FileInfo>{}); // Return empty list on parse error
+            }
+        },
+        on_error);
+}
+
 void MoonrakerAPI::get_file_metadata(const std::string& filename, FileMetadataCallback on_success,
                                      ErrorCallback on_error, bool silent) {
     // Validate filename path

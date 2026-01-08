@@ -54,10 +54,17 @@ struct CardWidgetData {
     lv_subject_t filament_subject;
     char filament_buf[32] = {0};
 
+    /// Folder type for declarative binding: 0=file, 1=directory, 2=parent directory (..)
+    lv_subject_t folder_type_subject;
+
     // Observer handles (saved for cleanup before DELETE)
     lv_observer_t* filename_observer = nullptr;
     lv_observer_t* time_observer = nullptr;
     lv_observer_t* filament_observer = nullptr;
+    lv_observer_t* metadata_row_observer = nullptr;    ///< Hides metadata for directories
+    lv_observer_t* folder_icon_observer = nullptr;     ///< Shows folder icon for directories
+    lv_observer_t* parent_dir_icon_observer = nullptr; ///< Shows parent dir icon for ".."
+    lv_observer_t* thumbnail_observer = nullptr;       ///< Hides thumbnail for directories
 };
 
 /**

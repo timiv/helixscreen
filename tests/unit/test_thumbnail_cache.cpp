@@ -253,6 +253,160 @@ TEST_CASE("ThumbnailCache age validation", "[assets][cache][invalidation]") {
     }
 }
 
+// ============================================================================
+// save_raw_png Tests (for USB thumbnail extraction fallback)
+// ============================================================================
+
+TEST_CASE("ThumbnailCache save_raw_png saves valid PNG data", "[assets][cache][save_raw_png]") {
+    ThumbnailCache& cache = get_thumbnail_cache();
+
+    // Valid minimal 1x1 PNG (decoded from base64)
+    // This is a real PNG with proper magic bytes and structure
+    std::vector<uint8_t> valid_png = {
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,       // PNG signature
+        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,       // IHDR chunk
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,       // 1x1 pixels
+        0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE, // RGB, etc
+        0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54,       // IDAT chunk
+        0x08, 0xD7, 0x63, 0xF8, 0xFF, 0xFF, 0x3F, 0x00,       // Compressed data
+        0x05, 0xFE, 0x02, 0xFE, 0xA3, 0x56, 0x4A, 0x25,       // CRC
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,       // IEND chunk
+        0xAE, 0x42, 0x60, 0x82                                // IEND CRC
+    };
+
+    std::string source_id = "test_save_raw_png_" + std::to_string(rand());
+
+    SECTION("Returns LVGL path for valid PNG data") {
+        std::string result = cache.save_raw_png(source_id, valid_png);
+
+        REQUIRE(!result.empty());
+        REQUIRE(ThumbnailCache::is_lvgl_path(result));
+
+        // Cleanup
+        cache.invalidate(source_id);
+    }
+
+    SECTION("Saved file exists and contains correct data") {
+        std::string result = cache.save_raw_png(source_id, valid_png);
+        REQUIRE(!result.empty());
+
+        // Strip A: prefix and check file exists
+        std::string local_path = result.substr(2);
+        REQUIRE(std::filesystem::exists(local_path));
+
+        // Verify file size matches
+        REQUIRE(std::filesystem::file_size(local_path) == valid_png.size());
+
+        // Read back and verify content
+        std::ifstream ifs(local_path, std::ios::binary);
+        std::vector<uint8_t> read_back(valid_png.size());
+        ifs.read(reinterpret_cast<char*>(read_back.data()), valid_png.size());
+        ifs.close();
+
+        REQUIRE(read_back == valid_png);
+
+        // Cleanup
+        cache.invalidate(source_id);
+    }
+
+    SECTION("Different source_ids create different cache files") {
+        std::string id1 = "test_save_raw_1_" + std::to_string(rand());
+        std::string id2 = "test_save_raw_2_" + std::to_string(rand());
+
+        std::string path1 = cache.save_raw_png(id1, valid_png);
+        std::string path2 = cache.save_raw_png(id2, valid_png);
+
+        REQUIRE(!path1.empty());
+        REQUIRE(!path2.empty());
+        REQUIRE(path1 != path2);
+
+        // Cleanup
+        cache.invalidate(id1);
+        cache.invalidate(id2);
+    }
+}
+
+TEST_CASE("ThumbnailCache save_raw_png validates PNG data", "[assets][cache][save_raw_png]") {
+    ThumbnailCache& cache = get_thumbnail_cache();
+
+    SECTION("Rejects empty data") {
+        std::vector<uint8_t> empty_data;
+        std::string result = cache.save_raw_png("test_empty", empty_data);
+        REQUIRE(result.empty());
+    }
+
+    SECTION("Rejects data smaller than PNG header") {
+        std::vector<uint8_t> too_small = {0x89, 'P', 'N', 'G'}; // Only 4 bytes
+        std::string result = cache.save_raw_png("test_small", too_small);
+        REQUIRE(result.empty());
+    }
+
+    SECTION("Rejects invalid PNG magic bytes") {
+        std::vector<uint8_t> invalid_magic = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        std::string result = cache.save_raw_png("test_invalid_magic", invalid_magic);
+        REQUIRE(result.empty());
+    }
+
+    SECTION("Rejects JPEG data (wrong magic)") {
+        std::vector<uint8_t> jpeg_data = {0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46};
+        std::string result = cache.save_raw_png("test_jpeg", jpeg_data);
+        REQUIRE(result.empty());
+    }
+
+    SECTION("Rejects empty source identifier") {
+        std::vector<uint8_t> valid_png = {0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
+        std::string result = cache.save_raw_png("", valid_png);
+        REQUIRE(result.empty());
+    }
+}
+
+TEST_CASE("ThumbnailCache save_raw_png integrates with cache eviction",
+          "[assets][cache][save_raw_png]") {
+    ThumbnailCache& cache = get_thumbnail_cache();
+
+    // Valid minimal PNG
+    std::vector<uint8_t> valid_png = {
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
+        0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00,
+        0x00, 0x90, 0x77, 0x53, 0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54, 0x08,
+        0xD7, 0x63, 0xF8, 0xFF, 0xFF, 0x3F, 0x00, 0x05, 0xFE, 0x02, 0xFE, 0xA3, 0x56, 0x4A,
+        0x25, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82};
+
+    SECTION("Saved file can be found via get_if_cached") {
+        std::string source_id = "test_cache_integration_" + std::to_string(rand());
+
+        // Save the PNG
+        std::string saved_path = cache.save_raw_png(source_id, valid_png);
+        REQUIRE(!saved_path.empty());
+
+        // Should now be found via get_if_cached
+        std::string cached_path = cache.get_if_cached(source_id);
+        REQUIRE(!cached_path.empty());
+        REQUIRE(cached_path == saved_path);
+
+        // Cleanup
+        cache.invalidate(source_id);
+    }
+
+    SECTION("Saved file can be invalidated") {
+        std::string source_id = "test_invalidate_" + std::to_string(rand());
+
+        std::string saved_path = cache.save_raw_png(source_id, valid_png);
+        REQUIRE(!saved_path.empty());
+
+        // File exists
+        std::string local_path = saved_path.substr(2);
+        REQUIRE(std::filesystem::exists(local_path));
+
+        // Invalidate
+        size_t removed = cache.invalidate(source_id);
+        REQUIRE(removed >= 1);
+
+        // File should be gone
+        REQUIRE_FALSE(std::filesystem::exists(local_path));
+    }
+}
+
 TEST_CASE("ThumbnailCache invalidation removes all variants", "[assets][cache][invalidation]") {
     ThumbnailCache& cache = get_thumbnail_cache();
 

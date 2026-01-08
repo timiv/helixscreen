@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <functional>
 #include <vector>
@@ -500,6 +501,63 @@ void ThumbnailCache::fetch(MoonrakerAPI* api, const std::string& relative_path,
                 on_error(error.message);
             }
         });
+}
+
+std::string ThumbnailCache::save_raw_png(const std::string& source_identifier,
+                                         const std::vector<uint8_t>& png_data) {
+    if (source_identifier.empty()) {
+        spdlog::warn("[ThumbnailCache] Empty source identifier for save_raw_png");
+        return "";
+    }
+
+    if (png_data.size() < 8) {
+        spdlog::warn("[ThumbnailCache] PNG data too small ({} bytes)", png_data.size());
+        return "";
+    }
+
+    // Validate PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
+    static const uint8_t png_magic[] = {0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
+    if (std::memcmp(png_data.data(), png_magic, sizeof(png_magic)) != 0) {
+        spdlog::warn("[ThumbnailCache] Invalid PNG magic bytes in save_raw_png");
+        return "";
+    }
+
+    // Check disk pressure before saving
+    if (!is_caching_allowed()) {
+        spdlog::warn("[ThumbnailCache] Disk critically low, skipping save of {}",
+                     source_identifier);
+        return "";
+    }
+
+    // Evict old files before saving new one
+    evict_if_needed();
+
+    // Generate cache path using same hash scheme as downloaded thumbnails
+    std::string cache_path = get_cache_path(source_identifier);
+
+    // Write PNG data to cache file
+    std::ofstream file(cache_path, std::ios::binary);
+    if (!file) {
+        spdlog::error("[ThumbnailCache] Failed to create cache file: {}", cache_path);
+        return "";
+    }
+
+    file.write(reinterpret_cast<const char*>(png_data.data()),
+               static_cast<std::streamsize>(png_data.size()));
+    file.close();
+
+    if (!file) {
+        spdlog::error("[ThumbnailCache] Failed to write PNG data to {}", cache_path);
+        return "";
+    }
+
+    spdlog::debug("[ThumbnailCache] Saved {} bytes from gcode extraction: {}", png_data.size(),
+                  cache_path);
+
+    // Check if we need eviction after save
+    evict_if_needed();
+
+    return to_lvgl_path(cache_path);
 }
 
 size_t ThumbnailCache::clear_cache() {

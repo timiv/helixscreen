@@ -6,7 +6,9 @@
 #include "moonraker_api_internal.h"
 #include "spdlog/spdlog.h"
 
+#include <chrono>
 #include <sstream>
+#include <thread>
 
 using namespace moonraker_internal;
 
@@ -20,7 +22,9 @@ MoonrakerAPI::MoonrakerAPI(MoonrakerClient& client, PrinterState& state) : clien
 }
 
 MoonrakerAPI::~MoonrakerAPI() {
-    // Signal shutdown and wait for all HTTP threads
+    // Signal shutdown and wait for HTTP threads with timeout
+    // File downloads/uploads can have long timeouts (up to 1 hour in libhv),
+    // so we use a timed join to avoid blocking shutdown indefinitely.
     shutting_down_.store(true);
 
     std::list<std::thread> threads_to_join;
@@ -29,9 +33,52 @@ MoonrakerAPI::~MoonrakerAPI() {
         threads_to_join = std::move(http_threads_);
     }
 
+    if (threads_to_join.empty()) {
+        return;
+    }
+
+    spdlog::debug("[Moonraker API] Waiting for {} HTTP thread(s) to finish...",
+                  threads_to_join.size());
+
+    // Timed join pattern: use a helper thread to do the join, poll for completion.
+    // We can't use std::async because its std::future destructor blocks!
+    constexpr auto kJoinTimeout = std::chrono::seconds(2);
+    constexpr auto kPollInterval = std::chrono::milliseconds(10);
+
     for (auto& t : threads_to_join) {
-        if (t.joinable()) {
+        if (!t.joinable()) {
+            continue;
+        }
+
+        // Launch helper thread to do the join
+        std::atomic<bool> joined{false};
+        std::thread join_helper([&t, &joined]() {
             t.join();
+            joined.store(true);
+        });
+
+        // Poll for completion with timeout
+        auto start = std::chrono::steady_clock::now();
+        while (!joined.load()) {
+            if (std::chrono::steady_clock::now() - start > kJoinTimeout) {
+                // Timeout - detach BOTH the helper AND the original thread
+                // We must detach `t` to avoid std::terminate when http_threads_ is destroyed
+                // L033 warns about detach on ARM/glibc with static linking, but:
+                // 1. This only happens during shutdown with stuck HTTP requests
+                // 2. The alternative (blocking forever or std::terminate) is worse
+                // 3. Most deployments use dynamic linking
+                spdlog::warn("[Moonraker API] HTTP thread still running after {}s - "
+                             "will terminate with process",
+                             kJoinTimeout.count());
+                join_helper.detach();
+                t.detach(); // Critical: avoid std::terminate on list destruction
+                break;
+            }
+            std::this_thread::sleep_for(kPollInterval);
+        }
+
+        if (joined.load()) {
+            join_helper.join();
         }
     }
 }

@@ -266,6 +266,28 @@ class ThumbnailCache {
                              ErrorCallback on_error = nullptr, time_t source_modified = 0);
 
     /**
+     * @brief Save raw PNG data directly to cache
+     *
+     * Saves decoded PNG bytes (e.g., from base64-encoded gcode thumbnails)
+     * directly to the cache. The source_identifier is hashed to generate the
+     * cache filename, same as thumbnails downloaded from Moonraker.
+     *
+     * Use this when thumbnail data is extracted from gcode files instead of
+     * downloaded via Moonraker's HTTP API (e.g., USB files where Moonraker
+     * can't write .thumbs directory).
+     *
+     * @param source_identifier Unique identifier for this thumbnail (typically
+     *        the relative_path that would be used with fetch(), e.g., "usb/file.gcode")
+     * @param png_data Raw PNG bytes (must be valid PNG with magic header)
+     * @return LVGL path ("A:...") to saved file, or empty string on failure
+     *
+     * @note Validates PNG magic bytes before saving
+     * @note Triggers cache eviction if needed after saving
+     */
+    std::string save_raw_png(const std::string& source_identifier,
+                             const std::vector<uint8_t>& png_data);
+
+    /**
      * @brief Clear all cached thumbnails
      *
      * Removes all files from the cache directory.

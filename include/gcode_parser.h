@@ -455,6 +455,17 @@ struct GCodeThumbnail {
 std::vector<GCodeThumbnail> extract_thumbnails(const std::string& filepath);
 
 /**
+ * @brief Extract all thumbnails from G-code content string
+ *
+ * Same as extract_thumbnails() but works on string content instead of file.
+ * Useful for processing downloaded gcode without writing to disk.
+ *
+ * @param content G-code content (typically first ~100KB of file header)
+ * @return Vector of thumbnails sorted largest-first. Empty if none found.
+ */
+std::vector<GCodeThumbnail> extract_thumbnails_from_content(const std::string& content);
+
+/**
  * @brief Get the largest thumbnail from a G-code file
  *
  * @param filepath Path to the G-code file

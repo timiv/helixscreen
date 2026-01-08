@@ -43,12 +43,18 @@ LV_FONT_DECLARE(noto_sans_bold_28);
 // =============================================================================
 
 // Navigation icons
-#define ICON_HOME "\xF3\xB0\x8B\x9C"     // U+F02DC home
-#define ICON_CONTROLS "\xF3\xB0\xA3\xA9" // U+F08E9 tune-variant
-#define ICON_FILAMENT "\xF3\xB0\xA5\xBA" // U+F097A film
-#define ICON_SETTINGS "\xF3\xB0\x92\x93" // U+F0493 cog
-#define ICON_ADVANCED "\xF3\xB0\x87\x99" // U+F01D9 dots-vertical
-#define ICON_FOLDER "\xF3\xB0\x9D\xB0"   // U+F0770 folder-open
+#define ICON_HOME "\xF3\xB0\x8B\x9C"        // U+F02DC home
+#define ICON_CONTROLS "\xF3\xB0\xA3\xA9"    // U+F08E9 tune-variant
+#define ICON_FILAMENT "\xF3\xB0\xA5\xBA"    // U+F097A film
+#define ICON_SETTINGS "\xF3\xB0\x92\x93"    // U+F0493 cog
+#define ICON_ADVANCED "\xF3\xB0\x87\x99"    // U+F01D9 dots-vertical
+#define ICON_FOLDER_OPEN "\xF3\xB0\x9D\xB0" // U+F0770 folder-open
+
+// Folder icons (for file browser)
+#define ICON_FOLDER "\xF3\xB0\x89\x8B"            // U+F024B folder
+#define ICON_FOLDER_OUTLINE "\xF3\xB0\x89\x96"    // U+F0256 folder-outline
+#define ICON_FOLDER_UP "\xF3\xB1\xA7\xB0"         // U+F19F0 folder-arrow-up
+#define ICON_FOLDER_UP_OUTLINE "\xF3\xB1\xA7\xB3" // U+F19F3 folder-arrow-up-outline
 
 // Status & network icons
 #define ICON_TEMPERATURE "\xF3\xB0\x94\x8F"     // U+F050F thermometer

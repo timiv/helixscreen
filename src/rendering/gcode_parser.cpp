@@ -1014,6 +1014,78 @@ std::vector<GCodeThumbnail> extract_thumbnails(const std::string& filepath) {
     return thumbnails;
 }
 
+std::vector<GCodeThumbnail> extract_thumbnails_from_content(const std::string& content) {
+    std::vector<GCodeThumbnail> thumbnails;
+
+    GCodeThumbnail current_thumb;
+    std::string base64_data;
+    bool in_thumbnail_block = false;
+    int lines_read = 0;
+    constexpr int max_header_lines = 2000; // Thumbnails should be in first ~2000 lines
+
+    // Parse content line by line using string stream
+    std::istringstream stream(content);
+    std::string line;
+
+    while (std::getline(stream, line) && lines_read < max_header_lines) {
+        lines_read++;
+
+        // Look for thumbnail begin marker
+        // Format: "; thumbnail begin WIDTHxHEIGHT SIZE"
+        size_t begin_pos = line.find("; thumbnail begin ");
+        if (begin_pos != std::string::npos) {
+            // Parse dimensions: "WIDTHxHEIGHT SIZE"
+            std::string dims = line.substr(begin_pos + 18);
+            int w = 0, h = 0, size = 0;
+            if (sscanf(dims.c_str(), "%dx%d %d", &w, &h, &size) >= 2) {
+                current_thumb = GCodeThumbnail();
+                current_thumb.width = w;
+                current_thumb.height = h;
+                base64_data.clear();
+                base64_data.reserve(static_cast<size_t>(size) * 4 / 3 +
+                                    100); // Estimate base64 size
+                in_thumbnail_block = true;
+                spdlog::debug("[GCode Parser] Found thumbnail {}x{} in content", w, h);
+            }
+            continue;
+        }
+
+        // Look for thumbnail end marker
+        if (in_thumbnail_block && line.find("; thumbnail end") != std::string::npos) {
+            // Decode accumulated base64 data
+            current_thumb.png_data = base64_decode(base64_data);
+            if (!current_thumb.png_data.empty()) {
+                thumbnails.push_back(std::move(current_thumb));
+            }
+            in_thumbnail_block = false;
+            continue;
+        }
+
+        // Accumulate base64 data (lines start with "; ")
+        if (in_thumbnail_block && line.size() > 2 && line[0] == ';' && line[1] == ' ') {
+            base64_data += line.substr(2);
+        }
+
+        // Stop if we hit actual G-code (not header comments)
+        if (!line.empty() && line[0] != ';' && line[0] != '\r' && line[0] != '\n') {
+            // Check if it's a G-code command
+            if (line[0] == 'G' || line[0] == 'M' || line[0] == 'T') {
+                break; // Past header, stop searching
+            }
+        }
+    }
+
+    // Sort by pixel count (largest first)
+    std::sort(thumbnails.begin(), thumbnails.end(),
+              [](const GCodeThumbnail& a, const GCodeThumbnail& b) {
+                  return a.pixel_count() > b.pixel_count();
+              });
+
+    spdlog::info("[GCode Parser] Extracted {} thumbnails from content ({} lines)",
+                 thumbnails.size(), lines_read);
+    return thumbnails;
+}
+
 GCodeThumbnail get_best_thumbnail(const std::string& filepath) {
     auto thumbnails = extract_thumbnails(filepath);
     if (thumbnails.empty()) {

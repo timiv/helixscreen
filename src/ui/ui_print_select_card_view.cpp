@@ -4,8 +4,7 @@
 #include "ui_print_select_card_view.h"
 
 #include "ui_panel_print_select.h" // For PrintFileData, CardDimensions
-#include "ui_theme.h"
-#include "ui_utils.h" // For strip_gcode_extension
+#include "ui_utils.h"              // For strip_gcode_extension
 
 #include "prerendered_images.h"
 
@@ -109,6 +108,7 @@ void PrintSelectCardView::cleanup() {
     if (lv_is_initialized()) {
         for (auto& data : card_data_pool_) {
             if (data) {
+                // Text binding observers
                 if (data->filename_observer) {
                     lv_observer_remove(data->filename_observer);
                     data->filename_observer = nullptr;
@@ -120,6 +120,23 @@ void PrintSelectCardView::cleanup() {
                 if (data->filament_observer) {
                     lv_observer_remove(data->filament_observer);
                     data->filament_observer = nullptr;
+                }
+                // Directory visibility binding observers
+                if (data->metadata_row_observer) {
+                    lv_observer_remove(data->metadata_row_observer);
+                    data->metadata_row_observer = nullptr;
+                }
+                if (data->folder_icon_observer) {
+                    lv_observer_remove(data->folder_icon_observer);
+                    data->folder_icon_observer = nullptr;
+                }
+                if (data->parent_dir_icon_observer) {
+                    lv_observer_remove(data->parent_dir_icon_observer);
+                    data->parent_dir_icon_observer = nullptr;
+                }
+                if (data->thumbnail_observer) {
+                    lv_observer_remove(data->thumbnail_observer);
+                    data->thumbnail_observer = nullptr;
                 }
             }
         }
@@ -195,6 +212,8 @@ void PrintSelectCardView::init_pool(const CardDimensions& dims) {
                                    sizeof(data->time_buf), "--");
             lv_subject_init_string(&data->filament_subject, data->filament_buf, nullptr,
                                    sizeof(data->filament_buf), "--");
+            // folder_type: 0=file, 1=directory, 2=parent directory (..)
+            lv_subject_init_int(&data->folder_type_subject, 0);
 
             // Bind labels to subjects
             lv_obj_t* filename_label = lv_obj_find_by_name(card, "filename_label");
@@ -212,6 +231,36 @@ void PrintSelectCardView::init_pool(const CardDimensions& dims) {
             if (filament_label) {
                 data->filament_observer =
                     lv_label_bind_text(filament_label, &data->filament_subject, "%s");
+            }
+
+            // Bind directory-related visibility (declarative UI pattern)
+            // folder_type: 0=file, 1=directory, 2=parent directory
+            lv_obj_t* metadata_row = lv_obj_find_by_name(card, "metadata_row");
+            if (metadata_row) {
+                // Hide metadata row for any directory (folder_type != 0)
+                data->metadata_row_observer = lv_obj_bind_flag_if_not_eq(
+                    metadata_row, &data->folder_type_subject, LV_OBJ_FLAG_HIDDEN, 0);
+            }
+
+            lv_obj_t* folder_icon = lv_obj_find_by_name(card, "folder_icon");
+            if (folder_icon) {
+                // Show folder icon only for regular directories (folder_type == 1)
+                data->folder_icon_observer = lv_obj_bind_flag_if_not_eq(
+                    folder_icon, &data->folder_type_subject, LV_OBJ_FLAG_HIDDEN, 1);
+            }
+
+            lv_obj_t* parent_dir_icon = lv_obj_find_by_name(card, "parent_dir_icon");
+            if (parent_dir_icon) {
+                // Show parent dir icon only for ".." entries (folder_type == 2)
+                data->parent_dir_icon_observer = lv_obj_bind_flag_if_not_eq(
+                    parent_dir_icon, &data->folder_type_subject, LV_OBJ_FLAG_HIDDEN, 2);
+            }
+
+            lv_obj_t* thumbnail = lv_obj_find_by_name(card, "thumbnail");
+            if (thumbnail) {
+                // Hide thumbnail for any directory (folder_type != 0)
+                data->thumbnail_observer = lv_obj_bind_flag_if_not_eq(
+                    thumbnail, &data->folder_type_subject, LV_OBJ_FLAG_HIDDEN, 0);
             }
 
             card_pool_.push_back(card);
@@ -261,46 +310,49 @@ void PrintSelectCardView::configure_card(lv_obj_t* card, size_t pool_index, size
         return;
     }
 
-    // Update display name
-    std::string display_name =
-        file.is_dir ? file.filename + "/" : strip_gcode_extension(file.filename);
+    // Determine folder type: 0=file, 1=directory, 2=parent directory (..)
+    int folder_type = 0;
+    if (file.is_dir) {
+        folder_type = (file.filename == "..") ? 2 : 1;
+    }
 
-    // Update labels via subjects (declarative pattern)
+    // Update display name (parent dir shows as "..", others append "/" for dirs)
+    std::string display_name;
+    if (file.filename == "..") {
+        display_name = "..";
+    } else if (file.is_dir) {
+        display_name = file.filename + "/";
+    } else {
+        display_name = strip_gcode_extension(file.filename);
+    }
+
+    // Update subjects (declarative pattern - bindings react automatically)
     lv_subject_copy_string(&data->filename_subject, display_name.c_str());
     lv_subject_copy_string(&data->time_subject, file.print_time_str.c_str());
     lv_subject_copy_string(&data->filament_subject, file.filament_str.c_str());
+    lv_subject_set_int(&data->folder_type_subject, folder_type);
 
-    // Update thumbnail
-    lv_obj_t* thumb_img = lv_obj_find_by_name(card, "thumbnail");
-    if (thumb_img && !file.thumbnail_path.empty()) {
-        lv_image_set_src(thumb_img, file.thumbnail_path.c_str());
-
-        // Directory styling - use amber/orange tint for folder icons
-        if (file.is_dir) {
-            lv_obj_set_style_image_recolor(thumb_img, ui_theme_get_color("warning_color"), 0);
-            lv_obj_set_style_image_recolor_opa(thumb_img, LV_OPA_COVER, 0);
-        } else {
-            lv_obj_set_style_image_recolor_opa(thumb_img, LV_OPA_TRANSP, 0);
-        }
-    }
-
-    // Hide/show metadata row for directories
-    lv_obj_t* metadata_row = lv_obj_find_by_name(card, "metadata_row");
-    if (metadata_row) {
-        if (file.is_dir) {
-            lv_obj_add_flag(metadata_row, LV_OBJ_FLAG_HIDDEN);
-        } else {
-            lv_obj_remove_flag(metadata_row, LV_OBJ_FLAG_HIDDEN);
+    // Update thumbnail source (only for files - directories use folder icon)
+    if (!file.is_dir) {
+        lv_obj_t* thumb_img = lv_obj_find_by_name(card, "thumbnail");
+        if (thumb_img && !file.thumbnail_path.empty()) {
+            lv_image_set_src(thumb_img, file.thumbnail_path.c_str());
         }
     }
 
     // Adjust overlay heights for directories (show less metadata)
-    if (file.is_dir) {
-        lv_obj_t* metadata_clip = lv_obj_find_by_name(card, "metadata_clip");
-        lv_obj_t* metadata_overlay = lv_obj_find_by_name(card, "metadata_overlay");
-        if (metadata_clip && metadata_overlay) {
+    // Note: metadata_row visibility, folder_icon, and thumbnail visibility
+    // are handled declaratively via is_dir_subject bindings
+    lv_obj_t* metadata_clip = lv_obj_find_by_name(card, "metadata_clip");
+    lv_obj_t* metadata_overlay = lv_obj_find_by_name(card, "metadata_overlay");
+    if (metadata_clip && metadata_overlay) {
+        if (file.is_dir) {
             lv_obj_set_height(metadata_clip, DIR_METADATA_CLIP_HEIGHT);
             lv_obj_set_height(metadata_overlay, DIR_METADATA_OVERLAY_HEIGHT);
+        } else {
+            // Reset to default heights for files
+            lv_obj_set_height(metadata_clip, 70); // metadata_overlay_min_height from XML
+            lv_obj_set_height(metadata_overlay, 78);
         }
     }
 
@@ -345,6 +397,11 @@ void PrintSelectCardView::populate(const std::vector<PrintFileData>& file_list,
     // Reset visible range tracking
     visible_start_row_ = -1;
     visible_end_row_ = -1;
+
+    // Invalidate card pool indices to force reconfiguration
+    // This is critical when the file list content changes (e.g., directory navigation)
+    // even though indices might match, the underlying data is different
+    std::fill(card_pool_indices_.begin(), card_pool_indices_.end(), -1);
 
     // Update visible cards (this also updates spacer heights)
     update_visible(file_list, dims);

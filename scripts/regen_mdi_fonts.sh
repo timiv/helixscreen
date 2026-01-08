@@ -86,6 +86,7 @@ MDI_ICONS+=",0xF0210"    # fan
 MDI_ICONS+=",0xF0238"    # fire
 MDI_ICONS+=",0xF0241"    # flash (lightning bolt - heating indicator)
 MDI_ICONS+=",0xF024B"    # folder
+MDI_ICONS+=",0xF0256"    # folder-outline
 MDI_ICONS+=",0xF0259"    # folder-upload
 MDI_ICONS+=",0xF0279"    # format-list-bulleted (list)
 MDI_ICONS+=",0xF02D7"    # help-circle (question-circle)
@@ -190,6 +191,10 @@ MDI_ICONS+=",0xF0D4C"    # axis-x-arrow
 MDI_ICONS+=",0xF0D51"    # axis-y-arrow
 MDI_ICONS+=",0xF0D55"    # axis-z-arrow
 MDI_ICONS+=",0xF0E4F"    # lightbulb-off
+
+# Folder navigation icons (for file browser)
+MDI_ICONS+=",0xF19F0"    # folder-arrow-up (parent directory)
+MDI_ICONS+=",0xF19F3"    # folder-arrow-up-outline
 
 # Graduated lightbulb icons (brightness levels)
 MDI_ICONS+=",0xF0336"    # lightbulb-outline (OFF state)

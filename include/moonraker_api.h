@@ -84,6 +84,25 @@ class MoonrakerAPI {
                     FileListCallback on_success, ErrorCallback on_error);
 
     /**
+     * @brief Get directory contents with explicit directory entries
+     *
+     * Unlike list_files() which returns a flat list, this method returns
+     * both files AND directories in the specified path. This is needed for
+     * proper directory navigation in the file browser.
+     *
+     * Uses server.files.get_directory endpoint which returns:
+     * - dirs: Array of {dirname, modified, size, permissions}
+     * - files: Array of {filename, modified, size, permissions}
+     *
+     * @param root Root directory ("gcodes", "config", "timelapse")
+     * @param path Subdirectory path (empty for root)
+     * @param on_success Callback with file list (directories have is_dir=true)
+     * @param on_error Error callback
+     */
+    void get_directory(const std::string& root, const std::string& path,
+                       FileListCallback on_success, ErrorCallback on_error);
+
+    /**
      * @brief Get detailed metadata for a file
      *
      * @param filename Full path to file (relative to gcodes root)
