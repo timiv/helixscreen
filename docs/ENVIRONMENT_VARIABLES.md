@@ -12,6 +12,7 @@ This document provides a comprehensive reference for all environment variables u
 | [Mock & Testing](#mock--testing) | 10 | `HELIX_MOCK_*` |
 | [UI Automation](#ui-automation) | 3 | `HELIX_AUTO_*` |
 | [Calibration](#calibration-auto-start) | 2 | `*_AUTO_START` |
+| [Debugging](#debugging) | 1 | `HELIX_DEBUG_*` |
 | [Logging & Paths](#logging--data-paths) | 2 | Standard Unix |
 
 ---
@@ -475,6 +476,44 @@ Auto-start bed screw probing when the screws tilt panel loads.
 # Test screws panel with auto-start
 SCREWS_AUTO_START=1 ./build/bin/helix-screen --test -p screws-tilt
 ```
+
+---
+
+## Debugging
+
+### `HELIX_DEBUG_SUBJECTS`
+
+Enable verbose subject debugging with stack traces. When LVGL subject type mismatches occur (e.g., trying to read an INT from a STRING subject), this enables detailed diagnostics including the subject name, registration location, and a full stack trace.
+
+| Property | Value |
+|----------|-------|
+| **Values** | `1` (enable), unset (disable) |
+| **Default** | Disabled |
+| **CLI equivalent** | `--debug-subjects` |
+| **File** | `src/system/runtime_config.cpp` |
+
+```bash
+# Enable via environment variable
+HELIX_DEBUG_SUBJECTS=1 ./build/bin/helix-screen -vv
+
+# Or via command-line flag (equivalent)
+./build/bin/helix-screen --debug-subjects -vv
+```
+
+**Example output when a type mismatch occurs:**
+```
+[warning] [LVGL] Subject type is not LV_SUBJECT_TYPE_INT (ptr=0x155008f30, type=7)
+[warning]   -> Expected type: LV_SUBJECT_TYPE_INT
+[warning]   -> Subject: "print_progress" (STRING) registered at printer_state.cpp:226
+[warning]   Stack trace:
+[warning]     #0 HomePanel::update_status() + 108
+[warning]     #1 HomePanel::on_state_changed(int) + 140
+```
+
+**Use cases:**
+- Debugging XML binding issues (e.g., `bind_text` on an INT subject)
+- Finding subject initialization order problems
+- Tracing observer callbacks that fire before subjects are ready
 
 ---
 
