@@ -506,3 +506,68 @@ class MacroModificationManager;
 helix::MacroModificationManager* MoonrakerManager::macro_analysis() const {
     return nullptr;
 }
+
+// ============================================================================
+// Stubs for LVGLUITestFixture - Full UI Integration Tests
+// ============================================================================
+// These stubs support tests that need more complete UI initialization
+// but don't need real network/hardware connections.
+
+// Stub for app_globals_init_subjects (creates test notification subject)
+static lv_subject_t s_test_notification_subject;
+static bool s_test_notification_subject_initialized = false;
+
+void app_globals_init_subjects() {
+    if (!s_test_notification_subject_initialized) {
+        lv_subject_init_pointer(&s_test_notification_subject, nullptr);
+        s_test_notification_subject_initialized = true;
+        spdlog::debug("[Test Stub] app_globals_init_subjects: notification subject initialized");
+    }
+}
+
+void app_globals_deinit_subjects() {
+    if (s_test_notification_subject_initialized) {
+        lv_subject_deinit(&s_test_notification_subject);
+        s_test_notification_subject_initialized = false;
+        spdlog::debug(
+            "[Test Stub] app_globals_deinit_subjects: notification subject deinitialized");
+    }
+}
+
+lv_subject_t& get_notification_subject() {
+    if (!s_test_notification_subject_initialized) {
+        app_globals_init_subjects();
+    }
+    return s_test_notification_subject;
+}
+
+// Stub for ui_status_bar_init_subjects (creates test subjects for status bar)
+static lv_subject_t s_test_printer_icon_subject;
+static lv_subject_t s_test_network_icon_subject;
+static bool s_test_status_bar_subjects_initialized = false;
+
+void ui_status_bar_init_subjects() {
+    if (!s_test_status_bar_subjects_initialized) {
+        lv_subject_init_int(&s_test_printer_icon_subject, 0);
+        lv_subject_init_int(&s_test_network_icon_subject, 0);
+        s_test_status_bar_subjects_initialized = true;
+        spdlog::debug("[Test Stub] ui_status_bar_init_subjects: subjects initialized");
+    }
+}
+
+void ui_status_bar_deinit_subjects() {
+    if (s_test_status_bar_subjects_initialized) {
+        lv_subject_deinit(&s_test_printer_icon_subject);
+        lv_subject_deinit(&s_test_network_icon_subject);
+        s_test_status_bar_subjects_initialized = false;
+        spdlog::debug("[Test Stub] ui_status_bar_deinit_subjects: subjects deinitialized");
+    }
+}
+
+void ui_status_bar_register_callbacks() {
+    spdlog::debug("[Test Stub] ui_status_bar_register_callbacks: no-op in tests");
+}
+
+void ui_status_bar_init() {
+    spdlog::debug("[Test Stub] ui_status_bar_init: no-op in tests");
+}

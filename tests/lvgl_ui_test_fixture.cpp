@@ -1,0 +1,228 @@
+// Copyright (C) 2025-2026 356C LLC
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+#include "lvgl_ui_test_fixture.h"
+
+// Asset management
+#include "asset_manager.h"
+
+// Theme
+#include "ui_theme.h"
+
+// Custom widgets (must be registered before XML components that use them)
+#include "ui_bed_mesh.h"
+#include "ui_card.h"
+#include "ui_component_header_bar.h"
+#include "ui_dialog.h"
+#include "ui_gcode_viewer.h"
+#include "ui_gradient_canvas.h"
+#include "ui_icon.h"
+#include "ui_severity_card.h"
+#include "ui_switch.h"
+#include "ui_temp_display.h"
+
+// XML registration
+#include "xml_registration.h"
+
+// Subject initialization
+#include "ui_nav_manager.h"
+#include "ui_status_bar_manager.h"
+#include "ui_wizard.h"
+
+#include "app_globals.h"
+#include "printer_state.h"
+
+// Event callbacks
+#include "ui_emergency_stop.h"
+#include "ui_panel_input_shaper.h"
+#include "ui_panel_screws_tilt.h"
+
+// Moonraker (for API/client - disconnected mode)
+#include "moonraker_api.h"
+#include "moonraker_client.h"
+
+#include <spdlog/spdlog.h>
+
+LVGLUITestFixture::LVGLUITestFixture() {
+    spdlog::debug("[LVGLUITestFixture] Starting initialization...");
+
+    // The parent constructor (LVGLTestFixture) creates a test screen.
+    // We need to delete it temporarily because ui_theme_init() hangs
+    // if called when screens exist. We'll recreate it after theme init.
+    if (m_test_screen != nullptr) {
+        lv_obj_delete(m_test_screen);
+        m_test_screen = nullptr;
+    }
+
+    // Phase 1: Assets (fonts, images)
+    init_assets();
+
+    // Phase 2: Theme (needs assets, no screens present)
+    init_theme();
+
+    // Phase 3: Custom widgets (needed by XML components)
+    register_widgets();
+
+    // Phase 4: Subjects (MUST be before XML components per L004)
+    init_subjects();
+
+    // Phase 5: Event callbacks (MUST be before XML components per L013)
+    register_event_callbacks();
+
+    // Phase 6: XML components (now subjects and callbacks are ready)
+    register_xml_components();
+
+    // Recreate test screen (with theme applied)
+    m_test_screen = lv_obj_create(nullptr);
+    if (m_test_screen != nullptr) {
+        lv_screen_load(m_test_screen);
+    }
+
+    m_fully_initialized = true;
+    spdlog::info("[LVGLUITestFixture] Fully initialized");
+}
+
+LVGLUITestFixture::~LVGLUITestFixture() {
+    cleanup();
+}
+
+PrinterState& LVGLUITestFixture::state() {
+    return get_printer_state();
+}
+
+MoonrakerClient* LVGLUITestFixture::client() {
+    return m_client.get();
+}
+
+MoonrakerAPI* LVGLUITestFixture::api() {
+    return m_api.get();
+}
+
+void LVGLUITestFixture::init_assets() {
+    spdlog::debug("[LVGLUITestFixture] Registering assets...");
+    AssetManager::register_all();
+    m_assets_initialized = true;
+    spdlog::debug("[LVGLUITestFixture] Assets registered");
+}
+
+void LVGLUITestFixture::init_theme() {
+    spdlog::debug("[LVGLUITestFixture] Initializing theme...");
+
+    // globals.xml must be registered before theme (provides constants)
+    lv_xml_register_component_from_file("A:ui_xml/globals.xml");
+
+    // Initialize theme in light mode for test consistency
+    // (dark mode can make screenshots harder to compare)
+    ui_theme_init(lv_display_get_default(), false);
+    m_theme_initialized = true;
+    spdlog::debug("[LVGLUITestFixture] Theme initialized");
+}
+
+void LVGLUITestFixture::register_widgets() {
+    spdlog::debug("[LVGLUITestFixture] Registering custom widgets...");
+
+    // Register C++ widgets in dependency order
+    // These are needed before XML components that embed them
+    ui_icon_register_widget();
+    ui_switch_register();
+    ui_card_register();
+    ui_temp_display_init();
+    ui_severity_card_register();
+    ui_dialog_register();
+    ui_bed_mesh_register();
+    ui_gcode_viewer_register();
+    ui_gradient_canvas_register();
+
+    // Initialize component systems
+    ui_component_header_bar_init();
+
+    m_widgets_registered = true;
+    spdlog::debug("[LVGLUITestFixture] Custom widgets registered");
+}
+
+void LVGLUITestFixture::init_subjects() {
+    spdlog::debug("[LVGLUITestFixture] Initializing subjects...");
+
+    // Core subjects (must be first)
+    app_globals_init_subjects();
+    ui_nav_init();
+    ui_status_bar_init_subjects();
+
+    // PrinterState subjects (panels depend on these)
+    // Pass true to enable XML subject registration
+    get_printer_state().init_subjects(true);
+
+    // Wizard subjects (needed for wizard components)
+    ui_wizard_init_subjects();
+
+    // Create disconnected client and API for tests that need them
+    m_client = std::make_unique<MoonrakerClient>();
+    m_api = std::make_unique<MoonrakerAPI>(*m_client, get_printer_state());
+
+    m_subjects_initialized = true;
+    spdlog::debug("[LVGLUITestFixture] Subjects initialized");
+}
+
+void LVGLUITestFixture::register_event_callbacks() {
+    spdlog::debug("[LVGLUITestFixture] Registering event callbacks...");
+
+    // Wizard callbacks (for navigation buttons)
+    ui_wizard_register_event_callbacks();
+    ui_wizard_container_register_responsive_constants();
+
+    // Status bar callbacks (for status icons)
+    ui_status_bar_register_callbacks();
+
+    // Calibration panel callbacks
+    ui_panel_screws_tilt_register_callbacks();
+    ui_panel_input_shaper_register_callbacks();
+
+    m_callbacks_registered = true;
+    spdlog::debug("[LVGLUITestFixture] Event callbacks registered");
+}
+
+void LVGLUITestFixture::register_xml_components() {
+    spdlog::debug("[LVGLUITestFixture] Registering XML components...");
+
+    // Use production registration function - registers ALL components
+    // in correct dependency order
+    helix::register_xml_components();
+
+    m_xml_registered = true;
+    spdlog::debug("[LVGLUITestFixture] XML components registered");
+}
+
+void LVGLUITestFixture::cleanup() {
+    spdlog::debug("[LVGLUITestFixture] Starting cleanup...");
+
+    // Cleanup follows reverse initialization order (per L041)
+
+    // Destroy API before client (API holds reference to client)
+    m_api.reset();
+    m_client.reset();
+
+    // Deinitialize subjects
+    if (m_subjects_initialized) {
+        // Wizard subjects
+        ui_wizard_deinit_subjects();
+
+        // PrinterState subjects
+        get_printer_state().reset_for_testing();
+
+        // Core subjects - note: these are singletons, so we only deinit
+        // the ones we explicitly initialized
+        // (app_globals, nav, status_bar are managed by static registries
+        // in production, but for tests we just reset PrinterState)
+
+        m_subjects_initialized = false;
+    }
+
+    // XML subjects cleanup
+    if (m_xml_registered) {
+        helix::deinit_xml_subjects();
+        m_xml_registered = false;
+    }
+
+    m_fully_initialized = false;
+    spdlog::debug("[LVGLUITestFixture] Cleanup complete");
+}

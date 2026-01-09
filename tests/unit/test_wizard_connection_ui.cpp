@@ -4,9 +4,12 @@
 #include "ui_wizard.h"
 #include "ui_wizard_connection.h"
 
+#include "../lvgl_ui_test_fixture.h"
 #include "../ui_test_utils.h"
 #include "lvgl/lvgl.h"
 #include "moonraker_client.h"
+
+#include <spdlog/spdlog.h>
 
 #include <chrono>
 #include <memory>
@@ -17,70 +20,41 @@
 // ============================================================================
 // Test Fixture for Wizard Connection UI
 // ============================================================================
+// Extends LVGLUITestFixture which provides full XML component registration
 
-class WizardConnectionUIFixture {
+class WizardConnectionUIFixture : public LVGLUITestFixture {
   public:
     WizardConnectionUIFixture() {
-        // 1. Initialize LVGL (safe version avoids "already initialized" warnings)
-        lv_init_safe();
+        // LVGLUITestFixture handles all LVGL, theme, widget, subject,
+        // callback, and XML component initialization
 
-        // 2. Create headless display for testing
-        alignas(64) static lv_color_t buf[800 * 10];
-        display = lv_display_create(800, 480);
-        lv_display_set_buffers(display, buf, nullptr, sizeof(buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
-        lv_display_set_flush_cb(
-            display, [](lv_display_t* disp, const lv_area_t* area, uint8_t* px_map) {
-                lv_display_flush_ready(disp); // Dummy flush for headless testing
-            });
+        // Create the wizard container on the test screen
+        wizard = ui_wizard_create(test_screen());
+        if (!wizard) {
+            spdlog::error("[WizardConnectionUIFixture] Failed to create wizard!");
+            return;
+        }
 
-        // 3. Create test screen
-        screen = lv_obj_create(lv_screen_active());
-        lv_obj_set_size(screen, 800, 480);
-
-        // 4. Register XML components (required for wizard)
-        ensure_components_registered();
-
-        // 5. Initialize wizard subjects
-        ui_wizard_init_subjects();
-        ui_wizard_register_event_callbacks();
-
-        // 6. Navigate wizard to step 2 (Connection screen)
-        // First create the wizard container
-        wizard = ui_wizard_create(screen);
-        REQUIRE(wizard != nullptr);
-
-        // Then navigate to step 2
+        // Navigate to step 2 (Connection screen)
+        // NOTE: This starts mDNS discovery - keep test processing minimal
         ui_wizard_navigate_to_step(2);
 
-        // 7. Initialize UI test system
-        UITest::init(screen);
+        // Initialize UI test system with test screen
+        UITest::init(test_screen());
 
-        // Process LVGL tasks to ensure UI is ready
-        UITest::wait_ms(100);
+        // Skip LVGL processing in constructor - let individual tests process
+        // NOTE: mDNS timer processing was causing test hangs
     }
 
     ~WizardConnectionUIFixture() {
         UITest::cleanup();
-        if (wizard)
+        if (wizard) {
             lv_obj_delete(wizard);
-        if (screen)
-            lv_obj_delete(screen);
-        if (display)
-            lv_display_delete(display);
-    }
-
-    void ensure_components_registered() {
-        static bool components_registered = false;
-        if (!components_registered) {
-            // Register required XML components
-            // Note: In real app these would be loaded from files
-            // For testing we may need to mock or skip XML loading
-            components_registered = true;
+            wizard = nullptr;
         }
+        // LVGLUITestFixture destructor handles LVGL cleanup
     }
 
-    lv_obj_t* screen = nullptr;
-    lv_display_t* display = nullptr;
     lv_obj_t* wizard = nullptr;
 };
 
@@ -103,26 +77,30 @@ class WizardConnectionUIFixture {
 
 TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: All widgets exist",
                  "[wizard][connection][ui][.ui_integration]") {
-    // Find the main connection screen widgets
-    lv_obj_t* ip_input = UITest::find_by_name(screen, "ip_input");
+    // Ensure wizard was created successfully
+    REQUIRE(wizard != nullptr);
+
+    // Find the main connection screen widgets (search in wizard, not test_screen)
+    lv_obj_t* ip_input = lv_obj_find_by_name(wizard, "ip_input");
     REQUIRE(ip_input != nullptr);
 
-    lv_obj_t* port_input = UITest::find_by_name(screen, "port_input");
+    lv_obj_t* port_input = lv_obj_find_by_name(wizard, "port_input");
     REQUIRE(port_input != nullptr);
 
-    lv_obj_t* test_btn = UITest::find_by_name(screen, "btn_test_connection");
+    lv_obj_t* test_btn = lv_obj_find_by_name(wizard, "btn_test_connection");
     REQUIRE(test_btn != nullptr);
 
-    lv_obj_t* status_label = UITest::find_by_name(screen, "connection_status");
+    // Note: connection_status_text is the actual widget name in XML
+    lv_obj_t* status_label = lv_obj_find_by_name(wizard, "connection_status_text");
     REQUIRE(status_label != nullptr);
 }
 
 TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Input field interaction",
                  "[wizard][connection][ui][.ui_integration]") {
-    lv_obj_t* ip_input = UITest::find_by_name(screen, "ip_input");
+    lv_obj_t* ip_input = UITest::find_by_name(test_screen(), "ip_input");
     REQUIRE(ip_input != nullptr);
 
-    lv_obj_t* port_input = UITest::find_by_name(screen, "port_input");
+    lv_obj_t* port_input = UITest::find_by_name(test_screen(), "port_input");
     REQUIRE(port_input != nullptr);
 
     // Type IP address
@@ -149,7 +127,7 @@ TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Input field interact
 
 TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Test button state",
                  "[wizard][connection][ui][.ui_integration]") {
-    lv_obj_t* test_btn = UITest::find_by_name(screen, "btn_test_connection");
+    lv_obj_t* test_btn = UITest::find_by_name(test_screen(), "btn_test_connection");
     REQUIRE(test_btn != nullptr);
 
     // Button should not have the CLICKABLE flag removed
@@ -162,7 +140,7 @@ TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Test button state",
 
 TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Status label updates",
                  "[wizard][connection][ui][.ui_integration]") {
-    lv_obj_t* status_label = UITest::find_by_name(screen, "connection_status");
+    lv_obj_t* status_label = UITest::find_by_name(test_screen(), "connection_status");
     REQUIRE(status_label != nullptr);
 
     // Initially status should be empty or hidden
@@ -170,12 +148,12 @@ TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Status label updates
     REQUIRE(initial_status.empty());
 
     // Enter invalid IP
-    lv_obj_t* ip_input = UITest::find_by_name(screen, "ip_input");
+    lv_obj_t* ip_input = UITest::find_by_name(test_screen(), "ip_input");
     lv_textarea_set_text(ip_input, ""); // Clear existing text
     UITest::type_text(ip_input, "999.999.999.999");
 
     // Click test button
-    lv_obj_t* test_btn = UITest::find_by_name(screen, "btn_test_connection");
+    lv_obj_t* test_btn = UITest::find_by_name(test_screen(), "btn_test_connection");
     UITest::click(test_btn);
     UITest::wait_ms(100);
 
@@ -187,8 +165,8 @@ TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Status label updates
 TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Navigation buttons",
                  "[wizard][connection][ui][.ui_integration]") {
     // Find navigation buttons
-    lv_obj_t* back_btn = UITest::find_by_name(screen, "wizard_back_button");
-    lv_obj_t* next_btn = UITest::find_by_name(screen, "wizard_next_button");
+    lv_obj_t* back_btn = UITest::find_by_name(test_screen(), "wizard_back_button");
+    lv_obj_t* next_btn = UITest::find_by_name(test_screen(), "wizard_next_button");
 
     // Both should exist (even if back is hidden on step 1)
     REQUIRE(back_btn != nullptr);
@@ -205,8 +183,8 @@ TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Navigation buttons",
 TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Title and progress",
                  "[wizard][connection][ui][.ui_integration]") {
     // Find title and progress labels
-    lv_obj_t* title = UITest::find_by_name(screen, "wizard_title");
-    lv_obj_t* progress = UITest::find_by_name(screen, "wizard_progress");
+    lv_obj_t* title = UITest::find_by_name(test_screen(), "wizard_title");
+    lv_obj_t* progress = UITest::find_by_name(test_screen(), "wizard_progress");
 
     REQUIRE(title != nullptr);
     REQUIRE(progress != nullptr);
@@ -309,10 +287,10 @@ TEST_CASE("Connection UI: Mock connection flow", "[wizard][connection][mock]") {
 
 TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Input validation feedback",
                  "[wizard][connection][ui][validation][.ui_integration]") {
-    lv_obj_t* ip_input = UITest::find_by_name(screen, "ip_input");
-    lv_obj_t* port_input = UITest::find_by_name(screen, "port_input");
-    lv_obj_t* test_btn = UITest::find_by_name(screen, "btn_test_connection");
-    lv_obj_t* status = UITest::find_by_name(screen, "connection_status");
+    lv_obj_t* ip_input = UITest::find_by_name(test_screen(), "ip_input");
+    lv_obj_t* port_input = UITest::find_by_name(test_screen(), "port_input");
+    lv_obj_t* test_btn = UITest::find_by_name(test_screen(), "btn_test_connection");
+    lv_obj_t* status = UITest::find_by_name(test_screen(), "connection_status");
 
     SECTION("Empty IP address") {
         lv_textarea_set_text(ip_input, ""); // Clear text
@@ -358,7 +336,7 @@ TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Input validation fee
 TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Responsive layout",
                  "[wizard][connection][ui][responsive][.ui_integration]") {
     // Get the connection screen container
-    lv_obj_t* container = UITest::find_by_name(screen, "wizard_content");
+    lv_obj_t* container = UITest::find_by_name(test_screen(), "wizard_content");
     REQUIRE(container != nullptr);
 
     // Verify container uses flex layout
@@ -374,7 +352,7 @@ TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Responsive layout",
     REQUIRE(height > 0);
 
     // Input fields should be responsive
-    lv_obj_t* ip_input = UITest::find_by_name(screen, "ip_input");
+    lv_obj_t* ip_input = UITest::find_by_name(test_screen(), "ip_input");
     lv_coord_t input_width = lv_obj_get_width(ip_input);
 
     // Input should be reasonably sized

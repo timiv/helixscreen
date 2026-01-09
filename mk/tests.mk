@@ -60,7 +60,7 @@ endef
 # - All the manual TEST_*_DEPS groups → single TEST_APP_OBJS
 
 # Core test infrastructure (always required)
-TEST_CORE_DEPS := $(TEST_MAIN_OBJ) $(CATCH2_OBJ) $(UI_TEST_UTILS_OBJ) $(LVGL_TEST_FIXTURE_OBJ) $(TEST_FIXTURES_OBJ) $(TEST_OBJS) $(TEST_APP_OBJS_EXTRA)
+TEST_CORE_DEPS := $(TEST_MAIN_OBJ) $(CATCH2_OBJ) $(UI_TEST_UTILS_OBJ) $(LVGL_TEST_FIXTURE_OBJ) $(TEST_FIXTURES_OBJ) $(LVGL_UI_TEST_FIXTURE_OBJ) $(TEST_OBJS) $(TEST_APP_OBJS_EXTRA)
 
 # LVGL + Graphics stack (required for all UI tests)
 TEST_LVGL_DEPS := $(LVGL_OBJS) $(THORVG_OBJS)
@@ -118,7 +118,7 @@ TEST_APP_OBJS := $(filter-out \
 # Clean test artifacts
 clean-tests:
 	$(ECHO) "$(YELLOW)Cleaning test artifacts...$(RESET)"
-	$(Q)rm -f $(TEST_BIN) $(TEST_MAIN_OBJ) $(CATCH2_OBJ) $(UI_TEST_UTILS_OBJ) $(LVGL_TEST_FIXTURE_OBJ) $(TEST_FIXTURES_OBJ) $(TEST_OBJS)
+	$(Q)rm -f $(TEST_BIN) $(TEST_MAIN_OBJ) $(CATCH2_OBJ) $(UI_TEST_UTILS_OBJ) $(LVGL_TEST_FIXTURE_OBJ) $(TEST_FIXTURES_OBJ) $(LVGL_UI_TEST_FIXTURE_OBJ) $(TEST_OBJS)
 	$(ECHO) "$(GREEN)✓ Test artifacts cleaned$(RESET)"
 
 # Build tests in parallel (auto-detects core count like main build target)
@@ -513,6 +513,13 @@ $(LVGL_TEST_FIXTURE_OBJ): $(TEST_DIR)/lvgl_test_fixture.cpp
 $(TEST_FIXTURES_OBJ): $(TEST_DIR)/test_fixtures.cpp
 	$(Q)mkdir -p $(dir $@)
 	$(ECHO) "$(CYAN)[TEST-FIXTURE]$(RESET) $<"
+	$(Q)$(CXX) $(CXXFLAGS) $(DEPFLAGS) -I$(TEST_DIR) $(INCLUDES) -c $< -o $@
+
+# Compile LVGL UI test fixture (full UI integration test fixture)
+# Uses DEPFLAGS to track header dependencies
+$(LVGL_UI_TEST_FIXTURE_OBJ): $(TEST_DIR)/lvgl_ui_test_fixture.cpp
+	$(Q)mkdir -p $(dir $@)
+	$(ECHO) "$(CYAN)[UI-FIXTURE]$(RESET) $<"
 	$(Q)$(CXX) $(CXXFLAGS) $(DEPFLAGS) -I$(TEST_DIR) $(INCLUDES) -c $< -o $@
 
 # Compile test sources
