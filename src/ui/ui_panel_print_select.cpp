@@ -1794,9 +1794,21 @@ void PrintSelectPanel::update_empty_state() {
 }
 
 void PrintSelectPanel::update_print_button_state() {
-    // Update the can_print subject based on current print state
+    // Update the can_print subject based on current print state and macro analysis
     // XML binding automatically disables button when value is 0
     bool can_print = printer_state_.can_start_new_print();
+
+    // Also disable if macro analysis is in progress to prevent race conditions
+    // where print starts before we know which skip params to use
+    if (can_print && detail_view_) {
+        if (auto* prep_mgr = detail_view_->get_prep_manager()) {
+            if (prep_mgr->is_macro_analysis_in_progress()) {
+                can_print = false;
+                spdlog::debug("[{}] Print button disabled: macro analysis in progress", get_name());
+            }
+        }
+    }
+
     int new_value = can_print ? 1 : 0;
 
     // Only update if value changed (avoid unnecessary subject notifications)
@@ -1957,6 +1969,8 @@ void PrintSelectPanel::create_detail_view() {
             [this](const helix::PrintStartAnalysis& /*analysis*/) {
                 // Update unified preprint steps (merges file + macro ops)
                 update_preprint_steps_subject();
+                // Re-enable print button now that analysis is complete
+                update_print_button_state();
             });
     }
 

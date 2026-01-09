@@ -174,6 +174,16 @@ class PrintPreparationManager {
     }
 
     /**
+     * @brief Check if macro analysis is currently in progress
+     *
+     * Used to disable Print button until analysis completes, preventing
+     * race conditions where print starts before skip params are known.
+     */
+    [[nodiscard]] bool is_macro_analysis_in_progress() const {
+        return macro_analysis_in_progress_;
+    }
+
+    /**
      * @brief Get cached PRINT_START analysis result
      */
     [[nodiscard]] const std::optional<helix::PrintStartAnalysis>& get_macro_analysis() const {
