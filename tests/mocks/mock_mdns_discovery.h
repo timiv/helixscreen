@@ -32,12 +32,10 @@
  * Does not start any threads or perform network I/O.
  * Optionally can be configured to return fake printers for testing.
  */
-class MockMdnsDiscovery {
+class MockMdnsDiscovery : public IMdnsDiscovery {
   public:
-    using DiscoveryCallback = std::function<void(const std::vector<DiscoveredPrinter>&)>;
-
     MockMdnsDiscovery() = default;
-    ~MockMdnsDiscovery() = default;
+    ~MockMdnsDiscovery() override = default;
 
     // Non-copyable
     MockMdnsDiscovery(const MockMdnsDiscovery&) = delete;
@@ -49,7 +47,7 @@ class MockMdnsDiscovery {
      * Does NOT start any background threads. Callback is invoked synchronously
      * with the current set of fake printers (empty by default).
      */
-    void start_discovery(DiscoveryCallback on_update) {
+    void start_discovery(DiscoveryCallback on_update) override {
         callback_ = std::move(on_update);
         discovering_ = true;
 
@@ -62,7 +60,7 @@ class MockMdnsDiscovery {
     /**
      * @brief Stop "discovering" - just clears state
      */
-    void stop_discovery() {
+    void stop_discovery() override {
         discovering_ = false;
         callback_ = nullptr;
     }
@@ -70,14 +68,14 @@ class MockMdnsDiscovery {
     /**
      * @brief Check if mock is in "discovering" state
      */
-    bool is_discovering() const {
+    bool is_discovering() const override {
         return discovering_;
     }
 
     /**
      * @brief Get configured fake printers
      */
-    std::vector<DiscoveredPrinter> get_discovered_printers() const {
+    std::vector<DiscoveredPrinter> get_discovered_printers() const override {
         return fake_printers_;
     }
 

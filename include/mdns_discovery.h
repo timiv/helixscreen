@@ -30,6 +30,23 @@ struct DiscoveredPrinter {
 };
 
 /**
+ * @brief Abstract interface for mDNS discovery
+ *
+ * Allows dependency injection of mock implementations for testing.
+ */
+class IMdnsDiscovery {
+  public:
+    using DiscoveryCallback = std::function<void(const std::vector<DiscoveredPrinter>&)>;
+
+    virtual ~IMdnsDiscovery() = default;
+
+    virtual void start_discovery(DiscoveryCallback on_update) = 0;
+    virtual void stop_discovery() = 0;
+    virtual bool is_discovering() const = 0;
+    virtual std::vector<DiscoveredPrinter> get_discovered_printers() const = 0;
+};
+
+/**
  * @brief mDNS discovery service for finding Moonraker instances on the local network
  *
  * This class provides network discovery of Moonraker 3D printer API servers using
@@ -54,7 +71,7 @@ struct DiscoveredPrinter {
  * discovery.stop_discovery();
  * @endcode
  */
-class MdnsDiscovery {
+class MdnsDiscovery : public IMdnsDiscovery {
   public:
     /**
      * @brief Callback type for discovery updates
@@ -83,7 +100,7 @@ class MdnsDiscovery {
      *
      * @param on_update Callback invoked with updated printer list
      */
-    void start_discovery(DiscoveryCallback on_update);
+    void start_discovery(DiscoveryCallback on_update) override;
 
     /**
      * @brief Stop discovering printers
@@ -93,14 +110,14 @@ class MdnsDiscovery {
      *
      * Safe to call multiple times or when not discovering.
      */
-    void stop_discovery();
+    void stop_discovery() override;
 
     /**
      * @brief Check if discovery is currently active
      *
      * @return true if actively discovering, false otherwise
      */
-    bool is_discovering() const;
+    bool is_discovering() const override;
 
     /**
      * @brief Get the current list of discovered printers
@@ -109,7 +126,7 @@ class MdnsDiscovery {
      *
      * @return Vector of discovered printers (may be empty)
      */
-    std::vector<DiscoveredPrinter> get_discovered_printers() const;
+    std::vector<DiscoveredPrinter> get_discovered_printers() const override;
 
   private:
     class Impl;

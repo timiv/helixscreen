@@ -137,6 +137,16 @@ class WizardConnectionStep {
     }
 
     /**
+     * @brief Inject an mDNS discovery implementation
+     *
+     * Allows tests to inject a MockMdnsDiscovery to avoid network I/O
+     * and background threads. Must be called before create().
+     *
+     * @param discovery The mDNS discovery implementation to use
+     */
+    void set_mdns_discovery(std::unique_ptr<IMdnsDiscovery> discovery);
+
+    /**
      * @brief Check if this step has been cleaned up
      *
      * Thread-safe check for use in async callbacks. Returns true if cleanup()
@@ -219,8 +229,8 @@ class WizardConnectionStep {
     static void on_port_input_changed_static(lv_event_t* e);
     static void auto_probe_timer_cb(lv_timer_t* timer);
 
-    // mDNS discovery
-    std::unique_ptr<MdnsDiscovery> mdns_discovery_;
+    // mDNS discovery (injectable for testing)
+    std::unique_ptr<IMdnsDiscovery> mdns_discovery_;
     std::vector<DiscoveredPrinter> discovered_printers_;
 
     // Subjects for mDNS UI
