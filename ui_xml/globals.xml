@@ -21,7 +21,7 @@
     <px name="border_radius_large" value="12"/>
     <!-- Static small radius for elements that always want 4px regardless of screen size -->
     <px name="border_radius_sm" value="4"/>
-    
+
     <!-- ===================================================================== -->
     <!-- Unified Responsive Spacing System (space_*)                         -->
     <!-- ===================================================================== -->
@@ -64,7 +64,7 @@
     <px name="space_2xl_neg_small" value="-24"/>
     <px name="space_2xl_neg_medium" value="-32"/>
     <px name="space_2xl_neg_large" value="-40"/>
-    
+
     <!-- ===================================================================== -->
     <!-- Responsive Icon Sizes (icon_size_*)                                  -->
     <!-- ===================================================================== -->
@@ -74,7 +74,7 @@
     <string name="icon_size_card_small" value="md"/>
     <string name="icon_size_card_medium" value="lg"/>
     <string name="icon_size_card_large" value="xl"/>
-    
+
     <!-- ===================================================================== -->
     <!-- Responsive Spinner Sizes (spinner_*)                                  -->
     <!-- ===================================================================== -->
@@ -96,7 +96,7 @@
     <px name="spinner_xs_small" value="12"/>
     <px name="spinner_xs_medium" value="14"/>
     <px name="spinner_xs_large" value="16"/>
-    
+
     <!-- Spinner arc widths - proportional to size -->
     <px name="spinner_arc_lg_small" value="3"/>
     <px name="spinner_arc_lg_medium" value="4"/>
@@ -110,7 +110,7 @@
     <px name="spinner_arc_xs_small" value="2"/>
     <px name="spinner_arc_xs_medium" value="2"/>
     <px name="spinner_arc_xs_large" value="2"/>
-    
+
     <!-- ===================================================================== -->
     <!-- Responsive Keypad Sizes (keypad_*)                                    -->
     <!-- ===================================================================== -->
@@ -132,14 +132,14 @@
     <!-- Preview/thumbnail vertical offset to account for metadata overlays -->
     <!-- Shifts content up to prevent overlap with bottom metadata areas -->
     <percentage name="preview_offset_y" value="-20%"/>
-    
+
     <!-- Regular button dimensions -->
     <px name="button_height" value="50"/>
     <px name="button_height_small" value="48"/>
     <px name="button_height_medium" value="52"/>
     <px name="button_height_large" value="72"/>
     <px name="button_padding" value="12"/>
-    
+
     <!-- Icon buttons, back buttons -->
     <px name="button_height_sm_small" value="36"/>
     <px name="button_height_sm_medium" value="40"/>
@@ -152,7 +152,7 @@
     <px name="button_height_lg_large" value="96"/>
 
     <!-- Other component dimensions -->
-    <px name="header_height" value="60"/>    
+    <px name="header_height" value="60"/>
 
     <!-- Primary action buttons -->
     <px name="input_height" value="48"/>
@@ -169,7 +169,7 @@
     <px name="color_text_height_small" value="52"/>
     <px name="color_text_height_medium" value="60"/>
     <px name="color_text_height_large" value="68"/>
-  
+
     <!-- Input field dimensions (text inputs, dropdowns, rollers) -->
     <px name="input_border_width" value="1"/>
     <!-- Border width for input fields (prominent for visibility) -->
@@ -223,7 +223,7 @@
     <string name="icon_font_xl_medium" value="mdi_icons_64"/>
     <string name="icon_font_xl_large" value="mdi_icons_64"/>
     <!-- NO BASE icon_font_xl - registered at runtime -->
-    
+
     <!-- ===================================================================== -->
     <!-- Animation Timing Constants                                            -->
     <!-- ===================================================================== -->
@@ -242,16 +242,14 @@
     <px name="anim_press" value="80"/>
     <!-- anim_release: Button release with overshoot -->
     <px name="anim_release" value="120"/>
-    
+
     <!-- Graph/Visualization colors -->
     <color name="graph_line_primary" value="#AD2724"/>
     <color name="graph_line_secondary" value="#D4A84B"/>
     <color name="graph_line_target" value="#2196F3"/>
     <color name="graph_bg_dark" value="#2D2D2D"/>
     <color name="graph_bg_light" value="#F5F5F5"/>
-    <!-- Theme-aware variants for dynamic binding -->
-    <color name="graph_bg_dark_dark" value="#2D2D2D"/>
-    <color name="graph_bg_dark_light" value="#F5F5F5"/>
+
     <!-- Mesh visualization gradient -->
     <color name="mesh_low" value="#2196F3"/>
     <color name="mesh_mid" value="#4CAF50"/>
@@ -302,7 +300,7 @@
     <color name="spool_body_shade" value="#444444"/>
     <color name="spool_hub_top" value="#050505"/>
     <color name="spool_hub_bottom" value="#404040"/>
-    
+
     <!-- Light icon colors (static - same in light/dark) -->
     <color name="light_icon_off" value="#808080"/>
     <color name="light_icon_on" value="#FFD700"/>
@@ -318,7 +316,7 @@
     <color name="heating_color_dark" value="#FF6666"/>
     <color name="cooling_color_light" value="#00CED1"/>
     <color name="cooling_color_dark" value="#33E5E8"/>
-    
+
     <!-- ===================================================================== -->
     <!-- App-wide Theme Colors.                                                -->
     <!-- ===================================================================== -->
@@ -362,7 +360,7 @@
     <!-- Special/modifier keys (shift, backspace, return, ?123) -->
     <color name="keyboard_key_special_light" value="#B8BCC4"/>
     <color name="keyboard_key_special_dark" value="#4A4A4C"/>
-    
+
     <!-- ===================================================================== -->
     <!-- Material Design Icon constants - MDI codepoints (U+F0000 range)       -->
     <!-- Source: https://pictogrammers.com/library/mdi/                        -->

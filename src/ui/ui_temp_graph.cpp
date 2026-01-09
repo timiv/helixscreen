@@ -34,8 +34,7 @@ static lv_color_t mute_color(lv_color_t color, lv_opa_t opa) {
     // Blend toward chart background based on opacity
     // opa=255 = full color, opa=0 = full background
     // Use theme token for chart background (dark mode typically used for graphs)
-    lv_color_t bg =
-        ui_theme_get_color(ui_theme_is_dark_mode() ? "graph_bg_dark" : "graph_bg_light");
+    lv_color_t bg = ui_theme_get_color("graph_bg");
     uint8_t r = (color.red * opa + bg.red * (255 - opa)) / 255;
     uint8_t g = (color.green * opa + bg.green * (255 - opa)) / 255;
     uint8_t b = (color.blue * opa + bg.blue * (255 - opa)) / 255;
