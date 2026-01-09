@@ -64,8 +64,8 @@ WizardConnectionStep::WizardConnectionStep() {
     std::memset(connection_status_text_buffer_, 0, sizeof(connection_status_text_buffer_));
     std::memset(mdns_status_buffer_, 0, sizeof(mdns_status_buffer_));
 
-    // Create mDNS discovery instance
-    mdns_discovery_ = std::make_unique<MdnsDiscovery>();
+    // NOTE: mDNS discovery is created lazily in create() to avoid spawning
+    // background threads in test fixtures where should_mock_mdns() is true
 
     spdlog::debug("[{}] Instance created", get_name());
 }
@@ -74,6 +74,10 @@ WizardConnectionStep::~WizardConnectionStep() {
     // NOTE: Do NOT call LVGL functions here - LVGL may be destroyed first
     // NOTE: Do NOT log here - spdlog may be destroyed first
     screen_root_ = nullptr;
+}
+
+void WizardConnectionStep::set_mdns_discovery(std::unique_ptr<IMdnsDiscovery> discovery) {
+    mdns_discovery_ = std::move(discovery);
 }
 
 // ============================================================================
@@ -939,15 +943,14 @@ lv_obj_t* WizardConnectionStep::create(lv_obj_t* parent) {
         lv_timer_set_repeat_count(auto_probe_timer_, 1); // One-shot timer
     }
 
-    // Start mDNS discovery (skip in test mode - no real responders)
-    if (mdns_discovery_ && !get_runtime_config()->should_mock_mdns()) {
-        spdlog::debug("[{}] Starting mDNS discovery", get_name());
-        mdns_discovery_->start_discovery([this](const std::vector<DiscoveredPrinter>& printers) {
-            on_printers_discovered(printers);
-        });
-    } else if (get_runtime_config()->should_mock_mdns()) {
-        spdlog::debug("[{}] Skipping mDNS discovery (test mode)", get_name());
+    // Lazy-create mDNS discovery if none was injected
+    if (!mdns_discovery_) {
+        mdns_discovery_ = std::make_unique<MdnsDiscovery>();
     }
+    spdlog::debug("[{}] Starting mDNS discovery", get_name());
+    mdns_discovery_->start_discovery([this](const std::vector<DiscoveredPrinter>& printers) {
+        on_printers_discovered(printers);
+    });
 
     spdlog::debug("[{}] Screen created successfully", get_name());
     return screen_root_;
