@@ -781,7 +781,9 @@ tests/unit/test_printer_state.cpp
 
 ### 1.2 Observer Pattern Factory
 
-**Status**: [ ] Not Started  [ ] In Progress  [ ] Complete
+**Status**: [ ] Not Started  [x] In Progress  [ ] Complete
+
+> **Progress**: Factory implemented + 3 pilot panels migrated. 6 files with 13 observers remaining.
 
 #### Problem Statement
 The same 15-line observer pattern is repeated **129+ times** across 85+ UI files, totaling approximately **2000 lines** of nearly identical boilerplate.
@@ -870,31 +872,35 @@ observer_ = create_value_observer(
 
 #### Implementation Steps
 
-**Phase 1: Characterization Tests (BEFORE any code changes)**
-- [ ] Catalog all observer pattern variations in use (int, float, string, pointer)
-- [ ] Write characterization tests for 3 pilot panels (FilamentPanel, ControlsPanel, ExtrusionPanel)
-- [ ] Document expected behavior: notification timing, value conversion, async safety
-- [ ] **✅ CHECKPOINT 1: Review and approve characterization tests**
+**Phase 1: Characterization Tests (BEFORE any code changes)** ✅ COMPLETE
+- [x] Catalog all observer pattern variations in use (int, float, string, pointer)
+- [x] Write characterization tests for 3 pilot panels (FilamentPanel, ControlsPanel, ExtrusionPanel)
+- [x] Document expected behavior: notification timing, value conversion, async safety
+- [x] **✅ CHECKPOINT 1: Review and approve characterization tests**
 
-**Phase 2: Factory Implementation**
-- [ ] Create `include/observer_factory.h` with template helpers
-- [ ] Create `src/ui/observer_factory.cpp` for any non-inline implementations
-- [ ] Write unit tests for observer factory (all subject types, edge cases)
-- [ ] Verify factory tests pass
-- [ ] **✅ Code review: Observer factory implementation**
+**Phase 2: Factory Implementation** ✅ COMPLETE
+- [x] Create `include/observer_factory.h` with template helpers (header-only, 466 lines)
+- [x] Write unit tests for observer factory (12 tests, 36 assertions)
+- [x] Verify factory tests pass
+- [x] **✅ Code review: Observer factory implementation**
 
-**Phase 3: Pilot Migration**
-- [ ] Migrate FilamentPanel to use factory
-- [ ] Verify FilamentPanel characterization tests pass
-- [ ] Migrate ControlsPanel to use factory
-- [ ] Verify ControlsPanel characterization tests pass
-- [ ] Migrate ExtrusionPanel to use factory
-- [ ] Verify ExtrusionPanel characterization tests pass
-- [ ] **✅ CHECKPOINT 2: Review pilot migration**
+**Phase 3: Pilot Migration** ✅ COMPLETE
+- [x] Migrate FilamentPanel to use factory (57% line reduction)
+- [x] Verify FilamentPanel characterization tests pass
+- [x] Migrate ControlsPanel to use factory (13 static callbacks removed)
+- [x] Verify ControlsPanel characterization tests pass
+- [x] Migrate ExtrusionPanel to use factory (1 static callback removed)
+- [x] Verify ExtrusionPanel characterization tests pass
+- [x] **✅ CHECKPOINT 2: Review pilot migration**
 
-**Phase 4: Full Migration**
-- [ ] Create migration guide for remaining panels
-- [ ] Migrate remaining 80+ panels incrementally (group by domain)
+**Phase 4: Full Migration** ⏳ IN PROGRESS
+- [ ] Migrate remaining 6 files with 13 observers:
+  - [ ] `ui_panel_motion.cpp` - 3 observers (position_x/y/z)
+  - [ ] `ui_panel_ams.cpp` - 2 observers (action, slot_count)
+  - [ ] `ui_fan_control_overlay.cpp` - 1 observer (fans_version)
+  - [ ] `ui_ams_slot.cpp` - 4 observers (color, status, current_slot, filament_loaded)
+  - [ ] `ui_ams_mini_status.cpp` - 2 observers (slot_count, slots_version)
+  - [ ] `ui_ams_current_tool.cpp` - 1 observer (color)
 - [ ] Run full test suite after each group
 - [ ] **✅ CHECKPOINT 3: Final review before merge**
 
@@ -1691,8 +1697,9 @@ while (parent) {
 ### Phase 2: Foundation (1 week)
 | Item | Effort | Owner | Status |
 |------|--------|-------|--------|
-| Observer factory implementation | 1d | | [ ] |
-| Observer factory pilot migration | 1d | | [ ] |
+| Observer factory implementation | 1d | | [x] Complete |
+| Observer factory pilot migration | 1d | | [x] Complete (3 panels) |
+| Observer factory full migration | 0.5d | | [ ] 6 files remaining |
 | SubjectManagedPanel audit | 0.5d | | [ ] |
 | SubjectManagedPanel high-priority migration | 2d | | [ ] |
 
@@ -1886,3 +1893,4 @@ private:
 | Date | Author | Changes |
 |------|--------|---------|
 | 2026-01-08 | Claude | Initial document creation |
+| 2026-01-09 | Claude | Observer factory: Phase 1-3 complete. Factory implemented (466 lines, 12 tests), 3 pilot panels migrated (FilamentPanel, ControlsPanel, ExtrusionPanel). Net -146 lines. 6 files/13 observers remaining. |
