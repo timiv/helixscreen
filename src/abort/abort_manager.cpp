@@ -110,7 +110,7 @@ void AbortManager::start_abort() {
         // Skip HEATER_INTERRUPT, go directly to PROBE_QUEUE
         spdlog::debug("[AbortManager] Kalico NOT_PRESENT cached, skipping to PROBE_QUEUE");
         set_state(State::PROBE_QUEUE);
-        set_progress_message("Probing queue...");
+        set_progress_message("Stopping print...");
         start_probe();
     } else {
         // Unknown or DETECTED - try HEATER_INTERRUPT
@@ -118,7 +118,7 @@ void AbortManager::start_abort() {
         spdlog::debug("[AbortManager] Trying HEATER_INTERRUPT (Kalico status: {})",
                       kalico_status_ == KalicoStatus::UNKNOWN ? "UNKNOWN" : "DETECTED");
         set_state(State::TRY_HEATER_INTERRUPT);
-        set_progress_message("Checking Kalico...");
+        set_progress_message("Stopping print...");
         try_heater_interrupt();
     }
 }
@@ -361,7 +361,7 @@ void AbortManager::escalate_to_estop() {
 void AbortManager::send_firmware_restart() {
     spdlog::info("[AbortManager] Sending FIRMWARE_RESTART");
     set_state(State::SENT_RESTART);
-    set_progress_message("Restarting firmware...");
+    set_progress_message("Restarting...");
 
     // If no API, just stay in SENT_RESTART state
     // Tests will call on_restart_sent_for_testing() to progress
@@ -401,7 +401,7 @@ void AbortManager::wait_for_reconnect() {
     seen_shutdown_during_reconnect_.store(false);
 
     set_state(State::WAITING_RECONNECT);
-    set_progress_message("Waiting for reconnect...");
+    set_progress_message("Restarting...");
 
     // Start reconnect timeout timer
     reconnect_timer_ = lv_timer_create(reconnect_timer_cb, RECONNECT_TIMEOUT_MS, this);
@@ -461,7 +461,7 @@ void AbortManager::on_heater_interrupt_success() {
 
     // Proceed to PROBE_QUEUE
     set_state(State::PROBE_QUEUE);
-    set_progress_message("Probing queue...");
+    set_progress_message("Stopping print...");
     start_probe();
 }
 
@@ -481,7 +481,7 @@ void AbortManager::on_heater_interrupt_error() {
 
     // Proceed to PROBE_QUEUE
     set_state(State::PROBE_QUEUE);
-    set_progress_message("Probing queue...");
+    set_progress_message("Stopping print...");
     start_probe();
 }
 
@@ -497,7 +497,7 @@ void AbortManager::on_heater_interrupt_timeout() {
 
     // Proceed to PROBE_QUEUE
     set_state(State::PROBE_QUEUE);
-    set_progress_message("Probing queue...");
+    set_progress_message("Stopping print...");
     start_probe();
 }
 
@@ -514,7 +514,7 @@ void AbortManager::on_probe_response() {
 
     spdlog::info("[AbortManager] Queue responsive, sending CANCEL_PRINT");
     set_state(State::SENT_CANCEL);
-    set_progress_message("Cancelling print...");
+    set_progress_message("Stopping print...");
     send_cancel_print();
 }
 

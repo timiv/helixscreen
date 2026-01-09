@@ -22,10 +22,8 @@
               style_pad_left="#space_lg" style_pad_right="#space_lg" style_pad_top="#space_xl"
               style_pad_bottom="#space_xl" flex_flow="column" style_flex_cross_place="center"
               style_flex_main_place="center" style_flex_track_place="center" style_pad_gap="#space_lg">
-        <!-- Spinner animation -->
-        <lv_spinner name="abort_spinner"
-                    width="#spinner_lg" height="#spinner_lg" style_arc_width_indicator="#spinner_arc_lg"
-                    style_arc_color="#primary_color" style_arc_opa_main="0"/>
+        <!-- Spinner animation (Material Design style) -->
+        <spinner size="lg"/>
         <!-- Progress message (dynamically bound to abort_progress_message subject) -->
         <text_body name="abort_message_label"
                    width="100%" bind_text="abort_progress_message" text="Processing..."
