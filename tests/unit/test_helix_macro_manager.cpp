@@ -127,11 +127,11 @@ TEST_CASE("MacroManager - get_macro_content contains parameter handling", "[conf
     REQUIRE(content.find("BED_TEMP") != std::string::npos);
     REQUIRE(content.find("EXTRUDER_TEMP") != std::string::npos);
 
-    // HELIX_START_PRINT should accept operation flags
-    REQUIRE(content.find("DO_QGL") != std::string::npos);
-    REQUIRE(content.find("DO_Z_TILT") != std::string::npos);
-    REQUIRE(content.find("DO_BED_MESH") != std::string::npos);
-    REQUIRE(content.find("DO_NOZZLE_CLEAN") != std::string::npos);
+    // HELIX_START_PRINT should accept operation flags (PERFORM_* is the standard)
+    REQUIRE(content.find("PERFORM_QGL") != std::string::npos);
+    REQUIRE(content.find("PERFORM_Z_TILT") != std::string::npos);
+    REQUIRE(content.find("PERFORM_BED_MESH") != std::string::npos);
+    REQUIRE(content.find("PERFORM_NOZZLE_CLEAN") != std::string::npos);
 }
 
 TEST_CASE("MacroManager - get_macro_content includes conditional operations", "[config][content]") {
@@ -152,8 +152,8 @@ TEST_CASE("MacroManager - get_macro_content includes conditional operations", "[
 TEST_CASE("MacroManager - get_macro_names returns expected macros", "[slow][config][content]") {
     auto names = MacroManager::get_macro_names();
 
-    // v2.0 has 15 public macros (excluding _HELIX_STATE which starts with _)
-    REQUIRE(names.size() == 15);
+    // v2.0 has 14 public macros (excluding _HELIX_STATE which starts with _)
+    REQUIRE(names.size() == 14);
 
     // Core signals
     REQUIRE(std::find(names.begin(), names.end(), "HELIX_READY") != names.end());
