@@ -197,56 +197,56 @@ void PrintStatusPanel::init_subjects() {
 
     // Initialize all subjects with default values
     // Note: Display filename is now handled by ActivePrintMediaManager via print_display_filename
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(progress_text_subject_, progress_text_buf_, "0%",
-                                        "print_progress_text");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(layer_text_subject_, layer_text_buf_, "Layer 0 / 0",
-                                        "print_layer_text");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(elapsed_subject_, elapsed_buf_, "0h 00m", "print_elapsed");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(remaining_subject_, remaining_buf_, "0h 00m",
-                                        "print_remaining");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(nozzle_temp_subject_, nozzle_temp_buf_, "0 / 0°C",
-                                        "nozzle_temp_text");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_temp_subject_, bed_temp_buf_, "0 / 0°C",
-                                        "bed_temp_text");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(speed_subject_, speed_buf_, "100%", "print_speed_text");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(flow_subject_, flow_buf_, "100%", "print_flow_text");
+    UI_MANAGED_SUBJECT_STRING(progress_text_subject_, progress_text_buf_, "0%",
+                              "print_progress_text", subjects_);
+    UI_MANAGED_SUBJECT_STRING(layer_text_subject_, layer_text_buf_, "Layer 0 / 0",
+                              "print_layer_text", subjects_);
+    UI_MANAGED_SUBJECT_STRING(elapsed_subject_, elapsed_buf_, "0h 00m", "print_elapsed", subjects_);
+    UI_MANAGED_SUBJECT_STRING(remaining_subject_, remaining_buf_, "0h 00m", "print_remaining",
+                              subjects_);
+    UI_MANAGED_SUBJECT_STRING(nozzle_temp_subject_, nozzle_temp_buf_, "0 / 0°C", "nozzle_temp_text",
+                              subjects_);
+    UI_MANAGED_SUBJECT_STRING(bed_temp_subject_, bed_temp_buf_, "0 / 0°C", "bed_temp_text",
+                              subjects_);
+    UI_MANAGED_SUBJECT_STRING(speed_subject_, speed_buf_, "100%", "print_speed_text", subjects_);
+    UI_MANAGED_SUBJECT_STRING(flow_subject_, flow_buf_, "100%", "print_flow_text", subjects_);
     // Pause button icon - MDI icons (pause=F03E4, play=F040A)
     // UTF-8: pause=F3 B0 8F A4, play=F3 B0 90 8A
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(pause_button_subject_, pause_button_buf_,
-                                        "\xF3\xB0\x8F\xA4", "pause_button_icon");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(pause_label_subject_, pause_label_buf_, "Pause",
-                                        "pause_button_label");
+    UI_MANAGED_SUBJECT_STRING(pause_button_subject_, pause_button_buf_, "\xF3\xB0\x8F\xA4",
+                              "pause_button_icon", subjects_);
+    UI_MANAGED_SUBJECT_STRING(pause_label_subject_, pause_label_buf_, "Pause", "pause_button_label",
+                              subjects_);
 
     // Timelapse button icon (F0567=video, F0568=video-off)
     // MDI icons in Plane 15 (U+F0xxx) use 4-byte UTF-8 encoding
     // Default to video-off (timelapse disabled): U+F0568 = \xF3\xB0\x95\xA8
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(timelapse_button_subject_, timelapse_button_buf_,
-                                        "\xF3\xB0\x95\xA8", "timelapse_button_icon");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(timelapse_label_subject_, timelapse_label_buf_, "Off",
-                                        "timelapse_button_label");
+    UI_MANAGED_SUBJECT_STRING(timelapse_button_subject_, timelapse_button_buf_, "\xF3\xB0\x95\xA8",
+                              "timelapse_button_icon", subjects_);
+    UI_MANAGED_SUBJECT_STRING(timelapse_label_subject_, timelapse_label_buf_, "Off",
+                              "timelapse_button_label", subjects_);
 
     // Light button icon (F0336=lightbulb-outline OFF, F06E8=lightbulb-on ON)
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(light_button_subject_, light_button_buf_,
-                                        "\xF3\xB0\x8C\xB6", "light_button_icon");
+    UI_MANAGED_SUBJECT_STRING(light_button_subject_, light_button_buf_, "\xF3\xB0\x8C\xB6",
+                              "light_button_icon", subjects_);
 
     // Preparing state subjects
-    UI_SUBJECT_INIT_AND_REGISTER_INT(preparing_visible_subject_, 0, "preparing_visible");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(preparing_operation_subject_, preparing_operation_buf_,
-                                        "Preparing...", "preparing_operation");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(preparing_progress_subject_, 0, "preparing_progress");
+    UI_MANAGED_SUBJECT_INT(preparing_visible_subject_, 0, "preparing_visible", subjects_);
+    UI_MANAGED_SUBJECT_STRING(preparing_operation_subject_, preparing_operation_buf_,
+                              "Preparing...", "preparing_operation", subjects_);
+    UI_MANAGED_SUBJECT_INT(preparing_progress_subject_, 0, "preparing_progress", subjects_);
 
     // Progress bar subject (integer 0-100 for XML bind_value)
 
     // Viewer mode subject (0=thumbnail, 1=3D gcode viewer, 2=2D gcode viewer)
-    UI_SUBJECT_INIT_AND_REGISTER_INT(gcode_viewer_mode_subject_, 0, "gcode_viewer_mode");
+    UI_MANAGED_SUBJECT_INT(gcode_viewer_mode_subject_, 0, "gcode_viewer_mode", subjects_);
 
     // Tuning panel subjects (for tune panel sliders)
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(tune_speed_subject_, tune_speed_buf_, "100%",
-                                        "tune_speed_display");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(tune_flow_subject_, tune_flow_buf_, "100%",
-                                        "tune_flow_display");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(tune_z_offset_subject_, tune_z_offset_buf_, "0.000mm",
-                                        "tune_z_offset_display");
+    UI_MANAGED_SUBJECT_STRING(tune_speed_subject_, tune_speed_buf_, "100%", "tune_speed_display",
+                              subjects_);
+    UI_MANAGED_SUBJECT_STRING(tune_flow_subject_, tune_flow_buf_, "100%", "tune_flow_display",
+                              subjects_);
+    UI_MANAGED_SUBJECT_STRING(tune_z_offset_subject_, tune_z_offset_buf_, "0.000mm",
+                              "tune_z_offset_display", subjects_);
 
     // Register XML event callbacks for tune panel
     lv_xml_register_event_cb(nullptr, "on_tune_speed_changed", on_tune_speed_changed_cb);
@@ -295,33 +295,14 @@ void PrintStatusPanel::init_subjects() {
                       initial_phase, prog);
     }
 
-    spdlog::debug("[{}] Subjects initialized (17 subjects)", get_name());
+    spdlog::debug("[{}] Subjects initialized (20 subjects)", get_name());
 }
 
 void PrintStatusPanel::deinit_subjects() {
     if (!subjects_initialized_)
         return;
 
-    lv_subject_deinit(&progress_text_subject_);
-    lv_subject_deinit(&layer_text_subject_);
-    lv_subject_deinit(&elapsed_subject_);
-    lv_subject_deinit(&remaining_subject_);
-    lv_subject_deinit(&nozzle_temp_subject_);
-    lv_subject_deinit(&bed_temp_subject_);
-    lv_subject_deinit(&speed_subject_);
-    lv_subject_deinit(&flow_subject_);
-    lv_subject_deinit(&pause_button_subject_);
-    lv_subject_deinit(&pause_label_subject_);
-    lv_subject_deinit(&timelapse_button_subject_);
-    lv_subject_deinit(&timelapse_label_subject_);
-    lv_subject_deinit(&light_button_subject_);
-    lv_subject_deinit(&preparing_visible_subject_);
-    lv_subject_deinit(&preparing_operation_subject_);
-    lv_subject_deinit(&preparing_progress_subject_);
-    lv_subject_deinit(&gcode_viewer_mode_subject_);
-    lv_subject_deinit(&tune_speed_subject_);
-    lv_subject_deinit(&tune_flow_subject_);
-    lv_subject_deinit(&tune_z_offset_subject_);
+    subjects_.deinit_all();
 
     subjects_initialized_ = false;
     spdlog::debug("[PrintStatusPanel] Subjects deinitialized");

@@ -7,6 +7,7 @@
 #include "ui_panel_base.h"
 
 #include "config.h"
+#include "subject_managed_panel.h"
 
 // Forward declarations
 class TempControlPanel;
@@ -166,6 +167,7 @@ class FilamentPanel : public PanelBase {
     // === Subjects (owned by this panel) ===
     //
 
+    SubjectManager subjects_;
     lv_subject_t temp_display_subject_;
     lv_subject_t status_subject_;
     lv_subject_t material_selected_subject_;

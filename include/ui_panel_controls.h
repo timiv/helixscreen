@@ -8,6 +8,7 @@
 
 #include "config.h"
 #include "standard_macros.h"
+#include "subject_managed_panel.h"
 
 #include <optional>
 
@@ -126,6 +127,12 @@ class ControlsPanel : public PanelBase {
      * and hide buttons for empty slots.
      */
     void refresh_macro_buttons();
+
+    //
+    // === Subject Manager (RAII cleanup) ===
+    //
+
+    SubjectManager subjects_; ///< RAII subject manager - auto-deinits all subjects
 
     //
     // === V2 Dashboard Subjects (for XML bind_text/bind_value) ===

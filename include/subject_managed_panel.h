@@ -233,3 +233,41 @@ class SubjectManager {
         SubjectDebugRegistry::instance().register_subject(                                         \
             &(subject), (xml_name), LV_SUBJECT_TYPE_STRING, __FILE__, __LINE__);                   \
     } while (0)
+
+/**
+ * @brief Helper macro to init, register with XML system, AND register with SubjectManager
+ *
+ * Combines UI_SUBJECT_INIT_AND_REGISTER_POINTER with SubjectManager registration.
+ *
+ * @param subject lv_subject_t member variable
+ * @param initial_value Initial pointer value (can be nullptr)
+ * @param xml_name String name for XML binding
+ * @param manager SubjectManager instance
+ */
+#define UI_MANAGED_SUBJECT_POINTER(subject, initial_value, xml_name, manager)                      \
+    do {                                                                                           \
+        lv_subject_init_pointer(&(subject), (initial_value));                                      \
+        lv_xml_register_subject(nullptr, (xml_name), &(subject));                                  \
+        (manager).register_subject(&(subject));                                                    \
+        SubjectDebugRegistry::instance().register_subject(                                         \
+            &(subject), (xml_name), LV_SUBJECT_TYPE_POINTER, __FILE__, __LINE__);                  \
+    } while (0)
+
+/**
+ * @brief Helper macro to init, register with XML system, AND register with SubjectManager
+ *
+ * Combines UI_SUBJECT_INIT_AND_REGISTER_COLOR with SubjectManager registration.
+ *
+ * @param subject lv_subject_t member variable
+ * @param initial_value Initial lv_color_t value
+ * @param xml_name String name for XML binding
+ * @param manager SubjectManager instance
+ */
+#define UI_MANAGED_SUBJECT_COLOR(subject, initial_value, xml_name, manager)                        \
+    do {                                                                                           \
+        lv_subject_init_color(&(subject), (initial_value));                                        \
+        lv_xml_register_subject(nullptr, (xml_name), &(subject));                                  \
+        (manager).register_subject(&(subject));                                                    \
+        SubjectDebugRegistry::instance().register_subject(                                         \
+            &(subject), (xml_name), LV_SUBJECT_TYPE_COLOR, __FILE__, __LINE__);                    \
+    } while (0)

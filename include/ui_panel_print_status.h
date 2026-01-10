@@ -8,6 +8,7 @@
 
 #include "overlay_base.h"
 #include "printer_state.h"
+#include "subject_managed_panel.h"
 
 // Forward declaration
 class MoonrakerAPI;
@@ -511,6 +512,8 @@ class PrintStatusPanel : public OverlayBase {
     // Note: Display filename uses shared print_display_filename from PrinterState
     //       (populated by ActivePrintMediaManager)
     //
+
+    SubjectManager subjects_; ///< RAII manager for automatic subject cleanup
 
     lv_subject_t progress_text_subject_;
     lv_subject_t layer_text_subject_;

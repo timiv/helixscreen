@@ -155,42 +155,42 @@ void FilamentPanel::init_subjects() {
     }
 
     // Initialize subjects with default values
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(temp_display_subject_, temp_display_buf_, temp_display_buf_,
-                                        "filament_temp_display");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(status_subject_, status_buf_, status_buf_,
-                                        "filament_status");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(material_selected_subject_, -1, "filament_material_selected");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(extrusion_allowed_subject_, 0,
-                                     "filament_extrusion_allowed"); // false (cold at start)
-    UI_SUBJECT_INIT_AND_REGISTER_INT(safety_warning_visible_subject_, 1,
-                                     "filament_safety_warning_visible"); // true (cold at start)
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(warning_temps_subject_, warning_temps_buf_,
-                                        warning_temps_buf_, "filament_warning_temps");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(safety_warning_text_subject_, safety_warning_text_buf_,
-                                        safety_warning_text_buf_, "filament_safety_warning_text");
+    UI_MANAGED_SUBJECT_STRING(temp_display_subject_, temp_display_buf_, temp_display_buf_,
+                              "filament_temp_display", subjects_);
+    UI_MANAGED_SUBJECT_STRING(status_subject_, status_buf_, status_buf_, "filament_status",
+                              subjects_);
+    UI_MANAGED_SUBJECT_INT(material_selected_subject_, -1, "filament_material_selected", subjects_);
+    UI_MANAGED_SUBJECT_INT(extrusion_allowed_subject_, 0, "filament_extrusion_allowed",
+                           subjects_); // false (cold at start)
+    UI_MANAGED_SUBJECT_INT(safety_warning_visible_subject_, 1, "filament_safety_warning_visible",
+                           subjects_); // true (cold at start)
+    UI_MANAGED_SUBJECT_STRING(warning_temps_subject_, warning_temps_buf_, warning_temps_buf_,
+                              "filament_warning_temps", subjects_);
+    UI_MANAGED_SUBJECT_STRING(safety_warning_text_subject_, safety_warning_text_buf_,
+                              safety_warning_text_buf_, "filament_safety_warning_text", subjects_);
 
     // Material temperature display subjects (for right side preset displays)
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(material_nozzle_temp_subject_, material_nozzle_buf_,
-                                        material_nozzle_buf_, "filament_material_nozzle_temp");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(material_bed_temp_subject_, material_bed_buf_,
-                                        material_bed_buf_, "filament_material_bed_temp");
+    UI_MANAGED_SUBJECT_STRING(material_nozzle_temp_subject_, material_nozzle_buf_,
+                              material_nozzle_buf_, "filament_material_nozzle_temp", subjects_);
+    UI_MANAGED_SUBJECT_STRING(material_bed_temp_subject_, material_bed_buf_, material_bed_buf_,
+                              "filament_material_bed_temp", subjects_);
 
     // Left card temperature subjects (current and target for nozzle/bed)
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(nozzle_current_subject_, nozzle_current_buf_,
-                                        nozzle_current_buf_, "filament_nozzle_current");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(nozzle_target_subject_, nozzle_target_buf_,
-                                        nozzle_target_buf_, "filament_nozzle_target");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_current_subject_, bed_current_buf_, bed_current_buf_,
-                                        "filament_bed_current");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_target_subject_, bed_target_buf_, bed_target_buf_,
-                                        "filament_bed_target");
+    UI_MANAGED_SUBJECT_STRING(nozzle_current_subject_, nozzle_current_buf_, nozzle_current_buf_,
+                              "filament_nozzle_current", subjects_);
+    UI_MANAGED_SUBJECT_STRING(nozzle_target_subject_, nozzle_target_buf_, nozzle_target_buf_,
+                              "filament_nozzle_target", subjects_);
+    UI_MANAGED_SUBJECT_STRING(bed_current_subject_, bed_current_buf_, bed_current_buf_,
+                              "filament_bed_current", subjects_);
+    UI_MANAGED_SUBJECT_STRING(bed_target_subject_, bed_target_buf_, bed_target_buf_,
+                              "filament_bed_target", subjects_);
 
     // Operation in progress subject (for disabling buttons during filament ops)
-    UI_SUBJECT_INIT_AND_REGISTER_INT(operation_in_progress_subject_, 0,
-                                     "filament_operation_in_progress");
+    UI_MANAGED_SUBJECT_INT(operation_in_progress_subject_, 0, "filament_operation_in_progress",
+                           subjects_);
 
     // Cooldown button visibility (1 when nozzle target > 0)
-    UI_SUBJECT_INIT_AND_REGISTER_INT(nozzle_heating_subject_, 0, "filament_nozzle_heating");
+    UI_MANAGED_SUBJECT_INT(nozzle_heating_subject_, 0, "filament_nozzle_heating", subjects_);
 
     subjects_initialized_ = true;
     spdlog::debug("[{}] Subjects initialized: temp={}/{}°C, material={}", get_name(),
@@ -202,22 +202,7 @@ void FilamentPanel::deinit_subjects() {
         return;
     }
 
-    // Deinitialize all subjects in reverse order of initialization [L041]
-    lv_subject_deinit(&nozzle_heating_subject_);
-    lv_subject_deinit(&operation_in_progress_subject_);
-    lv_subject_deinit(&bed_target_subject_);
-    lv_subject_deinit(&bed_current_subject_);
-    lv_subject_deinit(&nozzle_target_subject_);
-    lv_subject_deinit(&nozzle_current_subject_);
-    lv_subject_deinit(&material_bed_temp_subject_);
-    lv_subject_deinit(&material_nozzle_temp_subject_);
-    lv_subject_deinit(&safety_warning_text_subject_);
-    lv_subject_deinit(&warning_temps_subject_);
-    lv_subject_deinit(&safety_warning_visible_subject_);
-    lv_subject_deinit(&extrusion_allowed_subject_);
-    lv_subject_deinit(&material_selected_subject_);
-    lv_subject_deinit(&status_subject_);
-    lv_subject_deinit(&temp_display_subject_);
+    subjects_.deinit_all();
 
     subjects_initialized_ = false;
     spdlog::debug("[{}] Subjects deinitialized", get_name());

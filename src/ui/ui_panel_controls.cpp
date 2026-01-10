@@ -28,6 +28,7 @@
 #include "printer_state.h"
 #include "standard_macros.h"
 #include "static_panel_registry.h"
+#include "subject_managed_panel.h"
 
 #include <spdlog/spdlog.h>
 
@@ -123,68 +124,69 @@ void ControlsPanel::init_subjects() {
     }
 
     // Initialize dashboard display subjects for card live data
+    // Using UI_MANAGED_SUBJECT_* macros for automatic RAII cleanup via SubjectManager
 
     // Nozzle temperature display
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(nozzle_temp_subject_, nozzle_temp_buf_, "--°C",
-                                        "controls_nozzle_temp");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(nozzle_pct_subject_, 0, "controls_nozzle_pct");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(nozzle_status_subject_, nozzle_status_buf_, "Off",
-                                        "controls_nozzle_status");
+    UI_MANAGED_SUBJECT_STRING(nozzle_temp_subject_, nozzle_temp_buf_, "--°C",
+                              "controls_nozzle_temp", subjects_);
+    UI_MANAGED_SUBJECT_INT(nozzle_pct_subject_, 0, "controls_nozzle_pct", subjects_);
+    UI_MANAGED_SUBJECT_STRING(nozzle_status_subject_, nozzle_status_buf_, "Off",
+                              "controls_nozzle_status", subjects_);
 
     // Bed temperature display
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_temp_subject_, bed_temp_buf_, "--°C",
-                                        "controls_bed_temp");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(bed_pct_subject_, 0, "controls_bed_pct");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_status_subject_, bed_status_buf_, "Off",
-                                        "controls_bed_status");
+    UI_MANAGED_SUBJECT_STRING(bed_temp_subject_, bed_temp_buf_, "--°C", "controls_bed_temp",
+                              subjects_);
+    UI_MANAGED_SUBJECT_INT(bed_pct_subject_, 0, "controls_bed_pct", subjects_);
+    UI_MANAGED_SUBJECT_STRING(bed_status_subject_, bed_status_buf_, "Off", "controls_bed_status",
+                              subjects_);
 
     // Fan speed display
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(fan_speed_subject_, fan_speed_buf_, "Off",
-                                        "controls_fan_speed");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(fan_pct_subject_, 0, "controls_fan_pct");
+    UI_MANAGED_SUBJECT_STRING(fan_speed_subject_, fan_speed_buf_, "Off", "controls_fan_speed",
+                              subjects_);
+    UI_MANAGED_SUBJECT_INT(fan_pct_subject_, 0, "controls_fan_pct", subjects_);
 
     // Macro button visibility and names (for declarative binding)
-    UI_SUBJECT_INIT_AND_REGISTER_INT(macro_1_visible_, 0, "macro_1_visible");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(macro_2_visible_, 0, "macro_2_visible");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(macro_1_name_, macro_1_name_buf_, "", "macro_1_name");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(macro_2_name_, macro_2_name_buf_, "", "macro_2_name");
+    UI_MANAGED_SUBJECT_INT(macro_1_visible_, 0, "macro_1_visible", subjects_);
+    UI_MANAGED_SUBJECT_INT(macro_2_visible_, 0, "macro_2_visible", subjects_);
+    UI_MANAGED_SUBJECT_STRING(macro_1_name_, macro_1_name_buf_, "", "macro_1_name", subjects_);
+    UI_MANAGED_SUBJECT_STRING(macro_2_name_, macro_2_name_buf_, "", "macro_2_name", subjects_);
 
     // Z-Offset delta display (for banner showing unsaved adjustment)
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(z_offset_delta_display_subject_,
-                                        z_offset_delta_display_buf_, "", "z_offset_delta_display");
+    UI_MANAGED_SUBJECT_STRING(z_offset_delta_display_subject_, z_offset_delta_display_buf_, "",
+                              "z_offset_delta_display", subjects_);
 
     // Homing status subjects for bind_style visual feedback
-    UI_SUBJECT_INIT_AND_REGISTER_INT(x_homed_, 0, "x_homed");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(y_homed_, 0, "y_homed");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(xy_homed_, 0, "xy_homed");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(z_homed_, 0, "z_homed");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(all_homed_, 0, "all_homed");
+    UI_MANAGED_SUBJECT_INT(x_homed_, 0, "x_homed", subjects_);
+    UI_MANAGED_SUBJECT_INT(y_homed_, 0, "y_homed", subjects_);
+    UI_MANAGED_SUBJECT_INT(xy_homed_, 0, "xy_homed", subjects_);
+    UI_MANAGED_SUBJECT_INT(z_homed_, 0, "z_homed", subjects_);
+    UI_MANAGED_SUBJECT_INT(all_homed_, 0, "all_homed", subjects_);
 
     // Position display subjects for Position card
     // Format: numeric value only (axis label is static in XML for proper alignment)
     std::strcpy(controls_pos_x_buf_, "   --   mm");
     std::strcpy(controls_pos_y_buf_, "   --   mm");
     std::strcpy(controls_pos_z_buf_, "   --   mm");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(controls_pos_x_subject_, controls_pos_x_buf_, "   --   mm",
-                                        "controls_pos_x");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(controls_pos_y_subject_, controls_pos_y_buf_, "   --   mm",
-                                        "controls_pos_y");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(controls_pos_z_subject_, controls_pos_z_buf_, "   --   mm",
-                                        "controls_pos_z");
+    UI_MANAGED_SUBJECT_STRING(controls_pos_x_subject_, controls_pos_x_buf_, "   --   mm",
+                              "controls_pos_x", subjects_);
+    UI_MANAGED_SUBJECT_STRING(controls_pos_y_subject_, controls_pos_y_buf_, "   --   mm",
+                              "controls_pos_y", subjects_);
+    UI_MANAGED_SUBJECT_STRING(controls_pos_z_subject_, controls_pos_z_buf_, "   --   mm",
+                              "controls_pos_z", subjects_);
 
     // Speed/Flow override display subjects
     std::strcpy(speed_override_buf_, "100%");
     std::strcpy(flow_override_buf_, "100%");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(speed_override_subject_, speed_override_buf_, "100%",
-                                        "controls_speed_pct");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(flow_override_subject_, flow_override_buf_, "100%",
-                                        "controls_flow_pct");
+    UI_MANAGED_SUBJECT_STRING(speed_override_subject_, speed_override_buf_, "100%",
+                              "controls_speed_pct", subjects_);
+    UI_MANAGED_SUBJECT_STRING(flow_override_subject_, flow_override_buf_, "100%",
+                              "controls_flow_pct", subjects_);
 
     // Macro buttons 3 & 4 visibility and names
-    UI_SUBJECT_INIT_AND_REGISTER_INT(macro_3_visible_, 0, "macro_3_visible");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(macro_4_visible_, 0, "macro_4_visible");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(macro_3_name_, macro_3_name_buf_, "", "macro_3_name");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(macro_4_name_, macro_4_name_buf_, "", "macro_4_name");
+    UI_MANAGED_SUBJECT_INT(macro_3_visible_, 0, "macro_3_visible", subjects_);
+    UI_MANAGED_SUBJECT_INT(macro_4_visible_, 0, "macro_4_visible", subjects_);
+    UI_MANAGED_SUBJECT_STRING(macro_3_name_, macro_3_name_buf_, "", "macro_3_name", subjects_);
+    UI_MANAGED_SUBJECT_STRING(macro_4_name_, macro_4_name_buf_, "", "macro_4_name", subjects_);
 
     // Observe homed_axes from PrinterState to update homing subjects using string observer
     homed_axes_observer_ = observe_string<ControlsPanel>(
@@ -275,55 +277,11 @@ void ControlsPanel::deinit_subjects() {
         return;
     }
 
-    // Deinitialize all local lv_subject_t members (27 total)
-
-    // Nozzle temperature display
-    lv_subject_deinit(&nozzle_temp_subject_);
-    lv_subject_deinit(&nozzle_pct_subject_);
-    lv_subject_deinit(&nozzle_status_subject_);
-
-    // Bed temperature display
-    lv_subject_deinit(&bed_temp_subject_);
-    lv_subject_deinit(&bed_pct_subject_);
-    lv_subject_deinit(&bed_status_subject_);
-
-    // Fan speed display
-    lv_subject_deinit(&fan_speed_subject_);
-    lv_subject_deinit(&fan_pct_subject_);
-
-    // Macro button visibility and names
-    lv_subject_deinit(&macro_1_visible_);
-    lv_subject_deinit(&macro_2_visible_);
-    lv_subject_deinit(&macro_1_name_);
-    lv_subject_deinit(&macro_2_name_);
-
-    // Z-Offset delta display
-    lv_subject_deinit(&z_offset_delta_display_subject_);
-
-    // Homing status subjects
-    lv_subject_deinit(&x_homed_);
-    lv_subject_deinit(&y_homed_);
-    lv_subject_deinit(&xy_homed_);
-    lv_subject_deinit(&z_homed_);
-    lv_subject_deinit(&all_homed_);
-
-    // Position display subjects
-    lv_subject_deinit(&controls_pos_x_subject_);
-    lv_subject_deinit(&controls_pos_y_subject_);
-    lv_subject_deinit(&controls_pos_z_subject_);
-
-    // Speed/Flow override display subjects
-    lv_subject_deinit(&speed_override_subject_);
-    lv_subject_deinit(&flow_override_subject_);
-
-    // Macro buttons 3 & 4 visibility and names
-    lv_subject_deinit(&macro_3_visible_);
-    lv_subject_deinit(&macro_4_visible_);
-    lv_subject_deinit(&macro_3_name_);
-    lv_subject_deinit(&macro_4_name_);
+    // SubjectManager handles deinitialization of all registered subjects (28 total)
+    subjects_.deinit_all();
 
     subjects_initialized_ = false;
-    spdlog::debug("[Controls Panel] Subjects deinitialized");
+    spdlog::debug("[Controls Panel] Subjects deinitialized ({} subjects)", subjects_.count());
 }
 
 void ControlsPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {

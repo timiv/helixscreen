@@ -7,6 +7,7 @@
 
 #include "moonraker_domain_service.h" // For BedMeshProfile
 #include "overlay_base.h"
+#include "subject_managed_panel.h"
 
 #include <array>
 #include <atomic>
@@ -94,6 +95,9 @@ class BedMeshPanel : public OverlayBase {
     void save_profile_with_name(const std::string& name);
 
   private:
+    // ========== Subject Manager (RAII cleanup) ==========
+    SubjectManager subjects_;
+
     // ========== Current Mesh Stats Subjects ==========
     lv_subject_t bed_mesh_available_;
     lv_subject_t bed_mesh_profile_name_;
