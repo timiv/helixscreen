@@ -227,7 +227,7 @@ lv_timer_create([](lv_timer_t* timer) {
 
 ## 🟠 Long-Term Refactors (6+ hours)
 
-> **Status**: LT1 complete, LT2 complete, LT3 not started
+> **Status**: LT1 complete, LT2 complete, LT3 complete
 
 ### ✅ LT1: Move Capabilities to PrinterState (COMPLETED 2026-01-09)
 
@@ -285,20 +285,22 @@ Checkbox state now flows through subjects:
 
 ---
 
-### LT3: Unify GCodeOpsDetector and PrintStartAnalyzer
+### ✅ LT3: Unify GCodeOpsDetector and PrintStartAnalyzer (COMPLETED 2026-01-09)
 
-**Current State:**
-Both classes scan for the same operations using similar patterns. `GCodeOpsDetector` scans file content; `PrintStartAnalyzer` scans macro content.
+**What was done (Option B: Extend shared infrastructure):**
+- Added string utilities to `operation_patterns.h`: `to_upper()`, `to_lower()`, `contains_ci()`, `equals_ci()`
+- Added parameter matching infrastructure: `ParamMatchResult`, `match_parameter_to_category()`
+- Moved `ParameterSemantic` enum from `print_start_analyzer.h` to `operation_patterns.h`
+- Added slicer-style short parameter variations for G-code detection
+- Refactored `GCodeOpsDetector` to use `match_parameter_to_category()` instead of hard-coded `param_mappings`
+- Refactored `GCodeOpsDetector::display_name()` to use `category_name()`
+- Refactored `PrintStartAnalyzer` to use shared string utilities
+- Added 74 test assertions for `operation_patterns` utilities
 
-**Target Architecture:**
-- Extract common scanning logic into `OperationScanner` class
-- `GCodeOpsDetector` becomes thin wrapper: `scan_file()` -> `OperationScanner::scan()`
-- `PrintStartAnalyzer` becomes thin wrapper: `parse_macro()` -> `OperationScanner::scan()`
-- Add context flag to differentiate file vs macro scanning
+**Result:**
+Single source of truth for parameter matching. Adding new operation types now automatically works in both analyzers. Reduced ~150 lines of duplicated code.
 
-**Benefit:** Single implementation of pattern matching, easier to add new operations.
-
-**Effort:** 6 hours
+**Actual Effort:** ~2.5 hours (reduced from estimate due to already-shared infrastructure)
 
 ---
 
