@@ -27,7 +27,7 @@ namespace helix::ui {
  *
  * Handles the print preparation workflow including:
  * - Scanning G-code files for embedded operations (bed leveling, QGL, etc.)
- * - Collecting user-selected pre-print options from checkboxes
+ * - Collecting user-selected pre-print options from LVGL subjects
  * - Building and executing pre-print operation sequences
  * - Modifying G-code to disable embedded operations when requested
  *
@@ -35,7 +35,9 @@ namespace helix::ui {
  * ```cpp
  * PrintPreparationManager prep_manager;
  * prep_manager.set_dependencies(api, printer_state);
- * prep_manager.set_checkboxes(bed_cb, qgl_cb, z_tilt_cb, clean_cb, timelapse_cb);
+ * prep_manager.set_preprint_subjects(bed_subj, qgl_subj, z_tilt_subj, clean_subj, purge_subj,
+ * timelapse_subj); prep_manager.set_preprint_visibility_subjects(can_show_bed_mesh, can_show_qgl,
+ * ...);
  *
  * // When detail view opens:
  * prep_manager.scan_file_for_operations(filename, current_path);
@@ -46,7 +48,7 @@ namespace helix::ui {
  */
 
 /**
- * @brief Pre-print options read from UI checkboxes
+ * @brief Pre-print options read from UI subjects
  */
 struct PrePrintOptions {
     // File-level operations (from checkboxes in detail view)
@@ -127,21 +129,6 @@ class PrintPreparationManager {
      * @brief Set API and printer state dependencies
      */
     void set_dependencies(MoonrakerAPI* api, PrinterState* printer_state);
-
-    /**
-     * @brief Set checkbox widget references for reading user selections
-     *
-     * @param bed_mesh Bed mesh checkbox (may be nullptr)
-     * @param qgl QGL checkbox (may be nullptr)
-     * @param z_tilt Z-tilt checkbox (may be nullptr)
-     * @param nozzle_clean Nozzle clean checkbox (may be nullptr)
-     * @param timelapse Timelapse checkbox (may be nullptr)
-     *
-     * @deprecated Use set_preprint_subjects() instead for subject-based state reading
-     */
-    [[deprecated("Use set_preprint_subjects() instead")]]
-    void set_checkboxes(lv_obj_t* bed_mesh, lv_obj_t* qgl, lv_obj_t* z_tilt, lv_obj_t* nozzle_clean,
-                        lv_obj_t* timelapse);
 
     /**
      * @brief Set pre-print checkbox state subjects (LT2)
@@ -352,14 +339,6 @@ class PrintPreparationManager {
     // === Print Execution ===
 
     /**
-     * @brief Read pre-print options from checkbox states
-     *
-     * @deprecated Use read_options_from_subjects() instead
-     */
-    [[deprecated("Use read_options_from_subjects() instead")]] [[nodiscard]] PrePrintOptions
-    read_options_from_checkboxes() const;
-
-    /**
      * @brief Read pre-print options from subject states (LT2)
      *
      * Reads the current state of pre-print options from subjects instead
@@ -408,13 +387,6 @@ class PrintPreparationManager {
     // === Dependencies ===
     MoonrakerAPI* api_ = nullptr;
     PrinterState* printer_state_ = nullptr;
-
-    // === Checkbox References (deprecated - use subjects instead) ===
-    lv_obj_t* bed_mesh_checkbox_ = nullptr;
-    lv_obj_t* qgl_checkbox_ = nullptr;
-    lv_obj_t* z_tilt_checkbox_ = nullptr;
-    lv_obj_t* nozzle_clean_checkbox_ = nullptr;
-    lv_obj_t* timelapse_checkbox_ = nullptr;
 
     // === Checkbox State Subjects (LT2 - from PrintSelectDetailView) ===
     // These subjects track the checked state of each pre-print option switch
@@ -529,14 +501,6 @@ class PrintPreparationManager {
     void start_print_directly(const std::string& filename,
                               NavigateToStatusCallback on_navigate_to_status,
                               PrintCompletionCallback on_completion);
-
-    /**
-     * @brief Helper to check if a checkbox is visible and unchecked
-     *
-     * @deprecated Use is_option_disabled_from_subject() instead
-     */
-    [[deprecated("Use is_option_disabled_from_subject() instead")]]
-    static bool is_option_disabled(lv_obj_t* checkbox);
 
     /**
      * @brief Helper to check if an option is disabled via subjects (LT2)

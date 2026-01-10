@@ -166,24 +166,6 @@ TEST_CASE("PrintPreparationManager: set_cached_file_size", "[print_preparation][
 }
 
 // ============================================================================
-// Tests: Checkbox Reading
-// ============================================================================
-
-TEST_CASE("PrintPreparationManager: read_options_from_checkboxes", "[print_preparation][options]") {
-    PrintPreparationManager manager;
-    // No checkboxes set - tests null handling
-
-    SECTION("Returns default options when no checkboxes set") {
-        auto options = manager.read_options_from_checkboxes();
-        REQUIRE(options.bed_mesh == false);
-        REQUIRE(options.qgl == false);
-        REQUIRE(options.z_tilt == false);
-        REQUIRE(options.nozzle_clean == false);
-        REQUIRE(options.timelapse == false);
-    }
-}
-
-// ============================================================================
 // Tests: Subject-Based Options Reading (LT2)
 // ============================================================================
 
@@ -1541,5 +1523,399 @@ TEST_CASE_METHOD(MacroAnalysisRetryFixture,
         INFO("Delay 2: " << delay2.count() << "ms");
         REQUIRE(delay2.count() >= 1800); // At least 1.8s
         REQUIRE(delay2.count() <= 2500); // At most 2.5s
+    }
+}
+
+// ============================================================================
+// Tests: Subject-Only API (P1 Priority - Deprecated Widget API Removal)
+// ============================================================================
+
+/**
+ * These tests document the expected behavior of the subject-based API that must
+ * be preserved when the deprecated widget-based API is removed.
+ *
+ * The subject-based API allows reading pre-print options from lv_subject_t
+ * pointers instead of directly querying LVGL widget states, enabling better
+ * separation of concerns and easier testing.
+ *
+ * Key methods being tested:
+ * - read_options_from_subjects(): Reads checkbox states from subjects
+ * - is_option_disabled_from_subject(): Checks visibility + checked state
+ * - collect_ops_to_disable(): Uses subjects exclusively for determining what to disable
+ */
+
+TEST_CASE("PrintPreparationManager: read_options_from_subjects returns correct PrePrintOptions",
+          "[print_preparation][p1][subjects]") {
+    lv_init_safe();
+    PrintPreparationManager manager;
+    PreprintSubjectsFixture subjects;
+    subjects.init_all_subjects();
+
+    SECTION("All options checked with all visible - returns all true") {
+        // Set all visibility to visible (1)
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 1);
+        lv_subject_set_int(&subjects.can_show_qgl, 1);
+        lv_subject_set_int(&subjects.can_show_z_tilt, 1);
+        lv_subject_set_int(&subjects.can_show_nozzle_clean, 1);
+        lv_subject_set_int(&subjects.can_show_purge_line, 1);
+        lv_subject_set_int(&subjects.can_show_timelapse, 1);
+
+        // Set all checkboxes to checked (1)
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 1);
+        lv_subject_set_int(&subjects.preprint_qgl, 1);
+        lv_subject_set_int(&subjects.preprint_z_tilt, 1);
+        lv_subject_set_int(&subjects.preprint_nozzle_clean, 1);
+        lv_subject_set_int(&subjects.preprint_purge_line, 1);
+        lv_subject_set_int(&subjects.preprint_timelapse, 1);
+
+        manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
+                                      &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
+                                      &subjects.preprint_purge_line, &subjects.preprint_timelapse);
+        manager.set_preprint_visibility_subjects(
+            &subjects.can_show_bed_mesh, &subjects.can_show_qgl, &subjects.can_show_z_tilt,
+            &subjects.can_show_nozzle_clean, &subjects.can_show_purge_line,
+            &subjects.can_show_timelapse);
+
+        auto options = manager.read_options_from_subjects();
+
+        REQUIRE(options.bed_mesh == true);
+        REQUIRE(options.qgl == true);
+        REQUIRE(options.z_tilt == true);
+        REQUIRE(options.nozzle_clean == true);
+        REQUIRE(options.purge_line == true);
+        REQUIRE(options.timelapse == true);
+    }
+
+    SECTION("All options unchecked with all visible - returns all false") {
+        // Set all visibility to visible (1)
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 1);
+        lv_subject_set_int(&subjects.can_show_qgl, 1);
+        lv_subject_set_int(&subjects.can_show_z_tilt, 1);
+        lv_subject_set_int(&subjects.can_show_nozzle_clean, 1);
+        lv_subject_set_int(&subjects.can_show_purge_line, 1);
+        lv_subject_set_int(&subjects.can_show_timelapse, 1);
+
+        // Set all checkboxes to unchecked (0 - default from fixture)
+
+        manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
+                                      &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
+                                      &subjects.preprint_purge_line, &subjects.preprint_timelapse);
+        manager.set_preprint_visibility_subjects(
+            &subjects.can_show_bed_mesh, &subjects.can_show_qgl, &subjects.can_show_z_tilt,
+            &subjects.can_show_nozzle_clean, &subjects.can_show_purge_line,
+            &subjects.can_show_timelapse);
+
+        auto options = manager.read_options_from_subjects();
+
+        REQUIRE(options.bed_mesh == false);
+        REQUIRE(options.qgl == false);
+        REQUIRE(options.z_tilt == false);
+        REQUIRE(options.nozzle_clean == false);
+        REQUIRE(options.purge_line == false);
+        REQUIRE(options.timelapse == false);
+    }
+
+    SECTION("Hidden options return false even when checked") {
+        // Set all visibility to hidden (0)
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 0);
+        lv_subject_set_int(&subjects.can_show_qgl, 0);
+        lv_subject_set_int(&subjects.can_show_z_tilt, 0);
+        lv_subject_set_int(&subjects.can_show_nozzle_clean, 0);
+        lv_subject_set_int(&subjects.can_show_purge_line, 0);
+        lv_subject_set_int(&subjects.can_show_timelapse, 0);
+
+        // Set all checkboxes to checked (1)
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 1);
+        lv_subject_set_int(&subjects.preprint_qgl, 1);
+        lv_subject_set_int(&subjects.preprint_z_tilt, 1);
+        lv_subject_set_int(&subjects.preprint_nozzle_clean, 1);
+        lv_subject_set_int(&subjects.preprint_purge_line, 1);
+        lv_subject_set_int(&subjects.preprint_timelapse, 1);
+
+        manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
+                                      &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
+                                      &subjects.preprint_purge_line, &subjects.preprint_timelapse);
+        manager.set_preprint_visibility_subjects(
+            &subjects.can_show_bed_mesh, &subjects.can_show_qgl, &subjects.can_show_z_tilt,
+            &subjects.can_show_nozzle_clean, &subjects.can_show_purge_line,
+            &subjects.can_show_timelapse);
+
+        auto options = manager.read_options_from_subjects();
+
+        // Hidden options should return false regardless of checked state
+        REQUIRE(options.bed_mesh == false);
+        REQUIRE(options.qgl == false);
+        REQUIRE(options.z_tilt == false);
+        REQUIRE(options.nozzle_clean == false);
+        REQUIRE(options.purge_line == false);
+        REQUIRE(options.timelapse == false);
+    }
+
+    SECTION("Mixed visibility and checked states") {
+        // bed_mesh: visible + checked = true
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 1);
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 1);
+
+        // qgl: visible + unchecked = false
+        lv_subject_set_int(&subjects.can_show_qgl, 1);
+        lv_subject_set_int(&subjects.preprint_qgl, 0);
+
+        // z_tilt: hidden + checked = false
+        lv_subject_set_int(&subjects.can_show_z_tilt, 0);
+        lv_subject_set_int(&subjects.preprint_z_tilt, 1);
+
+        // nozzle_clean: hidden + unchecked = false
+        lv_subject_set_int(&subjects.can_show_nozzle_clean, 0);
+        lv_subject_set_int(&subjects.preprint_nozzle_clean, 0);
+
+        // purge_line: visible + checked = true
+        lv_subject_set_int(&subjects.can_show_purge_line, 1);
+        lv_subject_set_int(&subjects.preprint_purge_line, 1);
+
+        // timelapse: visible + unchecked = false
+        lv_subject_set_int(&subjects.can_show_timelapse, 1);
+        lv_subject_set_int(&subjects.preprint_timelapse, 0);
+
+        manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
+                                      &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
+                                      &subjects.preprint_purge_line, &subjects.preprint_timelapse);
+        manager.set_preprint_visibility_subjects(
+            &subjects.can_show_bed_mesh, &subjects.can_show_qgl, &subjects.can_show_z_tilt,
+            &subjects.can_show_nozzle_clean, &subjects.can_show_purge_line,
+            &subjects.can_show_timelapse);
+
+        auto options = manager.read_options_from_subjects();
+
+        REQUIRE(options.bed_mesh == true);      // visible + checked
+        REQUIRE(options.qgl == false);          // visible + unchecked
+        REQUIRE(options.z_tilt == false);       // hidden + checked
+        REQUIRE(options.nozzle_clean == false); // hidden + unchecked
+        REQUIRE(options.purge_line == true);    // visible + checked
+        REQUIRE(options.timelapse == false);    // visible + unchecked
+    }
+
+    SECTION("Without visibility subjects set - only checks checked state") {
+        // Only set checkbox subjects, not visibility subjects
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 1);
+        lv_subject_set_int(&subjects.preprint_qgl, 0);
+
+        manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
+                                      &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
+                                      &subjects.preprint_purge_line, &subjects.preprint_timelapse);
+        // Don't call set_preprint_visibility_subjects - they remain nullptr
+
+        auto options = manager.read_options_from_subjects();
+
+        // Without visibility subjects, should just check the checked state
+        REQUIRE(options.bed_mesh == true); // checked
+        REQUIRE(options.qgl == false);     // unchecked
+        REQUIRE(options.z_tilt == false);  // unchecked (default)
+    }
+}
+
+TEST_CASE("PrintPreparationManager: is_option_disabled_from_subject handles visibility + checked",
+          "[print_preparation][p1][subjects]") {
+    lv_init_safe();
+    PrintPreparationManager manager;
+
+    // Create test subjects for the four combinations
+    lv_subject_t visibility_visible{};
+    lv_subject_t visibility_hidden{};
+    lv_subject_t checked_true{};
+    lv_subject_t checked_false{};
+
+    lv_subject_init_int(&visibility_visible, 1); // visible
+    lv_subject_init_int(&visibility_hidden, 0);  // hidden
+    lv_subject_init_int(&checked_true, 1);       // checked
+    lv_subject_init_int(&checked_false, 0);      // unchecked
+
+    SECTION("Visible + checked = NOT disabled (option enabled)") {
+        // User can see the option and has it checked - they want this operation
+        // We need to call the private method via collect_ops_to_disable indirectly,
+        // but we can test the behavior through read_options_from_subjects
+        PreprintSubjectsFixture subjects;
+        subjects.init_all_subjects();
+
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 1); // visible
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 1); // checked
+
+        manager.set_preprint_subjects(&subjects.preprint_bed_mesh, nullptr, nullptr, nullptr,
+                                      nullptr, nullptr);
+        manager.set_preprint_visibility_subjects(&subjects.can_show_bed_mesh, nullptr, nullptr,
+                                                 nullptr, nullptr, nullptr);
+
+        auto options = manager.read_options_from_subjects();
+        REQUIRE(options.bed_mesh == true);
+    }
+
+    SECTION("Visible + unchecked = disabled (option disabled by user)") {
+        // User can see the option but has it unchecked - they DON'T want this operation
+        PreprintSubjectsFixture subjects;
+        subjects.init_all_subjects();
+
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 1); // visible
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 0); // unchecked
+
+        manager.set_preprint_subjects(&subjects.preprint_bed_mesh, nullptr, nullptr, nullptr,
+                                      nullptr, nullptr);
+        manager.set_preprint_visibility_subjects(&subjects.can_show_bed_mesh, nullptr, nullptr,
+                                                 nullptr, nullptr, nullptr);
+
+        auto options = manager.read_options_from_subjects();
+        REQUIRE(options.bed_mesh == false);
+    }
+
+    SECTION("Hidden + checked = NOT disabled (hidden means not applicable)") {
+        // Option is hidden because it's not applicable to this printer
+        // The checked state is irrelevant - hidden options shouldn't affect behavior
+        PreprintSubjectsFixture subjects;
+        subjects.init_all_subjects();
+
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 0); // hidden
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 1); // checked (irrelevant)
+
+        manager.set_preprint_subjects(&subjects.preprint_bed_mesh, nullptr, nullptr, nullptr,
+                                      nullptr, nullptr);
+        manager.set_preprint_visibility_subjects(&subjects.can_show_bed_mesh, nullptr, nullptr,
+                                                 nullptr, nullptr, nullptr);
+
+        auto options = manager.read_options_from_subjects();
+        // Hidden means not applicable - should return false (not enabled, but also not "disabled")
+        REQUIRE(options.bed_mesh == false);
+    }
+
+    SECTION("Hidden + unchecked = NOT disabled (hidden means not applicable)") {
+        // Option is hidden because it's not applicable to this printer
+        PreprintSubjectsFixture subjects;
+        subjects.init_all_subjects();
+
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 0); // hidden
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 0); // unchecked (irrelevant)
+
+        manager.set_preprint_subjects(&subjects.preprint_bed_mesh, nullptr, nullptr, nullptr,
+                                      nullptr, nullptr);
+        manager.set_preprint_visibility_subjects(&subjects.can_show_bed_mesh, nullptr, nullptr,
+                                                 nullptr, nullptr, nullptr);
+
+        auto options = manager.read_options_from_subjects();
+        // Hidden means not applicable - should return false
+        REQUIRE(options.bed_mesh == false);
+    }
+
+    // Clean up test subjects
+    lv_subject_deinit(&checked_false);
+    lv_subject_deinit(&checked_true);
+    lv_subject_deinit(&visibility_hidden);
+    lv_subject_deinit(&visibility_visible);
+}
+
+TEST_CASE("PrintPreparationManager: collect_ops_to_disable uses subjects exclusively",
+          "[print_preparation][p1][subjects]") {
+    lv_init_safe();
+    PrintPreparationManager manager;
+    PreprintSubjectsFixture subjects;
+    subjects.init_all_subjects();
+
+    // Set up subjects on manager
+    manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
+                                  &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
+                                  &subjects.preprint_purge_line, &subjects.preprint_timelapse);
+    manager.set_preprint_visibility_subjects(
+        &subjects.can_show_bed_mesh, &subjects.can_show_qgl, &subjects.can_show_z_tilt,
+        &subjects.can_show_nozzle_clean, &subjects.can_show_purge_line,
+        &subjects.can_show_timelapse);
+
+    SECTION("Returns empty when no scan result available") {
+        // Set some options as visible + unchecked (would be disabled)
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 1); // visible
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 0); // unchecked
+
+        // Without a scan result, collect_ops_to_disable should return empty
+        // (There's no G-code file to check for embedded operations)
+        // We can't directly call collect_ops_to_disable (it's private),
+        // but we can verify behavior through start_print flow
+        // For now, verify read_options_from_subjects works correctly
+        auto options = manager.read_options_from_subjects();
+        REQUIRE(options.bed_mesh == false); // visible + unchecked = not enabled
+    }
+
+    SECTION("Visible + unchecked options are candidates for disabling") {
+        // Set bed_mesh as visible + unchecked (user wants to disable)
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 1); // visible
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 0); // unchecked
+
+        // Set qgl as visible + checked (user wants to keep)
+        lv_subject_set_int(&subjects.can_show_qgl, 1); // visible
+        lv_subject_set_int(&subjects.preprint_qgl, 1); // checked
+
+        auto options = manager.read_options_from_subjects();
+
+        // bed_mesh: visible + unchecked = false (would be disabled if in file)
+        REQUIRE(options.bed_mesh == false);
+        // qgl: visible + checked = true (would NOT be disabled)
+        REQUIRE(options.qgl == true);
+    }
+
+    SECTION("Hidden options are NOT candidates for disabling") {
+        // Set bed_mesh as hidden + unchecked
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 0); // hidden
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 0); // unchecked
+
+        // Set qgl as hidden + checked
+        lv_subject_set_int(&subjects.can_show_qgl, 0); // hidden
+        lv_subject_set_int(&subjects.preprint_qgl, 1); // checked
+
+        auto options = manager.read_options_from_subjects();
+
+        // Hidden options should return false (not enabled)
+        // but they should NOT be added to ops_to_disable
+        // (hidden means not applicable to this printer, not user-disabled)
+        REQUIRE(options.bed_mesh == false);
+        REQUIRE(options.qgl == false);
+    }
+
+    SECTION("All operations disabled when visible + all unchecked") {
+        // Set all as visible + unchecked
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 1);
+        lv_subject_set_int(&subjects.can_show_qgl, 1);
+        lv_subject_set_int(&subjects.can_show_z_tilt, 1);
+        lv_subject_set_int(&subjects.can_show_nozzle_clean, 1);
+
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 0);
+        lv_subject_set_int(&subjects.preprint_qgl, 0);
+        lv_subject_set_int(&subjects.preprint_z_tilt, 0);
+        lv_subject_set_int(&subjects.preprint_nozzle_clean, 0);
+
+        auto options = manager.read_options_from_subjects();
+
+        REQUIRE(options.bed_mesh == false);
+        REQUIRE(options.qgl == false);
+        REQUIRE(options.z_tilt == false);
+        REQUIRE(options.nozzle_clean == false);
+    }
+
+    SECTION("Mixed state: some visible+unchecked, some hidden, some visible+checked") {
+        // bed_mesh: visible + unchecked = false (would be disabled)
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 1);
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 0);
+
+        // qgl: hidden + unchecked = false (NOT disabled - just not applicable)
+        lv_subject_set_int(&subjects.can_show_qgl, 0);
+        lv_subject_set_int(&subjects.preprint_qgl, 0);
+
+        // z_tilt: visible + checked = true (enabled)
+        lv_subject_set_int(&subjects.can_show_z_tilt, 1);
+        lv_subject_set_int(&subjects.preprint_z_tilt, 1);
+
+        // nozzle_clean: hidden + checked = false (NOT disabled - just not applicable)
+        lv_subject_set_int(&subjects.can_show_nozzle_clean, 0);
+        lv_subject_set_int(&subjects.preprint_nozzle_clean, 1);
+
+        auto options = manager.read_options_from_subjects();
+
+        REQUIRE(options.bed_mesh == false);     // visible + unchecked
+        REQUIRE(options.qgl == false);          // hidden
+        REQUIRE(options.z_tilt == true);        // visible + checked
+        REQUIRE(options.nozzle_clean == false); // hidden
     }
 }

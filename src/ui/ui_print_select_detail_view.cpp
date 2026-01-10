@@ -210,8 +210,6 @@ void PrintSelectDetailView::set_dependencies(MoonrakerAPI* api, PrinterState* pr
 
     if (prep_manager_) {
         prep_manager_->set_dependencies(api_, printer_state_);
-        prep_manager_->set_checkboxes(bed_mesh_checkbox_, qgl_checkbox_, z_tilt_checkbox_,
-                                      nozzle_clean_checkbox_, timelapse_checkbox_);
 
         // LT2: Wire up subjects for declarative state reading
         prep_manager_->set_preprint_subjects(

@@ -80,15 +80,6 @@ void PrintPreparationManager::on_connection_state_changed(lv_observer_t* observe
     }
 }
 
-void PrintPreparationManager::set_checkboxes(lv_obj_t* bed_mesh, lv_obj_t* qgl, lv_obj_t* z_tilt,
-                                             lv_obj_t* nozzle_clean, lv_obj_t* timelapse) {
-    bed_mesh_checkbox_ = bed_mesh;
-    qgl_checkbox_ = qgl;
-    z_tilt_checkbox_ = z_tilt;
-    nozzle_clean_checkbox_ = nozzle_clean;
-    timelapse_checkbox_ = timelapse;
-}
-
 void PrintPreparationManager::set_preprint_subjects(lv_subject_t* bed_mesh, lv_subject_t* qgl,
                                                     lv_subject_t* z_tilt,
                                                     lv_subject_t* nozzle_clean,
@@ -720,36 +711,6 @@ ModificationCapability PrintPreparationManager::check_modification_capability() 
 // Print Execution
 // ============================================================================
 
-PrePrintOptions PrintPreparationManager::read_options_from_checkboxes() const {
-    PrePrintOptions options;
-
-    // Only count as checked if checkbox exists, is VISIBLE, AND has checked state.
-    // Hidden checkboxes (for unsupported capabilities like QGL on non-Voron printers)
-    // should NOT contribute to pre-print operations.
-    // NOTE: The hidden flag may be on the parent row container, not the checkbox itself.
-    auto is_checked = [](lv_obj_t* checkbox) -> bool {
-        if (!checkbox)
-            return false;
-        // Check if checkbox or any ancestor is hidden
-        lv_obj_t* obj = checkbox;
-        while (obj) {
-            if (lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN)) {
-                return false; // Hidden checkbox = not checked
-            }
-            obj = lv_obj_get_parent(obj);
-        }
-        return lv_obj_has_state(checkbox, LV_STATE_CHECKED);
-    };
-
-    options.bed_mesh = is_checked(bed_mesh_checkbox_);
-    options.qgl = is_checked(qgl_checkbox_);
-    options.z_tilt = is_checked(z_tilt_checkbox_);
-    options.nozzle_clean = is_checked(nozzle_clean_checkbox_);
-    options.timelapse = is_checked(timelapse_checkbox_);
-
-    return options;
-}
-
 PrePrintOptions PrintPreparationManager::read_options_from_subjects() const {
     PrePrintOptions options;
 
@@ -893,14 +854,6 @@ bool PrintPreparationManager::is_print_in_progress() const {
 // ============================================================================
 // Internal Methods
 // ============================================================================
-
-bool PrintPreparationManager::is_option_disabled(lv_obj_t* checkbox) {
-    if (!checkbox)
-        return false;
-    bool is_visible = !lv_obj_has_flag(checkbox, LV_OBJ_FLAG_HIDDEN);
-    bool is_checked = lv_obj_has_state(checkbox, LV_STATE_CHECKED);
-    return is_visible && !is_checked; // Visible but NOT checked = disabled
-}
 
 bool PrintPreparationManager::is_option_disabled_from_subject(lv_subject_t* visibility_subject,
                                                               lv_subject_t* checked_subject) const {
