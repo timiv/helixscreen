@@ -4,12 +4,12 @@
 #include "../../include/moonraker_api.h"
 #include "../../include/moonraker_client.h"
 #include "../../lvgl/lvgl.h"
+#include "../ui_test_utils.h"
 
 #include <chrono>
 #include <thread>
 
 #include "../catch_amalgamated.hpp"
-#include "../ui_test_utils.h"
 
 /**
  * MoonrakerAPI Security Tests

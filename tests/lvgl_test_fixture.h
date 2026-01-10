@@ -3,8 +3,9 @@
 
 #pragma once
 
-#include "lvgl/lvgl.h"
 #include "ui_update_queue.h"
+
+#include "lvgl/lvgl.h"
 
 #include <mutex>
 

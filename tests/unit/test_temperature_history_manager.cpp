@@ -20,6 +20,7 @@
 #include "../../include/temperature_history_manager.h"
 #include "../../include/ui_update_queue.h"
 #include "../../lvgl/lvgl.h"
+#include "../ui_test_utils.h"
 
 #include <atomic>
 #include <chrono>
@@ -30,7 +31,6 @@
 #include <vector>
 
 #include "../catch_amalgamated.hpp"
-#include "../ui_test_utils.h"
 
 // ============================================================================
 // Global LVGL Initialization

@@ -81,8 +81,8 @@ TEST_CASE("PrinterState: Observer fires when printer connection state changes",
 
     int user_data[2] = {0, -1}; // [callback_count, last_value]
 
-    lv_observer_t* observer =
-        lv_subject_add_observer(state.get_printer_connection_state_subject(), observer_cb, user_data);
+    lv_observer_t* observer = lv_subject_add_observer(state.get_printer_connection_state_subject(),
+                                                      observer_cb, user_data);
 
     // LVGL auto-notifies observers when first added (fires immediately with current value)
     REQUIRE(user_data[0] == 1); // Callback fired immediately with initial value (0)

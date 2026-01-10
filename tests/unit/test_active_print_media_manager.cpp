@@ -338,8 +338,8 @@ TEST_CASE_METHOD(ActivePrintMediaManagerTestFixture,
         (*count)++;
     };
 
-    lv_observer_t* observer = lv_subject_add_observer(
-        state().get_print_display_filename_subject(), observer_cb, &observer_count);
+    lv_observer_t* observer = lv_subject_add_observer(state().get_print_display_filename_subject(),
+                                                      observer_cb, &observer_count);
 
     // Initial observer registration fires once
     REQUIRE(observer_count == 1);
