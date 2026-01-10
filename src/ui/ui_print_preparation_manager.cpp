@@ -11,6 +11,7 @@
 #include "active_print_media_manager.h"
 #include "app_globals.h"
 #include "memory_utils.h"
+#include "operation_registry.h"
 
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>
@@ -283,29 +284,12 @@ std::string PrintPreparationManager::format_macro_operations() const {
         }
         first = false;
 
-        // Get user-friendly name for the operation
-        switch (op.category) {
-        case helix::PrintStartOpCategory::BED_MESH:
-            result += "Bed Mesh";
-            break;
-        case helix::PrintStartOpCategory::QGL:
-            result += "QGL";
-            break;
-        case helix::PrintStartOpCategory::Z_TILT:
-            result += "Z-Tilt";
-            break;
-        case helix::PrintStartOpCategory::NOZZLE_CLEAN:
-            result += "Nozzle Clean";
-            break;
-        case helix::PrintStartOpCategory::CHAMBER_SOAK:
-            result += "Chamber Soak";
-            break;
-        case helix::PrintStartOpCategory::BED_LEVEL:
-            result += "Bed Level";
-            break;
-        default:
+        // Get user-friendly name for the operation from shared definitions
+        const char* name = helix::category_name(op.category);
+        if (name && op.category != helix::PrintStartOpCategory::UNKNOWN) {
+            result += name;
+        } else {
             result += op.name;
-            break;
         }
 
         // Add skip indicator if controllable
@@ -528,20 +512,26 @@ std::string PrintPreparationManager::format_preprint_steps() const {
     // Database entries are curated and provide correct parameter names
     const auto& caps = get_cached_capabilities();
     if (!caps.empty()) {
-        // Map capability keys to friendly names (keys match database)
-        static const std::map<std::string, std::string> cap_friendly_names = {
-            {"bed_mesh", "Bed mesh"},
-            {"qgl", "Quad gantry leveling"},
-            {"z_tilt", "Z-tilt adjustment"},
-            {"nozzle_clean", "Nozzle cleaning"},
-            {"priming", "Nozzle priming"},
-            {"skew_correct", "Skew correction"},
-            {"chamber_soak", "Chamber heat soak"},
-        };
-
         for (const auto& [cap_key, cap_info] : caps.params) {
-            auto name_it = cap_friendly_names.find(cap_key);
-            std::string name = (name_it != cap_friendly_names.end()) ? name_it->second : cap_key;
+            // Look up friendly name from OperationRegistry (for controllable ops)
+            // or fall back to the cap_key if not found
+            std::string name;
+            if (auto info = helix::OperationRegistry::get_by_key(cap_key)) {
+                name = info->friendly_name;
+            } else {
+                // Non-controllable operations (priming, chamber_soak, skew_correct)
+                // still need friendly names - use hardcoded fallback for these edge cases
+                // since they're not in OperationRegistry
+                if (cap_key == "priming") {
+                    name = "Nozzle priming";
+                } else if (cap_key == "chamber_soak") {
+                    name = helix::category_name(helix::OperationCategory::CHAMBER_SOAK);
+                } else if (cap_key == "skew_correct") {
+                    name = helix::category_name(helix::OperationCategory::SKEW_CORRECT);
+                } else {
+                    name = cap_key;
+                }
+            }
 
             // Capabilities from database are skippable via macro params
             ops[cap_key] = UnifiedOp{name, true};
@@ -587,45 +577,33 @@ std::string PrintPreparationManager::format_preprint_steps() const {
     // 3. Add operations from G-code file scan (these are already in the file)
     if (cached_scan_result_.has_value()) {
         for (const auto& op : cached_scan_result_->operations) {
-            // Map file operation types to category keys
+            // Skip operations we don't want to display (homing, start_print, unknown)
+            if (op.type == gcode::OperationType::HOMING ||
+                op.type == gcode::OperationType::START_PRINT ||
+                op.type == gcode::OperationType::UNKNOWN) {
+                continue;
+            }
+
+            // Get key and name from OperationRegistry for controllable operations,
+            // or use category_key/category_name for non-controllable ones
             std::string key;
             std::string name;
 
-            switch (op.type) {
-            case gcode::OperationType::BED_MESH:
-                key = "bed_mesh";
-                name = "Bed mesh";
-                break;
-            case gcode::OperationType::QGL:
-                key = "qgl";
-                name = "Quad gantry leveling";
-                break;
-            case gcode::OperationType::Z_TILT:
-                key = "z_tilt";
-                name = "Z-tilt adjustment";
-                break;
-            case gcode::OperationType::NOZZLE_CLEAN:
-                key = "nozzle_clean";
-                name = "Nozzle cleaning";
-                break;
-            case gcode::OperationType::CHAMBER_SOAK:
-                key = "chamber_soak";
-                name = "Chamber heat soak";
-                break;
-            case gcode::OperationType::PURGE_LINE:
+            if (auto info = helix::OperationRegistry::get(op.type)) {
+                // Controllable operation - use registry data
+                key = info->capability_key;
+                name = info->friendly_name;
+            } else {
+                // Non-controllable operation (CHAMBER_SOAK, SKEW_CORRECT, BED_LEVEL)
+                // Use shared category_key/category_name functions
+                key = helix::category_key(op.type);
+                name = helix::category_name(op.type);
+            }
+
+            // Special case: PURGE_LINE maps to "priming" key in capability database
+            if (op.type == gcode::OperationType::PURGE_LINE) {
                 key = "priming";
                 name = "Nozzle priming";
-                break;
-            case gcode::OperationType::SKEW_CORRECT:
-                key = "skew_correct";
-                name = "Skew correction";
-                break;
-            case gcode::OperationType::BED_LEVEL:
-                key = "bed_level";
-                name = "Bed leveling";
-                break;
-            default:
-                continue; // Skip homing, start_print, etc.
             }
 
             // File operations are embedded in G-code, not skippable via macro
