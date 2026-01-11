@@ -1254,7 +1254,7 @@ bool Application::connect_moonraker() {
                 spdlog::info("[Application] Moonraker discovery complete, splash can exit");
 
                 get_printer_state().set_printer_capabilities(std::get<0>(*ctx));
-                get_printer_state().init_fans(client_ptr->get_fans());
+                get_printer_state().init_fans(client_ptr->hardware().fans());
                 get_printer_state().set_klipper_version(client_ptr->get_software_version());
                 get_printer_state().set_moonraker_version(client_ptr->get_moonraker_version());
 

@@ -174,6 +174,10 @@ TEST_CASE_METHOD(LVGLTestFixture, "Factory: observe_int_async with temperature t
     lv_subject_set_int(&subject, 600);
     REQUIRE(panel.int_value == 60);
 
+    // Drain async queue before releasing guard - ensures pending callbacks
+    // execute while panel is still valid (L054 pattern)
+    helix::ui::UpdateQueue::instance().drain_queue_for_testing();
+
     guard.release();
     lv_subject_deinit(&subject);
 }

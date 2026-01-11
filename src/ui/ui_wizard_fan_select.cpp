@@ -232,7 +232,7 @@ lv_obj_t* WizardFanSelectStep::create(lv_obj_t* parent) {
     // Build hotend fan options with custom filter (heater_fan OR hotend_fan)
     hotend_fan_items_.clear();
     if (client) {
-        const auto& fans = client->get_fans();
+        const auto& fans = client->hardware().fans();
         for (const auto& fan : fans) {
             if (fan.find("heater_fan") != std::string::npos ||
                 fan.find("hotend_fan") != std::string::npos) {
@@ -251,7 +251,7 @@ lv_obj_t* WizardFanSelectStep::create(lv_obj_t* parent) {
     // Build part cooling fan options with custom filter (has "fan" but NOT heater/hotend)
     part_fan_items_.clear();
     if (client) {
-        const auto& fans = client->get_fans();
+        const auto& fans = client->hardware().fans();
         for (const auto& fan : fans) {
             if (fan.find("fan") != std::string::npos &&
                 fan.find("heater_fan") == std::string::npos &&
@@ -271,8 +271,9 @@ lv_obj_t* WizardFanSelectStep::create(lv_obj_t* parent) {
     // Create PrinterHardware for guessing
     std::unique_ptr<PrinterHardware> hw;
     if (client) {
-        hw = std::make_unique<PrinterHardware>(client->get_heaters(), client->get_sensors(),
-                                               client->get_fans(), client->get_leds());
+        hw = std::make_unique<PrinterHardware>(client->hardware().heaters(),
+                                               client->hardware().sensors(),
+                                               client->hardware().fans(), client->hardware().leds());
     }
 
     // Find and configure hotend fan dropdown
@@ -296,7 +297,7 @@ lv_obj_t* WizardFanSelectStep::create(lv_obj_t* parent) {
     }
 
     // Check if we should show optional fans row (only if > 2 fans discovered)
-    size_t fan_count = client ? client->get_fans().size() : 0;
+    size_t fan_count = client ? client->hardware().fans().size() : 0;
     bool show_optional_fans = fan_count > 2;
 
     lv_obj_t* optional_row = lv_obj_find_by_name(screen_root_, "optional_fans_row");
@@ -309,7 +310,7 @@ lv_obj_t* WizardFanSelectStep::create(lv_obj_t* parent) {
         // Build chamber fan options - show ALL fans
         chamber_fan_items_.clear();
         if (client) {
-            const auto& fans = client->get_fans();
+            const auto& fans = client->hardware().fans();
             for (const auto& fan : fans) {
                 chamber_fan_items_.push_back(fan);
             }
@@ -325,7 +326,7 @@ lv_obj_t* WizardFanSelectStep::create(lv_obj_t* parent) {
         // Build exhaust fan options - show ALL fans
         exhaust_fan_items_.clear();
         if (client) {
-            const auto& fans = client->get_fans();
+            const auto& fans = client->hardware().fans();
             for (const auto& fan : fans) {
                 exhaust_fan_items_.push_back(fan);
             }

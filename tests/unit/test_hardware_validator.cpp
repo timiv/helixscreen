@@ -706,3 +706,4 @@ TEST_CASE_METHOD(HardwareValidatorConfigFixture,
     REQUIRE(hardware.contains("expected"));
     REQUIRE(hardware.contains("last_snapshot"));
 }
+

@@ -164,7 +164,7 @@ lv_obj_t* WizardHeaterSelectStep::create(lv_obj_t* parent) {
     // Event handler is wired via XML <event_cb>
     wizard_populate_hardware_dropdown(
         screen_root_, "bed_heater_dropdown", &bed_heater_selected_, bed_heater_items_,
-        [](MoonrakerClient* c) -> const auto& { return c->get_heaters(); },
+        [](MoonrakerClient* c) -> const auto& { return c->hardware().heaters(); },
         "bed", // Filter for bed-related heaters
         true,  // Allow "None" option
         helix::wizard::BED_HEATER, [](const PrinterHardware& hw) { return hw.guess_bed_heater(); },
@@ -174,7 +174,7 @@ lv_obj_t* WizardHeaterSelectStep::create(lv_obj_t* parent) {
     // Event handler is wired via XML <event_cb>
     wizard_populate_hardware_dropdown(
         screen_root_, "hotend_heater_dropdown", &hotend_heater_selected_, hotend_heater_items_,
-        [](MoonrakerClient* c) -> const auto& { return c->get_heaters(); },
+        [](MoonrakerClient* c) -> const auto& { return c->hardware().heaters(); },
         "extruder", // Filter for extruder-related heaters
         true,       // Allow "None" option
         helix::wizard::HOTEND_HEATER,

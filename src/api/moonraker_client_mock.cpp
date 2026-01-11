@@ -259,6 +259,9 @@ void MoonrakerClientMock::populate_capabilities() {
     // Parse objects into capabilities (for PrinterCapabilities queries)
     capabilities_.parse_objects(mock_objects);
 
+    // Parse objects into hardware discovery (Phase 2: unified hardware access)
+    hardware_.parse_objects(mock_objects);
+
     // Populate printer_objects_ for get_printer_objects() - used by hardware validator
     printer_objects_.clear();
     for (const auto& obj : mock_objects) {
@@ -277,6 +280,34 @@ void MoonrakerClientMock::populate_capabilities() {
 
     spdlog::debug("[MoonrakerClientMock] Capabilities populated: {} macros, {} filament sensors",
                   capabilities_.macros().size(), filament_sensors_.size());
+}
+
+void MoonrakerClientMock::rebuild_hardware() {
+    json objects = json::array();
+
+    for (const auto& h : heaters_) {
+        objects.push_back(h);
+    }
+    for (const auto& f : fans_) {
+        objects.push_back(f);
+    }
+    for (const auto& s : sensors_) {
+        // Only include sensors that have proper sensor prefixes (temperature_sensor, etc.)
+        // Skip bare heater names like "extruder", "heater_bed" - those are handled via heaters_
+        // In Klipper's object list, heaters appear once (as "extruder" or "heater_bed"),
+        // and their thermistors are accessed via the heater's temperature property.
+        if (s.rfind("temperature_sensor ", 0) == 0 || s.rfind("temperature_fan ", 0) == 0) {
+            objects.push_back(s);
+        }
+    }
+    for (const auto& l : leds_) {
+        objects.push_back(l);
+    }
+    for (const auto& fs : filament_sensors_) {
+        objects.push_back(fs);
+    }
+
+    hardware_.parse_objects(objects);
 }
 
 void MoonrakerClientMock::discover_printer(std::function<void()> on_complete) {

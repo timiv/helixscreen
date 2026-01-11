@@ -87,7 +87,8 @@ bool wizard_populate_hardware_dropdown(
     std::unique_ptr<PrinterHardware> hw_instance;
     if (client && guess_fallback) {
         hw_instance = std::make_unique<PrinterHardware>(
-            client->get_heaters(), client->get_sensors(), client->get_fans(), client->get_leds());
+            client->hardware().heaters(), client->hardware().sensors(), client->hardware().fans(),
+            client->hardware().leds());
         hw = hw_instance.get();
     }
 

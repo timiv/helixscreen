@@ -806,7 +806,7 @@ static void on_next_clicked(lv_event_t* e) {
             MoonrakerClient* client = get_moonraker_client();
             if (client) {
                 PrinterCapabilities caps;
-                caps.parse_objects(client->get_printer_objects());
+                caps = client->capabilities();
                 if (caps.has_filament_sensors()) {
                     fsm.discover_sensors(caps.get_filament_sensor_names());
                     spdlog::debug("[Wizard] Populated FilamentSensorManager before skip check");

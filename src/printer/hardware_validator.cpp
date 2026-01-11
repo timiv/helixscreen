@@ -248,10 +248,10 @@ HardwareSnapshot HardwareValidator::create_snapshot(const MoonrakerClient* clien
         return snapshot;
     }
 
-    snapshot.heaters = client->get_heaters();
-    snapshot.sensors = client->get_sensors();
-    snapshot.fans = client->get_fans();
-    snapshot.leds = client->get_leds();
+    snapshot.heaters = client->hardware().heaters();
+    snapshot.sensors = client->hardware().sensors();
+    snapshot.fans = client->hardware().fans();
+    snapshot.leds = client->hardware().leds();
     snapshot.filament_sensors = caps.get_filament_sensor_names();
 
     return snapshot;
@@ -375,7 +375,7 @@ void HardwareValidator::add_expected_hardware(Config* config, const std::string&
 
 void HardwareValidator::validate_critical_hardware(const MoonrakerClient* client,
                                                    HardwareValidationResult& result) {
-    const auto& heaters = client->get_heaters();
+    const auto& heaters = client->hardware().heaters();
 
     // Check for extruder
     bool has_extruder = false;
@@ -406,9 +406,9 @@ void HardwareValidator::validate_configured_hardware(Config* config, const Moonr
         return;
     }
 
-    const auto& heaters = client->get_heaters();
-    const auto& fans = client->get_fans();
-    const auto& leds = client->get_leds();
+    const auto& heaters = client->hardware().heaters();
+    const auto& fans = client->hardware().fans();
+    const auto& leds = client->hardware().leds();
     const auto& filament_sensors = caps.get_filament_sensor_names();
 
     // Check configured heater (bed)
@@ -558,7 +558,7 @@ void HardwareValidator::validate_configured_hardware(Config* config, const Moonr
 void HardwareValidator::validate_new_hardware(Config* config, const MoonrakerClient* client,
                                               const PrinterCapabilities& caps,
                                               HardwareValidationResult& result) {
-    const auto& leds = client->get_leds();
+    const auto& leds = client->hardware().leds();
 
     // Check for LEDs not in config
     // Only suggest if user hasn't configured any LED yet

@@ -139,14 +139,15 @@ static PrinterDetectionHint detect_printer_type() {
 
     // Build hardware data from MoonrakerClient discovery
     PrinterHardwareData hardware;
-    hardware.heaters = client->get_heaters();
-    hardware.sensors = client->get_sensors();
-    hardware.fans = client->get_fans();
-    hardware.leds = client->get_leds();
+    hardware.heaters = client->hardware().heaters();
+    hardware.sensors = client->hardware().sensors();
+    hardware.fans = client->hardware().fans();
+    hardware.leds = client->hardware().leds();
     hardware.hostname = client->get_hostname();
 
     // Additional detection data sources (Phase 1 enhancement)
-    hardware.steppers = client->get_steppers();
+    hardware.steppers = client->hardware().steppers();
+    // Note: printer_objects still uses deprecated getter - detection engine needs raw list
     hardware.printer_objects = client->get_printer_objects();
     hardware.kinematics = client->get_kinematics();
     hardware.build_volume = client->get_build_volume();

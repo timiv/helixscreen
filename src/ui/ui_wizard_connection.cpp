@@ -419,9 +419,9 @@ void WizardConnectionStep::on_connection_success() {
                             MoonrakerClient* client = get_moonraker_client();
                             MoonrakerAPI* api = get_moonraker_api();
                             if (client) {
-                                auto heaters = client->get_heaters();
-                                auto sensors = client->get_sensors();
-                                auto fans = client->get_fans();
+                                const auto& heaters = client->hardware().heaters();
+                                const auto& sensors = client->hardware().sensors();
+                                const auto& fans = client->hardware().fans();
                                 spdlog::info("[Wizard Connection] Discovered {} heaters, {} "
                                              "sensors, {} fans",
                                              heaters.size(), sensors.size(), fans.size());
@@ -430,9 +430,8 @@ void WizardConnectionStep::on_connection_success() {
 
                                 // Initialize subsystems (AMS, filament sensors, macros)
                                 // so they're available for later wizard steps
-                                PrinterCapabilities caps;
-                                caps.parse_objects(client->get_printer_objects());
-                                init_subsystems_from_capabilities(caps, api, client);
+                                init_subsystems_from_capabilities(client->capabilities(), api,
+                                                                  client);
                             }
 
                             // NOW enable Next button - discovery is complete
@@ -729,9 +728,8 @@ void WizardConnectionStep::on_auto_probe_success() {
                                              client->get_hostname());
 
                                 // Initialize subsystems (AMS, filament sensors, macros)
-                                PrinterCapabilities caps;
-                                caps.parse_objects(client->get_printer_objects());
-                                init_subsystems_from_capabilities(caps, api, client);
+                                init_subsystems_from_capabilities(client->capabilities(), api,
+                                                                  client);
                             }
 
                             // NOW enable Next button - discovery is complete
