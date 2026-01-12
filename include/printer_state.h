@@ -8,6 +8,7 @@
 #include "lvgl/lvgl.h"
 #include "printer_detector.h"
 #include "printer_hardware_discovery.h"
+#include "printer_motion_state.h"
 #include "printer_temperature_state.h"
 #include "spdlog/spdlog.h"
 #include "subject_managed_panel.h"
@@ -534,27 +535,27 @@ class PrinterState {
      */
     void reset_print_start_state();
 
-    // Motion subjects
+    // Motion subjects - delegated to PrinterMotionState component
     lv_subject_t* get_position_x_subject() {
-        return &position_x_;
+        return motion_state_.get_position_x_subject();
     }
     lv_subject_t* get_position_y_subject() {
-        return &position_y_;
+        return motion_state_.get_position_y_subject();
     }
     lv_subject_t* get_position_z_subject() {
-        return &position_z_;
+        return motion_state_.get_position_z_subject();
     }
     lv_subject_t* get_homed_axes_subject() {
-        return &homed_axes_;
+        return motion_state_.get_homed_axes_subject();
     } // "xyz", "xy", etc.
     // Note: Derived subjects (xy_homed, z_homed, all_homed) are panel-local in ControlsPanel
 
-    // Speed/Flow subjects (percentages, 0-100)
+    // Speed/Flow subjects (percentages, 0-100) - delegated to PrinterMotionState component
     lv_subject_t* get_speed_factor_subject() {
-        return &speed_factor_;
+        return motion_state_.get_speed_factor_subject();
     }
     lv_subject_t* get_flow_factor_subject() {
-        return &flow_factor_;
+        return motion_state_.get_flow_factor_subject();
     }
     lv_subject_t* get_fan_speed_subject() {
         return &fan_speed_;
@@ -612,13 +613,15 @@ class PrinterState {
      * Returns current Z-offset from gcode_move.homing_origin[2] in microns.
      * Divide by 1000.0 to get mm value (e.g., 200 = 0.200mm).
      * Used for live baby-stepping display during prints.
+     * Delegated to PrinterMotionState component.
      */
     lv_subject_t* get_gcode_z_offset_subject() {
-        return &gcode_z_offset_;
+        return motion_state_.get_gcode_z_offset_subject();
     }
 
     // ========================================================================
     // PENDING Z-OFFSET DELTA (for tracking adjustments made during print)
+    // Delegated to PrinterMotionState component.
     // ========================================================================
 
     /**
@@ -628,29 +631,37 @@ class PrinterState {
      * Use this to show "unsaved adjustment" notification in Controls panel.
      */
     lv_subject_t* get_pending_z_offset_delta_subject() {
-        return &pending_z_offset_delta_;
+        return motion_state_.get_pending_z_offset_delta_subject();
     }
 
     /**
      * @brief Add to pending Z-offset delta (called when user adjusts Z during print)
      * @param delta_microns Adjustment in microns (positive = farther, negative = closer)
      */
-    void add_pending_z_offset_delta(int delta_microns);
+    void add_pending_z_offset_delta(int delta_microns) {
+        motion_state_.add_pending_z_offset_delta(delta_microns);
+    }
 
     /**
      * @brief Get current pending Z-offset delta in microns
      */
-    int get_pending_z_offset_delta() const;
+    int get_pending_z_offset_delta() const {
+        return motion_state_.get_pending_z_offset_delta();
+    }
 
     /**
      * @brief Check if there's a pending Z-offset adjustment
      */
-    bool has_pending_z_offset_adjustment() const;
+    bool has_pending_z_offset_adjustment() const {
+        return motion_state_.has_pending_z_offset_adjustment();
+    }
 
     /**
      * @brief Clear pending Z-offset delta (after save or dismiss)
      */
-    void clear_pending_z_offset_delta();
+    void clear_pending_z_offset_delta() {
+        motion_state_.clear_pending_z_offset_delta();
+    }
 
     // Printer connection state subjects (Moonraker WebSocket)
     lv_subject_t* get_printer_connection_state_subject() {
@@ -1215,6 +1226,9 @@ class PrinterState {
     /// Temperature state component (extruder and bed temperatures)
     helix::PrinterTemperatureState temperature_state_;
 
+    /// Motion state component (position, speed/flow, z-offset)
+    helix::PrinterMotionState motion_state_;
+
     // Print progress subjects
     lv_subject_t print_progress_;         // Integer 0-100
     lv_subject_t print_filename_;         // String buffer
@@ -1243,17 +1257,11 @@ class PrinterState {
     // (G-code downloading/modifying/uploading - may take 20+ seconds for large files)
     lv_subject_t print_in_progress_;
 
-    // Motion subjects
-    lv_subject_t position_x_;
-    lv_subject_t position_y_;
-    lv_subject_t position_z_;
-    lv_subject_t homed_axes_; // String buffer (derived subjects are panel-local)
+    // Note: Motion subjects (position_x_, position_y_, position_z_, homed_axes_,
+    // speed_factor_, flow_factor_, gcode_z_offset_, pending_z_offset_delta_)
+    // are now managed by motion_state_ component
 
-    // Speed/Flow/Z-offset subjects (from gcode_move status)
-    lv_subject_t speed_factor_;
-    lv_subject_t flow_factor_;
-    lv_subject_t gcode_z_offset_; // Integer: Z-offset * 1000 (microns) from homing_origin[2]
-    lv_subject_t pending_z_offset_delta_; // Integer: accumulated adjustment during print (microns)
+    // Fan subject (not part of motion state)
     lv_subject_t fan_speed_;
 
     // Multi-fan tracking
@@ -1353,11 +1361,11 @@ class PrinterState {
     std::string tracked_led_name_;
 
     // String buffers for subject storage
+    // Note: homed_axes_buf_ is now in motion_state_ component
     char print_filename_buf_[256];
     char print_display_filename_buf_[128]; // Clean filename for UI display
     char print_thumbnail_path_buf_[512];   // LVGL path to current print thumbnail
     char print_state_buf_[32];
-    char homed_axes_buf_[8];
     char printer_connection_message_buf_[128];
     char klipper_version_buf_[64];
     char moonraker_version_buf_[64];

@@ -85,9 +85,9 @@ const char* print_job_state_to_string(PrintJobState state) {
 
 PrinterState::PrinterState() {
     // Initialize string buffers
+    // Note: homed_axes_buf_ is now in motion_state_ component
     std::memset(print_filename_buf_, 0, sizeof(print_filename_buf_));
     std::memset(print_state_buf_, 0, sizeof(print_state_buf_));
-    std::memset(homed_axes_buf_, 0, sizeof(homed_axes_buf_));
     std::memset(printer_connection_message_buf_, 0, sizeof(printer_connection_message_buf_));
     std::memset(klipper_version_buf_, 0, sizeof(klipper_version_buf_));
     std::memset(moonraker_version_buf_, 0, sizeof(moonraker_version_buf_));
@@ -95,7 +95,6 @@ PrinterState::PrinterState() {
 
     // Set default values
     std::strcpy(print_state_buf_, "standby");
-    std::strcpy(homed_axes_buf_, "");
     std::strcpy(printer_connection_message_buf_, "Disconnected");
     std::strcpy(klipper_version_buf_, "—");
     std::strcpy(moonraker_version_buf_, "—");
@@ -117,6 +116,9 @@ void PrinterState::reset_for_testing() {
 
     // Reset temperature state component
     temperature_state_.reset_for_testing();
+
+    // Reset motion state component
+    motion_state_.reset_for_testing();
 
     // Use SubjectManager for automatic subject cleanup
     subjects_.deinit_all();
@@ -161,6 +163,9 @@ void PrinterState::init_subjects(bool register_xml) {
     // Initialize temperature state component (extruder and bed temperatures)
     temperature_state_.init_subjects(register_xml);
 
+    // Initialize motion state component (position, speed/flow, z-offset)
+    motion_state_.init_subjects(register_xml);
+
     // Print progress subjects
     lv_subject_init_int(&print_progress_, 0);
     lv_subject_init_string(&print_filename_, print_filename_buf_, nullptr,
@@ -193,17 +198,11 @@ void PrinterState::init_subjects(bool register_xml) {
     // Print workflow in-progress subject (1 while preparing/starting, 0 otherwise)
     lv_subject_init_int(&print_in_progress_, 0);
 
-    // Motion subjects
-    lv_subject_init_int(&position_x_, 0);
-    lv_subject_init_int(&position_y_, 0);
-    lv_subject_init_int(&position_z_, 0);
-    lv_subject_init_string(&homed_axes_, homed_axes_buf_, nullptr, sizeof(homed_axes_buf_), "");
+    // Note: Motion subjects (position_x_, position_y_, position_z_, homed_axes_,
+    // speed_factor_, flow_factor_, gcode_z_offset_, pending_z_offset_delta_)
+    // are now initialized by motion_state_.init_subjects() above
 
-    // Speed/Flow subjects (percentages)
-    lv_subject_init_int(&speed_factor_, 100);
-    lv_subject_init_int(&flow_factor_, 100);
-    lv_subject_init_int(&gcode_z_offset_, 0);         // Z-offset in microns from homing_origin[2]
-    lv_subject_init_int(&pending_z_offset_delta_, 0); // Accumulated adjustment during print
+    // Fan subjects (not part of motion state)
     lv_subject_init_int(&fan_speed_, 0);
     lv_subject_init_int(&fans_version_, 0); // Multi-fan version for UI updates
 
@@ -321,16 +320,8 @@ void PrinterState::init_subjects(bool register_xml) {
     subjects_.register_subject(&print_start_message_);
     subjects_.register_subject(&print_start_progress_);
     subjects_.register_subject(&print_in_progress_);
-    // Motion subjects
-    subjects_.register_subject(&position_x_);
-    subjects_.register_subject(&position_y_);
-    subjects_.register_subject(&position_z_);
-    subjects_.register_subject(&homed_axes_);
-    // Speed/Flow/Z-offset subjects
-    subjects_.register_subject(&speed_factor_);
-    subjects_.register_subject(&flow_factor_);
-    subjects_.register_subject(&gcode_z_offset_);
-    subjects_.register_subject(&pending_z_offset_delta_);
+    // Note: Motion subjects are registered by motion_state_ component
+    // Fan subjects (not part of motion state)
     subjects_.register_subject(&fan_speed_);
     subjects_.register_subject(&fans_version_);
     // Printer connection subjects
@@ -418,14 +409,8 @@ void PrinterState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "print_start_phase", &print_start_phase_);
         lv_xml_register_subject(NULL, "print_start_message", &print_start_message_);
         lv_xml_register_subject(NULL, "print_start_progress", &print_start_progress_);
-        lv_xml_register_subject(NULL, "position_x", &position_x_);
-        lv_xml_register_subject(NULL, "position_y", &position_y_);
-        lv_xml_register_subject(NULL, "position_z", &position_z_);
-        lv_xml_register_subject(NULL, "homed_axes", &homed_axes_);
-        lv_xml_register_subject(NULL, "speed_factor", &speed_factor_);
-        lv_xml_register_subject(NULL, "flow_factor", &flow_factor_);
-        lv_xml_register_subject(NULL, "gcode_z_offset", &gcode_z_offset_);
-        lv_xml_register_subject(NULL, "pending_z_offset_delta", &pending_z_offset_delta_);
+        // Note: Motion subjects are registered by motion_state_ component
+        // Fan subjects (not part of motion state)
         lv_xml_register_subject(NULL, "fan_speed", &fan_speed_);
         lv_xml_register_subject(NULL, "fans_version", &fans_version_);
         lv_xml_register_subject(NULL, "printer_connection_state", &printer_connection_state_);
@@ -527,6 +512,9 @@ void PrinterState::update_from_status(const json& state) {
 
     // Delegate temperature updates to temperature state component
     temperature_state_.update_from_status(state);
+
+    // Delegate motion updates to motion state component
+    motion_state_.update_from_status(state);
 
     // Update print progress
     if (state.contains("virtual_sdcard")) {
@@ -662,56 +650,16 @@ void PrinterState::update_from_status(const json& state) {
         }
     }
 
-    // Update toolhead position
+    // Note: Toolhead position, homed_axes, speed_factor, flow_factor, and gcode_z_offset
+    // are now updated by motion_state_.update_from_status() above
+
+    // Extract kinematics type (determines if bed moves on Z or gantry moves)
+    // This is not part of motion_state_ as it affects printer_bed_moves_ subject
     if (state.contains("toolhead")) {
         const auto& toolhead = state["toolhead"];
-
-        if (toolhead.contains("position") && toolhead["position"].is_array()) {
-            const auto& pos = toolhead["position"];
-            // Note: Klipper can send null position values before homing or during errors
-            if (pos.size() >= 3 && pos[0].is_number() && pos[1].is_number() && pos[2].is_number()) {
-                lv_subject_set_int(&position_x_, static_cast<int>(pos[0].get<double>()));
-                lv_subject_set_int(&position_y_, static_cast<int>(pos[1].get<double>()));
-                lv_subject_set_int(&position_z_, static_cast<int>(pos[2].get<double>()));
-            }
-        }
-
-        if (toolhead.contains("homed_axes") && toolhead["homed_axes"].is_string()) {
-            std::string axes = toolhead["homed_axes"].get<std::string>();
-            lv_subject_copy_string(&homed_axes_, axes.c_str());
-            // Note: Derived homing subjects (xy_homed, z_homed, all_homed) are now
-            // panel-local in ControlsPanel, which observes this homed_axes string.
-        }
-
-        // Extract kinematics type (determines if bed moves on Z or gantry moves)
         if (toolhead.contains("kinematics") && toolhead["kinematics"].is_string()) {
             std::string kin = toolhead["kinematics"].get<std::string>();
             set_kinematics(kin);
-        }
-    }
-
-    // Update speed factor
-    if (state.contains("gcode_move")) {
-        const auto& gcode_move = state["gcode_move"];
-
-        if (gcode_move.contains("speed_factor") && gcode_move["speed_factor"].is_number()) {
-            int factor_pct = helix::units::json_to_percent(gcode_move, "speed_factor");
-            lv_subject_set_int(&speed_factor_, factor_pct);
-        }
-
-        if (gcode_move.contains("extrude_factor") && gcode_move["extrude_factor"].is_number()) {
-            int factor_pct = helix::units::json_to_percent(gcode_move, "extrude_factor");
-            lv_subject_set_int(&flow_factor_, factor_pct);
-        }
-
-        // Parse Z-offset from homing_origin[2] (baby stepping / SET_GCODE_OFFSET Z=)
-        if (gcode_move.contains("homing_origin") && gcode_move["homing_origin"].is_array()) {
-            const auto& origin = gcode_move["homing_origin"];
-            if (origin.size() >= 3 && origin[2].is_number()) {
-                int z_microns = static_cast<int>(origin[2].get<double>() * 1000.0);
-                lv_subject_set_int(&gcode_z_offset_, z_microns);
-                spdlog::trace("[PrinterState] G-code Z-offset: {}µm", z_microns);
-            }
         }
     }
 
@@ -1346,32 +1294,8 @@ void PrinterState::set_kinematics(const std::string& kinematics) {
     }
 }
 
-// ============================================================================
-// PENDING Z-OFFSET DELTA TRACKING
-// ============================================================================
-
-void PrinterState::add_pending_z_offset_delta(int delta_microns) {
-    int current = lv_subject_get_int(&pending_z_offset_delta_);
-    int new_value = current + delta_microns;
-    lv_subject_set_int(&pending_z_offset_delta_, new_value);
-    spdlog::debug("[PrinterState] Pending Z-offset delta: {:+}µm (total: {:+}µm)", delta_microns,
-                  new_value);
-}
-
-int PrinterState::get_pending_z_offset_delta() const {
-    return lv_subject_get_int(const_cast<lv_subject_t*>(&pending_z_offset_delta_));
-}
-
-bool PrinterState::has_pending_z_offset_adjustment() const {
-    return get_pending_z_offset_delta() != 0;
-}
-
-void PrinterState::clear_pending_z_offset_delta() {
-    if (has_pending_z_offset_adjustment()) {
-        spdlog::info("[PrinterState] Clearing pending Z-offset delta");
-        lv_subject_set_int(&pending_z_offset_delta_, 0);
-    }
-}
+// Note: Pending Z-offset delta methods are now delegated to motion_state_
+// component in the header file.
 
 // ============================================================================
 // PRINT START PROGRESS TRACKING
