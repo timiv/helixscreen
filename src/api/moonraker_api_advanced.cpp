@@ -20,33 +20,96 @@ using namespace moonraker_internal;
 // Domain Service Operations - Bed Mesh
 // ============================================================================
 
-const BedMeshProfile* MoonrakerAPI::get_active_bed_mesh() const {
-    // Suppress deprecation warning - we're the migration target
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    const BedMeshProfile& mesh = client_.get_active_bed_mesh();
-#pragma GCC diagnostic pop
+void MoonrakerAPI::update_bed_mesh(const json& bed_mesh) {
+    std::lock_guard<std::mutex> lock(bed_mesh_mutex_);
 
-    if (mesh.probed_matrix.empty()) {
+    // Parse active profile name
+    if (bed_mesh.contains("profile_name") && !bed_mesh["profile_name"].is_null()) {
+        active_bed_mesh_.name = bed_mesh["profile_name"].template get<std::string>();
+    }
+
+    // Parse probed_matrix (2D array of Z heights)
+    if (bed_mesh.contains("probed_matrix") && bed_mesh["probed_matrix"].is_array()) {
+        active_bed_mesh_.probed_matrix.clear();
+        for (const auto& row : bed_mesh["probed_matrix"]) {
+            if (row.is_array()) {
+                std::vector<float> row_vec;
+                for (const auto& val : row) {
+                    if (val.is_number()) {
+                        row_vec.push_back(val.template get<float>());
+                    }
+                }
+                if (!row_vec.empty()) {
+                    active_bed_mesh_.probed_matrix.push_back(row_vec);
+                }
+            }
+        }
+
+        // Update dimensions
+        active_bed_mesh_.y_count = static_cast<int>(active_bed_mesh_.probed_matrix.size());
+        active_bed_mesh_.x_count = active_bed_mesh_.probed_matrix.empty()
+                                       ? 0
+                                       : static_cast<int>(active_bed_mesh_.probed_matrix[0].size());
+    }
+
+    // Parse mesh bounds (check that elements are numbers, not null)
+    if (bed_mesh.contains("mesh_min") && bed_mesh["mesh_min"].is_array() &&
+        bed_mesh["mesh_min"].size() >= 2 && bed_mesh["mesh_min"][0].is_number() &&
+        bed_mesh["mesh_min"][1].is_number()) {
+        active_bed_mesh_.mesh_min[0] = bed_mesh["mesh_min"][0].template get<float>();
+        active_bed_mesh_.mesh_min[1] = bed_mesh["mesh_min"][1].template get<float>();
+    }
+
+    if (bed_mesh.contains("mesh_max") && bed_mesh["mesh_max"].is_array() &&
+        bed_mesh["mesh_max"].size() >= 2 && bed_mesh["mesh_max"][0].is_number() &&
+        bed_mesh["mesh_max"][1].is_number()) {
+        active_bed_mesh_.mesh_max[0] = bed_mesh["mesh_max"][0].template get<float>();
+        active_bed_mesh_.mesh_max[1] = bed_mesh["mesh_max"][1].template get<float>();
+    }
+
+    // Parse available profiles
+    if (bed_mesh.contains("profiles") && bed_mesh["profiles"].is_object()) {
+        bed_mesh_profiles_.clear();
+        for (auto& [profile_name, profile_data] : bed_mesh["profiles"].items()) {
+            bed_mesh_profiles_.push_back(profile_name);
+        }
+    }
+
+    // Parse algorithm from mesh_params (if available)
+    if (bed_mesh.contains("mesh_params") && bed_mesh["mesh_params"].is_object()) {
+        const json& params = bed_mesh["mesh_params"];
+        if (params.contains("algo") && params["algo"].is_string()) {
+            active_bed_mesh_.algo = params["algo"].template get<std::string>();
+        }
+    }
+
+    if (active_bed_mesh_.probed_matrix.empty()) {
+        spdlog::debug("[MoonrakerAPI] Bed mesh data cleared (no probed_matrix)");
+    } else {
+        spdlog::info("[MoonrakerAPI] Bed mesh updated: profile='{}', size={}x{}, "
+                     "profiles={}, algo='{}'",
+                     active_bed_mesh_.name, active_bed_mesh_.x_count, active_bed_mesh_.y_count,
+                     bed_mesh_profiles_.size(), active_bed_mesh_.algo);
+    }
+}
+
+const BedMeshProfile* MoonrakerAPI::get_active_bed_mesh() const {
+    std::lock_guard<std::mutex> lock(bed_mesh_mutex_);
+
+    if (active_bed_mesh_.probed_matrix.empty()) {
         return nullptr;
     }
-    return &mesh;
+    return &active_bed_mesh_;
 }
 
 std::vector<std::string> MoonrakerAPI::get_bed_mesh_profiles() const {
-    // Suppress deprecation warning - we're the migration target
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    return client_.get_bed_mesh_profiles();
-#pragma GCC diagnostic pop
+    std::lock_guard<std::mutex> lock(bed_mesh_mutex_);
+    return bed_mesh_profiles_;
 }
 
 bool MoonrakerAPI::has_bed_mesh() const {
-    // Suppress deprecation warning - we're the migration target
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    return client_.has_bed_mesh();
-#pragma GCC diagnostic pop
+    std::lock_guard<std::mutex> lock(bed_mesh_mutex_);
+    return !active_bed_mesh_.probed_matrix.empty();
 }
 
 void MoonrakerAPI::get_excluded_objects(

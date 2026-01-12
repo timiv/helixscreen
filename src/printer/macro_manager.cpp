@@ -91,15 +91,15 @@ std::vector<std::string> parse_macro_names(const std::string& content) {
 // MacroManager Implementation
 // ============================================================================
 
-MacroManager::MacroManager(MoonrakerAPI& api, const PrinterCapabilities& capabilities)
-    : api_(api), capabilities_(capabilities) {}
+MacroManager::MacroManager(MoonrakerAPI& api, const PrinterHardwareDiscovery& hardware)
+    : api_(api), hardware_(hardware) {}
 
 bool MacroManager::is_installed() const {
-    return capabilities_.has_helix_macros();
+    return hardware_.has_helix_macros();
 }
 
 MacroInstallStatus MacroManager::get_status() const {
-    if (!capabilities_.has_helix_macros()) {
+    if (!hardware_.has_helix_macros()) {
         return MacroInstallStatus::NOT_INSTALLED;
     }
 
@@ -398,14 +398,14 @@ void MacroManager::restart_klipper(SuccessCallback on_success, ErrorCallback on_
 
 std::optional<std::string> MacroManager::parse_installed_version() const {
     // Check if HELIX_READY macro exists (indicates v2.0+ macros)
-    if (capabilities_.has_helix_macro("HELIX_READY")) {
+    if (hardware_.has_helix_macro("HELIX_READY")) {
         // TODO: Query the actual version from _HELIX_STATE or similar via Moonraker
         // For now, assume 2.0.0 if HELIX_READY exists
         return "2.0.0";
     }
 
     // Check for legacy v1.x macros
-    if (capabilities_.has_helix_macro("HELIX_START_PRINT")) {
+    if (hardware_.has_helix_macro("HELIX_START_PRINT")) {
         return "1.0.0";
     }
 

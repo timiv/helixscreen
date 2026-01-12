@@ -17,12 +17,12 @@
 #include "../../include/moonraker_client_mock.h"
 #include "../../include/printer_hardware.h"
 #include "../../lvgl/lvgl.h"
+#include "../ui_test_utils.h"
 
 #include <chrono>
 #include <thread>
 
 #include "../catch_amalgamated.hpp"
-#include "../ui_test_utils.h"
 
 // ============================================================================
 // Global LVGL Initialization (called once)
@@ -161,8 +161,8 @@ TEST_CASE("PrinterHardware guessing works for multiple printer types",
         mock.connect("ws://mock/websocket", []() {}, []() {});
         mock.discover_printer([]() {});
 
-        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(), mock.hardware().fans(),
-                           mock.hardware().leds());
+        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(),
+                           mock.hardware().fans(), mock.hardware().leds());
 
         REQUIRE(hw.guess_bed_heater() == "heater_bed");
         REQUIRE(hw.guess_hotend_heater() == "extruder");
@@ -178,8 +178,8 @@ TEST_CASE("PrinterHardware guessing works for multiple printer types",
         mock.connect("ws://mock/websocket", []() {}, []() {});
         mock.discover_printer([]() {});
 
-        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(), mock.hardware().fans(),
-                           mock.hardware().leds());
+        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(),
+                           mock.hardware().fans(), mock.hardware().leds());
 
         // Just verify these return something sensible
         REQUIRE_FALSE(hw.guess_bed_heater().empty());
@@ -194,8 +194,8 @@ TEST_CASE("PrinterHardware guessing works for multiple printer types",
         mock.connect("ws://mock/websocket", []() {}, []() {});
         mock.discover_printer([]() {});
 
-        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(), mock.hardware().fans(),
-                           mock.hardware().leds());
+        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(),
+                           mock.hardware().fans(), mock.hardware().leds());
 
         // Multi-extruder should still find bed and primary extruder
         REQUIRE_FALSE(hw.guess_bed_heater().empty());

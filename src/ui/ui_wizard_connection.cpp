@@ -18,7 +18,7 @@
 #include "lvgl/lvgl.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
-#include "printer_capabilities.h"
+#include "printer_hardware_discovery.h"
 #include "runtime_config.h"
 #include "static_panel_registry.h"
 #include "wizard_config_paths.h"
@@ -426,12 +426,12 @@ void WizardConnectionStep::on_connection_success() {
                                              "sensors, {} fans",
                                              heaters.size(), sensors.size(), fans.size());
                                 spdlog::info("[Wizard Connection] Hostname: '{}'",
-                                             client->get_hostname());
+                                             client->hardware().hostname());
 
                                 // Initialize subsystems (AMS, filament sensors, macros)
                                 // so they're available for later wizard steps
-                                init_subsystems_from_capabilities(client->capabilities(), api,
-                                                                  client);
+                                helix::init_subsystems_from_hardware(client->hardware(), api,
+                                                                     client);
                             }
 
                             // NOW enable Next button - discovery is complete
@@ -725,11 +725,11 @@ void WizardConnectionStep::on_auto_probe_success() {
                             MoonrakerAPI* api = get_moonraker_api();
                             if (client) {
                                 spdlog::info("[Wizard Connection] Hostname: '{}'",
-                                             client->get_hostname());
+                                             client->hardware().hostname());
 
                                 // Initialize subsystems (AMS, filament sensors, macros)
-                                init_subsystems_from_capabilities(client->capabilities(), api,
-                                                                  client);
+                                helix::init_subsystems_from_hardware(client->hardware(), api,
+                                                                     client);
                             }
 
                             // NOW enable Next button - discovery is complete

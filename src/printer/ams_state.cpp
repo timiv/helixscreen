@@ -17,7 +17,6 @@
 
 #include "format_utils.h"
 #include "moonraker_api.h"
-#include "printer_capabilities.h"
 #include "printer_hardware_discovery.h"
 #include "runtime_config.h"
 
@@ -358,75 +357,6 @@ void AmsState::deinit_subjects() {
 
     initialized_ = false;
     spdlog::debug("[AMS State] Subjects deinitialized");
-}
-
-void AmsState::init_backend_from_capabilities(const PrinterCapabilities& caps, MoonrakerAPI* api,
-                                              MoonrakerClient* client) {
-    // Skip if no MMU or tool changer detected
-    if (!caps.has_mmu() && !caps.has_tool_changer()) {
-        spdlog::debug(
-            "[AMS State] No MMU or tool changer detected, skipping backend initialization");
-        return;
-    }
-
-    // Skip if already in mock mode (mock backend was created at startup)
-    if (get_runtime_config()->should_mock_ams()) {
-        spdlog::debug("[AMS State] Mock mode active, skipping real backend initialization");
-        return;
-    }
-
-    // Check if backend already exists (with lock)
-    {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
-        if (backend_) {
-            spdlog::debug("[AMS State] Backend already exists, skipping initialization");
-            return;
-        }
-    }
-
-    AmsType detected_type = caps.get_mmu_type();
-    spdlog::info("[AMS State] Detected MMU system: {}", ams_type_to_string(detected_type));
-
-    auto backend = AmsBackend::create(detected_type, api, client);
-    if (backend) {
-        // Pass discovered configuration to backend through base class interface.
-        // Each backend type implements only what it needs (no-op default for others):
-        // - AFC: uses lane/hub names from printer.objects.list
-        // - Tool Changer: uses tool names from printer.objects.list
-        backend->set_discovered_lanes(caps.get_afc_lane_names(), caps.get_afc_hub_names());
-        backend->set_discovered_tools(caps.get_tool_names());
-
-        // Set backend (registers event callback)
-        set_backend(std::move(backend));
-
-        // Now start the backend - this subscribes to Moonraker updates
-        // Event callback is already registered so any events will be processed
-        // start() will query initial state asynchronously and emit STATE_CHANGED when data arrives
-        {
-            std::lock_guard<std::recursive_mutex> lock(mutex_);
-            if (backend_) {
-                spdlog::debug("[AMS State] Starting backend");
-                auto result = backend_->start();
-                spdlog::debug("[AMS State] backend->start() returned, result={}",
-                              static_cast<bool>(result));
-            }
-        }
-
-        // Note: Don't call sync_from_backend() here - with the early hardware discovery
-        // callback architecture, the backend receives initial state naturally from the
-        // printer.objects.subscribe response and will emit a STATE_CHANGED event.
-        // The slot_count below reflects the initialized lanes (from discovery), not loaded filament
-        // state.
-        int slot_count = 0;
-        {
-            std::lock_guard<std::recursive_mutex> lock(mutex_);
-            slot_count = lv_subject_get_int(&slot_count_);
-        }
-        spdlog::info("[AMS State] {} backend initialized ({} slots)",
-                     ams_type_to_string(detected_type), slot_count);
-    } else {
-        spdlog::warn("[AMS State] Failed to create {} backend", ams_type_to_string(detected_type));
-    }
 }
 
 void AmsState::init_backend_from_hardware(const helix::PrinterHardwareDiscovery& hardware,

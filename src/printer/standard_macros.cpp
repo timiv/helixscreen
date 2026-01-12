@@ -5,7 +5,6 @@
 
 #include "config.h"
 #include "moonraker_api.h"
-#include "printer_capabilities.h"
 #include "printer_hardware_discovery.h"
 
 #include <spdlog/spdlog.h>
@@ -138,62 +137,6 @@ void StandardMacros::init_slot_definitions() {
     }
 }
 
-void StandardMacros::init(const PrinterCapabilities& caps) {
-    spdlog::debug("[StandardMacros] Initializing with printer capabilities");
-
-    // Reset detected macros and restore fallbacks from static table
-    // (fallbacks may have been cleared on previous init if not installed)
-    for (auto& slot : slots_) {
-        slot.detected_macro.clear();
-
-        // Restore fallback from static definition
-        auto fallback_it = FALLBACK_MACROS.find(slot.slot);
-        if (fallback_it != FALLBACK_MACROS.end()) {
-            slot.fallback_macro = fallback_it->second;
-        }
-    }
-
-    // Load user configuration
-    load_from_config();
-
-    // Run auto-detection
-    auto_detect(caps);
-
-    // Check which fallbacks are actually available on this printer
-    for (auto& slot : slots_) {
-        if (!slot.fallback_macro.empty()) {
-            if (!caps.has_helix_macro(slot.fallback_macro)) {
-                spdlog::debug("[StandardMacros] Fallback {} not installed for {}",
-                              slot.fallback_macro, slot.slot_name);
-                slot.fallback_macro.clear();
-            }
-        }
-    }
-
-    initialized_ = true;
-
-    // Log summary
-    int configured = 0, detected = 0, fallback = 0, empty = 0;
-    for (const auto& slot : slots_) {
-        switch (slot.get_source()) {
-        case MacroSource::CONFIGURED:
-            configured++;
-            break;
-        case MacroSource::DETECTED:
-            detected++;
-            break;
-        case MacroSource::FALLBACK:
-            fallback++;
-            break;
-        case MacroSource::NONE:
-            empty++;
-            break;
-        }
-    }
-    spdlog::info("[StandardMacros] Initialized: {} configured, {} detected, {} fallback, {} empty",
-                 configured, detected, fallback, empty);
-}
-
 void StandardMacros::reset() {
     spdlog::debug("[StandardMacros] Resetting");
     for (auto& slot : slots_) {
@@ -279,39 +222,6 @@ void StandardMacros::save_to_config() {
     }
 }
 
-void StandardMacros::auto_detect(const PrinterCapabilities& caps) {
-    spdlog::debug("[StandardMacros] Running auto-detection on {} macros", caps.macro_count());
-
-    for (const auto& pattern_def : DETECTION_PATTERNS) {
-        auto detected = try_detect(caps, pattern_def.slot, pattern_def.patterns);
-        if (!detected.empty()) {
-            auto index = static_cast<size_t>(pattern_def.slot);
-            if (index < slots_.size()) {
-                slots_[index].detected_macro = detected;
-                spdlog::debug("[StandardMacros] Detected {} -> {}", slots_[index].slot_name,
-                              detected);
-            }
-        }
-    }
-}
-
-std::string StandardMacros::try_detect(const PrinterCapabilities& caps,
-                                       [[maybe_unused]] StandardMacroSlot slot,
-                                       const std::vector<std::string>& patterns) {
-    const auto& macros = caps.macros();
-
-    for (const auto& pattern : patterns) {
-        std::string upper_pattern = to_upper(pattern);
-        // Check if the pattern exists as a macro (both are uppercase)
-        if (macros.find(upper_pattern) != macros.end()) {
-            // Return the pattern as-is (Klipper macros are case-insensitive)
-            return pattern;
-        }
-    }
-
-    return "";
-}
-
 bool StandardMacros::execute(StandardMacroSlot slot, MoonrakerAPI* api, SuccessCallback on_success,
                              ErrorCallback on_error) {
     return execute(slot, api, {}, std::move(on_success), std::move(on_error));
@@ -337,10 +247,6 @@ bool StandardMacros::execute(StandardMacroSlot slot, MoonrakerAPI* api,
     api->execute_macro(macro_name, params, std::move(on_success), std::move(on_error));
     return true;
 }
-
-// ============================================================================
-// PrinterHardwareDiscovery Overloads
-// ============================================================================
 
 void StandardMacros::init(const helix::PrinterHardwareDiscovery& hardware) {
     spdlog::debug("[StandardMacros] Initializing with hardware discovery");

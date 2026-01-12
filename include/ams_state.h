@@ -12,7 +12,6 @@
 #include <mutex>
 
 // Forward declarations
-class PrinterCapabilities;
 class MoonrakerAPI;
 class MoonrakerClient;
 
@@ -106,22 +105,6 @@ class AmsState {
      * Disconnects all observers from subjects.
      */
     void deinit_subjects();
-
-    /**
-     * @brief Initialize AMS backend from detected printer capabilities
-     *
-     * Called after Moonraker discovery completes. If the printer has an MMU system
-     * (AFC/Box Turtle, Happy Hare, etc.), creates and starts the appropriate backend.
-     * Does nothing if no MMU is detected or if already in mock mode.
-     *
-     * @param caps Detected printer capabilities
-     * @param api MoonrakerAPI instance for making API calls
-     * @param client MoonrakerClient instance for WebSocket communication
-     * @deprecated Use init_backend_from_hardware instead
-     */
-    [[deprecated("Use init_backend_from_hardware instead")]]
-    void init_backend_from_capabilities(const PrinterCapabilities& caps, MoonrakerAPI* api,
-                                        MoonrakerClient* client);
 
     /**
      * @brief Initialize AMS backend from discovered hardware
@@ -582,18 +565,6 @@ class AmsState {
      * @brief Bump the slots version counter
      */
     void bump_slots_version();
-
-    /**
-     * @brief Initialize a Klipper-based MMU backend (Happy Hare, AFC)
-     *
-     * Called when a Klipper object-based MMU system is detected.
-     *
-     * @param caps Detected printer capabilities
-     * @param api MoonrakerAPI instance
-     * @param client MoonrakerClient instance
-     */
-    void init_klipper_mmu_backend(const PrinterCapabilities& caps, MoonrakerAPI* api,
-                                  MoonrakerClient* client);
 
     /**
      * @brief Probe for ValgACE via REST endpoint

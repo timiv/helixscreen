@@ -475,6 +475,34 @@ class MoonrakerClientMock : public MoonrakerClient {
         toggle_filament_runout();
     }
 
+    // ========== Bed Mesh Accessors (Mock-specific) ==========
+    // These were removed from MoonrakerClient and moved to MoonrakerAPI.
+    // The mock needs its own accessors for test validation.
+
+    /**
+     * @brief Get the active bed mesh profile
+     * @return Reference to the currently active bed mesh profile
+     */
+    [[nodiscard]] const BedMeshProfile& get_active_bed_mesh() const {
+        return active_bed_mesh_;
+    }
+
+    /**
+     * @brief Get list of available bed mesh profile names
+     * @return Vector of profile names
+     */
+    [[nodiscard]] const std::vector<std::string>& get_bed_mesh_profiles() const {
+        return bed_mesh_profiles_;
+    }
+
+    /**
+     * @brief Check if bed mesh data is available
+     * @return true if a valid bed mesh profile has been loaded
+     */
+    [[nodiscard]] bool has_bed_mesh() const {
+        return !active_bed_mesh_.probed_matrix.empty();
+    }
+
   private:
     /**
      * @brief Populate hardware lists based on configured printer type
@@ -664,6 +692,10 @@ class MoonrakerClientMock : public MoonrakerClient {
 
   private:
     PrinterType printer_type_;
+
+    // Mock bed mesh storage (Client no longer stores this; mock simulates it)
+    BedMeshProfile active_bed_mesh_;
+    std::vector<std::string> bed_mesh_profiles_;
 
     // Mock request ID counter for simulating send_jsonrpc return values
     std::atomic<RequestId> mock_request_id_counter_{0};

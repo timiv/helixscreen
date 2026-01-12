@@ -18,7 +18,6 @@
 #include "moonraker_api.h"
 #include "moonraker_client.h"
 #include "moonraker_manager.h"
-#include "printer_capabilities.h"
 #include "printer_state.h"
 #include "static_panel_registry.h"
 

@@ -754,3 +754,24 @@ class PrinterHardwareDiscovery {
 };
 
 } // namespace helix
+
+// Forward declarations for init_subsystems_from_hardware (global scope)
+class MoonrakerAPI;
+class MoonrakerClient;
+
+namespace helix {
+
+/**
+ * @brief Initialize subsystems from hardware discovery
+ *
+ * Initializes AMS backend, filament sensor manager, and standard macros
+ * based on discovered hardware.
+ *
+ * @param hardware Hardware discovery results
+ * @param api MoonrakerAPI instance
+ * @param client MoonrakerClient instance
+ */
+void init_subsystems_from_hardware(const PrinterHardwareDiscovery& hardware, ::MoonrakerAPI* api,
+                                   ::MoonrakerClient* client);
+
+} // namespace helix

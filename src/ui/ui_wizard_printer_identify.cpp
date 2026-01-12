@@ -143,18 +143,17 @@ static PrinterDetectionHint detect_printer_type() {
     hardware.sensors = client->hardware().sensors();
     hardware.fans = client->hardware().fans();
     hardware.leds = client->hardware().leds();
-    hardware.hostname = client->get_hostname();
+    hardware.hostname = client->hardware().hostname();
 
     // Additional detection data sources (Phase 1 enhancement)
     hardware.steppers = client->hardware().steppers();
-    // Note: printer_objects still uses deprecated getter - detection engine needs raw list
-    hardware.printer_objects = client->get_printer_objects();
-    hardware.kinematics = client->get_kinematics();
-    hardware.build_volume = client->get_build_volume();
+    hardware.printer_objects = client->hardware().printer_objects();
+    hardware.kinematics = client->hardware().kinematics();
+    hardware.build_volume = client->hardware().build_volume();
 
     // MCU detection data (Phase 3.1)
-    hardware.mcu = client->get_mcu();
-    hardware.mcu_list = client->get_mcu_list();
+    hardware.mcu = client->hardware().mcu();
+    hardware.mcu_list = client->hardware().mcu_list();
 
     spdlog::debug("[Wizard Printer] Detection data: heaters={}, sensors={}, fans={}, leds={}, "
                   "steppers={}, objects={}, kinematics={}, mcu={}, build=[{:.0f},{:.0f}]",
@@ -250,7 +249,7 @@ void WizardPrinterIdentifyStep::init_subjects() {
     if (default_name.empty()) {
         MoonrakerClient* client = get_moonraker_client();
         if (client) {
-            std::string hostname = client->get_hostname();
+            std::string hostname = client->hardware().hostname();
             spdlog::debug("[{}] Moonraker hostname value: '{}' (empty={}, unknown={})", get_name(),
                           hostname, hostname.empty(), hostname == "unknown");
             if (!hostname.empty() && hostname != "unknown") {

@@ -259,10 +259,7 @@ void MoonrakerClientMock::populate_capabilities() {
             "[MoonrakerClientMock] Default filament sensor: filament_switch_sensor runout_sensor");
     }
 
-    // Parse objects into capabilities (for PrinterCapabilities queries)
-    capabilities_.parse_objects(mock_objects);
-
-    // Parse objects into hardware discovery (Phase 2: unified hardware access)
+    // Parse objects into hardware discovery (unified hardware access)
     hardware_.parse_objects(mock_objects);
 
     // Populate printer_objects_ for get_printer_objects() - used by hardware validator
@@ -285,8 +282,8 @@ void MoonrakerClientMock::populate_capabilities() {
         }
     }
 
-    spdlog::debug("[MoonrakerClientMock] Capabilities populated: {} macros, {} filament sensors",
-                  capabilities_.macros().size(), filament_sensors_.size());
+    spdlog::debug("[MoonrakerClientMock] Hardware populated: {} macros, {} filament sensors",
+                  hardware_.macros().size(), filament_sensors_.size());
 }
 
 void MoonrakerClientMock::rebuild_hardware() {
@@ -368,12 +365,12 @@ void MoonrakerClientMock::discover_printer(std::function<void()> on_complete) {
             // Must be called BEFORE on_discovery_complete_ to match real implementation timing
             if (on_hardware_discovered_) {
                 spdlog::debug("[MoonrakerClientMock] Invoking early hardware discovery callback");
-                on_hardware_discovered_(capabilities_);
+                on_hardware_discovered_(hardware_);
             }
 
-            // Invoke discovery complete callback with capabilities (for PrinterState binding)
+            // Invoke discovery complete callback with hardware (for PrinterState binding)
             if (on_discovery_complete_) {
-                on_discovery_complete_(capabilities_);
+                on_discovery_complete_(hardware_);
             }
 
             // Invoke completion callback immediately (no async delay in mock)

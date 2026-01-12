@@ -271,9 +271,9 @@ lv_obj_t* WizardFanSelectStep::create(lv_obj_t* parent) {
     // Create PrinterHardware for guessing
     std::unique_ptr<PrinterHardware> hw;
     if (client) {
-        hw = std::make_unique<PrinterHardware>(client->hardware().heaters(),
-                                               client->hardware().sensors(),
-                                               client->hardware().fans(), client->hardware().leds());
+        hw = std::make_unique<PrinterHardware>(
+            client->hardware().heaters(), client->hardware().sensors(), client->hardware().fans(),
+            client->hardware().leds());
     }
 
     // Find and configure hotend fan dropdown

@@ -41,7 +41,6 @@
 #include "moonraker_error.h"
 #include "moonraker_events.h"
 #include "moonraker_request.h"
-#include "printer_capabilities.h"
 #include "printer_detector.h" // For BuildVolume struct
 #include "printer_hardware_discovery.h"
 #include "spdlog/spdlog.h"
@@ -334,8 +333,8 @@ class MoonrakerClient : public hv::WebSocketClient {
     /**
      * @brief Parse bed mesh data from Moonraker notification
      *
-     * Extracts bed_mesh object from printer state updates (notify_status_update).
-     * Updates active_bed_mesh_ with probed_matrix, bounds, and available profiles.
+     * Forwards bed_mesh JSON to registered callback (MoonrakerAPI).
+     * The API layer owns bed mesh data storage; Client is just the transport.
      *
      * @param bed_mesh JSON object from bed_mesh subscription
      */
@@ -416,51 +415,6 @@ class MoonrakerClient : public hv::WebSocketClient {
     }
 
     /**
-     * @brief Get currently active bed mesh profile
-     *
-     * Returns the active mesh profile loaded from Moonraker's bed_mesh object.
-     * The probed_matrix field contains the 2D Z-height array ready for rendering.
-     *
-     * @return Active mesh profile, or empty profile if none loaded
-     * @deprecated Use MoonrakerAPI::get_active_bed_mesh() instead. Domain logic is migrating
-     *             from transport layer (MoonrakerClient) to API layer (MoonrakerAPI).
-     */
-    [[deprecated("Use MoonrakerAPI::get_active_bed_mesh() instead")]] const BedMeshProfile&
-    get_active_bed_mesh() const {
-        return active_bed_mesh_;
-    }
-
-    /**
-     * @brief Get list of available mesh profile names
-     *
-     * Returns profile names from bed_mesh.profiles (e.g., "default", "adaptive", "calibration").
-     * Empty vector if no profiles available or discovery hasn't completed.
-     *
-     * @return Vector of profile names
-     * @deprecated Use MoonrakerAPI::get_bed_mesh_profiles() instead. Domain logic is migrating
-     *             from transport layer (MoonrakerClient) to API layer (MoonrakerAPI).
-     */
-    [[deprecated(
-        "Use MoonrakerAPI::get_bed_mesh_profiles() instead")]] const std::vector<std::string>&
-    get_bed_mesh_profiles() const {
-        return bed_mesh_profiles_;
-    }
-
-    /**
-     * @brief Check if bed mesh data is available
-     *
-     * Returns true if at least one mesh has been loaded from Moonraker.
-     * Does NOT guarantee the mesh is currently active in Klipper.
-     *
-     * @return true if probed_matrix is non-empty
-     * @deprecated Use MoonrakerAPI::has_bed_mesh() instead. Domain logic is migrating
-     *             from transport layer (MoonrakerClient) to API layer (MoonrakerAPI).
-     */
-    [[deprecated("Use MoonrakerAPI::has_bed_mesh() instead")]] bool has_bed_mesh() const {
-        return !active_bed_mesh_.probed_matrix.empty();
-    }
-
-    /**
      * @brief Get printer hostname from printer.info
      * @deprecated Use hardware().hostname() instead
      */
@@ -528,9 +482,10 @@ class MoonrakerClient : public hv::WebSocketClient {
      * 5. printer.objects.subscribe → initial state dispatched to subscribers
      * 6. on_discovery_complete_
      *
-     * @param cb Callback invoked with discovered capabilities (early)
+     * @param cb Callback invoked with discovered hardware (early)
      */
-    void set_on_hardware_discovered(std::function<void(const PrinterCapabilities&)> cb) {
+    void
+    set_on_hardware_discovered(std::function<void(const helix::PrinterHardwareDiscovery&)> cb) {
         on_hardware_discovered_ = cb;
     }
 
@@ -538,12 +493,28 @@ class MoonrakerClient : public hv::WebSocketClient {
      * @brief Set callback for printer discovery completion
      *
      * Called after discover_printer() successfully completes auto-discovery.
-     * Provides the discovered PrinterCapabilities for reactive UI updates.
+     * Provides the discovered PrinterHardwareDiscovery for reactive UI updates.
      *
-     * @param cb Callback invoked with discovered capabilities
+     * @param cb Callback invoked with discovered hardware
      */
-    void set_on_discovery_complete(std::function<void(const PrinterCapabilities&)> cb) {
+    void set_on_discovery_complete(std::function<void(const helix::PrinterHardwareDiscovery&)> cb) {
         on_discovery_complete_ = cb;
+    }
+
+    /**
+     * @brief Set callback for bed mesh updates
+     *
+     * Called when bed mesh data is received from Moonraker (via notify_status_update
+     * or initial subscription response). The callback receives the raw JSON bed_mesh
+     * object for independent parsing by MoonrakerAPI.
+     *
+     * This is part of the migration from Client-side storage to API-side storage.
+     *
+     * @param callback Callback receiving raw bed_mesh JSON, or nullptr to disable
+     */
+    void set_bed_mesh_callback(std::function<void(const json&)> callback) {
+        std::lock_guard<std::mutex> lock(callbacks_mutex_);
+        bed_mesh_callback_ = std::move(callback);
     }
 
     /**
@@ -719,18 +690,16 @@ class MoonrakerClient : public hv::WebSocketClient {
     BuildVolume build_volume_;                 // Build dimensions from bed_mesh bounds
     std::string mcu_;                          // Primary MCU chip (stm32f103xe, stm32h723xx, etc.)
     std::vector<std::string> mcu_list_;        // All MCU chips (primary + CAN toolheads + host)
-    PrinterCapabilities capabilities_;         // QGL, Z-tilt, bed mesh, macros
-    helix::PrinterHardwareDiscovery hardware_; // Unified hardware discovery (Phase 2)
+    helix::PrinterHardwareDiscovery hardware_; // Unified hardware discovery
 
     // Discovery callbacks (protected to allow mock to invoke)
-    std::function<void(const PrinterCapabilities&)>
+    std::function<void(const helix::PrinterHardwareDiscovery&)>
         on_hardware_discovered_; // Early phase (after parse_objects)
-    std::function<void(const PrinterCapabilities&)>
+    std::function<void(const helix::PrinterHardwareDiscovery&)>
         on_discovery_complete_; // Late phase (after subscription)
 
-    // Bed mesh data
-    BedMeshProfile active_bed_mesh_;             // Currently active mesh profile
-    std::vector<std::string> bed_mesh_profiles_; // Available profile names
+    // Bed mesh callback (P7b) - data now owned by MoonrakerAPI
+    std::function<void(const json&)> bed_mesh_callback_;
 
     // Notification callbacks (protected to allow mock to trigger notifications)
     // Map of subscription ID -> callback for O(1) unsubscription

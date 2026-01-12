@@ -1191,32 +1191,32 @@ TEST_CASE("PrinterHardware guessing methods work with mock hardware data", "[pri
     SECTION("guess_bed_heater returns heater_bed") {
         MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
         mock.discover_printer([]() {});
-        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(), mock.hardware().fans(),
-                           mock.hardware().leds());
+        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(),
+                           mock.hardware().fans(), mock.hardware().leds());
         REQUIRE(hw.guess_bed_heater() == "heater_bed");
     }
 
     SECTION("guess_hotend_heater returns extruder") {
         MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
         mock.discover_printer([]() {});
-        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(), mock.hardware().fans(),
-                           mock.hardware().leds());
+        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(),
+                           mock.hardware().fans(), mock.hardware().leds());
         REQUIRE(hw.guess_hotend_heater() == "extruder");
     }
 
     SECTION("guess_bed_sensor returns heater_bed (heaters are also sensors)") {
         MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
         mock.discover_printer([]() {});
-        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(), mock.hardware().fans(),
-                           mock.hardware().leds());
+        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(),
+                           mock.hardware().fans(), mock.hardware().leds());
         REQUIRE(hw.guess_bed_sensor() == "heater_bed");
     }
 
     SECTION("guess_hotend_sensor returns extruder (heaters are also sensors)") {
         MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
         mock.discover_printer([]() {});
-        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(), mock.hardware().fans(),
-                           mock.hardware().leds());
+        PrinterHardware hw(mock.hardware().heaters(), mock.hardware().sensors(),
+                           mock.hardware().fans(), mock.hardware().leds());
         REQUIRE(hw.guess_hotend_sensor() == "extruder");
     }
 }

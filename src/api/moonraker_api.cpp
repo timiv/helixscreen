@@ -19,6 +19,10 @@ using namespace moonraker_internal;
 MoonrakerAPI::MoonrakerAPI(MoonrakerClient& client, PrinterState& state) : client_(client) {
     // state parameter reserved for future use
     (void)state;
+
+    // Wire up bed mesh callback: Client pushes data to API when it arrives from WebSocket
+    client_.set_bed_mesh_callback(
+        [this](const json& bed_mesh) { this->update_bed_mesh(bed_mesh); });
 }
 
 MoonrakerAPI::~MoonrakerAPI() {

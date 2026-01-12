@@ -879,6 +879,18 @@ class MoonrakerAPI {
     const BedMeshProfile* get_active_bed_mesh() const;
 
     /**
+     * @brief Update bed mesh data from Moonraker status
+     *
+     * Called by MoonrakerClient when bed_mesh data is received from
+     * Moonraker subscriptions. Parses the JSON and updates local storage.
+     *
+     * Thread-safe: Uses internal mutex for synchronization.
+     *
+     * @param bed_mesh_data JSON object containing bed_mesh status fields
+     */
+    void update_bed_mesh(const json& bed_mesh_data);
+
+    /**
      * @brief Get list of available mesh profile names
      *
      * Returns profile names from bed_mesh.profiles (e.g., "default",
@@ -1188,6 +1200,11 @@ class MoonrakerAPI {
     std::atomic<bool> helix_plugin_available_{false};
     std::atomic<bool> helix_plugin_checked_{false};
     std::string helix_plugin_version_; ///< Plugin version (e.g., "2.0.0")
+
+    // Bed mesh storage (migrated from MoonrakerClient)
+    BedMeshProfile active_bed_mesh_;
+    std::vector<std::string> bed_mesh_profiles_;
+    mutable std::mutex bed_mesh_mutex_;
 
     // Track pending HTTP request threads to ensure clean shutdown
     // IMPORTANT: Prevents use-after-free when threads outlive the API object

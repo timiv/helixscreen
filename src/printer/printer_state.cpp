@@ -24,7 +24,6 @@
 #include "lvgl/src/display/lv_display_private.h" // For rendering_in_progress check
 #include "lvgl_debug_invalidate.h"
 #include "moonraker_client.h" // For ConnectionState enum
-#include "printer_capabilities.h"
 #include "runtime_config.h"
 #include "unit_conversions.h"
 
@@ -1167,46 +1166,6 @@ void PrinterState::set_tracked_led(const std::string& led_name) {
     } else {
         spdlog::debug("[PrinterState] LED tracking disabled");
     }
-}
-
-void PrinterState::set_printer_capabilities(const PrinterCapabilities& caps) {
-    // Thread-safe wrapper: defer LVGL subject updates to main thread
-    helix::async::call_method_ref(this, &PrinterState::set_printer_capabilities_internal, caps);
-}
-
-void PrinterState::set_printer_capabilities_internal(const PrinterCapabilities& caps) {
-    // Deprecated: This maintains backward compatibility while we transition callers
-    // Note: We can't easily convert PrinterCapabilities to PrinterHardwareDiscovery
-    // without re-parsing, so we just update subjects directly here for now
-
-    // Update subjects using values from caps
-    lv_subject_set_int(&printer_has_qgl_, caps.has_qgl() ? 1 : 0);
-    lv_subject_set_int(&printer_has_z_tilt_, caps.has_z_tilt() ? 1 : 0);
-    lv_subject_set_int(&printer_has_bed_mesh_, caps.has_bed_mesh() ? 1 : 0);
-    lv_subject_set_int(&printer_has_nozzle_clean_, caps.has_nozzle_clean_macro() ? 1 : 0);
-
-    // Hardware capabilities (no user override support yet - set directly from detection)
-    lv_subject_set_int(&printer_has_probe_, caps.has_probe() ? 1 : 0);
-    lv_subject_set_int(&printer_has_heater_bed_, caps.has_heater_bed() ? 1 : 0);
-    lv_subject_set_int(&printer_has_led_, caps.has_led() ? 1 : 0);
-    lv_subject_set_int(&printer_has_accelerometer_, caps.has_accelerometer() ? 1 : 0);
-
-    // Speaker capability (for M300 audio feedback)
-    lv_subject_set_int(&printer_has_speaker_, caps.has_speaker() ? 1 : 0);
-
-    // Timelapse capability (Moonraker-Timelapse plugin)
-    lv_subject_set_int(&printer_has_timelapse_, caps.has_timelapse() ? 1 : 0);
-
-    // Firmware retraction capability (for G10/G11 retraction settings)
-    lv_subject_set_int(&printer_has_firmware_retraction_, caps.has_firmware_retraction() ? 1 : 0);
-
-    spdlog::info("[PrinterState] Capabilities set (legacy): probe={}, heater_bed={}, LED={}, "
-                 "accelerometer={}, speaker={}, timelapse={}, fw_retraction={}",
-                 caps.has_probe(), caps.has_heater_bed(), caps.has_led(), caps.has_accelerometer(),
-                 caps.has_speaker(), caps.has_timelapse(), caps.has_firmware_retraction());
-
-    // Update composite subjects for G-code modification options
-    update_gcode_modification_visibility();
 }
 
 void PrinterState::set_hardware(const helix::PrinterHardwareDiscovery& hardware) {

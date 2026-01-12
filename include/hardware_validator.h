@@ -25,7 +25,10 @@ using json = nlohmann::json;
 // Forward declarations
 class Config;
 class MoonrakerClient;
-class PrinterCapabilities;
+
+namespace helix {
+class PrinterHardwareDiscovery;
+}
 
 /**
  * @brief Severity level for hardware validation issues
@@ -217,7 +220,7 @@ struct HardwareSnapshot {
  * auto result = validator.validate(
  *     config,           // helixconfig expectations
  *     client,           // MoonrakerClient with discovered hardware
- *     capabilities      // PrinterCapabilities
+ *     hardware          // PrinterHardwareDiscovery
  * );
  *
  * if (result.has_issues()) {
@@ -240,11 +243,11 @@ class HardwareValidator {
      *
      * @param config Config instance with hardware settings
      * @param client MoonrakerClient with discovery results
-     * @param caps PrinterCapabilities from discovery
+     * @param hardware PrinterHardwareDiscovery from discovery
      * @return Validation result with categorized issues
      */
     HardwareValidationResult validate(Config* config, const MoonrakerClient* client,
-                                      const PrinterCapabilities& caps);
+                                      const helix::PrinterHardwareDiscovery& hardware);
 
     /**
      * @brief Show persistent notification with "View Details" action
@@ -264,20 +267,20 @@ class HardwareValidator {
      *
      * @param config Config instance to save to
      * @param client MoonrakerClient with current hardware lists
-     * @param caps PrinterCapabilities with filament sensors
+     * @param hardware PrinterHardwareDiscovery with filament sensors
      */
     void save_session_snapshot(Config* config, const MoonrakerClient* client,
-                               const PrinterCapabilities& caps);
+                               const helix::PrinterHardwareDiscovery& hardware);
 
     /**
      * @brief Create snapshot from current Moonraker client state
      *
      * @param client MoonrakerClient with discovered hardware
-     * @param caps PrinterCapabilities with filament sensors
+     * @param hardware PrinterHardwareDiscovery with filament sensors
      * @return Snapshot of current hardware state
      */
     static HardwareSnapshot create_snapshot(const MoonrakerClient* client,
-                                            const PrinterCapabilities& caps);
+                                            const helix::PrinterHardwareDiscovery& hardware);
 
     /**
      * @brief Load previous session snapshot from config
@@ -330,14 +333,15 @@ class HardwareValidator {
      * @brief Validate configured hardware in helixconfig exists
      */
     void validate_configured_hardware(Config* config, const MoonrakerClient* client,
-                                      const PrinterCapabilities& caps,
+                                      const helix::PrinterHardwareDiscovery& hardware,
                                       HardwareValidationResult& result);
 
     /**
      * @brief Find hardware discovered but not in config (suggest adding)
      */
     void validate_new_hardware(Config* config, const MoonrakerClient* client,
-                               const PrinterCapabilities& caps, HardwareValidationResult& result);
+                               const helix::PrinterHardwareDiscovery& hardware,
+                               HardwareValidationResult& result);
 
     /**
      * @brief Compare current session against previous to find changes

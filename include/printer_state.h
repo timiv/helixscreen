@@ -820,19 +820,6 @@ class PrinterState {
     void set_network_status(int status);
 
     /**
-     * @brief Update printer capability subjects from PrinterCapabilities
-     *
-     * Updates subjects that control visibility of pre-print option checkboxes.
-     * Applies user-configured overrides from helixconfig.json before updating subjects.
-     * Called by main.cpp after MoonrakerClient::discover_printer() completes.
-     *
-     * @param caps PrinterCapabilities populated from printer.objects.list
-     * @deprecated Use set_hardware instead
-     */
-    [[deprecated("Use set_hardware instead")]]
-    void set_printer_capabilities(const PrinterCapabilities& caps);
-
-    /**
      * @brief Update printer capability subjects from PrinterHardwareDiscovery
      *
      * Updates subjects that control visibility of pre-print option checkboxes.
@@ -1404,15 +1391,13 @@ class PrinterState {
     // Thread-safe internal methods (called via lv_async_call from main thread)
     // ============================================================================
     // These methods contain the actual LVGL subject updates and must only be called
-    // from the main thread. The public methods (set_printer_capabilities, etc.) use
+    // from the main thread. The public methods (set_hardware, etc.) use
     // lv_async_call to defer to these internal methods, ensuring thread safety.
 
-    friend void async_capabilities_callback(void* user_data);
     friend void async_klipper_version_callback(void* user_data);
     friend void async_moonraker_version_callback(void* user_data);
     friend void async_klippy_state_callback(void* user_data);
 
-    void set_printer_capabilities_internal(const PrinterCapabilities& caps);
     void set_hardware_internal(const helix::PrinterHardwareDiscovery& hardware);
     void set_klipper_version_internal(const std::string& version);
     void set_moonraker_version_internal(const std::string& version);

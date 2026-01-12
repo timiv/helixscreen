@@ -1033,7 +1033,7 @@ void MoonrakerClient::continue_discovery(std::function<void()> on_complete) {
         // BEFORE the subscription response arrives, so they can receive initial state naturally
         if (on_hardware_discovered_) {
             spdlog::debug("[Moonraker Client] Invoking early hardware discovery callback");
-            on_hardware_discovered_(capabilities_);
+            on_hardware_discovered_(hardware_);
         }
 
         // Step 2: Get server information
@@ -1285,7 +1285,7 @@ void MoonrakerClient::complete_discovery_subscription(std::function<void()> on_c
     }
 
     // Firmware retraction settings (if printer has firmware_retraction module)
-    if (capabilities_.has_firmware_retraction()) {
+    if (hardware_.has_firmware_retraction()) {
         subscription_objects["firmware_retraction"] = nullptr;
     }
 
@@ -1336,7 +1336,7 @@ void MoonrakerClient::complete_discovery_subscription(std::function<void()> on_c
 
             // Discovery complete - notify observers
             if (on_discovery_complete_) {
-                on_discovery_complete_(capabilities_);
+                on_discovery_complete_(hardware_);
             }
             on_complete();
         });
@@ -1461,81 +1461,24 @@ void MoonrakerClient::parse_objects(const json& objects) {
         spdlog::info("[Moonraker Client] Filament sensors: {}", json(filament_sensors_).dump());
     }
 
-    // Store printer objects in hardware discovery
+    // Store printer objects in hardware discovery (handles all capability parsing)
     hardware_.set_printer_objects(all_objects);
-
-    // Parse printer capabilities (QGL, Z-tilt, bed mesh, macros)
-    capabilities_.parse_objects(objects);
 }
 
 void MoonrakerClient::parse_bed_mesh(const json& bed_mesh) {
-    // Parse active profile name
-    if (bed_mesh.contains("profile_name") && !bed_mesh["profile_name"].is_null()) {
-        active_bed_mesh_.name = bed_mesh["profile_name"].template get<std::string>();
+    // Invoke bed mesh callback for API layer
+    // The API layer (MoonrakerAPI) owns the bed mesh data; Client is just the transport
+    std::function<void(const json&)> callback_copy;
+    {
+        std::lock_guard<std::mutex> lock(callbacks_mutex_);
+        callback_copy = bed_mesh_callback_;
     }
-
-    // Parse probed_matrix (2D array of Z heights)
-    if (bed_mesh.contains("probed_matrix") && bed_mesh["probed_matrix"].is_array()) {
-        active_bed_mesh_.probed_matrix.clear();
-        for (const auto& row : bed_mesh["probed_matrix"]) {
-            if (row.is_array()) {
-                std::vector<float> row_vec;
-                for (const auto& val : row) {
-                    if (val.is_number()) {
-                        row_vec.push_back(val.template get<float>());
-                    }
-                }
-                if (!row_vec.empty()) {
-                    active_bed_mesh_.probed_matrix.push_back(row_vec);
-                }
-            }
+    if (callback_copy) {
+        try {
+            callback_copy(bed_mesh);
+        } catch (const std::exception& e) {
+            spdlog::error("[Moonraker Client] Bed mesh callback threw exception: {}", e.what());
         }
-
-        // Update dimensions
-        active_bed_mesh_.y_count = static_cast<int>(active_bed_mesh_.probed_matrix.size());
-        active_bed_mesh_.x_count = active_bed_mesh_.probed_matrix.empty()
-                                       ? 0
-                                       : static_cast<int>(active_bed_mesh_.probed_matrix[0].size());
-    }
-
-    // Parse mesh bounds (check that elements are numbers, not null)
-    if (bed_mesh.contains("mesh_min") && bed_mesh["mesh_min"].is_array() &&
-        bed_mesh["mesh_min"].size() >= 2 && bed_mesh["mesh_min"][0].is_number() &&
-        bed_mesh["mesh_min"][1].is_number()) {
-        active_bed_mesh_.mesh_min[0] = bed_mesh["mesh_min"][0].template get<float>();
-        active_bed_mesh_.mesh_min[1] = bed_mesh["mesh_min"][1].template get<float>();
-    }
-
-    if (bed_mesh.contains("mesh_max") && bed_mesh["mesh_max"].is_array() &&
-        bed_mesh["mesh_max"].size() >= 2 && bed_mesh["mesh_max"][0].is_number() &&
-        bed_mesh["mesh_max"][1].is_number()) {
-        active_bed_mesh_.mesh_max[0] = bed_mesh["mesh_max"][0].template get<float>();
-        active_bed_mesh_.mesh_max[1] = bed_mesh["mesh_max"][1].template get<float>();
-    }
-
-    // Parse available profiles
-    if (bed_mesh.contains("profiles") && bed_mesh["profiles"].is_object()) {
-        bed_mesh_profiles_.clear();
-        for (auto& [profile_name, profile_data] : bed_mesh["profiles"].items()) {
-            bed_mesh_profiles_.push_back(profile_name);
-        }
-    }
-
-    // Parse algorithm from mesh_params (if available)
-    if (bed_mesh.contains("mesh_params") && bed_mesh["mesh_params"].is_object()) {
-        const json& params = bed_mesh["mesh_params"];
-        if (params.contains("algo") && params["algo"].is_string()) {
-            active_bed_mesh_.algo = params["algo"].template get<std::string>();
-        }
-    }
-
-    if (active_bed_mesh_.probed_matrix.empty()) {
-        spdlog::debug("[Moonraker Client] Bed mesh data cleared (no probed_matrix)");
-    } else {
-        spdlog::info("[Moonraker Client] Bed mesh updated: profile='{}', size={}x{}, "
-                     "profiles={}, algo='{}'",
-                     active_bed_mesh_.name, active_bed_mesh_.x_count, active_bed_mesh_.y_count,
-                     bed_mesh_profiles_.size(), active_bed_mesh_.algo);
     }
 }
 
