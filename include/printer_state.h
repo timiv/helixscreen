@@ -9,6 +9,7 @@
 #include "printer_capabilities_state.h"
 #include "printer_detector.h"
 #include "printer_fan_state.h"
+#include "printer_plugin_status_state.h"
 #include "printer_hardware_discovery.h"
 #include "printer_led_state.h"
 #include "printer_motion_state.h"
@@ -927,7 +928,18 @@ class PrinterState {
      * @return Pointer to the helix_plugin_installed_ subject
      */
     lv_subject_t* get_helix_plugin_installed_subject() {
-        return &helix_plugin_installed_;
+        return plugin_status_state_.get_helix_plugin_installed_subject();
+    }
+
+    /**
+     * @brief Get phase_tracking_enabled subject for observers
+     *
+     * Use this when you need to observe phase tracking status changes.
+     *
+     * @return Pointer to the phase_tracking_enabled_ subject
+     */
+    lv_subject_t* get_phase_tracking_enabled_subject() {
+        return plugin_status_state_.get_phase_tracking_enabled_subject();
     }
 
     // === Visibility Subject Getters (LT2: for pre-print option row visibility) ===
@@ -1217,6 +1229,9 @@ class PrinterState {
     /// Capabilities state component (hardware capabilities, feature availability)
     helix::PrinterCapabilitiesState capabilities_state_;
 
+    /// Plugin status component (helix_plugin_installed, phase_tracking_enabled)
+    helix::PrinterPluginStatusState plugin_status_state_;
+
     // Note: Print subjects are now managed by print_domain_ component
     // (print_progress_, print_filename_, print_state_, print_state_enum_,
     //  print_outcome_, print_active_, print_show_progress_, print_display_filename_,
@@ -1259,9 +1274,8 @@ class PrinterState {
     // printer_has_purge_line_, printer_has_firmware_retraction_, printer_bed_moves_)
     // are now managed by capabilities_state_ component
 
-    // Plugin status subjects (not hardware capabilities, kept in PrinterState)
-    lv_subject_t helix_plugin_installed_; // Tri-state: -1=unknown, 0=not installed, 1=installed
-    lv_subject_t phase_tracking_enabled_; // Tri-state: -1=unknown, 0=disabled, 1=enabled
+    // Note: Plugin status subjects (helix_plugin_installed_, phase_tracking_enabled_)
+    // are now managed by plugin_status_state_ component
 
     // Composite subjects for G-code modification option visibility
     // These combine helix_plugin_installed with individual printer capabilities.

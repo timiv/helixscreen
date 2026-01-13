@@ -129,6 +129,9 @@ void PrinterState::reset_for_testing() {
     // Reset capabilities state component
     capabilities_state_.reset_for_testing();
 
+    // Reset plugin status state component
+    plugin_status_state_.reset_for_testing();
+
     // Use SubjectManager for automatic subject cleanup
     subjects_.deinit_all();
 
@@ -212,9 +215,8 @@ void PrinterState::init_subjects(bool register_xml) {
     // Excluded objects version subject (incremented when excluded_objects_ changes)
     lv_subject_init_int(&excluded_objects_version_, 0);
 
-    // Plugin status subjects (not hardware capabilities, kept in PrinterState)
-    lv_subject_init_int(&helix_plugin_installed_, -1); // -1=unknown, 0=not installed, 1=installed
-    lv_subject_init_int(&phase_tracking_enabled_, -1); // -1=unknown, 0=disabled, 1=enabled
+    // Plugin status subjects - delegated to plugin_status_state_ component
+    plugin_status_state_.init_subjects(register_xml);
 
     // Composite subjects for G-code modification option visibility
     // These are derived from helix_plugin_installed AND printer_has_* subjects
@@ -274,9 +276,7 @@ void PrinterState::init_subjects(bool register_xml) {
     // Note: LED subjects are registered by led_state_component_.init_subjects()
     // Excluded objects
     subjects_.register_subject(&excluded_objects_version_);
-    // Plugin status subjects (not hardware capabilities, kept in PrinterState)
-    subjects_.register_subject(&helix_plugin_installed_);
-    subjects_.register_subject(&phase_tracking_enabled_);
+    // Note: Plugin status subjects are registered by plugin_status_state_.init_subjects()
     // Composite subjects for G-code modification visibility
     subjects_.register_subject(&can_show_bed_mesh_);
     subjects_.register_subject(&can_show_qgl_);
@@ -326,9 +326,7 @@ void PrinterState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "nav_buttons_enabled", &nav_buttons_enabled_);
         // Note: LED subjects are registered by led_state_component_.init_subjects()
         lv_xml_register_subject(NULL, "excluded_objects_version", &excluded_objects_version_);
-        // Plugin status subjects (not hardware capabilities, kept in PrinterState)
-        lv_xml_register_subject(NULL, "helix_plugin_installed", &helix_plugin_installed_);
-        lv_xml_register_subject(NULL, "phase_tracking_enabled", &phase_tracking_enabled_);
+        // Note: Plugin status subjects are registered by plugin_status_state_.init_subjects()
         // Composite subjects for G-code modification visibility
         lv_xml_register_subject(NULL, "can_show_bed_mesh", &can_show_bed_mesh_);
         lv_xml_register_subject(NULL, "can_show_qgl", &can_show_qgl_);
@@ -681,9 +679,9 @@ void PrinterState::set_spoolman_available(bool available) {
 
 void PrinterState::set_helix_plugin_installed(bool installed) {
     // Thread-safe: Use helix::async::invoke to update LVGL subject from any thread
+    // We handle the async dispatch here because we need to update composite subjects after
     helix::async::invoke([this, installed]() {
-        lv_subject_set_int(&helix_plugin_installed_, installed ? 1 : 0);
-        spdlog::info("[PrinterState] HelixPrint plugin installed: {}", installed);
+        plugin_status_state_.set_installed_sync(installed);
 
         // Update composite subjects for G-code modification options
         update_gcode_modification_visibility();
@@ -691,30 +689,25 @@ void PrinterState::set_helix_plugin_installed(bool installed) {
 }
 
 bool PrinterState::service_has_helix_plugin() const {
-    // Note: lv_subject_get_int is thread-safe (atomic read)
-    // Tri-state: -1=unknown, 0=not installed, 1=installed
-    return lv_subject_get_int(const_cast<lv_subject_t*>(&helix_plugin_installed_)) == 1;
+    // Delegate to plugin_status_state_ component
+    return plugin_status_state_.service_has_helix_plugin();
 }
 
 void PrinterState::set_phase_tracking_enabled(bool enabled) {
-    // Thread-safe: Use helix::async::invoke to update LVGL subject from any thread
-    helix::async::invoke([this, enabled]() {
-        lv_subject_set_int(&phase_tracking_enabled_, enabled ? 1 : 0);
-        spdlog::info("[PrinterState] Phase tracking enabled: {}", enabled);
-    });
+    // Delegate to plugin_status_state_ component (handles async dispatch internally)
+    plugin_status_state_.set_phase_tracking_enabled(enabled);
 }
 
 bool PrinterState::is_phase_tracking_enabled() const {
-    // Note: lv_subject_get_int is thread-safe (atomic read)
-    // Tri-state: -1=unknown, 0=disabled, 1=enabled
-    return lv_subject_get_int(const_cast<lv_subject_t*>(&phase_tracking_enabled_)) == 1;
+    // Delegate to plugin_status_state_ component
+    return plugin_status_state_.is_phase_tracking_enabled();
 }
 
 void PrinterState::update_gcode_modification_visibility() {
     // Recalculate composite subjects: can_show_X = helix_plugin_installed && printer_has_X
     // These control visibility of pre-print G-code modification options in the UI
-    // Tri-state: -1=unknown, 0=not installed, 1=installed (only 1 counts as "has plugin")
-    bool plugin = lv_subject_get_int(&helix_plugin_installed_) == 1;
+    // Only consider plugin "installed" when value is 1 (not -1=unknown or 0=not installed)
+    bool plugin = plugin_status_state_.service_has_helix_plugin();
 
     auto update_if_changed = [](lv_subject_t* subject, int new_value) {
         if (lv_subject_get_int(subject) != new_value) {
