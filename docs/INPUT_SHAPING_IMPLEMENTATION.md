@@ -1,6 +1,6 @@
 # Input Shaping Panel/Wizard Implementation Plan
 
-**Status**: 🟡 In Progress - Phase 3 Complete
+**Status**: 🟡 In Progress - Phase 4 Complete
 **Created**: 2026-01-13
 **Last Updated**: 2026-01-13
 
@@ -8,14 +8,14 @@
 
 ## Progress Tracking
 
-### Overall Progress: Phase 2 of 7 Complete
+### Overall Progress: Phase 4 of 7 Complete
 
 | Phase | Status | Session | Notes |
 |-------|--------|---------|-------|
 | **Phase 1**: Core Types & API | ✅ Complete | 2 | ShaperOption, InputShaperConfig, NoiseCheckCollector, all_shapers |
 | **Phase 2**: InputShaperCalibrator | ✅ Complete | 3 | State machine, API integration, 35 tests |
 | **Phase 3**: Platform Detection | ✅ Complete | 4 | PlatformCapabilities, meminfo/cpuinfo parsing, 33 tests |
-| **Phase 4**: UI Panel Rewrite | ⬜ Not Started | - | |
+| **Phase 4**: UI Panel Rewrite | ✅ Complete | 5 | Panel delegates to calibrator, 78 tests total |
 | **Phase 5**: Frequency Chart | ⬜ Not Started | - | |
 | **Phase 6**: First-Run Wizard | ⬜ Not Started | - | |
 | **Phase 7**: Cache & Test Print | ⬜ Not Started | - | |
@@ -487,34 +487,29 @@ class InputShaperCalibrator {
 
 ### Phase 4: UI Panel Rewrite (Chunk C5)
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 
 #### Checkpoints:
-- [ ] Integration tests written with mock calibrator
-- [ ] `InputShaperPanel` header updated
-- [ ] State machine simplified (delegates to calibrator)
-- [ ] XML files created for all states
-- [ ] IDLE state UI working
-- [ ] CHECKING_ADXL state UI working
-- [ ] TESTING state UI working (with progress)
-- [ ] RESULTS state UI working
-- [ ] REVIEW state UI working
-- [ ] COMPLETE state UI working
-- [ ] Mock mode testing passes
-- [ ] Code reviewed
+- [x] Integration tests written with mock calibrator
+- [x] `InputShaperPanel` header updated
+- [x] State machine simplified (delegates to calibrator)
+- [x] XML files created for all states (kept existing unified XML approach)
+- [x] IDLE state UI working
+- [x] MEASURING state UI working (with calibrator delegation)
+- [x] RESULTS state UI working
+- [x] ERROR state UI working
+- [x] Mock mode testing passes
+- [x] Code reviewed - fixed async callback safety [L012]
 
-**Files to modify:**
-- `include/ui_panel_input_shaper.h`
-- `src/ui/ui_panel_input_shaper.cpp`
+**Files modified:**
+- `include/ui_panel_input_shaper.h` - Added calibrator member, getter for testing
+- `src/ui/ui_panel_input_shaper.cpp` - Delegates to calibrator instead of direct API calls
 
-**Files to create:**
-- `ui_xml/input_shaper_panel.xml`
-- `ui_xml/input_shaper_idle.xml`
-- `ui_xml/input_shaper_preflight.xml`
-- `ui_xml/input_shaper_testing.xml`
-- `ui_xml/input_shaper_results.xml`
-- `ui_xml/input_shaper_review.xml`
-- `ui_xml/input_shaper_complete.xml`
+**Files created:**
+- `tests/unit/test_input_shaper_panel_integration.cpp` - Mock calibrator and contract tests
+
+**Design decision:** Kept existing unified `input_shaper_panel.xml` with subject-bound visibility
+instead of creating separate XML files per state. This is simpler and already works well.
 
 ---
 
@@ -830,3 +825,26 @@ _Log each session here for continuity_
   - `src/system/platform_capabilities.cpp`
   - `tests/unit/test_platform_capabilities.cpp`
 - Next: Phase 4 - UI Panel Rewrite
+
+### Session 5 (Phase 4 Implementation)
+- Date: 2026-01-13
+- Branch: `feature/input-shaping` in worktree `helixscreen-input-shaping`
+- Completed:
+  - Refactored `InputShaperPanel` to delegate to `InputShaperCalibrator`
+  - Test-first: wrote integration tests with mock calibrator (28 new tests)
+  - Added `calibrator_` unique_ptr member to panel
+  - Added `get_calibrator()` accessor for testing
+  - Delegated: start_calibration -> calibrator_->run_calibration()
+  - Delegated: measure_noise -> calibrator_->check_accelerometer()
+  - Delegated: apply_recommendation -> calibrator_->apply_settings()
+  - Delegated: save_configuration -> calibrator_->save_to_config()
+  - Delegated: cancel_calibration -> calibrator_->cancel()
+  - Code reviewed: fixed missing `alive_` checks in async callbacks [L012]
+  - All 78 input shaper tests pass (152 assertions)
+- Files modified:
+  - `include/ui_panel_input_shaper.h`
+  - `src/ui/ui_panel_input_shaper.cpp`
+- Files created:
+  - `tests/unit/test_input_shaper_panel_integration.cpp`
+- Design decision: Kept existing unified XML approach instead of separate files per state
+- Next: Phase 5 - Frequency Chart
