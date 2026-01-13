@@ -89,8 +89,9 @@ WATCHDOG_BIN="${BIN_DIR}/helix-watchdog"
 : "${HELIX_SCREEN_HEIGHT:=480}"
 
 # Log function (must be defined before first use)
+# Uses stderr to avoid polluting stdout which could be captured unexpectedly
 log() {
-    echo "[helix-launcher] $*"
+    echo "[helix-launcher] $*" >&2
 }
 
 # Verify main binary exists

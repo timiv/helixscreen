@@ -92,7 +92,8 @@ stop_competing_uis() {
 start_splash() {
     if [ -x "$SPLASH" ]; then
         echo "Starting splash screen..." >&2
-        "$SPLASH" -w "$SCREEN_WIDTH" -h "$SCREEN_HEIGHT" &
+        # Redirect splash output to /dev/null to prevent any contamination of captured stdout
+        "$SPLASH" -w "$SCREEN_WIDTH" -h "$SCREEN_HEIGHT" >/dev/null 2>&1 &
         SPLASH_PID=$!
         echo "$SPLASH_PID" > /var/run/helix-splash.pid
         echo "--splash-pid=$SPLASH_PID"
