@@ -6,8 +6,19 @@
 #include "capability_overrides.h"
 #include "hardware_validator.h"
 #include "lvgl/lvgl.h"
+#include "printer_calibration_state.h"
+#include "printer_capabilities_state.h"
+#include "printer_composite_visibility_state.h"
 #include "printer_detector.h"
+#include "printer_fan_state.h"
 #include "printer_hardware_discovery.h"
+#include "printer_hardware_validation_state.h"
+#include "printer_led_state.h"
+#include "printer_motion_state.h"
+#include "printer_network_state.h"
+#include "printer_plugin_status_state.h"
+#include "printer_print_state.h"
+#include "printer_temperature_state.h"
 #include "spdlog/spdlog.h"
 #include "subject_managed_panel.h"
 
@@ -134,34 +145,6 @@ enum class PrintStartPhase {
  */
 const char* print_job_state_to_string(PrintJobState state);
 
-// ============================================================================
-// MULTI-FAN TRACKING
-// ============================================================================
-
-/**
- * @brief Fan type classification for display and control
- */
-enum class FanType {
-    PART_COOLING,   ///< Main part cooling fan ("fan")
-    HEATER_FAN,     ///< Hotend cooling fan (auto-controlled, not user-adjustable)
-    CONTROLLER_FAN, ///< Electronics cooling (auto-controlled)
-    GENERIC_FAN     ///< User-controllable generic fan (fan_generic)
-};
-
-/**
- * @brief Fan information for multi-fan display
- *
- * Holds display name, current speed, and controllability for each fan
- * discovered from Moonraker.
- */
-struct FanInfo {
-    std::string object_name;  ///< Full Moonraker object name (e.g., "heater_fan hotend_fan")
-    std::string display_name; ///< Human-readable name (e.g., "Hotend Fan")
-    FanType type = FanType::GENERIC_FAN;
-    int speed_percent = 0;        ///< Current speed 0-100%
-    bool is_controllable = false; ///< true for fan_generic, false for heater_fan/controller_fan
-};
-
 /**
  * @brief Printer state manager with LVGL 9 reactive subjects
  *
@@ -244,30 +227,31 @@ class PrinterState {
     // Subject accessors for XML binding
     //
 
-    // Temperature subjects (centidegrees: value * 10 for 0.1°C resolution)
-    // Example: 205.3°C is stored as 2053. Divide by 10 for display.
+    // Temperature subjects (centidegrees: value * 10 for 0.1C resolution)
+    // Example: 205.3C is stored as 2053. Divide by 10 for display.
+    // Delegated to PrinterTemperatureState component.
     lv_subject_t* get_extruder_temp_subject() {
-        return &extruder_temp_;
+        return temperature_state_.get_extruder_temp_subject();
     }
     lv_subject_t* get_extruder_target_subject() {
-        return &extruder_target_;
+        return temperature_state_.get_extruder_target_subject();
     }
     lv_subject_t* get_bed_temp_subject() {
-        return &bed_temp_;
+        return temperature_state_.get_bed_temp_subject();
     }
     lv_subject_t* get_bed_target_subject() {
-        return &bed_target_;
+        return temperature_state_.get_bed_target_subject();
     }
 
-    // Print progress subjects
+    // Print progress subjects - delegated to PrinterPrintState component
     lv_subject_t* get_print_progress_subject() {
-        return &print_progress_;
+        return print_domain_.get_print_progress_subject();
     } // 0-100
     lv_subject_t* get_print_filename_subject() {
-        return &print_filename_;
+        return print_domain_.get_print_filename_subject();
     }
     lv_subject_t* get_print_state_subject() {
-        return &print_state_;
+        return print_domain_.get_print_state_subject();
     } // "standby", "printing", "paused", "complete" (string for UI display)
 
     /**
@@ -280,7 +264,7 @@ class PrinterState {
      * @return Pointer to string subject
      */
     lv_subject_t* get_print_thumbnail_path_subject() {
-        return &print_thumbnail_path_;
+        return print_domain_.get_print_thumbnail_path_subject();
     }
 
     /**
@@ -303,7 +287,7 @@ class PrinterState {
      * @return Pointer to integer subject (cast value to PrintJobState)
      */
     lv_subject_t* get_print_state_enum_subject() {
-        return &print_state_enum_;
+        return print_domain_.get_print_state_enum_subject();
     }
 
     /**
@@ -316,7 +300,7 @@ class PrinterState {
      * @return Pointer to integer subject (0 or 1)
      */
     lv_subject_t* get_print_active_subject() {
-        return &print_active_;
+        return print_domain_.get_print_active_subject();
     }
 
     /**
@@ -332,7 +316,7 @@ class PrinterState {
      * @return Pointer to integer subject (cast value to PrintOutcome)
      */
     lv_subject_t* get_print_outcome_subject() {
-        return &print_outcome_;
+        return print_domain_.get_print_outcome_subject();
     }
 
     /**
@@ -354,7 +338,7 @@ class PrinterState {
      * @return Pointer to integer subject (0 or 1)
      */
     lv_subject_t* get_print_show_progress_subject() {
-        return &print_show_progress_;
+        return print_domain_.get_print_show_progress_subject();
     }
 
     /**
@@ -366,7 +350,7 @@ class PrinterState {
      * @return Pointer to string subject
      */
     lv_subject_t* get_print_display_filename_subject() {
-        return &print_display_filename_;
+        return print_domain_.get_print_display_filename_subject();
     }
 
     /**
@@ -424,7 +408,7 @@ class PrinterState {
      * even though the printer's physical state may still be STANDBY.
      */
     [[nodiscard]] bool is_print_in_progress() const {
-        return lv_subject_get_int(const_cast<lv_subject_t*>(&print_in_progress_)) != 0;
+        return print_domain_.is_print_in_progress();
     }
 
     /**
@@ -441,15 +425,16 @@ class PrinterState {
      * Value is 1 when print preparation is in progress, 0 otherwise.
      */
     lv_subject_t* get_print_in_progress_subject() {
-        return &print_in_progress_;
+        return print_domain_.get_print_in_progress_subject();
     }
 
     // Layer tracking subjects (from print_stats.info.current_layer/total_layer)
+    // Delegated to PrinterPrintState component
     lv_subject_t* get_print_layer_current_subject() {
-        return &print_layer_current_;
+        return print_domain_.get_print_layer_current_subject();
     }
     lv_subject_t* get_print_layer_total_subject() {
-        return &print_layer_total_;
+        return print_domain_.get_print_layer_total_subject();
     }
 
     /**
@@ -459,15 +444,15 @@ class PrinterState {
      * Moonraker notifications may update this later via SET_PRINT_STATS_INFO.
      */
     void set_print_layer_total(int total) {
-        lv_subject_set_int(&print_layer_total_, total);
+        print_domain_.set_print_layer_total(total);
     }
 
-    // Print time tracking subjects (in seconds)
+    // Print time tracking subjects (in seconds) - delegated to PrinterPrintState
     lv_subject_t* get_print_duration_subject() {
-        return &print_duration_;
+        return print_domain_.get_print_duration_subject();
     }
     lv_subject_t* get_print_time_left_subject() {
-        return &print_time_left_;
+        return print_domain_.get_print_time_left_subject();
     }
 
     // ========================================================================
@@ -481,7 +466,7 @@ class PrinterState {
      * Use with bind_flag_if_eq/not_eq in XML to show/hide progress overlay.
      */
     lv_subject_t* get_print_start_phase_subject() {
-        return &print_start_phase_;
+        return print_domain_.get_print_start_phase_subject();
     }
 
     /**
@@ -491,7 +476,7 @@ class PrinterState {
      * Use with bind_text in XML.
      */
     lv_subject_t* get_print_start_message_subject() {
-        return &print_start_message_;
+        return print_domain_.get_print_start_message_subject();
     }
 
     /**
@@ -501,7 +486,7 @@ class PrinterState {
      * Use with bind_value on lv_bar in XML.
      */
     lv_subject_t* get_print_start_progress_subject() {
-        return &print_start_progress_;
+        return print_domain_.get_print_start_progress_subject();
     }
 
     /**
@@ -532,42 +517,42 @@ class PrinterState {
      */
     void reset_print_start_state();
 
-    // Motion subjects
+    // Motion subjects - delegated to PrinterMotionState component
     lv_subject_t* get_position_x_subject() {
-        return &position_x_;
+        return motion_state_.get_position_x_subject();
     }
     lv_subject_t* get_position_y_subject() {
-        return &position_y_;
+        return motion_state_.get_position_y_subject();
     }
     lv_subject_t* get_position_z_subject() {
-        return &position_z_;
+        return motion_state_.get_position_z_subject();
     }
     lv_subject_t* get_homed_axes_subject() {
-        return &homed_axes_;
+        return motion_state_.get_homed_axes_subject();
     } // "xyz", "xy", etc.
     // Note: Derived subjects (xy_homed, z_homed, all_homed) are panel-local in ControlsPanel
 
-    // Speed/Flow subjects (percentages, 0-100)
+    // Speed/Flow subjects (percentages, 0-100) - delegated to PrinterMotionState component
     lv_subject_t* get_speed_factor_subject() {
-        return &speed_factor_;
+        return motion_state_.get_speed_factor_subject();
     }
     lv_subject_t* get_flow_factor_subject() {
-        return &flow_factor_;
+        return motion_state_.get_flow_factor_subject();
     }
     lv_subject_t* get_fan_speed_subject() {
-        return &fan_speed_;
+        return fan_state_.get_fan_speed_subject();
     }
 
     // ========================================================================
-    // MULTI-FAN API
+    // MULTI-FAN API - Delegated to PrinterFanState component
     // ========================================================================
 
     /**
      * @brief Get all tracked fans
      * @return Const reference to fan info vector
      */
-    const std::vector<FanInfo>& get_fans() const {
-        return fans_;
+    const std::vector<helix::FanInfo>& get_fans() const {
+        return fan_state_.get_fans();
     }
 
     /**
@@ -577,7 +562,7 @@ class PrinterState {
      * UI should observe this to rebuild dynamic fan list.
      */
     lv_subject_t* get_fans_version_subject() {
-        return &fans_version_;
+        return fan_state_.get_fans_version_subject();
     }
 
     /**
@@ -589,20 +574,17 @@ class PrinterState {
      * @param object_name Moonraker object name (e.g., "fan", "heater_fan hotend_fan")
      * @return Pointer to subject, or nullptr if fan not found
      */
-    lv_subject_t* get_fan_speed_subject(const std::string& object_name);
+    lv_subject_t* get_fan_speed_subject(const std::string& object_name) {
+        return fan_state_.get_fan_speed_subject(object_name);
+    }
 
     /**
      * @brief Initialize fan list from discovered fan objects
      * @param fan_objects List of Moonraker fan object names
      */
-    void init_fans(const std::vector<std::string>& fan_objects);
-
-    /**
-     * @brief Update speed for a specific fan
-     * @param object_name Moonraker object name (e.g., "heater_fan hotend_fan")
-     * @param speed Speed as 0.0-1.0 (Moonraker format)
-     */
-    void update_fan_speed(const std::string& object_name, double speed);
+    void init_fans(const std::vector<std::string>& fan_objects) {
+        fan_state_.init_fans(fan_objects);
+    }
 
     /**
      * @brief Get G-code Z offset subject for tune panel
@@ -610,13 +592,15 @@ class PrinterState {
      * Returns current Z-offset from gcode_move.homing_origin[2] in microns.
      * Divide by 1000.0 to get mm value (e.g., 200 = 0.200mm).
      * Used for live baby-stepping display during prints.
+     * Delegated to PrinterMotionState component.
      */
     lv_subject_t* get_gcode_z_offset_subject() {
-        return &gcode_z_offset_;
+        return motion_state_.get_gcode_z_offset_subject();
     }
 
     // ========================================================================
     // PENDING Z-OFFSET DELTA (for tracking adjustments made during print)
+    // Delegated to PrinterMotionState component.
     // ========================================================================
 
     /**
@@ -626,73 +610,82 @@ class PrinterState {
      * Use this to show "unsaved adjustment" notification in Controls panel.
      */
     lv_subject_t* get_pending_z_offset_delta_subject() {
-        return &pending_z_offset_delta_;
+        return motion_state_.get_pending_z_offset_delta_subject();
     }
 
     /**
      * @brief Add to pending Z-offset delta (called when user adjusts Z during print)
      * @param delta_microns Adjustment in microns (positive = farther, negative = closer)
      */
-    void add_pending_z_offset_delta(int delta_microns);
+    void add_pending_z_offset_delta(int delta_microns) {
+        motion_state_.add_pending_z_offset_delta(delta_microns);
+    }
 
     /**
      * @brief Get current pending Z-offset delta in microns
      */
-    int get_pending_z_offset_delta() const;
+    int get_pending_z_offset_delta() const {
+        return motion_state_.get_pending_z_offset_delta();
+    }
 
     /**
      * @brief Check if there's a pending Z-offset adjustment
      */
-    bool has_pending_z_offset_adjustment() const;
+    bool has_pending_z_offset_adjustment() const {
+        return motion_state_.has_pending_z_offset_adjustment();
+    }
 
     /**
      * @brief Clear pending Z-offset delta (after save or dismiss)
      */
-    void clear_pending_z_offset_delta();
+    void clear_pending_z_offset_delta() {
+        motion_state_.clear_pending_z_offset_delta();
+    }
 
-    // Printer connection state subjects (Moonraker WebSocket)
+    // Printer connection state subjects (Moonraker WebSocket) - delegated to PrinterNetworkState
     lv_subject_t* get_printer_connection_state_subject() {
-        return &printer_connection_state_;
+        return network_state_.get_printer_connection_state_subject();
     } // 0=disconnected, 1=connecting, 2=connected, 3=reconnecting, 4=failed
     lv_subject_t* get_printer_connection_message_subject() {
-        return &printer_connection_message_;
+        return network_state_.get_printer_connection_message_subject();
     } // Status message
 
-    // Network connectivity subject (WiFi/Ethernet)
+    // Network connectivity subject (WiFi/Ethernet) - delegated to PrinterNetworkState
     lv_subject_t* get_network_status_subject() {
-        return &network_status_;
+        return network_state_.get_network_status_subject();
     } // 0=disconnected, 1=connecting, 2=connected (matches NetworkStatus enum)
 
-    // Klipper firmware state subject
+    // Klipper firmware state subject - delegated to PrinterNetworkState
     lv_subject_t* get_klippy_state_subject() {
-        return &klippy_state_;
+        return network_state_.get_klippy_state_subject();
     } // 0=ready, 1=startup, 2=shutdown, 3=error (matches KlippyState enum)
 
-    // Combined nav button enabled subject (for navbar icon visibility)
+    // Combined nav button enabled subject (for navbar icon visibility) - delegated to
+    // PrinterNetworkState
     lv_subject_t* get_nav_buttons_enabled_subject() {
-        return &nav_buttons_enabled_;
+        return network_state_.get_nav_buttons_enabled_subject();
     } // 1=enabled (connected AND klippy ready), 0=disabled
 
-    // LED state subject (for home panel light control)
+    // LED state subjects - delegated to PrinterLedState component
     lv_subject_t* get_led_state_subject() {
-        return &led_state_;
+        return led_state_component_.get_led_state_subject();
     } // 0=off, 1=on (derived from LED color data)
 
     // LED RGBW channel subjects (0-255 integer range)
     lv_subject_t* get_led_r_subject() {
-        return &led_r_;
+        return led_state_component_.get_led_r_subject();
     }
     lv_subject_t* get_led_g_subject() {
-        return &led_g_;
+        return led_state_component_.get_led_g_subject();
     }
     lv_subject_t* get_led_b_subject() {
-        return &led_b_;
+        return led_state_component_.get_led_b_subject();
     }
     lv_subject_t* get_led_w_subject() {
-        return &led_w_;
+        return led_state_component_.get_led_w_subject();
     }
     lv_subject_t* get_led_brightness_subject() {
-        return &led_brightness_;
+        return led_state_component_.get_led_brightness_subject();
     } // 0-100 (max of RGBW channels)
 
     /**
@@ -739,15 +732,17 @@ class PrinterState {
      *
      * @param led_name Full LED name including type prefix, or empty to disable
      */
-    void set_tracked_led(const std::string& led_name);
+    void set_tracked_led(const std::string& led_name) {
+        led_state_component_.set_tracked_led(led_name);
+    }
 
     /**
      * @brief Get the currently tracked LED name
      *
      * @return LED name being tracked, or empty string if none
      */
-    const std::string& get_tracked_led() const {
-        return tracked_led_name_;
+    std::string get_tracked_led() const {
+        return led_state_component_.get_tracked_led();
     }
 
     /**
@@ -756,7 +751,7 @@ class PrinterState {
      * @return true if a LED name has been set
      */
     bool has_tracked_led() const {
-        return !tracked_led_name_.empty();
+        return led_state_component_.has_tracked_led();
     }
 
     /**
@@ -784,7 +779,7 @@ class PrinterState {
      * being connected" (yellow warning icon).
      */
     bool was_ever_connected() const {
-        return was_ever_connected_;
+        return network_state_.was_ever_connected();
     }
 
     /**
@@ -938,7 +933,18 @@ class PrinterState {
      * @return Pointer to the helix_plugin_installed_ subject
      */
     lv_subject_t* get_helix_plugin_installed_subject() {
-        return &helix_plugin_installed_;
+        return plugin_status_state_.get_helix_plugin_installed_subject();
+    }
+
+    /**
+     * @brief Get phase_tracking_enabled subject for observers
+     *
+     * Use this when you need to observe phase tracking status changes.
+     *
+     * @return Pointer to the phase_tracking_enabled_ subject
+     */
+    lv_subject_t* get_phase_tracking_enabled_subject() {
+        return plugin_status_state_.get_phase_tracking_enabled_subject();
     }
 
     // === Visibility Subject Getters (LT2: for pre-print option row visibility) ===
@@ -950,28 +956,28 @@ class PrinterState {
      * printer_has_bed_mesh), 0 otherwise.
      */
     lv_subject_t* get_can_show_bed_mesh_subject() {
-        return &can_show_bed_mesh_;
+        return composite_visibility_state_.get_can_show_bed_mesh_subject();
     }
 
     /**
      * @brief Get visibility subject for QGL row
      */
     lv_subject_t* get_can_show_qgl_subject() {
-        return &can_show_qgl_;
+        return composite_visibility_state_.get_can_show_qgl_subject();
     }
 
     /**
      * @brief Get visibility subject for Z-tilt row
      */
     lv_subject_t* get_can_show_z_tilt_subject() {
-        return &can_show_z_tilt_;
+        return composite_visibility_state_.get_can_show_z_tilt_subject();
     }
 
     /**
      * @brief Get visibility subject for nozzle clean row
      */
     lv_subject_t* get_can_show_nozzle_clean_subject() {
-        return &can_show_nozzle_clean_;
+        return composite_visibility_state_.get_can_show_nozzle_clean_subject();
     }
 
     /**
@@ -981,7 +987,7 @@ class PrinterState {
      * Note: Unlike other can_show_* subjects, timelapse doesn't require helix_print plugin.
      */
     lv_subject_t* get_printer_has_timelapse_subject() {
-        return &printer_has_timelapse_;
+        return capabilities_state_.get_printer_has_timelapse_subject();
     }
 
     /**
@@ -990,7 +996,7 @@ class PrinterState {
      * Returns 1 when printer has purge/priming capability, 0 otherwise.
      */
     lv_subject_t* get_printer_has_purge_line_subject() {
-        return &printer_has_purge_line_;
+        return capabilities_state_.get_printer_has_purge_line_subject();
     }
 
     /**
@@ -1000,7 +1006,7 @@ class PrinterState {
      * printer_has_purge_line), 0 otherwise.
      */
     lv_subject_t* get_can_show_purge_line_subject() {
-        return &can_show_purge_line_;
+        return composite_visibility_state_.get_can_show_purge_line_subject();
     }
 
     /**
@@ -1022,7 +1028,7 @@ class PrinterState {
      * Used for Z-offset UI to show appropriate directional icons.
      */
     lv_subject_t* get_printer_bed_moves_subject() {
-        return &printer_bed_moves_;
+        return capabilities_state_.get_printer_bed_moves_subject();
     }
 
     /**
@@ -1033,7 +1039,7 @@ class PrinterState {
      * to transition from PROBING to ADJUSTING state.
      */
     lv_subject_t* get_manual_probe_active_subject() {
-        return &manual_probe_active_;
+        return calibration_state_.get_manual_probe_active_subject();
     }
 
     /**
@@ -1044,7 +1050,7 @@ class PrinterState {
      * commands are executed.
      */
     lv_subject_t* get_manual_probe_z_position_subject() {
-        return &manual_probe_z_position_;
+        return calibration_state_.get_manual_probe_z_position_subject();
     }
 
     /**
@@ -1055,7 +1061,7 @@ class PrinterState {
      * Used to reflect motor state in the UI (e.g., disable motion controls when motors off).
      */
     lv_subject_t* get_motors_enabled_subject() {
-        return &motors_enabled_;
+        return calibration_state_.get_motors_enabled_subject();
     }
 
     /**
@@ -1067,7 +1073,7 @@ class PrinterState {
      * @return true if [probe] or [bltouch] section exists in Klipper config
      */
     bool has_probe() {
-        return lv_subject_get_int(&printer_has_probe_) != 0;
+        return capabilities_state_.has_probe();
     }
 
     // ========================================================================
@@ -1091,7 +1097,7 @@ class PrinterState {
      * Use with bind_flag_if_eq to show/hide Hardware Health section.
      */
     lv_subject_t* get_hardware_has_issues_subject() {
-        return &hardware_has_issues_;
+        return hardware_validation_state_.get_hardware_has_issues_subject();
     }
 
     /**
@@ -1100,7 +1106,7 @@ class PrinterState {
      * Integer subject with total number of validation issues.
      */
     lv_subject_t* get_hardware_issue_count_subject() {
-        return &hardware_issue_count_;
+        return hardware_validation_state_.get_hardware_issue_count_subject();
     }
 
     /**
@@ -1110,7 +1116,7 @@ class PrinterState {
      * Use for styling (color) based on severity.
      */
     lv_subject_t* get_hardware_max_severity_subject() {
-        return &hardware_max_severity_;
+        return hardware_validation_state_.get_hardware_max_severity_subject();
     }
 
     /**
@@ -1120,7 +1126,7 @@ class PrinterState {
      * UI should observe to refresh dynamic lists.
      */
     lv_subject_t* get_hardware_validation_version_subject() {
-        return &hardware_validation_version_;
+        return hardware_validation_state_.get_hardware_validation_version_subject();
     }
 
     /**
@@ -1130,14 +1136,14 @@ class PrinterState {
      * Used for settings panel row label binding.
      */
     lv_subject_t* get_hardware_issues_label_subject() {
-        return &hardware_issues_label_;
+        return hardware_validation_state_.get_hardware_issues_label_subject();
     }
 
     /**
      * @brief Check if hardware validation has any issues
      */
     bool has_hardware_issues() {
-        return lv_subject_get_int(&hardware_has_issues_) != 0;
+        return hardware_validation_state_.has_hardware_issues();
     }
 
     /**
@@ -1148,7 +1154,9 @@ class PrinterState {
      *
      * @return Reference to the stored validation result
      */
-    const HardwareValidationResult& get_hardware_validation_result() const;
+    const HardwareValidationResult& get_hardware_validation_result() const {
+        return hardware_validation_state_.get_hardware_validation_result();
+    }
 
     /**
      * @brief Remove a hardware issue from the cached validation result
@@ -1210,162 +1218,102 @@ class PrinterState {
     /// RAII manager for automatic subject cleanup - deinits all subjects on destruction
     SubjectManager subjects_;
 
-    // Temperature subjects
-    lv_subject_t extruder_temp_;
-    lv_subject_t extruder_target_;
-    lv_subject_t bed_temp_;
-    lv_subject_t bed_target_;
+    /// Temperature state component (extruder and bed temperatures)
+    helix::PrinterTemperatureState temperature_state_;
 
-    // Print progress subjects
-    lv_subject_t print_progress_;         // Integer 0-100
-    lv_subject_t print_filename_;         // String buffer
-    lv_subject_t print_state_;            // String buffer (for UI display binding)
-    lv_subject_t print_state_enum_;       // Integer: PrintJobState enum (for type-safe logic)
-    lv_subject_t print_outcome_;          // Integer: PrintOutcome enum (terminal state persistence)
-    lv_subject_t print_active_;           // Integer: 1 when PRINTING/PAUSED, 0 otherwise
-    lv_subject_t print_show_progress_;    // Integer: 1 when active AND not in start phase
-    lv_subject_t print_display_filename_; // String: clean filename for UI display
-    lv_subject_t print_thumbnail_path_;   // String: LVGL path to current print thumbnail
+    /// Motion state component (position, speed/flow, z-offset)
+    helix::PrinterMotionState motion_state_;
 
-    // Layer tracking subjects (from Moonraker print_stats.info)
-    lv_subject_t print_layer_current_; // Current layer (0-based)
-    lv_subject_t print_layer_total_;   // Total layers from file metadata
+    /// LED state component (RGBW channels, brightness, on/off state)
+    helix::PrinterLedState led_state_component_;
 
-    // Print time tracking subjects (in seconds)
-    lv_subject_t print_duration_;  // Elapsed print time in seconds
-    lv_subject_t print_time_left_; // Estimated remaining time in seconds
+    /// Fan state component (fan speed, multi-fan tracking)
+    helix::PrinterFanState fan_state_;
 
-    // Print start progress subjects (for PRINT_START macro tracking)
-    lv_subject_t print_start_phase_;    // Integer: PrintStartPhase enum value
-    lv_subject_t print_start_message_;  // String: human-readable phase message
-    lv_subject_t print_start_progress_; // Integer: 0-100% estimated progress
+    /// Print state component (progress, state, timing, layers, print start)
+    helix::PrinterPrintState print_domain_;
 
-    // Double-tap prevention: 1 while print workflow is executing, 0 otherwise
-    // (G-code downloading/modifying/uploading - may take 20+ seconds for large files)
-    lv_subject_t print_in_progress_;
+    /// Capabilities state component (hardware capabilities, feature availability)
+    helix::PrinterCapabilitiesState capabilities_state_;
 
-    // Motion subjects
-    lv_subject_t position_x_;
-    lv_subject_t position_y_;
-    lv_subject_t position_z_;
-    lv_subject_t homed_axes_; // String buffer (derived subjects are panel-local)
+    /// Plugin status component (helix_plugin_installed, phase_tracking_enabled)
+    helix::PrinterPluginStatusState plugin_status_state_;
 
-    // Speed/Flow/Z-offset subjects (from gcode_move status)
-    lv_subject_t speed_factor_;
-    lv_subject_t flow_factor_;
-    lv_subject_t gcode_z_offset_; // Integer: Z-offset * 1000 (microns) from homing_origin[2]
-    lv_subject_t pending_z_offset_delta_; // Integer: accumulated adjustment during print (microns)
-    lv_subject_t fan_speed_;
+    /// Calibration state component (firmware retraction, manual probe, motor state)
+    helix::PrinterCalibrationState calibration_state_;
 
-    // Multi-fan tracking
-    std::vector<FanInfo> fans_;   ///< All tracked fans (from discovery)
-    lv_subject_t fans_version_{}; ///< Incremented on fan list/speed changes
-    /// Per-fan speed subjects (unique_ptr prevents invalidation on map rehash)
-    std::unordered_map<std::string, std::unique_ptr<lv_subject_t>> fan_speed_subjects_;
+    /// Hardware validation state component (issue counts, severity, status text)
+    helix::PrinterHardwareValidationState hardware_validation_state_;
 
-    // Printer connection state subjects (Moonraker WebSocket)
-    lv_subject_t printer_connection_state_;   // Integer: uses PrinterStatus enum values
-    lv_subject_t printer_connection_message_; // String buffer
+    /// Composite visibility state component (can_show_* derived subjects)
+    helix::PrinterCompositeVisibilityState composite_visibility_state_;
 
-    // Network connectivity subject (WiFi/Ethernet)
-    lv_subject_t network_status_; // Integer: uses NetworkStatus enum values
+    /// Network state component (connection, klippy, nav buttons)
+    helix::PrinterNetworkState network_state_;
 
-    // Klipper firmware state subject
-    lv_subject_t klippy_state_; // Integer: uses KlippyState enum values
+    // Note: Print subjects are now managed by print_domain_ component
+    // (print_progress_, print_filename_, print_state_, print_state_enum_,
+    //  print_outcome_, print_active_, print_show_progress_, print_display_filename_,
+    //  print_thumbnail_path_, print_layer_current_, print_layer_total_,
+    //  print_duration_, print_time_left_, print_start_phase_, print_start_message_,
+    //  print_start_progress_, print_in_progress_)
 
-    // Combined nav button enabled state (for navbar icon visibility)
-    // 1 = enabled (connected AND klippy ready), 0 = disabled
-    lv_subject_t nav_buttons_enabled_;
+    // Note: Motion subjects (position_x_, position_y_, position_z_, homed_axes_,
+    // speed_factor_, flow_factor_, gcode_z_offset_, pending_z_offset_delta_)
+    // are now managed by motion_state_ component
 
-    // LED state subject
-    lv_subject_t led_state_; // Integer: 0=off, 1=on
+    // Note: Fan subjects (fan_speed_, fans_, fans_version_, fan_speed_subjects_)
+    // are now managed by fan_state_ component
 
-    // LED RGBW channel subjects (for color picker / brightness slider)
-    lv_subject_t led_r_;          // LED red channel 0-255
-    lv_subject_t led_g_;          // LED green channel 0-255
-    lv_subject_t led_b_;          // LED blue channel 0-255
-    lv_subject_t led_w_;          // LED white channel 0-255
-    lv_subject_t led_brightness_; // LED brightness 0-100 (max of RGBW channels)
+    // Note: Network subjects (printer_connection_state_, printer_connection_message_,
+    // network_status_, klippy_state_, nav_buttons_enabled_, was_ever_connected_)
+    // are now managed by network_state_ component
+
+    // Note: LED subjects (led_state_, led_r_, led_g_, led_b_, led_w_, led_brightness_)
+    // are now managed by led_state_component_
 
     // Exclude object subjects
     lv_subject_t excluded_objects_version_;            // Integer: incremented on change
     std::unordered_set<std::string> excluded_objects_; // Set of excluded object names
 
-    // Printer capability subjects (for pre-print options visibility)
-    lv_subject_t printer_has_qgl_;           // Integer: 0=no, 1=yes
-    lv_subject_t printer_has_z_tilt_;        // Integer: 0=no, 1=yes
-    lv_subject_t printer_has_bed_mesh_;      // Integer: 0=no, 1=yes
-    lv_subject_t printer_has_nozzle_clean_;  // Integer: 0=no, 1=yes
-    lv_subject_t printer_has_probe_;         // Integer: 0=no, 1=yes (for Z-offset calibration)
-    lv_subject_t printer_has_heater_bed_;    // Integer: 0=no, 1=yes (for PID bed tuning)
-    lv_subject_t printer_has_led_;           // Integer: 0=no, 1=yes (for LED light control)
-    lv_subject_t printer_has_accelerometer_; // Integer: 0=no, 1=yes (for input shaping)
-    lv_subject_t printer_has_spoolman_;      // Integer: 0=no, 1=yes (for filament tracking)
-    lv_subject_t printer_has_speaker_;       // Integer: 0=no, 1=yes (for M300 audio feedback)
-    lv_subject_t printer_has_timelapse_;  // Integer: 0=no, 1=yes (for Moonraker-Timelapse plugin)
-    lv_subject_t printer_has_purge_line_; // Integer: 0=no, 1=yes (for purge/priming capability)
-    lv_subject_t helix_plugin_installed_; // Tri-state: -1=unknown, 0=not installed, 1=installed
-    lv_subject_t phase_tracking_enabled_; // Tri-state: -1=unknown, 0=disabled, 1=enabled
-    lv_subject_t printer_has_firmware_retraction_; // Integer: 0=no, 1=yes (for G10/G11 retraction)
-    lv_subject_t printer_bed_moves_; // Integer: 0=no (gantry moves), 1=yes (bed moves on Z)
+    // Note: Printer capability subjects (printer_has_qgl_, printer_has_z_tilt_,
+    // printer_has_bed_mesh_, printer_has_nozzle_clean_, printer_has_probe_,
+    // printer_has_heater_bed_, printer_has_led_, printer_has_accelerometer_,
+    // printer_has_spoolman_, printer_has_speaker_, printer_has_timelapse_,
+    // printer_has_purge_line_, printer_has_firmware_retraction_, printer_bed_moves_)
+    // are now managed by capabilities_state_ component
 
-    // Composite subjects for G-code modification option visibility
-    // These combine helix_plugin_installed with individual printer capabilities.
-    // An option is shown only when BOTH: plugin installed AND printer has capability.
-    lv_subject_t can_show_bed_mesh_;     // helix_plugin_installed && printer_has_bed_mesh
-    lv_subject_t can_show_qgl_;          // helix_plugin_installed && printer_has_qgl
-    lv_subject_t can_show_z_tilt_;       // helix_plugin_installed && printer_has_z_tilt
-    lv_subject_t can_show_nozzle_clean_; // helix_plugin_installed && printer_has_nozzle_clean
-    lv_subject_t can_show_purge_line_;   // helix_plugin_installed && printer_has_purge_line
+    // Note: Plugin status subjects (helix_plugin_installed_, phase_tracking_enabled_)
+    // are now managed by plugin_status_state_ component
 
-    // Firmware retraction settings (from firmware_retraction Klipper module)
-    // Lengths stored as centimillimeters (x100) to preserve 0.01mm precision with integers
-    lv_subject_t retract_length_;         // centimm (e.g., 80 = 0.8mm)
-    lv_subject_t retract_speed_;          // mm/s (integer, e.g., 35)
-    lv_subject_t unretract_extra_length_; // centimm (e.g., 0 = 0.0mm)
-    lv_subject_t unretract_speed_;        // mm/s (integer, e.g., 35)
+    // Note: Composite visibility subjects (can_show_bed_mesh_, can_show_qgl_,
+    // can_show_z_tilt_, can_show_nozzle_clean_, can_show_purge_line_)
+    // are now managed by composite_visibility_state_ component
 
-    // Manual probe subjects (for Z-offset calibration)
-    lv_subject_t manual_probe_active_; // Integer: 0=inactive, 1=active (PROBE_CALIBRATE running)
-    lv_subject_t manual_probe_z_position_; // Integer: Z position * 1000 (for 0.001mm resolution)
-
-    // Motor enabled state (from idle_timeout.state)
-    lv_subject_t motors_enabled_; // Integer: 0=disabled (Idle), 1=enabled (Ready/Printing)
+    // Note: Firmware retraction, manual probe, and motor state subjects
+    // (retract_length_, retract_speed_, unretract_extra_length_, unretract_speed_,
+    //  manual_probe_active_, manual_probe_z_position_, motors_enabled_)
+    // are now managed by calibration_state_ component
 
     // Version subjects (for About section)
     lv_subject_t klipper_version_;
     lv_subject_t moonraker_version_;
 
-    // Hardware validation subjects (for Hardware Health section in Settings)
-    lv_subject_t hardware_has_issues_;         // Integer: 0=no issues, 1=has issues
-    lv_subject_t hardware_issue_count_;        // Integer: total number of issues
-    lv_subject_t hardware_max_severity_;       // Integer: 0=info, 1=warning, 2=critical
-    lv_subject_t hardware_validation_version_; // Integer: incremented on validation change
-    lv_subject_t hardware_critical_count_;     // Integer: count of critical issues
-    lv_subject_t hardware_warning_count_;      // Integer: count of warning issues
-    lv_subject_t hardware_info_count_;         // Integer: count of info issues
-    lv_subject_t hardware_session_count_;      // Integer: count of session change issues
-    lv_subject_t hardware_status_title_;       // String: e.g., "All Healthy" or "3 Issues Detected"
-    lv_subject_t hardware_status_detail_;      // String: e.g., "1 critical, 2 warnings"
-    lv_subject_t hardware_issues_label_;       // String: "1 Hardware Issue" or "5 Hardware Issues"
-    HardwareValidationResult hardware_validation_result_; // Stored result for UI access
+    // Note: Hardware validation subjects (hardware_has_issues_, hardware_issue_count_,
+    // hardware_max_severity_, hardware_validation_version_, hardware_critical_count_,
+    // hardware_warning_count_, hardware_info_count_, hardware_session_count_,
+    // hardware_status_title_, hardware_status_detail_, hardware_issues_label_,
+    // hardware_validation_result_) are now managed by hardware_validation_state_ component
 
-    // Tracked LED name (e.g., "neopixel chamber_light")
-    std::string tracked_led_name_;
+    // Note: tracked_led_name_ is now managed by led_state_component_
 
     // String buffers for subject storage
-    char print_filename_buf_[256];
-    char print_display_filename_buf_[128]; // Clean filename for UI display
-    char print_thumbnail_path_buf_[512];   // LVGL path to current print thumbnail
-    char print_state_buf_[32];
-    char homed_axes_buf_[8];
-    char printer_connection_message_buf_[128];
+    // Note: homed_axes_buf_ is now in motion_state_ component
+    // Note: print-related buffers are now in print_domain_ component
+    // Note: hardware validation buffers are now in hardware_validation_state_ component
+    // Note: printer_connection_message_buf_ is now in network_state_ component
     char klipper_version_buf_[64];
     char moonraker_version_buf_[64];
-    char print_start_message_buf_[64]; // "Heating Nozzle...", "Homing...", etc.
-    char hardware_status_title_buf_[64];
-    char hardware_status_detail_buf_[128];
-    char hardware_issues_label_buf_[48]; // "1 Hardware Issue" / "5 Hardware Issues"
 
     // JSON cache for complex data
     json json_state_;
@@ -1377,8 +1325,7 @@ class PrinterState {
     // Cached display pointer to detect LVGL reinitialization (for test isolation)
     lv_display_t* cached_display_ = nullptr;
 
-    // Track if we've ever successfully connected (for UI display)
-    bool was_ever_connected_ = false;
+    // Note: was_ever_connected_ is now managed by network_state_ component
 
     // Capability override layer (user config overrides for auto-detected capabilities)
     CapabilityOverrides capability_overrides_;
@@ -1402,7 +1349,6 @@ class PrinterState {
     void set_klipper_version_internal(const std::string& version);
     void set_moonraker_version_internal(const std::string& version);
     void set_klippy_state_internal(KlippyState state);
-    void set_print_in_progress_internal(bool in_progress);
     void set_printer_type_internal(const std::string& type);
 
     /**
@@ -1421,13 +1367,4 @@ class PrinterState {
      * Must be called from main thread (typically via async callbacks).
      */
     void update_gcode_modification_visibility();
-
-    /**
-     * @brief Update print_show_progress_ combined subject
-     *
-     * Sets print_show_progress_ to 1 only when print_active==1 AND print_start_phase==IDLE.
-     * Called whenever either component subject changes.
-     * Must be called from main thread.
-     */
-    void update_print_show_progress();
 };

@@ -635,7 +635,7 @@ void ControlsPanel::populate_secondary_fans() {
 
     for (const auto& fan : fans) {
         // Skip part cooling fan (it's the hero slider)
-        if (fan.type == FanType::PART_COOLING) {
+        if (fan.type == helix::FanType::PART_COOLING) {
             continue;
         }
 
