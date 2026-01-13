@@ -11,6 +11,7 @@
 #include "ui_overlay_network_settings.h"
 #include "ui_panel_memory_stats.h"
 #include "ui_settings_machine_limits.h"
+#include "ui_settings_macro_buttons.h"
 #include "ui_settings_plugins.h"
 #include "ui_severity_card.h"
 #include "ui_theme.h"
@@ -165,119 +166,8 @@ static void on_filament_master_toggle_changed(lv_event_t* e) {
     spdlog::info("[SettingsPanel] Filament sensor master enabled: {}", enabled ? "ON" : "OFF");
 }
 
-// ============================================================================
-// MACRO BUTTONS OVERLAY STATIC CALLBACKS
-// ============================================================================
-
-// Helper: Get slot name from selected quick button dropdown index
-// Index 0 = "(Empty)", then slot display names in order
-static std::string quick_button_index_to_slot_name(int index) {
-    if (index == 0) {
-        return ""; // Empty - no slot assigned
-    }
-    // Map index-1 to StandardMacroSlot enum order
-    const auto& slots = StandardMacros::instance().all();
-    if (index - 1 < static_cast<int>(slots.size())) {
-        return slots[index - 1].slot_name;
-    }
-    return "";
-}
-
-// Helper: Get selected macro name from standard macro dropdown
-// The dropdown options are: "(Auto: X)" or "(Empty)", then sorted macro names
-// user_data on dropdown contains the StandardMacroSlot as int
-static std::string get_selected_macro_from_dropdown(lv_obj_t* dropdown) {
-    char buf[64];
-    lv_dropdown_get_selected_str(dropdown, buf, sizeof(buf));
-    std::string selected(buf);
-
-    // Check for special options
-    if (selected.find("(Auto") == 0 || selected.find("(Empty)") == 0) {
-        return ""; // Clear configured macro, use auto-detection
-    }
-
-    return selected; // Return the macro name
-}
-
-// Quick button 1 dropdown changed
-static void on_quick_button_1_changed(lv_event_t* e) {
-    auto* dropdown = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int index = static_cast<int>(lv_dropdown_get_selected(dropdown));
-    std::string slot_name = quick_button_index_to_slot_name(index);
-
-    Config* config = Config::get_instance();
-    if (config) {
-        config->set<std::string>("/standard_macros/quick_button_1", slot_name);
-        config->save();
-    }
-
-    spdlog::info("[SettingsPanel] Quick button 1 set to: {}",
-                 slot_name.empty() ? "(empty)" : slot_name);
-}
-
-// Quick button 2 dropdown changed
-static void on_quick_button_2_changed(lv_event_t* e) {
-    auto* dropdown = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int index = static_cast<int>(lv_dropdown_get_selected(dropdown));
-    std::string slot_name = quick_button_index_to_slot_name(index);
-
-    Config* config = Config::get_instance();
-    if (config) {
-        config->set<std::string>("/standard_macros/quick_button_2", slot_name);
-        config->save();
-    }
-
-    spdlog::info("[SettingsPanel] Quick button 2 set to: {}",
-                 slot_name.empty() ? "(empty)" : slot_name);
-}
-
-// Standard macro slot dropdown changed - template for all slots
-static void handle_standard_macro_changed(StandardMacroSlot slot, lv_event_t* e) {
-    auto* dropdown = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    std::string macro = get_selected_macro_from_dropdown(dropdown);
-
-    StandardMacros::instance().set_macro(slot, macro);
-
-    const auto& info = StandardMacros::instance().get(slot);
-    spdlog::info("[SettingsPanel] {} macro set to: {} (resolved: {})", info.display_name,
-                 macro.empty() ? "(auto)" : macro, info.get_macro());
-}
-
-static void on_load_filament_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::LoadFilament, e);
-}
-
-static void on_unload_filament_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::UnloadFilament, e);
-}
-
-static void on_purge_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::Purge, e);
-}
-
-static void on_pause_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::Pause, e);
-}
-
-static void on_resume_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::Resume, e);
-}
-
-static void on_cancel_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::Cancel, e);
-}
-
-static void on_bed_level_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::BedLevel, e);
-}
-
-static void on_clean_nozzle_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::CleanNozzle, e);
-}
-
-static void on_heat_soak_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::HeatSoak, e);
-}
+// Note: Macro Buttons overlay callbacks are now in MacroButtonsOverlay class
+// See ui_settings_macro_buttons.cpp
 
 // ============================================================================
 // MODAL DIALOG STATIC CALLBACKS (XML event_cb)
@@ -364,19 +254,8 @@ void SettingsPanel::init_subjects() {
                              on_filament_master_toggle_changed);
     lv_xml_register_event_cb(nullptr, "on_macro_buttons_clicked", on_macro_buttons_clicked);
 
-    // Register macro buttons overlay dropdown callbacks
-    // These are defined as static functions at the top of this file
-    lv_xml_register_event_cb(nullptr, "on_quick_button_1_changed", on_quick_button_1_changed);
-    lv_xml_register_event_cb(nullptr, "on_quick_button_2_changed", on_quick_button_2_changed);
-    lv_xml_register_event_cb(nullptr, "on_load_filament_changed", on_load_filament_changed);
-    lv_xml_register_event_cb(nullptr, "on_unload_filament_changed", on_unload_filament_changed);
-    lv_xml_register_event_cb(nullptr, "on_purge_changed", on_purge_changed);
-    lv_xml_register_event_cb(nullptr, "on_pause_changed", on_pause_changed);
-    lv_xml_register_event_cb(nullptr, "on_resume_changed", on_resume_changed);
-    lv_xml_register_event_cb(nullptr, "on_cancel_changed", on_cancel_changed);
-    lv_xml_register_event_cb(nullptr, "on_bed_level_changed", on_bed_level_changed);
-    lv_xml_register_event_cb(nullptr, "on_clean_nozzle_changed", on_clean_nozzle_changed);
-    lv_xml_register_event_cb(nullptr, "on_heat_soak_changed", on_heat_soak_changed);
+    // Note: Macro Buttons overlay callbacks are now handled by MacroButtonsOverlay
+    // See ui_settings_macro_buttons.h
 
     lv_xml_register_event_cb(nullptr, "on_machine_limits_clicked", on_machine_limits_clicked);
 
@@ -890,158 +769,14 @@ void SettingsPanel::handle_filament_sensors_clicked() {
 }
 
 void SettingsPanel::handle_macro_buttons_clicked() {
-    spdlog::debug("[{}] Macro Buttons clicked - opening overlay", get_name());
+    spdlog::debug("[{}] Macro Buttons clicked - delegating to MacroButtonsOverlay", get_name());
 
-    // Create macro buttons overlay on first access (lazy initialization)
-    if (!macro_buttons_overlay_ && parent_screen_) {
-        spdlog::debug("[{}] Creating macro buttons overlay...", get_name());
-
-        // Create from XML - component name matches filename
-        macro_buttons_overlay_ =
-            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "macro_buttons_overlay", nullptr));
-        if (!macro_buttons_overlay_) {
-            spdlog::error("[{}] Failed to create macro buttons overlay from XML", get_name());
-            return;
-        }
-
-        // Back button already wired via header_bar XML event_cb (on_header_back_clicked)
-
-        // Initially hidden (dropdowns populated via populate_macro_dropdowns())
-        lv_obj_add_flag(macro_buttons_overlay_, LV_OBJ_FLAG_HIDDEN);
-        spdlog::info("[{}] Macro buttons overlay created", get_name());
-    }
-
-    // Populate dropdowns every time overlay is shown (handles printer reconnection)
-    populate_macro_dropdowns();
-
-    // Push overlay onto navigation history and show it
-    if (macro_buttons_overlay_) {
-        ui_nav_push_overlay(macro_buttons_overlay_);
-    }
+    auto& overlay = helix::settings::get_macro_buttons_overlay();
+    overlay.show(parent_screen_);
 }
 
-void SettingsPanel::populate_macro_dropdowns() {
-    if (!macro_buttons_overlay_) {
-        return;
-    }
-
-    spdlog::debug("[{}] Refreshing macro dropdowns...", get_name());
-
-    // === Populate Quick Button Dropdowns ===
-    // Options: "(Empty)", then slot display names
-    std::string quick_button_options = "(Empty)";
-    for (const auto& slot : StandardMacros::instance().all()) {
-        quick_button_options += "\n" + slot.display_name;
-    }
-
-    // Get current quick button config
-    Config* config = Config::get_instance();
-    std::string qb1_slot =
-        config ? config->get<std::string>("/standard_macros/quick_button_1", "clean_nozzle")
-               : "clean_nozzle";
-    std::string qb2_slot =
-        config ? config->get<std::string>("/standard_macros/quick_button_2", "bed_level")
-               : "bed_level";
-
-    // Helper to find index for a slot name
-    auto find_slot_index = [](const std::string& slot_name) -> int {
-        if (slot_name.empty())
-            return 0; // (Empty)
-        const auto& slots = StandardMacros::instance().all();
-        for (size_t i = 0; i < slots.size(); ++i) {
-            if (slots[i].slot_name == slot_name) {
-                return static_cast<int>(i) + 1; // +1 because 0 is "(Empty)"
-            }
-        }
-        return 0;
-    };
-
-    // Quick Button 1
-    lv_obj_t* qb1_row = lv_obj_find_by_name(macro_buttons_overlay_, "row_quick_button_1");
-    lv_obj_t* qb1_dropdown = qb1_row ? lv_obj_find_by_name(qb1_row, "dropdown") : nullptr;
-    if (qb1_dropdown) {
-        lv_dropdown_set_options(qb1_dropdown, quick_button_options.c_str());
-        lv_dropdown_set_selected(qb1_dropdown, find_slot_index(qb1_slot));
-    }
-
-    // Quick Button 2
-    lv_obj_t* qb2_row = lv_obj_find_by_name(macro_buttons_overlay_, "row_quick_button_2");
-    lv_obj_t* qb2_dropdown = qb2_row ? lv_obj_find_by_name(qb2_row, "dropdown") : nullptr;
-    if (qb2_dropdown) {
-        lv_dropdown_set_options(qb2_dropdown, quick_button_options.c_str());
-        lv_dropdown_set_selected(qb2_dropdown, find_slot_index(qb2_slot));
-    }
-
-    // === Populate Standard Macro Dropdowns ===
-    // Get sorted list of all printer macros from MoonrakerClient
-    std::vector<std::string> printer_macros;
-    MoonrakerClient* client = get_moonraker_client();
-    if (client) {
-        const auto& macros = client->hardware().macros();
-        for (const auto& macro : macros) {
-            printer_macros.push_back(macro);
-        }
-        std::sort(printer_macros.begin(), printer_macros.end());
-    }
-
-    // Row names matching XML
-    const std::vector<std::pair<StandardMacroSlot, std::string>> slot_rows = {
-        {StandardMacroSlot::LoadFilament, "row_load_filament"},
-        {StandardMacroSlot::UnloadFilament, "row_unload_filament"},
-        {StandardMacroSlot::Purge, "row_purge"},
-        {StandardMacroSlot::Pause, "row_pause"},
-        {StandardMacroSlot::Resume, "row_resume"},
-        {StandardMacroSlot::Cancel, "row_cancel"},
-        {StandardMacroSlot::BedLevel, "row_bed_level"},
-        {StandardMacroSlot::CleanNozzle, "row_clean_nozzle"},
-        {StandardMacroSlot::HeatSoak, "row_heat_soak"},
-    };
-
-    for (const auto& [slot, row_name] : slot_rows) {
-        lv_obj_t* row = lv_obj_find_by_name(macro_buttons_overlay_, row_name.c_str());
-        lv_obj_t* dropdown = row ? lv_obj_find_by_name(row, "dropdown") : nullptr;
-        if (!dropdown)
-            continue;
-
-        const auto& info = StandardMacros::instance().get(slot);
-
-        // Build options string - first option shows auto-detected or empty
-        std::string options;
-        if (!info.detected_macro.empty()) {
-            options = "(Auto: " + info.detected_macro + ")";
-        } else if (!info.fallback_macro.empty()) {
-            options = "(Auto: " + info.fallback_macro + ")";
-        } else {
-            options = "(Empty)";
-        }
-
-        // Add all printer macros
-        for (const auto& macro : printer_macros) {
-            options += "\n" + macro;
-        }
-
-        lv_dropdown_set_options(dropdown, options.c_str());
-
-        // Set selected value
-        if (!info.configured_macro.empty()) {
-            // Find the configured macro in the list
-            int idx = 1; // Start after "(Auto/Empty)"
-            for (const auto& macro : printer_macros) {
-                if (macro == info.configured_macro) {
-                    lv_dropdown_set_selected(dropdown, idx);
-                    break;
-                }
-                ++idx;
-            }
-        } else {
-            // Use auto (index 0)
-            lv_dropdown_set_selected(dropdown, 0);
-        }
-    }
-
-    spdlog::debug("[{}] Macro dropdowns refreshed ({} printer macros)", get_name(),
-                  printer_macros.size());
-}
+// Note: populate_macro_dropdowns() moved to MacroButtonsOverlay::populate_dropdowns()
+// See ui_settings_macro_buttons.cpp
 
 void SettingsPanel::populate_sensor_list() {
     if (!filament_sensors_overlay_) {

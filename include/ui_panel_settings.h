@@ -135,7 +135,8 @@ class SettingsPanel : public PanelBase {
     // Lazily-created overlay panels
     lv_obj_t* display_settings_overlay_ = nullptr;
     lv_obj_t* filament_sensors_overlay_ = nullptr;
-    lv_obj_t* macro_buttons_overlay_ = nullptr;
+    // Note: Macro Buttons overlay is now managed by MacroButtonsOverlay class
+    // See ui_settings_macro_buttons.h
     lv_obj_t* hardware_health_overlay_ = nullptr;
     // Note: Bed mesh panel managed by get_global_bed_mesh_panel()
     // Note: Z-Offset calibration panel managed by get_global_zoffset_cal_panel()
@@ -179,7 +180,7 @@ class SettingsPanel : public PanelBase {
     void handle_factory_reset_clicked();
     void show_theme_restart_dialog();
     void populate_sensor_list();
-    void populate_macro_dropdowns();
+    // Note: populate_macro_dropdowns() moved to MacroButtonsOverlay
     void populate_hardware_issues();
 
   public:
