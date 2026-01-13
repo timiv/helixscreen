@@ -1,0 +1,775 @@
+# Input Shaping Panel/Wizard Implementation Plan
+
+**Status**: 🔵 Planning Complete - Ready for Implementation
+**Created**: 2026-01-13
+**Last Updated**: 2026-01-13
+
+---
+
+## Progress Tracking
+
+### Overall Progress: Phase 0 of 7 Complete
+
+| Phase | Status | Session | Notes |
+|-------|--------|---------|-------|
+| **Phase 1**: Core Types & API | ⬜ Not Started | - | |
+| **Phase 2**: InputShaperCalibrator | ⬜ Not Started | - | |
+| **Phase 3**: Platform Detection | ⬜ Not Started | - | |
+| **Phase 4**: UI Panel Rewrite | ⬜ Not Started | - | |
+| **Phase 5**: Frequency Chart | ⬜ Not Started | - | |
+| **Phase 6**: First-Run Wizard | ⬜ Not Started | - | |
+| **Phase 7**: Cache & Test Print | ⬜ Not Started | - | |
+
+**Legend**: ⬜ Not Started | 🟡 In Progress | ✅ Complete | ❌ Blocked
+
+---
+
+## Overview
+
+Transform the existing basic `InputShaperPanel` into a comprehensive input shaping configuration experience with:
+- Visual frequency response graphs
+- Integrated accelerometer health check + troubleshooting
+- Guided step-by-step wizard flow
+- Shaper type comparison with tradeoff explanations
+- Optional test print integration
+- Current settings display when idle
+
+**Entry Point**: Settings overlay (like Machine Limits)
+**Hardware**: Graceful degradation based on RAM/CPU metrics
+
+---
+
+## Architecture: Clean Design (Free to Refactor)
+
+Since input shaping code isn't in production use yet, we can design it properly.
+
+**Key Insight**: The multi-step calibration workflow (ADXL check → X test → Y test → Review → Apply) needs to be reusable across multiple UI contexts. A **coordinator class** encapsulates this logic.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      UI LAYER                               │
+├──────────────────┬──────────────────┬───────────────────────┤
+│ InputShaperPanel │ WizardInputShaper│ (Future: CLI/Scripts) │
+│   (Settings)     │     Step         │                       │
+└────────┬─────────┴────────┬─────────┴───────────┬───────────┘
+         │                  │                     │
+         └──────────────────┼─────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│              InputShaperCalibrator (NEW)                    │
+│  Coordinates multi-step workflow, caches results            │
+│  - check_accelerometer()                                    │
+│  - run_calibration(axis, on_progress, on_complete)          │
+│  - get_results() → CalibrationResults                       │
+│  - apply_settings(x_config, y_config)                       │
+│  - save_to_config()                                         │
+│  - get_cached_results() → persistent storage                │
+└────────┬────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    MoonrakerAPI                             │
+│  measure_axes_noise(), start_resonance_test(),              │
+│  set_input_shaper(), save_config(),                         │
+│  get_input_shaper_config() (NEW)                            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Why InputShaperCalibrator?**
+- Similar pattern to `MacroModificationManager` (coordinates multi-step workflow)
+- Eliminates duplication between Panel and Wizard step
+- Owns result caching (session + persistent)
+- Single place to handle ADXL troubleshooting logic
+- Testable independently of UI
+
+---
+
+## Development Methodology
+
+Following best practices throughout:
+
+1. **Test-First** (`/test-first`): Write characterization/unit tests BEFORE implementation
+2. **Delegate** (`/delegate`): Agents handle actual implementation work
+3. **Review** (`/review`): Review each significant chunk before proceeding
+4. **Final Review**: Comprehensive review of all work at the end
+5. **Clean Context**: Main session for coordination and critical thinking only
+6. **Fresh Sessions**: Start each major phase in a fresh session to avoid compaction
+
+### Work Chunks (Delegatable Units)
+
+| Chunk | Description | Tests First |
+|-------|-------------|-------------|
+| **C1** | InputShaperCalibrator core class | Unit tests for state machine, callbacks |
+| **C2** | MoonrakerAPI new methods | Tests for measure_axes_noise, get_config |
+| **C3** | Enhanced InputShaperCollector | Tests for all_shapers parsing |
+| **C4** | PlatformCapabilities | Tests for tier detection |
+| **C5** | InputShaperPanel rewrite | Integration tests with mock calibrator |
+| **C6** | Frequency chart widget | Visual tests (screenshot comparison) |
+| **C7** | WizardInputShaperStep | Tests for skip logic, flow |
+| **C8** | Persistent cache | Tests for save/load |
+
+---
+
+## Existing Infrastructure (Reuse)
+
+| Component | Location | Status |
+|-----------|----------|--------|
+| `PrinterHardwareDiscovery::has_accelerometer()` | `printer_hardware_discovery.h:169-174` | ✅ Exists |
+| `MoonrakerAPI::start_resonance_test()` | `moonraker_api.h:1003` | ✅ Exists |
+| `MoonrakerAPI::set_input_shaper()` | `moonraker_api.h:1015` | ✅ Exists |
+| `MoonrakerAPI::save_config()` | `moonraker_api.h` | ✅ Exists |
+| `InputShaperCollector` | `moonraker_api_advanced.cpp:448-633` | ⚠️ Enhance |
+| `InputShaperResult` | `calibration_types.h:149-166` | ⚠️ Enhance |
+| `InputShaperPanel` | `ui_panel_input_shaper.h/cpp` | ⚠️ Major rework |
+
+---
+
+## What Needs to be Added/Modified
+
+### 1. New MoonrakerAPI Methods
+
+```cpp
+// moonraker_api.h - Add to advanced operations section
+
+/// Callback with noise level (0-1000+, <100 is good)
+using NoiseCheckCallback = std::function<void(float noise_level)>;
+
+/// Check accelerometer noise level (MEASURE_AXES_NOISE)
+virtual void measure_axes_noise(NoiseCheckCallback on_complete, ErrorCallback on_error);
+
+/// Get current input shaper configuration from printer
+virtual void get_input_shaper_config(
+    std::function<void(const InputShaperConfig&)> on_success,
+    ErrorCallback on_error);
+```
+
+### 2. New Data Types
+
+```cpp
+// calibration_types.h - Add
+
+/// Single shaper option with all metrics
+struct ShaperOption {
+    std::string type;           // "zv", "mzv", "ei", etc.
+    float frequency = 0.0f;     // Hz
+    float vibrations = 0.0f;    // % remaining
+    float smoothing = 0.0f;     // Lower is sharper
+    float max_accel = 0.0f;     // Recommended max acceleration
+};
+
+/// Enhanced result with ALL shaper options
+struct InputShaperResult {
+    char axis = 'X';
+    std::string recommended_type;
+    float recommended_freq = 0.0f;
+    std::vector<ShaperOption> all_shapers;  // NEW - all fitted options
+    std::vector<std::pair<float, float>> freq_response;  // For graphing
+    bool is_valid() const;
+};
+
+/// Current input shaper configuration (from printer state)
+struct InputShaperConfig {
+    std::string shaper_type_x;
+    float shaper_freq_x = 0.0f;
+    std::string shaper_type_y;
+    float shaper_freq_y = 0.0f;
+    float damping_ratio_x = 0.0f;
+    float damping_ratio_y = 0.0f;
+    bool is_configured = false;  // false if no shaper active
+};
+```
+
+### 3. New Collector for Noise Check
+
+```cpp
+// In moonraker_api_advanced.cpp - Add NoiseCheckCollector
+
+class NoiseCheckCollector : public std::enable_shared_from_this<NoiseCheckCollector> {
+    // Parses MEASURE_AXES_NOISE output:
+    // "axes_noise = 0.012345" or error if no accelerometer
+};
+```
+
+### 4. Platform Capabilities (New)
+
+```cpp
+// include/platform_capabilities.h
+
+enum class PlatformTier {
+    EMBEDDED,    // <512MB RAM or single core - table view only, no charts
+    BASIC,       // 512MB-2GB RAM or slower multi-core - simplified charts
+    STANDARD     // 2GB+ RAM and faster multi-core - full charts with animations
+};
+
+struct PlatformCapabilities {
+    // Detected hardware metrics
+    size_t available_ram_mb;      // From /proc/meminfo
+    int cpu_cores;                // From /proc/cpuinfo
+    int cpu_mhz;                  // Estimated from BogoMIPS or similar
+
+    // Derived capabilities
+    PlatformTier tier;
+    bool supports_charts;
+    bool supports_animations;
+    size_t max_chart_points;      // 200 for STANDARD, 50 for BASIC, 0 for EMBEDDED
+
+    static PlatformCapabilities detect();
+
+    // Tier thresholds (configurable for testing)
+    static constexpr size_t EMBEDDED_RAM_THRESHOLD_MB = 512;
+    static constexpr size_t STANDARD_RAM_THRESHOLD_MB = 2048;
+    static constexpr int STANDARD_CPU_CORES_MIN = 4;
+};
+```
+
+**Detection Logic:**
+1. Read `/proc/meminfo` for `MemTotal` → available RAM
+2. Count CPU cores from `/proc/cpuinfo`
+3. Extract CPU speed from BogoMIPS or `cpu MHz` fields
+4. Apply tier classification:
+   - **EMBEDDED**: RAM < 512MB OR single core
+   - **BASIC**: RAM 512MB-2GB OR 2-3 cores at low speed
+   - **STANDARD**: RAM >= 2GB AND 4+ cores
+
+This approach works on any Linux system without hardcoding device names.
+
+---
+
+## Wizard Flow Design
+
+### States (Enhanced from current 4-state machine)
+
+```cpp
+enum class InputShaperWizardState {
+    // Status/Idle
+    IDLE,              // Show current settings, Start button
+
+    // Pre-flight
+    CHECKING_ADXL,     // Running MEASURE_AXES_NOISE
+    ADXL_ERROR,        // ADXL not responding - show troubleshooting
+    ADXL_WARNING,      // High noise - show warning, allow proceed
+
+    // X-Axis Calibration
+    TESTING_X,         // SHAPER_CALIBRATE AXIS=X running
+    RESULTS_X,         // Show X results, Continue button
+
+    // Y-Axis Calibration
+    TESTING_Y,         // SHAPER_CALIBRATE AXIS=Y running
+    RESULTS_Y,         // Show Y results, Continue button
+
+    // Review & Apply
+    REVIEW,            // Compare X+Y results, shaper selection
+    APPLYING,          // SET_INPUT_SHAPER command
+
+    // Completion
+    COMPLETE,          // Success - offer SAVE_CONFIG and test print
+    ERROR              // Generic error state
+};
+```
+
+### Step Progression
+
+```
+START → CHECKING_ADXL
+           │
+           ├─ ADXL OK ────────────────────┐
+           ├─ ADXL High Noise → WARNING ──┼──► TESTING_X
+           └─ ADXL Failed → ERROR ────────┘        │
+                   │                               │
+                   ▼                               ▼
+           [Troubleshooting]              RESULTS_X (graph + table)
+                                                   │
+                                                   ▼
+                                             TESTING_Y
+                                                   │
+                                                   ▼
+                                          RESULTS_Y (graph + table)
+                                                   │
+                                                   ▼
+                                              REVIEW
+                                     (side-by-side comparison)
+                                     (shaper type selection)
+                                                   │
+                                                   ▼
+                                             APPLYING
+                                                   │
+                                                   ▼
+                                             COMPLETE
+                                       [Save Config] [Test Print]
+```
+
+---
+
+## UI Components
+
+### 1. Frequency Response Chart (Hardware-Adaptive)
+
+```cpp
+// include/ui_frequency_chart.h
+class FrequencyResponseChart {
+public:
+    void set_data(const std::vector<FrequencyPoint>& data);
+    void set_recommended_frequency(float freq_hz);
+    void add_shaper_overlay(const std::string& type, const std::vector<float>& response);
+    void clear();
+
+    // Hardware adaptation
+    void configure_for_platform(PlatformTier tier);
+
+private:
+    lv_obj_t* chart_;
+    PlatformTier tier_ = PlatformTier::STANDARD;
+
+    // Simplify data for weaker hardware
+    std::vector<FrequencyPoint> downsample(
+        const std::vector<FrequencyPoint>& data,
+        size_t max_points
+    );
+};
+```
+
+**Hardware Adaptation:**
+- STANDARD: Full resolution (200+ points), animations, multiple overlays
+- BASIC: Reduced resolution (50 points), no animation, single overlay
+- EMBEDDED: Table view only, no chart widget
+
+### 2. Shaper Comparison Table
+
+```cpp
+// Always available regardless of hardware tier
+struct ShaperComparisonRow {
+    std::string type;           // "mzv", "ei", etc.
+    float frequency;
+    float vibrations_pct;       // Lower is better
+    float smoothing;            // Lower is sharper
+    float max_accel;            // mm/s²
+    std::string tradeoff_desc;  // Plain English
+    bool is_recommended;
+};
+```
+
+**Tradeoff Descriptions:**
+- `zv`: "Fastest, minimal smoothing, may leave some ringing"
+- `mzv`: "Balanced - good ringing reduction with moderate smoothing"
+- `zvd`: "Better ringing reduction, more smoothing"
+- `ei`: "Strong ringing reduction, noticeable smoothing"
+- `2hump_ei`: "Very strong filtering, significant smoothing"
+- `3hump_ei`: "Maximum filtering, most smoothing, lowest max accel"
+
+### 3. ADXL Troubleshooting View
+
+When ADXL check fails, show:
+1. Error message (what failed)
+2. Likely causes checklist:
+   - [ ] ADXL wired correctly (SPI pins)
+   - [ ] MCU configured for ADXL (`[adxl345]` section)
+   - [ ] USB connection stable (for USB accelerometers)
+   - [ ] Firmware flashed with ADXL support
+3. Link to documentation
+4. "Check Again" button
+
+---
+
+## XML Structure
+
+```
+ui_xml/
+├── input_shaper_panel.xml            # Main container
+├── input_shaper_idle.xml             # IDLE state - current settings
+├── input_shaper_preflight.xml        # ADXL check screen
+├── input_shaper_testing.xml          # Progress during calibration
+├── input_shaper_results.xml          # Single axis results (graph + table)
+├── input_shaper_review.xml           # Both axes comparison
+├── input_shaper_complete.xml         # Success + next steps
+└── components/
+    ├── frequency_chart.xml           # Chart component (or placeholder)
+    └── shaper_comparison_row.xml     # Table row component
+```
+
+---
+
+## Implementation Phases
+
+### Phase 1: Core Types & API (Chunks C2, C3)
+
+**Status**: ⬜ Not Started
+
+#### Checkpoints:
+- [ ] Tests written for `measure_axes_noise()`
+- [ ] Tests written for `get_input_shaper_config()`
+- [ ] Tests written for enhanced `InputShaperCollector` (all shapers)
+- [ ] `ShaperOption` struct added to `calibration_types.h`
+- [ ] `InputShaperConfig` struct added to `calibration_types.h`
+- [ ] `InputShaperResult` enhanced with `all_shapers` vector
+- [ ] `measure_axes_noise()` method added to `MoonrakerAPI`
+- [ ] `get_input_shaper_config()` method added to `MoonrakerAPI`
+- [ ] `NoiseCheckCollector` implemented
+- [ ] `InputShaperCollector` enhanced to return all shapers
+- [ ] Mock implementations added
+- [ ] All tests pass
+- [ ] Code reviewed
+
+**Files to modify:**
+- `include/calibration_types.h`
+- `include/moonraker_api.h`
+- `src/api/moonraker_api_advanced.cpp`
+- `src/api/moonraker_api_mock.cpp`
+- `tests/unit/test_moonraker_api_input_shaper.cpp`
+
+---
+
+### Phase 2: InputShaperCalibrator (Chunk C1)
+
+**Status**: ⬜ Not Started
+
+#### Checkpoints:
+- [ ] Tests written for calibrator state machine
+- [ ] Tests written for check_accelerometer flow
+- [ ] Tests written for run_calibration flow
+- [ ] Tests written for apply_settings
+- [ ] Tests written for error handling
+- [ ] `InputShaperCalibrator` header created
+- [ ] State machine implemented
+- [ ] Accelerometer check flow implemented
+- [ ] Calibration run flow implemented
+- [ ] Apply settings implemented
+- [ ] Error handling implemented
+- [ ] All tests pass
+- [ ] Code reviewed
+
+**Files to create:**
+- `include/input_shaper_calibrator.h`
+- `src/calibration/input_shaper_calibrator.cpp`
+- `tests/unit/test_input_shaper_calibrator.cpp`
+
+**Core Design:**
+```cpp
+class InputShaperCalibrator {
+    enum class State { IDLE, CHECKING_ADXL, TESTING_X, TESTING_Y, READY };
+
+    void check_accelerometer(AccelCheckCallback on_complete);
+    void run_calibration(char axis, ProgressCallback, ResultCallback, ErrorCallback);
+    void cancel();
+
+    const CalibrationResults& get_results() const;
+    void apply_settings(const ApplyConfig&, SuccessCallback, ErrorCallback);
+    void save_to_config(SuccessCallback, ErrorCallback);
+
+    // Caching
+    void load_cached_results();
+    void save_results_to_cache();
+};
+```
+
+---
+
+### Phase 3: Platform Detection (Chunk C4)
+
+**Status**: ⬜ Not Started
+
+#### Checkpoints:
+- [ ] Tests written for RAM detection
+- [ ] Tests written for CPU core count detection
+- [ ] Tests written for tier classification
+- [ ] `PlatformCapabilities` header created
+- [ ] `/proc/meminfo` parsing implemented
+- [ ] `/proc/cpuinfo` parsing implemented
+- [ ] Tier classification logic implemented
+- [ ] All tests pass
+- [ ] Code reviewed
+
+**Files to create:**
+- `include/platform_capabilities.h`
+- `src/system/platform_capabilities.cpp`
+- `tests/unit/test_platform_capabilities.cpp`
+
+---
+
+### Phase 4: UI Panel Rewrite (Chunk C5)
+
+**Status**: ⬜ Not Started
+
+#### Checkpoints:
+- [ ] Integration tests written with mock calibrator
+- [ ] `InputShaperPanel` header updated
+- [ ] State machine simplified (delegates to calibrator)
+- [ ] XML files created for all states
+- [ ] IDLE state UI working
+- [ ] CHECKING_ADXL state UI working
+- [ ] TESTING state UI working (with progress)
+- [ ] RESULTS state UI working
+- [ ] REVIEW state UI working
+- [ ] COMPLETE state UI working
+- [ ] Mock mode testing passes
+- [ ] Code reviewed
+
+**Files to modify:**
+- `include/ui_panel_input_shaper.h`
+- `src/ui/ui_panel_input_shaper.cpp`
+
+**Files to create:**
+- `ui_xml/input_shaper_panel.xml`
+- `ui_xml/input_shaper_idle.xml`
+- `ui_xml/input_shaper_preflight.xml`
+- `ui_xml/input_shaper_testing.xml`
+- `ui_xml/input_shaper_results.xml`
+- `ui_xml/input_shaper_review.xml`
+- `ui_xml/input_shaper_complete.xml`
+
+---
+
+### Phase 5: Frequency Chart (Chunk C6)
+
+**Status**: ⬜ Not Started
+
+#### Checkpoints:
+- [ ] Chart widget header created
+- [ ] LVGL chart implementation done
+- [ ] Downsampling for BASIC tier implemented
+- [ ] Table fallback for EMBEDDED tier implemented
+- [ ] XML component created
+- [ ] Screenshot tests pass
+- [ ] Code reviewed
+
+**Files to create:**
+- `include/ui_frequency_chart.h`
+- `src/ui/ui_frequency_chart.cpp`
+- `ui_xml/components/frequency_chart.xml`
+
+---
+
+### Phase 6: First-Run Wizard Integration (Chunk C7)
+
+**Status**: ⬜ Not Started
+
+#### Checkpoints:
+- [ ] Tests written for skip logic
+- [ ] Tests written for wizard flow
+- [ ] `WizardInputShaperStep` header created
+- [ ] Step implementation using calibrator
+- [ ] XML template created
+- [ ] Integration with `ui_wizard.cpp`
+- [ ] Skip logic works when no accelerometer
+- [ ] Full flow works with accelerometer
+- [ ] All tests pass
+- [ ] Code reviewed
+
+**Files to create:**
+- `include/ui_wizard_input_shaper.h`
+- `src/ui/ui_wizard_input_shaper.cpp`
+- `ui_xml/wizard_input_shaper.xml`
+- `tests/unit/test_wizard_input_shaper_step.cpp`
+
+**Files to modify:**
+- `src/ui/ui_wizard.cpp`
+
+---
+
+### Phase 7: Persistent Cache & Test Print (Chunk C8)
+
+**Status**: ⬜ Not Started
+
+#### Checkpoints:
+- [ ] Tests written for cache save/load
+- [ ] Cache functionality added to calibrator
+- [ ] Test print gcode embedded in assets
+- [ ] "Print Test Pattern" button working
+- [ ] Cache persists across sessions
+- [ ] All tests pass
+- [ ] Code reviewed
+
+**Files to create:**
+- `assets/test_gcodes/ringing_test.gcode`
+
+**Cache location:** `~/.config/helix-screen/input_shaper_results.json`
+
+---
+
+## Files Summary
+
+### Files to Modify
+
+| File | Changes |
+|------|---------|
+| `include/calibration_types.h` | Add `ShaperOption`, `InputShaperConfig`, expand `InputShaperResult` |
+| `include/moonraker_api.h` | Add `measure_axes_noise()`, `get_input_shaper_config()` |
+| `src/api/moonraker_api_advanced.cpp` | Add `NoiseCheckCollector`, enhance `InputShaperCollector` |
+| `src/api/moonraker_api_mock.cpp` | Mock implementations for new methods |
+| `include/ui_panel_input_shaper.h` | Simplify state machine, delegate to calibrator |
+| `src/ui/ui_panel_input_shaper.cpp` | Major rewrite using InputShaperCalibrator |
+| `src/ui/ui_wizard.cpp` | Add optional input shaper step |
+
+### Files to Create
+
+| File | Purpose |
+|------|---------|
+| `include/input_shaper_calibrator.h` | **Core coordinator class** |
+| `src/calibration/input_shaper_calibrator.cpp` | Calibrator implementation + cache |
+| `include/platform_capabilities.h` | Hardware tier detection |
+| `src/system/platform_capabilities.cpp` | cpuinfo/meminfo parsing |
+| `include/ui_frequency_chart.h` | LVGL chart wrapper with downsampling |
+| `src/ui/ui_frequency_chart.cpp` | Chart implementation |
+| `include/ui_wizard_input_shaper.h` | First-run wizard step |
+| `src/ui/ui_wizard_input_shaper.cpp` | Step implementation (uses calibrator) |
+| `ui_xml/input_shaper_*.xml` | 6 state-specific XML files |
+| `ui_xml/wizard_input_shaper.xml` | First-run wizard step XML |
+| `ui_xml/components/frequency_chart.xml` | Chart component |
+| `ui_xml/components/shaper_comparison_row.xml` | Comparison row component |
+| `assets/test_gcodes/ringing_test.gcode` | Embedded test model |
+
+### Test Files to Create
+
+| File | Purpose |
+|------|---------|
+| `tests/unit/test_input_shaper_calibrator.cpp` | Calibrator state machine, callbacks |
+| `tests/unit/test_platform_capabilities.cpp` | Tier detection |
+| `tests/unit/test_wizard_input_shaper_step.cpp` | Skip logic, flow |
+
+---
+
+## Verification Plan
+
+1. **Unit tests** for API methods:
+   - `test_moonraker_api_input_shaper.cpp` - noise check, config query, enhanced results
+   - Test mock responses match real Klipper output format
+
+2. **Mock mode testing**: `./build/bin/helix-screen --test -vv`
+   - Navigate to Settings → Input Shaping
+   - Verify IDLE state shows "Not configured" or current settings
+   - Start calibration wizard → verify ADXL check passes (mock)
+   - Verify X-axis test completes with mock data
+   - Verify Y-axis test completes
+   - Verify Review screen shows all shaper options
+   - Apply settings → verify SET_INPUT_SHAPER called
+   - Test "Save to Config" flow
+
+3. **Platform detection testing**:
+   - Test on Pi 4 → should show charts
+   - Test on Pi 3/B+ → should show simplified charts or table
+   - Test on embedded → should show table only
+
+4. **Real hardware testing** (Pi 4 + ADXL345):
+   - Run full wizard flow
+   - Verify MEASURE_AXES_NOISE returns valid noise level
+   - Verify SHAPER_CALIBRATE completes for both axes
+   - Verify frequency graph renders (if data available)
+   - Verify Apply + Save Config works
+
+5. **First-run wizard testing**:
+   - Verify step skipped when `has_accelerometer() == false`
+   - Verify step shown when accelerometer detected
+   - Verify "Skip" works
+
+---
+
+## Design Decisions
+
+1. **Frequency data caching**: Persistent cache - save results to disk, show last results on next open
+   - Store in `~/.config/helix-screen/input_shaper_results.json`
+   - Include timestamp, allow "Re-run test" to refresh
+   - Helps users compare results over time
+
+2. **Test print model**: Embed in assets (~50KB gcode)
+   - Bundle small ringing test model in `assets/test_gcodes/ringing_test.gcode`
+   - No network dependency
+   - Include quick guide image in assets
+
+3. **First-run wizard**: Optional step if `resonance_tester` capability detected
+   - Show "Calibrate Input Shaping" step after hardware discovery
+   - Can be skipped - not mandatory
+   - Uses same calibrator (reusable)
+
+4. **Platform detection**: Based on hardware metrics (RAM, CPU cores), not device signatures
+   - Works on any Linux system
+   - Thresholds configurable for testing
+
+---
+
+## First-Run Wizard Integration
+
+Add optional step after LED/filament sensor selection:
+
+```
+Step 7: LED Select (if LEDs detected)
+Step 8: Filament Sensor (if 2+ sensors)
+Step 9: Input Shaping (NEW - if resonance_tester detected)  ← Skip-able
+Step 10: Summary
+```
+
+**WizardInputShaperStep** (new file):
+- Checks `has_accelerometer()` capability from `PrinterHardwareDiscovery`
+- `should_skip()` returns true if no accelerometer
+- Shows simplified flow: health check → calibrate both axes → apply
+- Reuses `InputShaperCalibrator` for all operations
+
+---
+
+## Session Handoff Template
+
+**To start a new session, point Claude at this document and say "GO".**
+
+Claude will:
+1. Read this document to understand context
+2. Find the first phase with status ⬜ or 🟡
+3. Update status to 🟡 In Progress
+4. Follow the methodology below
+5. Work through checkpoints
+6. Update status to ✅ when complete
+7. Log session in Session Notes
+
+### Methodology (ALWAYS follow)
+
+```
+1. /test-first   - Write failing tests BEFORE any implementation
+2. /delegate     - Agents do the coding, main session coordinates
+3. /review       - Review each significant chunk before proceeding
+4. Final review  - Comprehensive review when phase complete
+5. Clean context - Main session for thinking, agents for doing
+```
+
+### Per-Phase Workflow
+
+```
+START PHASE:
+  1. Update phase status: ⬜ → 🟡
+  2. Read phase checkpoints carefully
+  3. Identify first unchecked item
+
+FOR EACH CHECKPOINT:
+  1. If test-related: Use /test-first to write tests
+  2. If implementation: /delegate to agent with clear scope
+  3. Wait for agent completion
+  4. /review the result
+  5. Mark checkpoint complete: [ ] → [x]
+  6. Commit if appropriate
+
+END PHASE:
+  1. Run `make test-run` to verify all tests pass
+  2. Final /review of all phase work
+  3. Update phase status: 🟡 → ✅
+  4. Add entry to Session Notes
+  5. Commit with message: "feat(input-shaper): complete phase N - description"
+```
+
+### Quick Reference - What Each Phase Delivers
+
+| Phase | Key Deliverable | Entry Point |
+|-------|-----------------|-------------|
+| 1 | API methods + enhanced collector | `moonraker_api.h` |
+| 2 | InputShaperCalibrator class | `input_shaper_calibrator.h` |
+| 3 | PlatformCapabilities detection | `platform_capabilities.h` |
+| 4 | UI Panel with wizard flow | `ui_panel_input_shaper.cpp` |
+| 5 | Frequency chart widget | `ui_frequency_chart.cpp` |
+| 6 | First-run wizard step | `ui_wizard_input_shaper.cpp` |
+| 7 | Persistent cache + test print | calibrator cache methods |
+
+---
+
+## Session Notes
+
+_Log each session here for continuity_
+
+### Session 1 (Planning)
+- Date: 2026-01-13
+- Completed: Initial plan creation, tracking document
+- Next: Phase 1 - Core Types & API
