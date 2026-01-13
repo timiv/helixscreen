@@ -3,7 +3,7 @@
 This document tracks known architectural issues identified during codebase audits.
 These are not urgent but should be addressed when touching related code.
 
-> **Last Updated:** 2026-01-11
+> **Last Updated:** 2026-01-12
 > **Audit Method:** Multi-agent codebase analysis
 
 ---
@@ -18,33 +18,34 @@ These are not urgent but should be addressed when touching related code.
 
 ## 1. God Classes
 
-### 1.1 PrinterState (🔴 CRITICAL)
+### 1.1 PrinterState (✅ RESOLVED - 2026-01-12)
 
-**File:** `src/printer/printer_state.cpp` (1514 lines)
+**File:** `src/printer/printer_state.cpp`
 **Header:** `include/printer_state.h`
 
-**Problem:**
-- 194 public methods (getters/setters) for 80+ reactive subjects
-- Single monolithic state container managing: temperatures, print progress, motion, fans, LED, hardware validation, manual probe, excluded objects, print start phases, versions, capabilities
-- Referenced by 50+ files across UI, API, and application layers
-- Mixes concerns: UI state binding, domain logic, data caching
+**Resolution:**
+Decomposed into 13 focused, testable domain state classes with 300+ characterization tests:
 
-**Suggested Decomposition:**
 ```
-PrinterState (facade)
-├── PrintJobManager        - print state, progress, layers, ETA
-├── TemperatureController  - extruder/bed temps, targets, presets
-├── MotionState           - position, homed axes, speed/flow factors
-├── FanManager            - fan speeds, controllable fans
-├── HardwareHealthMonitor - hardware issues, thermal runaway
-└── CapabilityRegistry    - printer capabilities, feature flags
+PrinterState (facade - delegates to all components)
+├── PrinterTemperatureState    - 4 subjects: extruder/bed temps and targets
+├── PrinterMotionState         - 8 subjects: position, homed axes, speed/flow, Z-offset
+├── PrinterLedState            - 6 subjects: LED state, RGBW, brightness
+├── PrinterFanState            - 2+ dynamic: fan speeds, per-fan subjects
+├── PrinterPrintState          - 17 subjects: progress, filename, layers, time, phases
+├── PrinterCapabilitiesState   - 14 subjects: hardware capability flags
+├── PrinterPluginStatusState   - 2 subjects: helix plugin, phase tracking
+├── PrinterCalibrationState    - 7 subjects: retraction, manual probe, motors
+├── PrinterHardwareValidationState - 11 subjects: issues, severity, status
+├── PrinterCompositeVisibilityState - 5 subjects: derived can_show_* flags
+├── PrinterNetworkState        - 5 subjects: connection, klippy, nav buttons
+├── PrinterVersionsState       - 2 subjects: klipper/moonraker versions
+└── PrinterExcludedObjectsState - 2 subjects: excluded objects version + set
 ```
 
-**Migration Strategy:**
-1. Create domain objects with their own subjects
-2. PrinterState delegates to domain objects
-3. Gradually move callers to use domain objects directly
-4. Eventually PrinterState becomes thin facade
+**Pattern:** Each component follows SubjectManager RAII, init_subjects/reset_for_testing lifecycle, thread-safe via helix::async::invoke.
+
+**Archived Handoff:** `docs/archive/PRINTERSTATE_DECOMPOSITION_HANDOFF.md`
 
 ---
 
@@ -71,7 +72,29 @@ PrintStatusPanel (UI orchestration only)
 
 ---
 
-### 1.3 Application (🟠 HIGH)
+### 1.3 SettingsPanel (✅ RESOLVED - 2026-01-12)
+
+**File:** `src/ui/ui_panel_settings.cpp` (reduced from 1976 to 935 lines - 53% reduction)
+
+**Resolution:**
+Decomposed into focused overlay components with 92 characterization tests (528 assertions):
+
+```
+SettingsPanel (UI orchestration only)
+├── MachineLimitsOverlay            - Velocity/accel/jerk limits (~220 lines)
+├── MacroButtonsOverlay             - Configurable macro buttons (~250 lines)
+├── FilamentSensorSettingsOverlay   - Filament sensor list/toggle (~180 lines)
+├── HardwareHealthOverlay           - Hardware issue display/actions (~360 lines)
+└── DisplaySettingsOverlay          - Brightness, sleep, render modes (~240 lines)
+```
+
+**Pattern:** Each overlay follows singleton accessor with StaticPanelRegistry cleanup, lazy init, register_callbacks() for XML event bindings.
+
+**Commits:** 3cea3e6b, b0b3c8c1, bec9de47, ff9235fe, 235d9ada
+
+---
+
+### 1.4 Application (🟠 HIGH)
 
 **File:** `src/application/application.cpp` (1249 lines)
 
@@ -249,10 +272,10 @@ MotionPanel& get_global_motion_panel() {
 | File | Lines | Notes |
 |------|-------|-------|
 | ui_panel_print_status.cpp | ~1700 | ✅ Decomposed (was 2983) |
-| ui_panel_settings.cpp | 1654 | |
+| ui_panel_settings.cpp | 935 | ✅ Decomposed (was 1976) |
 | ui_panel_controls.cpp | 1653 | |
 | moonraker_client.cpp | 1595 | Mixed concerns |
-| printer_state.cpp | 1514 | God class |
+| printer_state.cpp | ~627 | ✅ Decomposed (was 1514) - now a facade |
 | ui_panel_home.cpp | 1344 | |
 | application.cpp | 1249 | |
 | ui_nav_manager.cpp | 1072 | |
@@ -265,3 +288,5 @@ MotionPanel& get_global_motion_panel() {
 |------|--------|
 | 2026-01-01 | Initial audit - documented all findings from multi-agent analysis |
 | 2026-01-11 | Updated for Hardware Discovery Refactor: PrinterCapabilities deleted, MoonrakerClient mixed concerns partially resolved |
+| 2026-01-12 | **PrinterState god class RESOLVED** - All 13 domains extracted (~90+ subjects), PrinterState now a thin facade |
+| 2026-01-12 | **SettingsPanel god class RESOLVED** - 5 overlay components extracted (1976→935 lines, 53% reduction), 92 tests with 528 assertions |
