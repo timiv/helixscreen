@@ -72,7 +72,29 @@ PrintStatusPanel (UI orchestration only)
 
 ---
 
-### 1.3 Application (🟠 HIGH)
+### 1.3 SettingsPanel (✅ RESOLVED - 2026-01-12)
+
+**File:** `src/ui/ui_panel_settings.cpp` (reduced from 1976 to 935 lines - 53% reduction)
+
+**Resolution:**
+Decomposed into focused overlay components with 92 characterization tests (528 assertions):
+
+```
+SettingsPanel (UI orchestration only)
+├── MachineLimitsOverlay            - Velocity/accel/jerk limits (~220 lines)
+├── MacroButtonsOverlay             - Configurable macro buttons (~250 lines)
+├── FilamentSensorSettingsOverlay   - Filament sensor list/toggle (~180 lines)
+├── HardwareHealthOverlay           - Hardware issue display/actions (~360 lines)
+└── DisplaySettingsOverlay          - Brightness, sleep, render modes (~240 lines)
+```
+
+**Pattern:** Each overlay follows singleton accessor with StaticPanelRegistry cleanup, lazy init, register_callbacks() for XML event bindings.
+
+**Commits:** 3cea3e6b, b0b3c8c1, bec9de47, ff9235fe, 235d9ada
+
+---
+
+### 1.4 Application (🟠 HIGH)
 
 **File:** `src/application/application.cpp` (1249 lines)
 
@@ -250,7 +272,7 @@ MotionPanel& get_global_motion_panel() {
 | File | Lines | Notes |
 |------|-------|-------|
 | ui_panel_print_status.cpp | ~1700 | ✅ Decomposed (was 2983) |
-| ui_panel_settings.cpp | 1654 | |
+| ui_panel_settings.cpp | 935 | ✅ Decomposed (was 1976) |
 | ui_panel_controls.cpp | 1653 | |
 | moonraker_client.cpp | 1595 | Mixed concerns |
 | printer_state.cpp | ~627 | ✅ Decomposed (was 1514) - now a facade |
@@ -267,3 +289,4 @@ MotionPanel& get_global_motion_panel() {
 | 2026-01-01 | Initial audit - documented all findings from multi-agent analysis |
 | 2026-01-11 | Updated for Hardware Discovery Refactor: PrinterCapabilities deleted, MoonrakerClient mixed concerns partially resolved |
 | 2026-01-12 | **PrinterState god class RESOLVED** - All 13 domains extracted (~90+ subjects), PrinterState now a thin facade |
+| 2026-01-12 | **SettingsPanel god class RESOLVED** - 5 overlay components extracted (1976→935 lines, 53% reduction), 92 tests with 528 assertions |

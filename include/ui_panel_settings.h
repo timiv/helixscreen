@@ -5,7 +5,6 @@
 
 #include "ui_panel_base.h"
 
-#include "calibration_types.h"     // For MachineLimits
 #include "subject_managed_panel.h" // For SubjectManager
 
 /**
@@ -121,46 +120,32 @@ class SettingsPanel : public PanelBase {
     /// RAII manager for automatic subject cleanup
     SubjectManager subjects_;
 
-    // Slider value subjects
-    lv_subject_t brightness_value_subject_;
+    // Note: brightness_value_subject_ is now managed by DisplaySettingsOverlay
 
     // Info row subjects
     lv_subject_t version_value_subject_;
     lv_subject_t printer_value_subject_;
 
     // Static buffers for string subjects (required for lv_subject_init_string)
-    char brightness_value_buf_[8]; // e.g., "75%"
-    char version_value_buf_[32];   // e.g., "1.2.3"
-    char printer_value_buf_[64];   // e.g., "Voron 2.4"
+    // Note: brightness_value_buf_ is now managed by DisplaySettingsOverlay
+    char version_value_buf_[32]; // e.g., "1.2.3"
+    char printer_value_buf_[64]; // e.g., "Voron 2.4"
 
-    // Lazily-created overlay panels
-    lv_obj_t* display_settings_overlay_ = nullptr;
-    lv_obj_t* filament_sensors_overlay_ = nullptr;
-    lv_obj_t* macro_buttons_overlay_ = nullptr;
-    lv_obj_t* hardware_health_overlay_ = nullptr;
+    // Note: Display Settings overlay is now managed by DisplaySettingsOverlay class
+    // See ui_settings_display.h
+    // Note: Filament Sensors overlay is now managed by FilamentSensorSettingsOverlay class
+    // See ui_settings_filament_sensors.h
+    // Note: Macro Buttons overlay is now managed by MacroButtonsOverlay class
+    // See ui_settings_macro_buttons.h
+    // Note: Hardware Health overlay is now managed by HardwareHealthOverlay class
+    // See ui_settings_hardware_health.h
     // Note: Bed mesh panel managed by get_global_bed_mesh_panel()
     // Note: Z-Offset calibration panel managed by get_global_zoffset_cal_panel()
     // Note: PID calibration panel managed by get_global_pid_cal_panel()
     // Note: factory_reset_dialog_ and theme_restart_dialog_ are public (for static callbacks)
 
-    // Hardware save confirmation dialog state
-    std::string pending_hardware_save_;
-    lv_obj_t* hardware_save_dialog_ = nullptr;
-
-    // Machine Limits overlay
-    lv_obj_t* machine_limits_overlay_ = nullptr;
-    MachineLimits current_limits_;  ///< Live values from sliders
-    MachineLimits original_limits_; ///< Values when overlay opened
-
-    // Subjects for value display (bind_text in XML)
-    lv_subject_t max_velocity_display_subject_;
-    char max_velocity_display_buf_[16];
-    lv_subject_t max_accel_display_subject_;
-    char max_accel_display_buf_[16];
-    lv_subject_t accel_to_decel_display_subject_;
-    char accel_to_decel_display_buf_[16];
-    lv_subject_t square_corner_velocity_display_subject_;
-    char square_corner_velocity_display_buf_[16];
+    // Note: Machine Limits overlay is now managed by MachineLimitsOverlay class
+    // See ui_settings_machine_limits.h
 
     //
     // === Setup Helpers ===
@@ -191,9 +176,9 @@ class SettingsPanel : public PanelBase {
     void handle_network_clicked();
     void handle_factory_reset_clicked();
     void show_theme_restart_dialog();
-    void populate_sensor_list();
-    void populate_macro_dropdowns();
-    void populate_hardware_issues();
+    // Note: populate_sensor_list() moved to FilamentSensorSettingsOverlay
+    // Note: populate_macro_dropdowns() moved to MacroButtonsOverlay
+    // Note: populate_hardware_issues() moved to HardwareHealthOverlay
 
   public:
     // Called by static modal callbacks - performs actual reset after confirmation
@@ -205,9 +190,8 @@ class SettingsPanel : public PanelBase {
     // Called by plugin failure toast action to open plugins overlay
     void handle_plugins_clicked();
 
-    // Called by hardware issue row action buttons
-    // is_ignore: true="Ignore" (mark optional), false="Save" (add to config with confirmation)
-    void handle_hardware_action(const char* hardware_name, bool is_ignore);
+    // Note: handle_hardware_action() moved to HardwareHealthOverlay
+    // See ui_settings_hardware_health.h
 
     // Dialog pointers accessible to static callbacks
     lv_obj_t* theme_restart_dialog_ = nullptr;
@@ -243,33 +227,13 @@ class SettingsPanel : public PanelBase {
     static void on_restart_later_clicked(lv_event_t* e);
     static void on_restart_now_clicked(lv_event_t* e);
     static void on_header_back_clicked(lv_event_t* e);
-    static void on_brightness_changed(lv_event_t* e);
+    // Note: on_brightness_changed is now in DisplaySettingsOverlay
 
-    // Static callbacks for hardware save confirmation dialog
-    static void on_hardware_save_confirm(lv_event_t* e);
-    static void on_hardware_save_cancel(lv_event_t* e);
+    // Note: Hardware save confirmation callbacks moved to HardwareHealthOverlay
+    // See ui_settings_hardware_health.h
 
-    // Static callbacks for machine limits overlay
-    static void on_max_velocity_changed(lv_event_t* e);
-    static void on_max_accel_changed(lv_event_t* e);
-    static void on_accel_to_decel_changed(lv_event_t* e);
-    static void on_square_corner_velocity_changed(lv_event_t* e);
-    static void on_limits_reset(lv_event_t* e);
-    static void on_limits_apply(lv_event_t* e);
-
-    // Instance methods called by static callbacks
-    void handle_hardware_save_confirm();
-    void handle_hardware_save_cancel();
-
-    // Machine limits instance handlers
-    void handle_max_velocity_changed(int value);
-    void handle_max_accel_changed(int value);
-    void handle_accel_to_decel_changed(int value);
-    void handle_square_corner_velocity_changed(int value);
-    void handle_limits_reset();
-    void handle_limits_apply();
-    void update_limits_display();
-    void update_limits_sliders();
+    // Note: Machine limits overlay callbacks are now in MachineLimitsOverlay class
+    // See ui_settings_machine_limits.h
 };
 
 // Global instance accessor (needed by main.cpp)

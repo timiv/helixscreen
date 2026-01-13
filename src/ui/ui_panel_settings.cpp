@@ -10,6 +10,11 @@
 #include "ui_nav_manager.h"
 #include "ui_overlay_network_settings.h"
 #include "ui_panel_memory_stats.h"
+#include "ui_settings_display.h"
+#include "ui_settings_filament_sensors.h"
+#include "ui_settings_hardware_health.h"
+#include "ui_settings_machine_limits.h"
+#include "ui_settings_macro_buttons.h"
 #include "ui_settings_plugins.h"
 #include "ui_severity_card.h"
 #include "ui_theme.h"
@@ -154,129 +159,10 @@ static void on_version_clicked(lv_event_t*) {
     }
 }
 
-// Static callback for filament sensor master toggle (XML event_cb)
-static void on_filament_master_toggle_changed(lv_event_t* e) {
-    auto* toggle = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    bool enabled = lv_obj_has_state(toggle, LV_STATE_CHECKED);
-    auto& mgr = helix::FilamentSensorManager::instance();
-    mgr.set_master_enabled(enabled);
-    mgr.save_config();
-    spdlog::info("[SettingsPanel] Filament sensor master enabled: {}", enabled ? "ON" : "OFF");
-}
-
-// ============================================================================
-// MACRO BUTTONS OVERLAY STATIC CALLBACKS
-// ============================================================================
-
-// Helper: Get slot name from selected quick button dropdown index
-// Index 0 = "(Empty)", then slot display names in order
-static std::string quick_button_index_to_slot_name(int index) {
-    if (index == 0) {
-        return ""; // Empty - no slot assigned
-    }
-    // Map index-1 to StandardMacroSlot enum order
-    const auto& slots = StandardMacros::instance().all();
-    if (index - 1 < static_cast<int>(slots.size())) {
-        return slots[index - 1].slot_name;
-    }
-    return "";
-}
-
-// Helper: Get selected macro name from standard macro dropdown
-// The dropdown options are: "(Auto: X)" or "(Empty)", then sorted macro names
-// user_data on dropdown contains the StandardMacroSlot as int
-static std::string get_selected_macro_from_dropdown(lv_obj_t* dropdown) {
-    char buf[64];
-    lv_dropdown_get_selected_str(dropdown, buf, sizeof(buf));
-    std::string selected(buf);
-
-    // Check for special options
-    if (selected.find("(Auto") == 0 || selected.find("(Empty)") == 0) {
-        return ""; // Clear configured macro, use auto-detection
-    }
-
-    return selected; // Return the macro name
-}
-
-// Quick button 1 dropdown changed
-static void on_quick_button_1_changed(lv_event_t* e) {
-    auto* dropdown = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int index = static_cast<int>(lv_dropdown_get_selected(dropdown));
-    std::string slot_name = quick_button_index_to_slot_name(index);
-
-    Config* config = Config::get_instance();
-    if (config) {
-        config->set<std::string>("/standard_macros/quick_button_1", slot_name);
-        config->save();
-    }
-
-    spdlog::info("[SettingsPanel] Quick button 1 set to: {}",
-                 slot_name.empty() ? "(empty)" : slot_name);
-}
-
-// Quick button 2 dropdown changed
-static void on_quick_button_2_changed(lv_event_t* e) {
-    auto* dropdown = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int index = static_cast<int>(lv_dropdown_get_selected(dropdown));
-    std::string slot_name = quick_button_index_to_slot_name(index);
-
-    Config* config = Config::get_instance();
-    if (config) {
-        config->set<std::string>("/standard_macros/quick_button_2", slot_name);
-        config->save();
-    }
-
-    spdlog::info("[SettingsPanel] Quick button 2 set to: {}",
-                 slot_name.empty() ? "(empty)" : slot_name);
-}
-
-// Standard macro slot dropdown changed - template for all slots
-static void handle_standard_macro_changed(StandardMacroSlot slot, lv_event_t* e) {
-    auto* dropdown = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    std::string macro = get_selected_macro_from_dropdown(dropdown);
-
-    StandardMacros::instance().set_macro(slot, macro);
-
-    const auto& info = StandardMacros::instance().get(slot);
-    spdlog::info("[SettingsPanel] {} macro set to: {} (resolved: {})", info.display_name,
-                 macro.empty() ? "(auto)" : macro, info.get_macro());
-}
-
-static void on_load_filament_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::LoadFilament, e);
-}
-
-static void on_unload_filament_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::UnloadFilament, e);
-}
-
-static void on_purge_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::Purge, e);
-}
-
-static void on_pause_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::Pause, e);
-}
-
-static void on_resume_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::Resume, e);
-}
-
-static void on_cancel_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::Cancel, e);
-}
-
-static void on_bed_level_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::BedLevel, e);
-}
-
-static void on_clean_nozzle_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::CleanNozzle, e);
-}
-
-static void on_heat_soak_changed(lv_event_t* e) {
-    handle_standard_macro_changed(StandardMacroSlot::HeatSoak, e);
-}
+// Note: Filament Sensors overlay callbacks are now in FilamentSensorSettingsOverlay class
+// See ui_settings_filament_sensors.cpp
+// Note: Macro Buttons overlay callbacks are now in MacroButtonsOverlay class
+// See ui_settings_macro_buttons.cpp
 
 // ============================================================================
 // MODAL DIALOG STATIC CALLBACKS (XML event_cb)
@@ -326,9 +212,8 @@ void SettingsPanel::init_subjects() {
     // Initialize SettingsManager subjects (for reactive binding)
     SettingsManager::instance().init_subjects();
 
-    // Initialize slider value subjects (for reactive binding)
-    UI_MANAGED_SUBJECT_STRING(brightness_value_subject_, brightness_value_buf_, "100%",
-                              "brightness_value", subjects_);
+    // Note: brightness_value subject is now managed by DisplaySettingsOverlay
+    // See ui_settings_display.cpp
 
     // Initialize info row subjects (for reactive binding)
     UI_MANAGED_SUBJECT_STRING(version_value_subject_, version_value_buf_, "—", "version_value",
@@ -359,48 +244,24 @@ void SettingsPanel::init_subjects() {
     // Register XML event callbacks for action rows
     lv_xml_register_event_cb(nullptr, "on_display_settings_clicked", on_display_settings_clicked);
     lv_xml_register_event_cb(nullptr, "on_filament_sensors_clicked", on_filament_sensors_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_master_toggle_changed",
-                             on_filament_master_toggle_changed);
+
+    // Note: Filament Sensors overlay callbacks are now handled by FilamentSensorSettingsOverlay
+    // See ui_settings_filament_sensors.h
+    helix::settings::get_filament_sensor_settings_overlay().register_callbacks();
+
+    // Note: Display Settings overlay callbacks are now handled by DisplaySettingsOverlay
+    // See ui_settings_display.h
+    helix::settings::get_display_settings_overlay().register_callbacks();
+
     lv_xml_register_event_cb(nullptr, "on_macro_buttons_clicked", on_macro_buttons_clicked);
 
-    // Register macro buttons overlay dropdown callbacks
-    // These are defined as static functions at the top of this file
-    lv_xml_register_event_cb(nullptr, "on_quick_button_1_changed", on_quick_button_1_changed);
-    lv_xml_register_event_cb(nullptr, "on_quick_button_2_changed", on_quick_button_2_changed);
-    lv_xml_register_event_cb(nullptr, "on_load_filament_changed", on_load_filament_changed);
-    lv_xml_register_event_cb(nullptr, "on_unload_filament_changed", on_unload_filament_changed);
-    lv_xml_register_event_cb(nullptr, "on_purge_changed", on_purge_changed);
-    lv_xml_register_event_cb(nullptr, "on_pause_changed", on_pause_changed);
-    lv_xml_register_event_cb(nullptr, "on_resume_changed", on_resume_changed);
-    lv_xml_register_event_cb(nullptr, "on_cancel_changed", on_cancel_changed);
-    lv_xml_register_event_cb(nullptr, "on_bed_level_changed", on_bed_level_changed);
-    lv_xml_register_event_cb(nullptr, "on_clean_nozzle_changed", on_clean_nozzle_changed);
-    lv_xml_register_event_cb(nullptr, "on_heat_soak_changed", on_heat_soak_changed);
+    // Note: Macro Buttons overlay callbacks are now handled by MacroButtonsOverlay
+    // See ui_settings_macro_buttons.h
 
     lv_xml_register_event_cb(nullptr, "on_machine_limits_clicked", on_machine_limits_clicked);
 
-    // Register machine limits overlay callbacks
-    lv_xml_register_event_cb(nullptr, "on_max_velocity_changed", on_max_velocity_changed);
-    lv_xml_register_event_cb(nullptr, "on_max_accel_changed", on_max_accel_changed);
-    lv_xml_register_event_cb(nullptr, "on_accel_to_decel_changed", on_accel_to_decel_changed);
-    lv_xml_register_event_cb(nullptr, "on_square_corner_velocity_changed",
-                             on_square_corner_velocity_changed);
-    lv_xml_register_event_cb(nullptr, "on_limits_reset", on_limits_reset);
-    lv_xml_register_event_cb(nullptr, "on_limits_apply", on_limits_apply);
-
-    // Initialize machine limits display subjects
-    UI_MANAGED_SUBJECT_STRING(max_velocity_display_subject_, max_velocity_display_buf_, "-- mm/s",
-                              "max_velocity_display", subjects_);
-
-    UI_MANAGED_SUBJECT_STRING(max_accel_display_subject_, max_accel_display_buf_, "-- mm/s²",
-                              "max_accel_display", subjects_);
-
-    UI_MANAGED_SUBJECT_STRING(accel_to_decel_display_subject_, accel_to_decel_display_buf_,
-                              "-- mm/s²", "accel_to_decel_display", subjects_);
-
-    UI_MANAGED_SUBJECT_STRING(square_corner_velocity_display_subject_,
-                              square_corner_velocity_display_buf_, "-- mm/s",
-                              "square_corner_velocity_display", subjects_);
+    // Note: Machine limits overlay callbacks and subjects are now handled by MachineLimitsOverlay
+    // See ui_settings_machine_limits.h
 
     lv_xml_register_event_cb(nullptr, "on_network_clicked", on_network_clicked);
     lv_xml_register_event_cb(nullptr, "on_factory_reset_clicked", on_factory_reset_clicked);
@@ -417,7 +278,7 @@ void SettingsPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_factory_reset_confirm", on_factory_reset_confirm);
     lv_xml_register_event_cb(nullptr, "on_factory_reset_cancel", on_factory_reset_cancel);
     lv_xml_register_event_cb(nullptr, "on_header_back_clicked", on_header_back_clicked);
-    lv_xml_register_event_cb(nullptr, "on_brightness_changed", on_brightness_changed);
+    // Note: on_brightness_changed is now handled by DisplaySettingsOverlay
 
     // Note: BedMeshPanel subjects are initialized in main.cpp during startup
 
@@ -753,647 +614,39 @@ void SettingsPanel::show_restart_prompt() {
 }
 
 void SettingsPanel::handle_display_settings_clicked() {
-    spdlog::debug("[{}] Display Settings clicked - opening overlay", get_name());
+    spdlog::debug("[{}] Display Settings clicked - delegating to DisplaySettingsOverlay",
+                  get_name());
 
-    // Create display settings overlay on first access (lazy initialization)
-    if (!display_settings_overlay_ && parent_screen_) {
-        spdlog::debug("[{}] Creating display settings overlay...", get_name());
-
-        // Create from XML - component name matches filename
-        display_settings_overlay_ = static_cast<lv_obj_t*>(
-            lv_xml_create(parent_screen_, "display_settings_overlay", nullptr));
-        if (display_settings_overlay_) {
-            // Back button event handler already wired via header_bar XML event_cb
-            // Brightness slider event handler already wired via XML event_cb
-
-            // Wire up brightness slider initial state
-            lv_obj_t* brightness_slider =
-                lv_obj_find_by_name(display_settings_overlay_, "brightness_slider");
-            lv_obj_t* brightness_label =
-                lv_obj_find_by_name(display_settings_overlay_, "brightness_value_label");
-            if (brightness_slider && brightness_label) {
-                // Set initial value from settings
-                int brightness = SettingsManager::instance().get_brightness();
-                lv_slider_set_value(brightness_slider, brightness, LV_ANIM_OFF);
-                // Update subject (label binding happens in XML)
-                snprintf(brightness_value_buf_, sizeof(brightness_value_buf_), "%d%%", brightness);
-                lv_subject_copy_string(&brightness_value_subject_, brightness_value_buf_);
-                // Event handler already wired via XML event_cb
-            }
-
-            // Initialize sleep timeout dropdown (inside setting_dropdown_row)
-            lv_obj_t* sleep_row =
-                lv_obj_find_by_name(display_settings_overlay_, "row_display_sleep");
-            lv_obj_t* sleep_dropdown =
-                sleep_row ? lv_obj_find_by_name(sleep_row, "dropdown") : nullptr;
-            if (sleep_dropdown) {
-                // Set dropdown options
-                lv_dropdown_set_options(sleep_dropdown,
-                                        "Never\n1 minute\n5 minutes\n10 minutes\n30 minutes");
-                // Set initial selection based on current setting
-                int current_sec = SettingsManager::instance().get_display_sleep_sec();
-                int index = SettingsManager::sleep_seconds_to_index(current_sec);
-                lv_dropdown_set_selected(sleep_dropdown, index);
-                spdlog::debug("[{}] Sleep dropdown initialized to index {} ({}s)", get_name(),
-                              index, current_sec);
-            }
-
-            // Initialize bed mesh render mode dropdown (inside setting_dropdown_row)
-            lv_obj_t* bed_mesh_row =
-                lv_obj_find_by_name(display_settings_overlay_, "row_bed_mesh_mode");
-            lv_obj_t* bed_mesh_dropdown =
-                bed_mesh_row ? lv_obj_find_by_name(bed_mesh_row, "dropdown") : nullptr;
-            if (bed_mesh_dropdown) {
-                // Set dropdown options
-                lv_dropdown_set_options(bed_mesh_dropdown,
-                                        SettingsManager::get_bed_mesh_render_mode_options());
-                // Set initial selection based on current setting
-                int current_mode = SettingsManager::instance().get_bed_mesh_render_mode();
-                lv_dropdown_set_selected(bed_mesh_dropdown, current_mode);
-                spdlog::debug("[{}] Bed mesh mode dropdown initialized to {} ({})", get_name(),
-                              current_mode,
-                              current_mode == 0 ? "Auto" : (current_mode == 1 ? "3D" : "2D"));
-            }
-
-            // Initialize G-code render mode dropdown (inside setting_dropdown_row, currently
-            // hidden)
-            lv_obj_t* gcode_row = lv_obj_find_by_name(display_settings_overlay_, "row_gcode_mode");
-            lv_obj_t* gcode_dropdown =
-                gcode_row ? lv_obj_find_by_name(gcode_row, "dropdown") : nullptr;
-            if (gcode_dropdown) {
-                // Set dropdown options
-                lv_dropdown_set_options(gcode_dropdown,
-                                        SettingsManager::get_gcode_render_mode_options());
-                // Set initial selection based on current setting
-                int current_mode = SettingsManager::instance().get_gcode_render_mode();
-                lv_dropdown_set_selected(gcode_dropdown, current_mode);
-                spdlog::debug(
-                    "[{}] G-code mode dropdown initialized to {} ({})", get_name(), current_mode,
-                    current_mode == 0 ? "Auto" : (current_mode == 1 ? "3D" : "2D Layers"));
-            }
-
-            // Initialize time format dropdown
-            lv_obj_t* time_format_row =
-                lv_obj_find_by_name(display_settings_overlay_, "row_time_format");
-            lv_obj_t* time_format_dropdown =
-                time_format_row ? lv_obj_find_by_name(time_format_row, "dropdown") : nullptr;
-            if (time_format_dropdown) {
-                // Set dropdown options
-                lv_dropdown_set_options(time_format_dropdown,
-                                        SettingsManager::get_time_format_options());
-                // Set initial selection based on current setting
-                auto current_format = SettingsManager::instance().get_time_format();
-                lv_dropdown_set_selected(time_format_dropdown,
-                                         static_cast<uint32_t>(current_format));
-                spdlog::debug("[{}] Time format dropdown initialized to {} ({})", get_name(),
-                              static_cast<int>(current_format),
-                              current_format == TimeFormat::HOUR_12 ? "12H" : "24H");
-            }
-
-            // Initially hidden
-            lv_obj_add_flag(display_settings_overlay_, LV_OBJ_FLAG_HIDDEN);
-            spdlog::info("[{}] Display settings overlay created", get_name());
-        } else {
-            spdlog::error("[{}] Failed to create display settings overlay from XML", get_name());
-            return;
-        }
-    }
-
-    // Push overlay onto navigation history and show it
-    if (display_settings_overlay_) {
-        ui_nav_push_overlay(display_settings_overlay_);
-    }
+    auto& overlay = helix::settings::get_display_settings_overlay();
+    overlay.show(parent_screen_);
 }
 
 void SettingsPanel::handle_filament_sensors_clicked() {
-    spdlog::debug("[{}] Filament Sensors clicked - opening overlay", get_name());
+    spdlog::debug("[{}] Filament Sensors clicked - delegating to FilamentSensorSettingsOverlay",
+                  get_name());
 
-    // Create filament sensors overlay on first access (lazy initialization)
-    if (!filament_sensors_overlay_ && parent_screen_) {
-        spdlog::debug("[{}] Creating filament sensors overlay...", get_name());
-
-        // Create from XML - component name matches filename
-        filament_sensors_overlay_ = static_cast<lv_obj_t*>(
-            lv_xml_create(parent_screen_, "filament_sensors_overlay", nullptr));
-        if (filament_sensors_overlay_) {
-            // Back button already wired via header_bar XML event_cb (on_header_back_clicked)
-
-            // Note: Master toggle state and events are handled declaratively via XML:
-            // - Initial state via bind_state_if_eq to filament_master_enabled subject
-            // - Value changes via event_cb to on_filament_master_toggle_changed
-
-            // Update sensor count label
-            lv_obj_t* count_label =
-                lv_obj_find_by_name(filament_sensors_overlay_, "sensor_count_label");
-            if (count_label) {
-                auto& mgr = helix::FilamentSensorManager::instance();
-                lv_label_set_text_fmt(count_label, "(%zu)", mgr.sensor_count());
-            }
-
-            // Populate sensor list
-            populate_sensor_list();
-
-            // Initially hidden
-            lv_obj_add_flag(filament_sensors_overlay_, LV_OBJ_FLAG_HIDDEN);
-            spdlog::info("[{}] Filament sensors overlay created", get_name());
-        } else {
-            spdlog::error("[{}] Failed to create filament sensors overlay from XML", get_name());
-            return;
-        }
-    }
-
-    // Push overlay onto navigation history and show it
-    if (filament_sensors_overlay_) {
-        ui_nav_push_overlay(filament_sensors_overlay_);
-    }
+    auto& overlay = helix::settings::get_filament_sensor_settings_overlay();
+    overlay.show(parent_screen_);
 }
 
 void SettingsPanel::handle_macro_buttons_clicked() {
-    spdlog::debug("[{}] Macro Buttons clicked - opening overlay", get_name());
+    spdlog::debug("[{}] Macro Buttons clicked - delegating to MacroButtonsOverlay", get_name());
 
-    // Create macro buttons overlay on first access (lazy initialization)
-    if (!macro_buttons_overlay_ && parent_screen_) {
-        spdlog::debug("[{}] Creating macro buttons overlay...", get_name());
-
-        // Create from XML - component name matches filename
-        macro_buttons_overlay_ =
-            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "macro_buttons_overlay", nullptr));
-        if (!macro_buttons_overlay_) {
-            spdlog::error("[{}] Failed to create macro buttons overlay from XML", get_name());
-            return;
-        }
-
-        // Back button already wired via header_bar XML event_cb (on_header_back_clicked)
-
-        // Initially hidden (dropdowns populated via populate_macro_dropdowns())
-        lv_obj_add_flag(macro_buttons_overlay_, LV_OBJ_FLAG_HIDDEN);
-        spdlog::info("[{}] Macro buttons overlay created", get_name());
-    }
-
-    // Populate dropdowns every time overlay is shown (handles printer reconnection)
-    populate_macro_dropdowns();
-
-    // Push overlay onto navigation history and show it
-    if (macro_buttons_overlay_) {
-        ui_nav_push_overlay(macro_buttons_overlay_);
-    }
+    auto& overlay = helix::settings::get_macro_buttons_overlay();
+    overlay.show(parent_screen_);
 }
 
-void SettingsPanel::populate_macro_dropdowns() {
-    if (!macro_buttons_overlay_) {
-        return;
-    }
-
-    spdlog::debug("[{}] Refreshing macro dropdowns...", get_name());
-
-    // === Populate Quick Button Dropdowns ===
-    // Options: "(Empty)", then slot display names
-    std::string quick_button_options = "(Empty)";
-    for (const auto& slot : StandardMacros::instance().all()) {
-        quick_button_options += "\n" + slot.display_name;
-    }
-
-    // Get current quick button config
-    Config* config = Config::get_instance();
-    std::string qb1_slot =
-        config ? config->get<std::string>("/standard_macros/quick_button_1", "clean_nozzle")
-               : "clean_nozzle";
-    std::string qb2_slot =
-        config ? config->get<std::string>("/standard_macros/quick_button_2", "bed_level")
-               : "bed_level";
-
-    // Helper to find index for a slot name
-    auto find_slot_index = [](const std::string& slot_name) -> int {
-        if (slot_name.empty())
-            return 0; // (Empty)
-        const auto& slots = StandardMacros::instance().all();
-        for (size_t i = 0; i < slots.size(); ++i) {
-            if (slots[i].slot_name == slot_name) {
-                return static_cast<int>(i) + 1; // +1 because 0 is "(Empty)"
-            }
-        }
-        return 0;
-    };
-
-    // Quick Button 1
-    lv_obj_t* qb1_row = lv_obj_find_by_name(macro_buttons_overlay_, "row_quick_button_1");
-    lv_obj_t* qb1_dropdown = qb1_row ? lv_obj_find_by_name(qb1_row, "dropdown") : nullptr;
-    if (qb1_dropdown) {
-        lv_dropdown_set_options(qb1_dropdown, quick_button_options.c_str());
-        lv_dropdown_set_selected(qb1_dropdown, find_slot_index(qb1_slot));
-    }
-
-    // Quick Button 2
-    lv_obj_t* qb2_row = lv_obj_find_by_name(macro_buttons_overlay_, "row_quick_button_2");
-    lv_obj_t* qb2_dropdown = qb2_row ? lv_obj_find_by_name(qb2_row, "dropdown") : nullptr;
-    if (qb2_dropdown) {
-        lv_dropdown_set_options(qb2_dropdown, quick_button_options.c_str());
-        lv_dropdown_set_selected(qb2_dropdown, find_slot_index(qb2_slot));
-    }
-
-    // === Populate Standard Macro Dropdowns ===
-    // Get sorted list of all printer macros from MoonrakerClient
-    std::vector<std::string> printer_macros;
-    MoonrakerClient* client = get_moonraker_client();
-    if (client) {
-        const auto& macros = client->hardware().macros();
-        for (const auto& macro : macros) {
-            printer_macros.push_back(macro);
-        }
-        std::sort(printer_macros.begin(), printer_macros.end());
-    }
-
-    // Row names matching XML
-    const std::vector<std::pair<StandardMacroSlot, std::string>> slot_rows = {
-        {StandardMacroSlot::LoadFilament, "row_load_filament"},
-        {StandardMacroSlot::UnloadFilament, "row_unload_filament"},
-        {StandardMacroSlot::Purge, "row_purge"},
-        {StandardMacroSlot::Pause, "row_pause"},
-        {StandardMacroSlot::Resume, "row_resume"},
-        {StandardMacroSlot::Cancel, "row_cancel"},
-        {StandardMacroSlot::BedLevel, "row_bed_level"},
-        {StandardMacroSlot::CleanNozzle, "row_clean_nozzle"},
-        {StandardMacroSlot::HeatSoak, "row_heat_soak"},
-    };
-
-    for (const auto& [slot, row_name] : slot_rows) {
-        lv_obj_t* row = lv_obj_find_by_name(macro_buttons_overlay_, row_name.c_str());
-        lv_obj_t* dropdown = row ? lv_obj_find_by_name(row, "dropdown") : nullptr;
-        if (!dropdown)
-            continue;
-
-        const auto& info = StandardMacros::instance().get(slot);
-
-        // Build options string - first option shows auto-detected or empty
-        std::string options;
-        if (!info.detected_macro.empty()) {
-            options = "(Auto: " + info.detected_macro + ")";
-        } else if (!info.fallback_macro.empty()) {
-            options = "(Auto: " + info.fallback_macro + ")";
-        } else {
-            options = "(Empty)";
-        }
-
-        // Add all printer macros
-        for (const auto& macro : printer_macros) {
-            options += "\n" + macro;
-        }
-
-        lv_dropdown_set_options(dropdown, options.c_str());
-
-        // Set selected value
-        if (!info.configured_macro.empty()) {
-            // Find the configured macro in the list
-            int idx = 1; // Start after "(Auto/Empty)"
-            for (const auto& macro : printer_macros) {
-                if (macro == info.configured_macro) {
-                    lv_dropdown_set_selected(dropdown, idx);
-                    break;
-                }
-                ++idx;
-            }
-        } else {
-            // Use auto (index 0)
-            lv_dropdown_set_selected(dropdown, 0);
-        }
-    }
-
-    spdlog::debug("[{}] Macro dropdowns refreshed ({} printer macros)", get_name(),
-                  printer_macros.size());
-}
-
-void SettingsPanel::populate_sensor_list() {
-    if (!filament_sensors_overlay_) {
-        return;
-    }
-
-    lv_obj_t* sensors_list = lv_obj_find_by_name(filament_sensors_overlay_, "sensors_list");
-    if (!sensors_list) {
-        spdlog::error("[{}] Could not find sensors_list container", get_name());
-        return;
-    }
-
-    // Get discovered sensors
-    auto& mgr = helix::FilamentSensorManager::instance();
-    auto sensors = mgr.get_sensors();
-
-    spdlog::debug("[{}] Populating sensor list with {} sensors", get_name(), sensors.size());
-
-    // NOTE: Placeholder visibility is handled by XML binding to filament_sensor_count subject
-    // via <lv_obj-bind_flag_if_ne subject="filament_sensor_count" flag="hidden" ref_value="0"/>
-
-    // Create a row for each sensor
-    for (const auto& sensor : sensors) {
-        // Create sensor row from XML component
-        const char* attrs[] = {
-            "sensor_name", sensor.sensor_name.c_str(), "sensor_type",
-            sensor.type == helix::FilamentSensorType::MOTION ? "motion" : "switch", nullptr};
-        auto* row =
-            static_cast<lv_obj_t*>(lv_xml_create(sensors_list, "filament_sensor_row", attrs));
-        if (!row) {
-            spdlog::error("[{}] Failed to create sensor row for {}", get_name(),
-                          sensor.sensor_name);
-            continue;
-        }
-
-        // Store klipper_name as user data for callbacks
-        // Note: We need to allocate this because sensor goes out of scope
-        char* klipper_name = static_cast<char*>(lv_malloc(sensor.klipper_name.size() + 1));
-        if (!klipper_name) {
-            spdlog::error("[{}] Failed to allocate memory for sensor name: {}", get_name(),
-                          sensor.klipper_name);
-            continue;
-        }
-        strcpy(klipper_name, sensor.klipper_name.c_str());
-        lv_obj_set_user_data(row, klipper_name);
-
-        // Register cleanup to free allocated string when row is deleted
-        // (LV_EVENT_DELETE is acceptable exception to "no lv_obj_add_event_cb" rule)
-        lv_obj_add_event_cb(
-            row,
-            [](lv_event_t* e) {
-                lv_obj_t* obj = lv_event_get_target_obj(e);
-                char* data = static_cast<char*>(lv_obj_get_user_data(obj));
-                if (data) {
-                    lv_free(data);
-                }
-            },
-            LV_EVENT_DELETE, nullptr);
-
-        // Wire up role dropdown
-        lv_obj_t* role_dropdown = lv_obj_find_by_name(row, "role_dropdown");
-        if (role_dropdown) {
-            // Set options with proper newline separators (XML can't do this)
-            lv_dropdown_set_options(role_dropdown, "None\nRunout\nToolhead\nEntry");
-
-            // Set current role
-            lv_dropdown_set_selected(role_dropdown, static_cast<uint32_t>(sensor.role));
-
-            // Store klipper_name reference for callback
-            lv_obj_set_user_data(role_dropdown, klipper_name);
-
-            // Wire up value change
-            lv_obj_add_event_cb(
-                role_dropdown,
-                [](lv_event_t* e) {
-                    auto* dropdown = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-                    auto* klipper_name_ptr =
-                        static_cast<const char*>(lv_obj_get_user_data(dropdown));
-                    if (!klipper_name_ptr)
-                        return;
-
-                    int index = static_cast<int>(lv_dropdown_get_selected(dropdown));
-                    auto role = static_cast<helix::FilamentSensorRole>(index);
-
-                    auto& mgr = helix::FilamentSensorManager::instance();
-                    mgr.set_sensor_role(klipper_name_ptr, role);
-                    mgr.save_config();
-                    spdlog::info("[SettingsPanel] Sensor {} role changed to {}", klipper_name_ptr,
-                                 helix::role_to_config_string(role));
-                },
-                LV_EVENT_VALUE_CHANGED, nullptr);
-        }
-
-        // Wire up enable toggle
-        lv_obj_t* enable_toggle = lv_obj_find_by_name(row, "enable_toggle");
-        if (enable_toggle) {
-            // Set current state
-            if (sensor.enabled) {
-                lv_obj_add_state(enable_toggle, LV_STATE_CHECKED);
-            } else {
-                lv_obj_remove_state(enable_toggle, LV_STATE_CHECKED);
-            }
-
-            // Store klipper_name reference for callback
-            lv_obj_set_user_data(enable_toggle, klipper_name);
-
-            // Wire up value change
-            lv_obj_add_event_cb(
-                enable_toggle,
-                [](lv_event_t* e) {
-                    auto* toggle = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-                    auto* klipper_name_ptr = static_cast<const char*>(lv_obj_get_user_data(toggle));
-                    if (!klipper_name_ptr)
-                        return;
-
-                    bool enabled = lv_obj_has_state(toggle, LV_STATE_CHECKED);
-
-                    auto& mgr = helix::FilamentSensorManager::instance();
-                    mgr.set_sensor_enabled(klipper_name_ptr, enabled);
-                    mgr.save_config();
-                    spdlog::info("[SettingsPanel] Sensor {} enabled: {}", klipper_name_ptr,
-                                 enabled ? "ON" : "OFF");
-                },
-                LV_EVENT_VALUE_CHANGED, nullptr);
-        }
-
-        spdlog::debug("[{}]   ✓ Created row for sensor: {}", get_name(), sensor.sensor_name);
-    }
-}
+// Note: populate_macro_dropdowns() moved to MacroButtonsOverlay::populate_dropdowns()
+// See ui_settings_macro_buttons.cpp
+// Note: populate_sensor_list() moved to FilamentSensorSettingsOverlay::populate_sensor_list()
+// See ui_settings_filament_sensors.cpp
 
 void SettingsPanel::handle_machine_limits_clicked() {
-    spdlog::debug("[{}] Machine Limits clicked - opening overlay", get_name());
+    spdlog::debug("[{}] Machine Limits clicked - delegating to MachineLimitsOverlay", get_name());
 
-    // Create machine limits overlay on first access (lazy initialization)
-    if (!machine_limits_overlay_ && parent_screen_) {
-        spdlog::debug("[{}] Creating machine limits overlay...", get_name());
-
-        machine_limits_overlay_ = static_cast<lv_obj_t*>(
-            lv_xml_create(parent_screen_, "machine_limits_overlay", nullptr));
-
-        if (machine_limits_overlay_) {
-            // Initially hidden
-            lv_obj_add_flag(machine_limits_overlay_, LV_OBJ_FLAG_HIDDEN);
-            spdlog::info("[{}] Machine limits overlay created", get_name());
-        } else {
-            spdlog::error("[{}] Failed to create machine limits overlay from XML", get_name());
-            ui_toast_show(ToastSeverity::ERROR, "Failed to load overlay", 2000);
-            return;
-        }
-    }
-
-    // Query current limits from printer
-    if (api_) {
-        api_->get_machine_limits(
-            [this](const MachineLimits& limits) {
-                // Capture limits by value and defer to main thread for LVGL calls
-                ui_queue_update([this, limits]() {
-                    spdlog::info("[{}] Got machine limits: vel={}, accel={}, a2d={}, scv={}",
-                                 get_name(), limits.max_velocity, limits.max_accel,
-                                 limits.max_accel_to_decel, limits.square_corner_velocity);
-
-                    // Store both current and original for reset
-                    current_limits_ = limits;
-                    original_limits_ = limits;
-
-                    // Update display and sliders
-                    update_limits_display();
-                    update_limits_sliders();
-
-                    // Update read-only Z values
-                    if (machine_limits_overlay_) {
-                        lv_obj_t* z_vel_row =
-                            lv_obj_find_by_name(machine_limits_overlay_, "row_max_z_velocity");
-                        if (z_vel_row) {
-                            lv_obj_t* value = lv_obj_find_by_name(z_vel_row, "value");
-                            if (value) {
-                                char buf[32];
-                                snprintf(buf, sizeof(buf), "%.0f mm/s", limits.max_z_velocity);
-                                lv_label_set_text(value, buf);
-                            }
-                        }
-                        lv_obj_t* z_accel_row =
-                            lv_obj_find_by_name(machine_limits_overlay_, "row_max_z_accel");
-                        if (z_accel_row) {
-                            lv_obj_t* value = lv_obj_find_by_name(z_accel_row, "value");
-                            if (value) {
-                                char buf[32];
-                                snprintf(buf, sizeof(buf), "%.0f mm/s²", limits.max_z_accel);
-                                lv_label_set_text(value, buf);
-                            }
-                        }
-                    }
-
-                    // Push overlay onto navigation history and show it
-                    if (machine_limits_overlay_) {
-                        ui_nav_push_overlay(machine_limits_overlay_);
-                    }
-                });
-            },
-            [this](const MoonrakerError& err) {
-                // Capture error by value and defer to main thread for LVGL calls
-                ui_queue_update([this, err]() {
-                    spdlog::error("[{}] Failed to get machine limits: {}", get_name(), err.message);
-                    ui_toast_show(ToastSeverity::ERROR, "Failed to get limits", 2000);
-                });
-            });
-    } else {
-        // No API - show overlay with default values
-        spdlog::warn("[{}] No API available, showing defaults", get_name());
-        if (machine_limits_overlay_) {
-            ui_nav_push_overlay(machine_limits_overlay_);
-        }
-    }
-}
-
-void SettingsPanel::update_limits_display() {
-    // Update max velocity display
-    snprintf(max_velocity_display_buf_, sizeof(max_velocity_display_buf_), "%.0f mm/s",
-             current_limits_.max_velocity);
-    lv_subject_copy_string(&max_velocity_display_subject_, max_velocity_display_buf_);
-
-    // Update max accel display
-    snprintf(max_accel_display_buf_, sizeof(max_accel_display_buf_), "%.0f mm/s²",
-             current_limits_.max_accel);
-    lv_subject_copy_string(&max_accel_display_subject_, max_accel_display_buf_);
-
-    // Update accel to decel display
-    snprintf(accel_to_decel_display_buf_, sizeof(accel_to_decel_display_buf_), "%.0f mm/s²",
-             current_limits_.max_accel_to_decel);
-    lv_subject_copy_string(&accel_to_decel_display_subject_, accel_to_decel_display_buf_);
-
-    // Update square corner velocity display
-    snprintf(square_corner_velocity_display_buf_, sizeof(square_corner_velocity_display_buf_),
-             "%.0f mm/s", current_limits_.square_corner_velocity);
-    lv_subject_copy_string(&square_corner_velocity_display_subject_,
-                           square_corner_velocity_display_buf_);
-}
-
-void SettingsPanel::update_limits_sliders() {
-    if (!machine_limits_overlay_) {
-        return;
-    }
-
-    // Update max velocity slider
-    lv_obj_t* vel_slider = lv_obj_find_by_name(machine_limits_overlay_, "max_velocity_slider");
-    if (vel_slider) {
-        lv_slider_set_value(vel_slider, static_cast<int>(current_limits_.max_velocity),
-                            LV_ANIM_OFF);
-    }
-
-    // Update max accel slider
-    lv_obj_t* accel_slider = lv_obj_find_by_name(machine_limits_overlay_, "max_accel_slider");
-    if (accel_slider) {
-        lv_slider_set_value(accel_slider, static_cast<int>(current_limits_.max_accel), LV_ANIM_OFF);
-    }
-
-    // Update accel to decel slider
-    lv_obj_t* a2d_slider = lv_obj_find_by_name(machine_limits_overlay_, "accel_to_decel_slider");
-    if (a2d_slider) {
-        lv_slider_set_value(a2d_slider, static_cast<int>(current_limits_.max_accel_to_decel),
-                            LV_ANIM_OFF);
-    }
-
-    // Update square corner velocity slider
-    lv_obj_t* scv_slider =
-        lv_obj_find_by_name(machine_limits_overlay_, "square_corner_velocity_slider");
-    if (scv_slider) {
-        lv_slider_set_value(scv_slider, static_cast<int>(current_limits_.square_corner_velocity),
-                            LV_ANIM_OFF);
-    }
-}
-
-void SettingsPanel::handle_max_velocity_changed(int value) {
-    current_limits_.max_velocity = static_cast<double>(value);
-    snprintf(max_velocity_display_buf_, sizeof(max_velocity_display_buf_), "%d mm/s", value);
-    lv_subject_copy_string(&max_velocity_display_subject_, max_velocity_display_buf_);
-}
-
-void SettingsPanel::handle_max_accel_changed(int value) {
-    current_limits_.max_accel = static_cast<double>(value);
-    snprintf(max_accel_display_buf_, sizeof(max_accel_display_buf_), "%d mm/s²", value);
-    lv_subject_copy_string(&max_accel_display_subject_, max_accel_display_buf_);
-}
-
-void SettingsPanel::handle_accel_to_decel_changed(int value) {
-    current_limits_.max_accel_to_decel = static_cast<double>(value);
-    snprintf(accel_to_decel_display_buf_, sizeof(accel_to_decel_display_buf_), "%d mm/s²", value);
-    lv_subject_copy_string(&accel_to_decel_display_subject_, accel_to_decel_display_buf_);
-}
-
-void SettingsPanel::handle_square_corner_velocity_changed(int value) {
-    current_limits_.square_corner_velocity = static_cast<double>(value);
-    snprintf(square_corner_velocity_display_buf_, sizeof(square_corner_velocity_display_buf_),
-             "%d mm/s", value);
-    lv_subject_copy_string(&square_corner_velocity_display_subject_,
-                           square_corner_velocity_display_buf_);
-}
-
-void SettingsPanel::handle_limits_reset() {
-    spdlog::info("[{}] Resetting limits to original values", get_name());
-    current_limits_ = original_limits_;
-    update_limits_display();
-    update_limits_sliders();
-}
-
-void SettingsPanel::handle_limits_apply() {
-    spdlog::info("[{}] Applying machine limits: vel={}, accel={}, a2d={}, scv={}", get_name(),
-                 current_limits_.max_velocity, current_limits_.max_accel,
-                 current_limits_.max_accel_to_decel, current_limits_.square_corner_velocity);
-
-    if (!api_) {
-        ui_toast_show(ToastSeverity::ERROR, "No printer connection", 2000);
-        return;
-    }
-
-    api_->set_machine_limits(
-        current_limits_,
-        [this]() {
-            // Defer to main thread for LVGL calls
-            ui_queue_update([this]() {
-                spdlog::info("[{}] Machine limits applied successfully", get_name());
-                ui_toast_show(ToastSeverity::SUCCESS, "Limits applied", 2000);
-                // Update original to prevent reset from reverting
-                original_limits_ = current_limits_;
-            });
-        },
-        [this](const MoonrakerError& err) {
-            // Capture error by value and defer to main thread for LVGL calls
-            ui_queue_update([this, err]() {
-                spdlog::error("[{}] Failed to apply machine limits: {}", get_name(), err.message);
-                ui_toast_show(ToastSeverity::ERROR, "Failed to apply limits", 2000);
-            });
-        });
+    auto& overlay = helix::settings::get_machine_limits_overlay();
+    overlay.set_api(api_);
+    overlay.show(parent_screen_);
 }
 
 void SettingsPanel::handle_network_clicked() {
@@ -1482,256 +735,18 @@ void SettingsPanel::perform_factory_reset() {
 }
 
 void SettingsPanel::handle_hardware_health_clicked() {
-    spdlog::debug("[{}] Hardware Health clicked - opening overlay", get_name());
+    spdlog::debug("[{}] Hardware Health clicked - delegating to HardwareHealthOverlay", get_name());
 
-    // Create overlay on first access (lazy initialization)
-    if (!hardware_health_overlay_ && parent_screen_) {
-        spdlog::debug("[{}] Creating hardware health overlay...", get_name());
-
-        hardware_health_overlay_ = static_cast<lv_obj_t*>(
-            lv_xml_create(parent_screen_, "hardware_health_overlay", nullptr));
-
-        if (hardware_health_overlay_) {
-            lv_obj_add_flag(hardware_health_overlay_, LV_OBJ_FLAG_HIDDEN);
-            spdlog::info("[{}] Hardware health overlay created", get_name());
-        } else {
-            spdlog::error("[{}] Failed to create hardware health overlay", get_name());
-            return;
-        }
-    }
-
-    // Populate the issues lists before showing
-    populate_hardware_issues();
-
-    // Push overlay onto navigation history and show it
-    if (hardware_health_overlay_) {
-        ui_nav_push_overlay(hardware_health_overlay_);
-    }
+    auto& overlay = helix::settings::get_hardware_health_overlay();
+    overlay.set_printer_state(&printer_state_);
+    overlay.show(parent_screen_);
 }
 
-void SettingsPanel::populate_hardware_issues() {
-    if (!hardware_health_overlay_) {
-        return;
-    }
+// Note: populate_hardware_issues() moved to HardwareHealthOverlay
+// See ui_settings_hardware_health.cpp
 
-    const auto& result = printer_state_.get_hardware_validation_result();
-
-    // Helper to convert severity enum to string for XML attribute
-    auto severity_to_string = [](HardwareIssueSeverity sev) -> const char* {
-        switch (sev) {
-        case HardwareIssueSeverity::CRITICAL:
-            return "error";
-        case HardwareIssueSeverity::WARNING:
-            return "warning";
-        case HardwareIssueSeverity::INFO:
-        default:
-            return "info";
-        }
-    };
-
-    // Helper to populate a list with issues
-    auto populate_list = [&](const char* list_name, const std::vector<HardwareIssue>& issues) {
-        lv_obj_t* list = lv_obj_find_by_name(hardware_health_overlay_, list_name);
-        if (!list) {
-            spdlog::warn("[{}] Could not find list: {}", get_name(), list_name);
-            return;
-        }
-
-        // Clear existing children
-        lv_obj_clean(list);
-
-        // Add issue rows
-        for (const auto& issue : issues) {
-            // Create row with severity attribute for colored left border
-            const char* attrs[] = {"severity", severity_to_string(issue.severity), nullptr};
-            lv_obj_t* row =
-                static_cast<lv_obj_t*>(lv_xml_create(list, "hardware_issue_row", attrs));
-            if (!row) {
-                continue;
-            }
-
-            // Finalize severity_card to show correct icon
-            ui_severity_card_finalize(row);
-
-            // Set hardware name
-            lv_obj_t* name_label = lv_obj_find_by_name(row, "hardware_name");
-            if (name_label) {
-                lv_label_set_text(name_label, issue.hardware_name.c_str());
-            }
-
-            // Set issue message
-            lv_obj_t* message_label = lv_obj_find_by_name(row, "issue_message");
-            if (message_label) {
-                lv_label_set_text(message_label, issue.message.c_str());
-            }
-
-            // Configure action buttons for non-critical issues
-            if (issue.severity != HardwareIssueSeverity::CRITICAL) {
-                lv_obj_t* action_buttons = lv_obj_find_by_name(row, "action_buttons");
-                lv_obj_t* ignore_btn = lv_obj_find_by_name(row, "ignore_btn");
-                lv_obj_t* save_btn = lv_obj_find_by_name(row, "save_btn");
-
-                if (action_buttons && ignore_btn) {
-                    // Show button container
-                    lv_obj_clear_flag(action_buttons, LV_OBJ_FLAG_HIDDEN);
-
-                    // Show Save button only for INFO severity (newly discovered)
-                    if (save_btn && issue.severity == HardwareIssueSeverity::INFO) {
-                        lv_obj_clear_flag(save_btn, LV_OBJ_FLAG_HIDDEN);
-                    }
-
-                    // Store hardware name in row for callback (freed on row delete)
-                    char* name_copy = strdup(issue.hardware_name.c_str());
-                    lv_obj_set_user_data(row, name_copy);
-
-                    // Add delete handler to free the strdup'd name
-                    lv_obj_add_event_cb(
-                        row,
-                        [](lv_event_t* e) {
-                            auto* obj = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-                            void* data = lv_obj_get_user_data(obj);
-                            if (data) {
-                                free(data);
-                            }
-                        },
-                        LV_EVENT_DELETE, nullptr);
-
-                    // Helper lambda for button click handlers
-                    auto add_button_handler = [&](lv_obj_t* btn, bool is_ignore) {
-                        lv_obj_add_event_cb(
-                            btn,
-                            [](lv_event_t* e) {
-                                LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] hardware_action_clicked");
-                                auto* btn = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-                                // Navigate up: btn -> action_buttons -> row
-                                lv_obj_t* action_container = lv_obj_get_parent(btn);
-                                lv_obj_t* row = lv_obj_get_parent(action_container);
-                                const char* hw_name =
-                                    static_cast<const char*>(lv_obj_get_user_data(row));
-                                bool is_ignore = static_cast<bool>(
-                                    reinterpret_cast<uintptr_t>(lv_event_get_user_data(e)));
-
-                                if (hw_name) {
-                                    get_global_settings_panel().handle_hardware_action(hw_name,
-                                                                                       is_ignore);
-                                }
-                                LVGL_SAFE_EVENT_CB_END();
-                            },
-                            LV_EVENT_CLICKED,
-                            reinterpret_cast<void*>(static_cast<uintptr_t>(is_ignore)));
-                    };
-
-                    // Wire up Ignore button (always visible for non-critical)
-                    add_button_handler(ignore_btn, true);
-
-                    // Wire up Save button (only for INFO severity)
-                    if (save_btn && issue.severity == HardwareIssueSeverity::INFO) {
-                        add_button_handler(save_btn, false);
-                    }
-                }
-            }
-        }
-    };
-
-    // Populate each section
-    populate_list("critical_issues_list", result.critical_missing);
-    populate_list("warning_issues_list", result.expected_missing);
-    populate_list("info_issues_list", result.newly_discovered);
-    populate_list("session_issues_list", result.changed_from_last_session);
-
-    spdlog::debug("[{}] Populated hardware issues: {} critical, {} warning, {} info, {} session",
-                  get_name(), result.critical_missing.size(), result.expected_missing.size(),
-                  result.newly_discovered.size(), result.changed_from_last_session.size());
-}
-
-void SettingsPanel::handle_hardware_action(const char* hardware_name, bool is_ignore) {
-    if (!hardware_name) {
-        return;
-    }
-
-    Config* config = Config::get_instance();
-    std::string hw_name(hardware_name);
-
-    if (is_ignore) {
-        // "Ignore" - Mark hardware as optional (no confirmation needed)
-        HardwareValidator::set_hardware_optional(config, hw_name, true);
-        ui_toast_show(ToastSeverity::SUCCESS, "Hardware marked as optional", 2000);
-        spdlog::info("[{}] Marked hardware '{}' as optional", get_name(), hw_name);
-
-        // Remove from cached validation result and refresh overlay
-        printer_state_.remove_hardware_issue(hw_name);
-        populate_hardware_issues();
-    } else {
-        // "Save" - Add to expected hardware (with confirmation)
-        // Store name for confirmation callback
-        pending_hardware_save_ = hw_name;
-
-        // Static message buffer (safe since we close existing dialogs first)
-        static char message_buf[256];
-        snprintf(message_buf, sizeof(message_buf),
-                 "Add '%s' to expected hardware?\n\nYou'll be notified if it's removed later.",
-                 hw_name.c_str());
-
-        // Close any existing dialog first
-        if (hardware_save_dialog_) {
-            ui_modal_hide(hardware_save_dialog_);
-            hardware_save_dialog_ = nullptr;
-        }
-
-        // Show confirmation dialog
-        hardware_save_dialog_ =
-            ui_modal_show_confirmation("Save Hardware", message_buf, ModalSeverity::Info, "Save",
-                                       on_hardware_save_confirm, on_hardware_save_cancel, this);
-    }
-}
-
-void SettingsPanel::on_hardware_save_confirm(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_hardware_save_confirm");
-    auto* self = static_cast<SettingsPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        self->handle_hardware_save_confirm();
-    }
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void SettingsPanel::on_hardware_save_cancel(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_hardware_save_cancel");
-    auto* self = static_cast<SettingsPanel*>(lv_event_get_user_data(e));
-    if (self) {
-        self->handle_hardware_save_cancel();
-    }
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void SettingsPanel::handle_hardware_save_confirm() {
-    // Close dialog first
-    if (hardware_save_dialog_) {
-        ui_modal_hide(hardware_save_dialog_);
-        hardware_save_dialog_ = nullptr;
-    }
-
-    Config* cfg = Config::get_instance();
-
-    // Add to expected hardware list
-    HardwareValidator::add_expected_hardware(cfg, pending_hardware_save_);
-    ui_toast_show(ToastSeverity::SUCCESS, "Hardware saved to config", 2000);
-    spdlog::info("[{}] Added hardware '{}' to expected list", get_name(), pending_hardware_save_);
-
-    // Remove from cached validation result and refresh overlay
-    printer_state_.remove_hardware_issue(pending_hardware_save_);
-    populate_hardware_issues();
-    pending_hardware_save_.clear();
-}
-
-void SettingsPanel::handle_hardware_save_cancel() {
-    // Close dialog
-    if (hardware_save_dialog_) {
-        ui_modal_hide(hardware_save_dialog_);
-        hardware_save_dialog_ = nullptr;
-    }
-
-    pending_hardware_save_.clear();
-}
+// Note: handle_hardware_action() and related methods moved to HardwareHealthOverlay
+// See ui_settings_hardware_health.cpp
 
 // ============================================================================
 // STATIC TRAMPOLINES (XML event_cb pattern - use global singleton)
@@ -1842,56 +857,11 @@ void SettingsPanel::on_plugins_clicked(lv_event_t* /*e*/) {
 }
 
 // ============================================================================
-// STATIC TRAMPOLINES - MACHINE LIMITS
-// ============================================================================
-
-void SettingsPanel::on_max_velocity_changed(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_max_velocity_changed");
-    auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int value = lv_slider_get_value(slider);
-    get_global_settings_panel().handle_max_velocity_changed(value);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void SettingsPanel::on_max_accel_changed(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_max_accel_changed");
-    auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int value = lv_slider_get_value(slider);
-    get_global_settings_panel().handle_max_accel_changed(value);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void SettingsPanel::on_accel_to_decel_changed(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_accel_to_decel_changed");
-    auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int value = lv_slider_get_value(slider);
-    get_global_settings_panel().handle_accel_to_decel_changed(value);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void SettingsPanel::on_square_corner_velocity_changed(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_square_corner_velocity_changed");
-    auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int value = lv_slider_get_value(slider);
-    get_global_settings_panel().handle_square_corner_velocity_changed(value);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void SettingsPanel::on_limits_reset(lv_event_t* /*e*/) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_limits_reset");
-    get_global_settings_panel().handle_limits_reset();
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void SettingsPanel::on_limits_apply(lv_event_t* /*e*/) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_limits_apply");
-    get_global_settings_panel().handle_limits_apply();
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-// ============================================================================
 // STATIC TRAMPOLINES - OVERLAYS
 // ============================================================================
+
+// Note: Machine limits overlay callbacks are now in MachineLimitsOverlay class
+// See ui_settings_machine_limits.cpp
 
 void SettingsPanel::on_restart_later_clicked(lv_event_t* /* e */) {
     LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_restart_later_clicked");
@@ -1917,19 +887,8 @@ void SettingsPanel::on_header_back_clicked(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
-void SettingsPanel::on_brightness_changed(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_brightness_changed");
-    auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int value = lv_slider_get_value(slider);
-    SettingsManager::instance().set_brightness(value);
-
-    // Update subject (label binding happens in XML)
-    auto& panel_ref = get_global_settings_panel();
-    snprintf(panel_ref.brightness_value_buf_, sizeof(panel_ref.brightness_value_buf_), "%d%%",
-             value);
-    lv_subject_copy_string(&panel_ref.brightness_value_subject_, panel_ref.brightness_value_buf_);
-    LVGL_SAFE_EVENT_CB_END();
-}
+// Note: on_brightness_changed is now handled by DisplaySettingsOverlay
+// See ui_settings_display.cpp
 
 // ============================================================================
 // GLOBAL INSTANCE
