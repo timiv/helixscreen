@@ -1,6 +1,6 @@
 # Input Shaping Panel/Wizard Implementation Plan
 
-**Status**: 🟡 In Progress - Phase 4 Complete
+**Status**: 🟡 In Progress - Phase 5 Complete
 **Created**: 2026-01-13
 **Last Updated**: 2026-01-13
 
@@ -8,7 +8,7 @@
 
 ## Progress Tracking
 
-### Overall Progress: Phase 4 of 7 Complete
+### Overall Progress: Phase 5 of 7 Complete
 
 | Phase | Status | Session | Notes |
 |-------|--------|---------|-------|
@@ -16,7 +16,7 @@
 | **Phase 2**: InputShaperCalibrator | ✅ Complete | 3 | State machine, API integration, 35 tests |
 | **Phase 3**: Platform Detection | ✅ Complete | 4 | PlatformCapabilities, meminfo/cpuinfo parsing, 33 tests |
 | **Phase 4**: UI Panel Rewrite | ✅ Complete | 5 | Panel delegates to calibrator, 78 tests total |
-| **Phase 5**: Frequency Chart | ⬜ Not Started | - | |
+| **Phase 5**: Frequency Chart | ✅ Complete | 6 | FrequencyResponseChart widget, downsampling, 193 assertions |
 | **Phase 6**: First-Run Wizard | ⬜ Not Started | - | |
 | **Phase 7**: Cache & Test Print | ⬜ Not Started | - | |
 
@@ -515,21 +515,24 @@ instead of creating separate XML files per state. This is simpler and already wo
 
 ### Phase 5: Frequency Chart (Chunk C6)
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 
 #### Checkpoints:
-- [ ] Chart widget header created
-- [ ] LVGL chart implementation done
-- [ ] Downsampling for BASIC tier implemented
-- [ ] Table fallback for EMBEDDED tier implemented
-- [ ] XML component created
-- [ ] Screenshot tests pass
-- [ ] Code reviewed
+- [x] Chart widget header created
+- [x] LVGL chart implementation done
+- [x] Downsampling for BASIC tier implemented
+- [x] Table fallback for EMBEDDED tier implemented
+- [x] XML container added to input_shaper_panel.xml
+- [x] Tests pass (193 assertions in 23 test cases)
+- [x] Code reviewed (9/10 quality rating)
 
-**Files to create:**
-- `include/ui_frequency_chart.h`
-- `src/ui/ui_frequency_chart.cpp`
-- `ui_xml/components/frequency_chart.xml`
+**Files created:**
+- `include/ui_frequency_response_chart.h`
+- `src/ui/ui_frequency_response_chart.cpp`
+- `tests/unit/test_frequency_response_chart.cpp`
+
+**Files modified:**
+- `ui_xml/input_shaper_panel.xml` - Added chart_container element
 
 ---
 
@@ -848,3 +851,26 @@ _Log each session here for continuity_
   - `tests/unit/test_input_shaper_panel_integration.cpp`
 - Design decision: Kept existing unified XML approach instead of separate files per state
 - Next: Phase 5 - Frequency Chart
+
+### Session 6 (Phase 5 Implementation)
+- Date: 2026-01-13
+- Branch: `feature/input-shaping` in worktree `helixscreen-input-shaping`
+- Completed:
+  - Created `FrequencyResponseChart` widget following `ui_temp_graph` pattern
+  - Test-first: wrote 23 test cases (193 assertions) before implementation
+  - C-style procedural API with opaque struct
+  - Series management (add, remove, show/hide, up to 8 series)
+  - Data downsampling for BASIC tier (50 points) and STANDARD tier (200 points)
+  - Table mode fallback for EMBEDDED tier (is_chart_mode = false)
+  - Peak frequency marking per series
+  - Frequency and amplitude range configuration
+  - Platform tier switching (creates/destroys LVGL chart widget dynamically)
+  - Code reviewed: 9/10 quality rating, fixed division-by-zero edge case
+  - All tests pass
+- Files created:
+  - `include/ui_frequency_response_chart.h`
+  - `src/ui/ui_frequency_response_chart.cpp`
+  - `tests/unit/test_frequency_response_chart.cpp`
+- Files modified:
+  - `ui_xml/input_shaper_panel.xml` - Added chart_container element
+- Next: Phase 6 - First-Run Wizard
