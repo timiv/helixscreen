@@ -16,6 +16,7 @@
 #include "ui_wizard_led_select.h"
 #include "ui_wizard_printer_identify.h"
 #include "ui_wizard_summary.h"
+#include "ui_wizard_touch_calibration.h"
 #include "ui_wizard_wifi.h"
 
 #include "ams_state.h"
@@ -58,8 +59,11 @@ static char wizard_subtitle_buffer[128];
 // Wizard container instance
 static lv_obj_t* wizard_container = nullptr;
 
-// Track current screen for proper cleanup
-static int current_screen_step = 0;
+// Track current screen for proper cleanup (-1 = no screen loaded yet)
+static int current_screen_step = -1;
+
+// Track if touch calibration step (0) is being skipped - not fbdev or already calibrated
+static bool touch_cal_step_skipped = false;
 
 // Track if AMS step (6) is being skipped - no AMS detected
 static bool ams_step_skipped = false;
@@ -90,7 +94,7 @@ static const char* get_step_subtitle_from_xml(int step);
  * Each component defines its own step_title in its <consts> block
  */
 static const char* const STEP_COMPONENT_NAMES[] = {
-    nullptr,                         // 0 (unused, 1-indexed)
+    "wizard_touch_calibration",      // 0 (may be skipped on non-fbdev)
     "wizard_wifi_setup",             // 1
     "wizard_connection",             // 2
     "wizard_printer_identify",       // 3
@@ -102,7 +106,7 @@ static const char* const STEP_COMPONENT_NAMES[] = {
     "wizard_input_shaper",           // 9 (may be skipped if no accelerometer)
     "wizard_summary"                 // 10
 };
-static constexpr int STEP_COMPONENT_COUNT = 10;
+static constexpr int STEP_COMPONENT_COUNT = 10; // Last step number (summary at step 10)
 
 /**
  * Get step title from XML component's <consts> block
@@ -117,7 +121,7 @@ static constexpr int STEP_COMPONENT_COUNT = 10;
  * eliminating hardcoded title strings in C++.
  */
 static const char* get_step_title_from_xml(int step) {
-    if (step < 1 || step > STEP_COMPONENT_COUNT) {
+    if (step < 0 || step > STEP_COMPONENT_COUNT) {
         spdlog::warn("[Wizard] Invalid step {} for title lookup", step);
         return "Unknown Step";
     }
@@ -145,7 +149,7 @@ static const char* get_step_title_from_xml(int step) {
  * that appear below the title in the wizard header.
  */
 static const char* get_step_subtitle_from_xml(int step) {
-    if (step < 1 || step > STEP_COMPONENT_COUNT) {
+    if (step < 0 || step > STEP_COMPONENT_COUNT) {
         return "";
     }
 
@@ -252,6 +256,7 @@ void ui_wizard_container_register_responsive_constants() {
 
     // Define child components that inherit this constant
     const char* children[] = {
+        "wizard_touch_calibration",
         "wizard_wifi_setup",
         "wizard_connection",
         "wizard_printer_identify",
@@ -310,29 +315,40 @@ lv_obj_t* ui_wizard_create(lv_obj_t* parent) {
 void ui_wizard_navigate_to_step(int step) {
     spdlog::debug("[Wizard] Navigating to step {}", step);
 
-    // Clamp step to valid range (internal steps are always 1-8)
-    if (step < 1)
-        step = 1;
+    // Clamp step to valid range (internal steps are 0-9)
+    if (step < 0)
+        step = 0;
     if (step > STEP_COMPONENT_COUNT)
         step = STEP_COMPONENT_COUNT;
 
     // Reset skip flags when starting wizard from the beginning
     // This ensures correct behavior if wizard is restarted after hardware changes
-    if (step == 1) {
+    if (step == 0) {
+        touch_cal_step_skipped = false;
         ams_step_skipped = false;
         led_step_skipped = false;
         filament_step_skipped = false;
         input_shaper_step_skipped = false;
+
+        // Auto-skip touch calibration step if not needed
+        if (get_wizard_touch_calibration_step()->should_skip()) {
+            touch_cal_step_skipped = true;
+            step = 1;
+            spdlog::debug("[Wizard] Skipping touch calibration step");
+        }
     }
 
     // Calculate display step and total for progress indicator
     // When steps are skipped, we adjust the display numbers:
+    // - Touch cal skip (0): step 1+ displays as-is (touch cal was step 1 when shown)
     // - AMS skip (6): steps 7+ display one lower
     // - LED skip (7): steps 8+ display one lower
     // - Filament skip (8): steps 9+ display one lower
     // - Input shaper skip (9): steps 10+ display one lower
-    // Total = 10 - skipped_count
-    int display_step = step;
+    // Total = 11 - skipped_count (steps 0-10 = 11 total)
+    int display_step = step + 1; // Convert internal step (0-based) to 1-based display
+    if (touch_cal_step_skipped)
+        display_step--;
     if (ams_step_skipped && step > 6)
         display_step--;
     if (led_step_skipped && step > 7)
@@ -342,7 +358,9 @@ void ui_wizard_navigate_to_step(int step) {
     if (input_shaper_step_skipped && step > 9)
         display_step--;
 
-    int display_total = 10;
+    int display_total = 11; // Steps 0-10 = 11 total
+    if (touch_cal_step_skipped)
+        display_total--;
     if (ams_step_skipped)
         display_total--;
     if (led_step_skipped)
@@ -403,13 +421,16 @@ void ui_wizard_set_title(const char* title) {
  * This ensures resources are properly released and screen pointers are reset.
  */
 static void ui_wizard_cleanup_current_screen() {
-    if (current_screen_step == 0) {
+    if (current_screen_step < 0) {
         return; // No screen loaded yet
     }
 
     spdlog::debug("[Wizard] Cleaning up screen for step {}", current_screen_step);
 
     switch (current_screen_step) {
+    case 0: // Touch Calibration
+        get_wizard_touch_calibration_step()->cleanup();
+        break;
     case 1: // WiFi Setup
         get_wizard_wifi_step()->cleanup();
         break;
@@ -477,6 +498,16 @@ static void ui_wizard_load_screen(int step) {
     // Note: Step-specific initialization remains in switch because each step
     // has unique logic (WiFi needs init_wifi_manager, etc.)
     switch (step) {
+    case 0: // Touch Calibration
+        spdlog::debug("[Wizard] Creating touch calibration screen");
+        // Reset Next button to enabled - touch cal uses its own completion logic
+        lv_subject_set_int(&connection_test_passed, 1);
+        get_wizard_touch_calibration_step()->init_subjects();
+        get_wizard_touch_calibration_step()->register_callbacks();
+        get_wizard_touch_calibration_step()->create(content);
+        lv_obj_update_layout(content);
+        break;
+
     case 1: // WiFi Setup
         spdlog::debug("[Wizard] Creating WiFi setup screen");
         // Reset Next button to enabled - WiFi step has no connection test requirement
@@ -771,12 +802,22 @@ void ui_wizard_complete() {
 static void on_back_clicked(lv_event_t* e) {
     (void)e;
     int current = lv_subject_get_int(&current_step);
-    if (current > 1) {
+
+    // Minimum step depends on whether touch calibration was skipped
+    int min_step = touch_cal_step_skipped ? 1 : 0;
+
+    if (current > min_step) {
         int prev_step = current - 1;
 
         // Skip input shaper step (9) when going back if it was skipped
         if (prev_step == 9 && input_shaper_step_skipped) {
             prev_step = 8;
+        }
+
+        // Skip touch calibration step (0) when going back if it was skipped
+        if (prev_step == 0 && touch_cal_step_skipped) {
+            // Can't go back further - touch cal was skipped
+            return;
         }
 
         // Skip filament sensor step (8) when going back if it was skipped

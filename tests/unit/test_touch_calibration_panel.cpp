@@ -1,0 +1,588 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+/**
+ * @file test_touch_calibration_panel.cpp
+ * @brief Unit tests for TouchCalibrationPanel state machine
+ *
+ * Tests the 3-point touch calibration state machine:
+ *
+ * States:
+ *   IDLE -> POINT_1 -> POINT_2 -> POINT_3 -> VERIFY -> COMPLETE
+ *            |          |          |          |
+ *            v          v          v          v
+ *        (capture)  (capture)  (capture)  (accept/retry)
+ *
+ * Written TDD-style - tests WILL FAIL until TouchCalibrationPanel is implemented.
+ */
+
+#include "touch_calibration.h"
+#include "touch_calibration_panel.h"
+
+#include <functional>
+#include <memory>
+
+#include "../catch_amalgamated.hpp"
+
+using namespace helix;
+
+// ============================================================================
+// Test Fixture
+// ============================================================================
+
+/**
+ * @brief Test fixture for TouchCalibrationPanel tests
+ *
+ * Provides panel instance and callback tracking for testing
+ * state machine transitions.
+ */
+class TouchCalibrationPanelTestFixture {
+  public:
+    TouchCalibrationPanelTestFixture() {
+        panel_ = std::make_unique<TouchCalibrationPanel>();
+        panel_->set_screen_size(800, 480);
+
+        // Set up callback to capture completion events
+        panel_->set_completion_callback([this](const TouchCalibration* cal) {
+            callback_called_ = true;
+            if (cal != nullptr && cal->valid) {
+                callback_calibration_ = *cal;
+                callback_received_valid_ = true;
+            } else {
+                callback_received_valid_ = false;
+            }
+        });
+    }
+
+    ~TouchCalibrationPanelTestFixture() = default;
+
+  protected:
+    std::unique_ptr<TouchCalibrationPanel> panel_;
+    bool callback_called_ = false;
+    bool callback_received_valid_ = false;
+    TouchCalibration callback_calibration_;
+
+    /**
+     * @brief Simulate capturing a raw touch point at current step
+     */
+    void capture_raw_point(int x, int y) {
+        panel_->capture_point(Point{x, y});
+    }
+
+    /**
+     * @brief Complete all 3 calibration points with valid data
+     *
+     * Uses points that form a valid triangle to ensure calibration succeeds.
+     */
+    void complete_all_points() {
+        // POINT_1: target (120, 144) - simulate touch at similar raw position
+        capture_raw_point(100, 120);
+        // POINT_2: target (400, 408)
+        capture_raw_point(380, 390);
+        // POINT_3: target (680, 72)
+        capture_raw_point(660, 60);
+    }
+
+    /**
+     * @brief Get state name for debugging
+     */
+    std::string state_name() const {
+        switch (panel_->get_state()) {
+        case TouchCalibrationPanel::State::IDLE:
+            return "IDLE";
+        case TouchCalibrationPanel::State::POINT_1:
+            return "POINT_1";
+        case TouchCalibrationPanel::State::POINT_2:
+            return "POINT_2";
+        case TouchCalibrationPanel::State::POINT_3:
+            return "POINT_3";
+        case TouchCalibrationPanel::State::VERIFY:
+            return "VERIFY";
+        case TouchCalibrationPanel::State::COMPLETE:
+            return "COMPLETE";
+        default:
+            return "UNKNOWN";
+        }
+    }
+};
+
+// ============================================================================
+// Initial State Tests
+// ============================================================================
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture, "TouchCalibrationPanel: Initial state is IDLE",
+                 "[touch-calibration][state][init]") {
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::IDLE);
+}
+
+// ============================================================================
+// Start Calibration Tests
+// ============================================================================
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: start() transitions to POINT_1",
+                 "[touch-calibration][state][start]") {
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::IDLE);
+
+    panel_->start();
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_1);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: start() from non-IDLE resets to POINT_1",
+                 "[touch-calibration][state][start]") {
+    panel_->start();
+    capture_raw_point(100, 100); // Move to POINT_2
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_2);
+
+    panel_->start();
+
+    // Should reset back to POINT_1
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_1);
+}
+
+// ============================================================================
+// Point Capture Sequence Tests
+// ============================================================================
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: capture_point advances POINT_1 to POINT_2",
+                 "[touch-calibration][state][capture]") {
+    panel_->start();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_1);
+
+    capture_raw_point(100, 120);
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_2);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: capture_point advances POINT_2 to POINT_3",
+                 "[touch-calibration][state][capture]") {
+    panel_->start();
+    capture_raw_point(100, 120); // POINT_1 -> POINT_2
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_2);
+
+    capture_raw_point(380, 390);
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_3);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: capture_point advances POINT_3 to VERIFY",
+                 "[touch-calibration][state][capture]") {
+    panel_->start();
+    capture_raw_point(100, 120); // POINT_1 -> POINT_2
+    capture_raw_point(380, 390); // POINT_2 -> POINT_3
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_3);
+
+    capture_raw_point(660, 60);
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::VERIFY);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: VERIFY state has valid calibration data",
+                 "[touch-calibration][state][verify]") {
+    panel_->start();
+    complete_all_points();
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::VERIFY);
+
+    const TouchCalibration* cal = panel_->get_calibration();
+    REQUIRE(cal != nullptr);
+    REQUIRE(cal->valid == true);
+}
+
+// ============================================================================
+// Verification Accept Tests
+// ============================================================================
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: accept() in VERIFY transitions to COMPLETE",
+                 "[touch-calibration][state][accept]") {
+    panel_->start();
+    complete_all_points();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::VERIFY);
+
+    panel_->accept();
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::COMPLETE);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: accept() invokes callback with valid calibration",
+                 "[touch-calibration][callback][accept]") {
+    panel_->start();
+    complete_all_points();
+
+    panel_->accept();
+
+    REQUIRE(callback_called_ == true);
+    REQUIRE(callback_received_valid_ == true);
+    REQUIRE(callback_calibration_.valid == true);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: accept() is no-op outside VERIFY state",
+                 "[touch-calibration][state][accept]") {
+    panel_->start();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_1);
+
+    panel_->accept();
+
+    // Should still be in POINT_1, accept ignored
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_1);
+    REQUIRE(callback_called_ == false);
+}
+
+// ============================================================================
+// Verification Retry Tests
+// ============================================================================
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: retry() in VERIFY returns to POINT_1",
+                 "[touch-calibration][state][retry]") {
+    panel_->start();
+    complete_all_points();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::VERIFY);
+
+    panel_->retry();
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_1);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: retry() clears previous calibration data",
+                 "[touch-calibration][state][retry]") {
+    panel_->start();
+    complete_all_points();
+
+    const TouchCalibration* cal_before = panel_->get_calibration();
+    REQUIRE(cal_before != nullptr);
+    REQUIRE(cal_before->valid == true);
+
+    panel_->retry();
+
+    // After retry, calibration should be invalid until new points captured
+    const TouchCalibration* cal_after = panel_->get_calibration();
+    REQUIRE(cal_after == nullptr);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: retry() is no-op outside VERIFY state",
+                 "[touch-calibration][state][retry]") {
+    panel_->start();
+    capture_raw_point(100, 120); // POINT_2
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_2);
+
+    panel_->retry();
+
+    // Should still be in POINT_2, retry ignored
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_2);
+}
+
+// ============================================================================
+// Cancel Tests
+// ============================================================================
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: cancel() from IDLE stays in IDLE",
+                 "[touch-calibration][state][cancel]") {
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::IDLE);
+
+    panel_->cancel();
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::IDLE);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: cancel() from POINT_1 returns to IDLE",
+                 "[touch-calibration][state][cancel]") {
+    panel_->start();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_1);
+
+    panel_->cancel();
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::IDLE);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: cancel() from POINT_2 returns to IDLE",
+                 "[touch-calibration][state][cancel]") {
+    panel_->start();
+    capture_raw_point(100, 120);
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_2);
+
+    panel_->cancel();
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::IDLE);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: cancel() from POINT_3 returns to IDLE",
+                 "[touch-calibration][state][cancel]") {
+    panel_->start();
+    capture_raw_point(100, 120);
+    capture_raw_point(380, 390);
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_3);
+
+    panel_->cancel();
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::IDLE);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: cancel() from VERIFY returns to IDLE",
+                 "[touch-calibration][state][cancel]") {
+    panel_->start();
+    complete_all_points();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::VERIFY);
+
+    panel_->cancel();
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::IDLE);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: cancel() invokes callback with nullptr",
+                 "[touch-calibration][callback][cancel]") {
+    panel_->start();
+    complete_all_points();
+
+    panel_->cancel();
+
+    REQUIRE(callback_called_ == true);
+    REQUIRE(callback_received_valid_ == false);
+}
+
+// ============================================================================
+// Invalid State Transition Tests
+// ============================================================================
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: capture_point in IDLE is no-op",
+                 "[touch-calibration][state][invalid]") {
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::IDLE);
+
+    capture_raw_point(100, 100);
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::IDLE);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: capture_point in VERIFY is no-op",
+                 "[touch-calibration][state][invalid]") {
+    panel_->start();
+    complete_all_points();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::VERIFY);
+
+    capture_raw_point(500, 500);
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::VERIFY);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: capture_point in COMPLETE is no-op",
+                 "[touch-calibration][state][invalid]") {
+    panel_->start();
+    complete_all_points();
+    panel_->accept();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::COMPLETE);
+
+    capture_raw_point(500, 500);
+
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::COMPLETE);
+}
+
+// ============================================================================
+// Target Position Tests
+// ============================================================================
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: get_target_position returns correct inset points",
+                 "[touch-calibration][targets]") {
+    SECTION("Step 0: 15% from left, 30% from top") {
+        // 800 * 0.15 = 120, 480 * 0.30 = 144
+        Point target = panel_->get_target_position(0);
+        REQUIRE(target.x == 120);
+        REQUIRE(target.y == 144);
+    }
+
+    SECTION("Step 1: center X, 85% from top") {
+        // 800 * 0.50 = 400, 480 * 0.85 = 408
+        Point target = panel_->get_target_position(1);
+        REQUIRE(target.x == 400);
+        REQUIRE(target.y == 408);
+    }
+
+    SECTION("Step 2: 85% from left, 15% from top") {
+        // 800 * 0.85 = 680, 480 * 0.15 = 72
+        Point target = panel_->get_target_position(2);
+        REQUIRE(target.x == 680);
+        REQUIRE(target.y == 72);
+    }
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: get_target_position out of range returns (0,0)",
+                 "[touch-calibration][targets]") {
+    Point target_neg = panel_->get_target_position(-1);
+    REQUIRE(target_neg.x == 0);
+    REQUIRE(target_neg.y == 0);
+
+    Point target_over = panel_->get_target_position(3);
+    REQUIRE(target_over.x == 0);
+    REQUIRE(target_over.y == 0);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: targets scale with screen size",
+                 "[touch-calibration][targets]") {
+    // Create panel with different screen size
+    TouchCalibrationPanel panel_1024;
+    panel_1024.set_screen_size(1024, 600);
+
+    // Step 0: 15% from left, 30% from top
+    // 1024 * 0.15 = 153.6 -> 153, 600 * 0.30 = 180
+    Point target = panel_1024.get_target_position(0);
+    REQUIRE(target.x == 153);
+    REQUIRE(target.y == 180);
+}
+
+// ============================================================================
+// Screen Size Configuration Tests
+// ============================================================================
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: set_screen_size updates target positions",
+                 "[touch-calibration][config]") {
+    Point target_before = panel_->get_target_position(0);
+
+    panel_->set_screen_size(1280, 720);
+
+    Point target_after = panel_->get_target_position(0);
+
+    // 1280 * 0.15 = 192, 720 * 0.30 = 216
+    REQUIRE(target_after.x == 192);
+    REQUIRE(target_after.y == 216);
+    REQUIRE(target_after.x != target_before.x);
+    REQUIRE(target_after.y != target_before.y);
+}
+
+// ============================================================================
+// Full Workflow Tests
+// ============================================================================
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: complete workflow IDLE -> COMPLETE",
+                 "[touch-calibration][workflow]") {
+    // Start in IDLE
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::IDLE);
+
+    // Begin calibration
+    panel_->start();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_1);
+
+    // Capture 3 points
+    capture_raw_point(100, 120);
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_2);
+
+    capture_raw_point(380, 390);
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_3);
+
+    capture_raw_point(660, 60);
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::VERIFY);
+
+    // Accept calibration
+    panel_->accept();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::COMPLETE);
+
+    // Verify callback was invoked with valid data
+    REQUIRE(callback_called_ == true);
+    REQUIRE(callback_received_valid_ == true);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: retry workflow loops back correctly",
+                 "[touch-calibration][workflow]") {
+    // Complete first attempt
+    panel_->start();
+    complete_all_points();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::VERIFY);
+
+    // Retry
+    panel_->retry();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_1);
+
+    // Complete second attempt
+    complete_all_points();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::VERIFY);
+
+    // Accept this time
+    panel_->accept();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::COMPLETE);
+    REQUIRE(callback_called_ == true);
+    REQUIRE(callback_received_valid_ == true);
+}
+
+// ============================================================================
+// Screen Size Change Tests
+// ============================================================================
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: retry after screen size change uses new size",
+                 "[touch-calibration][state][resize]") {
+    // Start calibration at 800x480
+    panel_->start();
+    complete_all_points();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::VERIFY);
+
+    // Change screen size while in VERIFY state
+    panel_->set_screen_size(1024, 600);
+
+    // Retry should recalculate screen points with new size
+    panel_->retry();
+    REQUIRE(panel_->get_state() == TouchCalibrationPanel::State::POINT_1);
+
+    // Verify targets use new screen size
+    Point target0 = panel_->get_target_position(0);
+    Point target1 = panel_->get_target_position(1);
+    Point target2 = panel_->get_target_position(2);
+
+    // 1024 * 0.15 = 153.6 -> 153
+    // 600 * 0.30 = 180
+    REQUIRE(target0.x == 153);
+    REQUIRE(target0.y == 180);
+
+    // 1024 * 0.50 = 512
+    // 600 * 0.85 = 510
+    REQUIRE(target1.x == 512);
+    REQUIRE(target1.y == 510);
+
+    // 1024 * 0.85 = 870.4 -> 870
+    // 600 * 0.15 = 90
+    REQUIRE(target2.x == 870);
+    REQUIRE(target2.y == 90);
+}
+
+TEST_CASE_METHOD(TouchCalibrationPanelTestFixture,
+                 "TouchCalibrationPanel: get_target_position reflects current screen size",
+                 "[touch-calibration][state][resize]") {
+    panel_->set_screen_size(800, 480);
+    panel_->start();
+
+    // Original targets for 800x480
+    Point orig0 = panel_->get_target_position(0);
+    REQUIRE(orig0.x == 120); // 800 * 0.15
+    REQUIRE(orig0.y == 144); // 480 * 0.30
+
+    // Change screen size mid-calibration
+    panel_->set_screen_size(1920, 1080);
+
+    // get_target_position should now return values for new size
+    Point new0 = panel_->get_target_position(0);
+    REQUIRE(new0.x == 288); // 1920 * 0.15
+    REQUIRE(new0.y == 324); // 1080 * 0.30
+}
