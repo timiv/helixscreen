@@ -114,21 +114,8 @@
     <!-- ===================================================================== -->
     <!-- Responsive Keypad Sizes (keypad_*)                                    -->
     <!-- ===================================================================== -->
-    <!-- Runtime selects appropriate variant via ui_theme_register_responsive_spacing()
-         Numeric keypad overlay - button heights, panel width, display area -->
-    <!-- keypad_btn_height: Touch-friendly button heights -->
-    <px name="keypad_btn_height_small" value="48"/>
-    <px name="keypad_btn_height_medium" value="56"/>
-    <px name="keypad_btn_height_large" value="72"/>
-    <!-- keypad_width: Panel width (right-aligned overlay) -->
-    <px name="keypad_width_small" value="280"/>
-    <px name="keypad_width_medium" value="340"/>
-    <px name="keypad_width_large" value="400"/>
-    <!-- keypad_display_height: Value entry display area -->
-    <px name="keypad_display_height_small" value="56"/>
-    <px name="keypad_display_height_medium" value="72"/>
-    <px name="keypad_display_height_large" value="88"/>
-
+    <!-- Runtime selects appropriate variant via ui_theme_register_responsive_spacing() -->
+ 
     <!-- printer_img_size moved to home_panel.xml -->
     <!-- accent_bar_width moved to home_panel.xml -->
     <px name="accent_bar_height" value="28"/>
@@ -339,15 +326,15 @@
          nord6: #eceff4 - brightest, main light background
     -->
     <!-- FROST (accent colors, interactive elements)
-         nord7:  #8fbcbb - secondary accent (teal/cyan)
-         nord8:  #88c0d0 - info, links, cold indicators
-         nord9:  #81a1c1 - tertiary accent
-         nord10: #5e81ac - primary accent (blue)
+         nord7:  #8fbcbb - highlighted accent (teal/cyan)
+         nord8:  #88c0d0 - primary info, links, cold indicators
+         nord9:  #81a1c1 - secondary color/accent
+         nord10: #5e81ac - tertiary color/accent (blue)
     -->
     <!-- AURORA (semantic/status colors)
          nord11: #bf616a - error, hot, danger (red)
-         nord12: #d08770 - warning, attention (orange)
-         nord13: #ebcb8b - secondary accent, warm (yellow)
+         nord12: #d08770 - danger, attention/advanced (orange)
+         nord13: #ebcb8b - warning (yellow)
          nord14: #a3be8c - success, positive (green)
          nord15: #b48ead - special, unusual (purple)
     -->
@@ -367,12 +354,14 @@
     <!-- App background colors (theme-aware) -->
     <color name="app_bg_color_light" value="#eceff4"/>  <!-- nord6 - brightest Snow Storm -->
     <color name="app_bg_color_dark" value="#2e3440"/>   <!-- nord0 - darkest Polar Night -->
+    <color name="section_bg_color" value="#434c5e"/>    <!-- nord2 -->
+
     <!-- Primary text colors (theme-aware) -->
     <color name="text_primary_light" value="#2e3440"/>   <!-- nord0 - darkest for contrast -->
-    <color name="text_primary_dark" value="#d8dee9"/>    <!-- nord4 -->
+    <color name="text_primary_dark" value="#eceff4"/>    <!-- nord6 -->
     <!-- Header text colors (theme-aware) -->
-    <color name="header_text_light" value="#2e3440"/>    <!-- nord0 -->
-    <color name="header_text_dark" value="#eceff4"/>     <!-- nord6 -->
+    <color name="header_text_light" value="#3b4252"/>    <!-- nord1 -->
+    <color name="header_text_dark" value="#eceff4"/>     <!-- nord5 -->
     <!-- Secondary text color (theme-aware) -->
     <color name="text_secondary_light" value="#4c566a"/> <!-- nord3 -->
     <color name="text_secondary_dark" value="#9ca3af"/>  <!-- dimmed nord4 -->

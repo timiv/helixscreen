@@ -3,27 +3,43 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- Numeric Keypad Overlay - Responsive layout for all screen sizes -->
 <component>
+  <consts>
+     <!-- Numeric keypad overlay - button heights, panel width, display area -->
+    <!-- keypad_btn_height: Touch-friendly button heights -->
+    <px name="keypad_btn_height_small" value="52"/>
+    <px name="keypad_btn_height_medium" value="68"/>
+    <px name="keypad_btn_height_large" value="84"/>
+
+    <!-- keypad_width: Panel width (right-aligned overlay) -->
+    <px name="keypad_width_small" value="280"/>
+    <px name="keypad_width_medium" value="340"/>
+    <px name="keypad_width_large" value="400"/>
+  
+  </consts>
   <view name="keypad_panel"
         extends="lv_obj" width="#keypad_width" height="100%" align="right_mid" style_pad_all="0" style_border_width="0"
         style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column" hidden="true">
     <!-- Header: no title, just back arrow and OK button -->
     <header_bar name="overlay_header"
-                title="" action_button_text="Set " hide_action_button="false" action_button_height="#button_height"/>
+                title="" action_button_text="Set " hide_action_button="false" action_button_height="#button_height"
+                action_button_pad="#space_md" />
     <!-- Content -->
     <lv_obj name="overlay_content"
             width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_md" scrollable="false"
-            style_border_width="0" flex_flow="column" style_pad_gap="#space_md">
+            style_border_width="0" flex_flow="column" style_pad_gap="0" style_pad_row="0">
+
       <!-- Display: Textarea styled input (read-only) with unit label -->
       <lv_obj name="display_container"
-              width="100%" height="#keypad_display_height" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-              scrollable="false" flex_flow="row" style_flex_cross_place="center">
+              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_lg"
+              scrollable="false" flex_flow="row" style_flex_cross_place="center" style_pad_bottom="0">
         <text_input name="input_display"
-                    height="100%" flex_grow="1" text="" bind_text="keypad_display" style_text_font="#font_heading"
+                    height="content" flex_grow="1" text="" bind_text="keypad_display" style_text_font="#font_heading"
                     style_text_align="right" style_border_width="#input_border_width" style_radius="#border_radius"
                     one_line="true" clickable="false" scrollable="false"/>
         <lv_label name="input_unit"
                   text="" style_text_font="#font_body" style_text_color="#text_secondary" style_pad_left="#space_sm"/>
       </lv_obj>
+
       <!-- Button Grid: row_wrap with explicit row gaps (no space_evenly override) -->
       <lv_obj name="keypad_grid"
               width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" scrollable="false" flex_flow="row_wrap"
