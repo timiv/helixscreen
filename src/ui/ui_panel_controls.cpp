@@ -127,14 +127,14 @@ void ControlsPanel::init_subjects() {
     // Using UI_MANAGED_SUBJECT_* macros for automatic RAII cleanup via SubjectManager
 
     // Nozzle temperature display
-    UI_MANAGED_SUBJECT_STRING(nozzle_temp_subject_, nozzle_temp_buf_, "--°C",
-                              "controls_nozzle_temp", subjects_);
+    UI_MANAGED_SUBJECT_STRING(nozzle_temp_subject_, nozzle_temp_buf_, "—°C", "controls_nozzle_temp",
+                              subjects_);
     UI_MANAGED_SUBJECT_INT(nozzle_pct_subject_, 0, "controls_nozzle_pct", subjects_);
     UI_MANAGED_SUBJECT_STRING(nozzle_status_subject_, nozzle_status_buf_, "Off",
                               "controls_nozzle_status", subjects_);
 
     // Bed temperature display
-    UI_MANAGED_SUBJECT_STRING(bed_temp_subject_, bed_temp_buf_, "--°C", "controls_bed_temp",
+    UI_MANAGED_SUBJECT_STRING(bed_temp_subject_, bed_temp_buf_, "—°C", "controls_bed_temp",
                               subjects_);
     UI_MANAGED_SUBJECT_INT(bed_pct_subject_, 0, "controls_bed_pct", subjects_);
     UI_MANAGED_SUBJECT_STRING(bed_status_subject_, bed_status_buf_, "Off", "controls_bed_status",
@@ -164,14 +164,14 @@ void ControlsPanel::init_subjects() {
 
     // Position display subjects for Position card
     // Format: numeric value only (axis label is static in XML for proper alignment)
-    std::strcpy(controls_pos_x_buf_, "   --   mm");
-    std::strcpy(controls_pos_y_buf_, "   --   mm");
-    std::strcpy(controls_pos_z_buf_, "   --   mm");
-    UI_MANAGED_SUBJECT_STRING(controls_pos_x_subject_, controls_pos_x_buf_, "   --   mm",
+    std::strcpy(controls_pos_x_buf_, "   —   mm");
+    std::strcpy(controls_pos_y_buf_, "   —   mm");
+    std::strcpy(controls_pos_z_buf_, "   —   mm");
+    UI_MANAGED_SUBJECT_STRING(controls_pos_x_subject_, controls_pos_x_buf_, "   —   mm",
                               "controls_pos_x", subjects_);
-    UI_MANAGED_SUBJECT_STRING(controls_pos_y_subject_, controls_pos_y_buf_, "   --   mm",
+    UI_MANAGED_SUBJECT_STRING(controls_pos_y_subject_, controls_pos_y_buf_, "   —   mm",
                               "controls_pos_y", subjects_);
-    UI_MANAGED_SUBJECT_STRING(controls_pos_z_subject_, controls_pos_z_buf_, "   --   mm",
+    UI_MANAGED_SUBJECT_STRING(controls_pos_z_subject_, controls_pos_z_buf_, "   —   mm",
                               "controls_pos_z", subjects_);
 
     // Speed/Flow override display subjects
@@ -654,34 +654,22 @@ void ControlsPanel::populate_secondary_fans() {
         lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER,
                               LV_FLEX_ALIGN_CENTER);
 
-        // Fan name label
+        // Fan name label - 60% width, truncate with ellipsis if needed
         lv_obj_t* name_label = lv_label_create(row);
         lv_label_set_text(name_label, fan.display_name.c_str());
+        lv_obj_set_width(name_label, LV_PCT(60));
         lv_obj_set_style_text_color(name_label, ui_theme_get_color("text_secondary"), 0);
         lv_obj_set_style_text_font(name_label, ui_theme_get_font("font_small"), 0);
+        lv_label_set_long_mode(name_label, LV_LABEL_LONG_DOT);
 
-        // Speed + indicator container
-        lv_obj_t* right_container = lv_obj_create(row);
-        lv_obj_set_size(right_container, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-        lv_obj_set_style_bg_opa(right_container, LV_OPA_TRANSP, 0);
-        lv_obj_set_style_border_width(right_container, 0, 0);
-        lv_obj_set_style_pad_all(right_container, 0, 0);
-        // Pass clicks through to parent container
-        lv_obj_remove_flag(right_container, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(right_container, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_set_flex_flow(right_container, LV_FLEX_FLOW_ROW);
-        lv_obj_set_flex_align(right_container, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER,
-                              LV_FLEX_ALIGN_CENTER);
-        lv_obj_set_style_pad_column(right_container, 4, 0);
-
-        // Speed percentage
+        // Speed percentage label - right-aligned
         char speed_buf[16];
         if (fan.speed_percent > 0) {
             std::snprintf(speed_buf, sizeof(speed_buf), "%d%%", fan.speed_percent);
         } else {
             std::snprintf(speed_buf, sizeof(speed_buf), "Off");
         }
-        lv_obj_t* speed_label = lv_label_create(right_container);
+        lv_obj_t* speed_label = lv_label_create(row);
         lv_label_set_text(speed_label, speed_buf);
         lv_obj_set_style_text_color(speed_label, ui_theme_get_color("text_secondary"), 0);
         lv_obj_set_style_text_font(speed_label, ui_theme_get_font("font_small"), 0);
@@ -689,14 +677,14 @@ void ControlsPanel::populate_secondary_fans() {
         // Track this row for reactive speed updates
         secondary_fan_rows_.push_back({fan.object_name, speed_label});
 
-        // Indicator icon: robot for auto-controlled, › for controllable
+        // Indicator icon: "A" circle for auto-controlled, › for controllable
         // Uses MDI icon font for proper glyph rendering
-        lv_obj_t* indicator = lv_label_create(right_container);
+        lv_obj_t* indicator = lv_label_create(row);
         if (fan.is_controllable) {
             lv_label_set_text(indicator, LV_SYMBOL_RIGHT);
         } else {
-            // Robot icon indicates "auto-controlled by system"
-            lv_label_set_text(indicator, ui_icon::lookup_codepoint("robot"));
+            // "A" in circle indicates "auto-controlled by system"
+            lv_label_set_text(indicator, ui_icon::lookup_codepoint("alpha_a_circle"));
         }
         lv_obj_set_style_text_color(indicator, ui_theme_get_color("text_secondary"), 0);
         lv_obj_set_style_text_font(indicator, &mdi_icons_16, 0);
