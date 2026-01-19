@@ -59,6 +59,10 @@ MoonrakerClientMock::MoonrakerClientMock(PrinterType type, double speedup_factor
         mock_spoolman_enabled_ = false;
         spdlog::info("[MoonrakerClientMock] Mock Spoolman disabled via HELIX_MOCK_SPOOLMAN=0");
     }
+
+    // Set up bed mesh callback to handle incoming status updates
+    // This ensures dispatch_status_update updates the mock's internal bed mesh state
+    set_bed_mesh_callback([this](const json& bed_mesh) { parse_incoming_bed_mesh(bed_mesh); });
 }
 
 void MoonrakerClientMock::set_simulation_speedup(double factor) {
@@ -564,6 +568,90 @@ void MoonrakerClientMock::populate_hardware() {
         spdlog::debug("  Fan: {}", f);
     for (const auto& l : leds_)
         spdlog::debug("  LED: {}", l);
+}
+
+void MoonrakerClientMock::parse_incoming_bed_mesh(const json& bed_mesh) {
+    // Parse bed mesh JSON from dispatch_status_update into active_bed_mesh_
+    // This mirrors the JSON format sent by real Moonraker
+
+    // Parse profile name
+    if (bed_mesh.contains("profile_name")) {
+        if (bed_mesh["profile_name"].is_string()) {
+            active_bed_mesh_.name = bed_mesh["profile_name"].get<std::string>();
+        } else if (bed_mesh["profile_name"].is_null()) {
+            active_bed_mesh_.name = "";
+        }
+    }
+
+    // Parse probed_matrix (2D array of Z heights)
+    if (bed_mesh.contains("probed_matrix") && bed_mesh["probed_matrix"].is_array()) {
+        active_bed_mesh_.probed_matrix.clear();
+        const auto& matrix = bed_mesh["probed_matrix"];
+
+        for (const auto& row : matrix) {
+            if (!row.is_array()) {
+                continue;
+            }
+            std::vector<float> row_vec;
+            for (const auto& val : row) {
+                if (val.is_number()) {
+                    row_vec.push_back(val.get<float>());
+                }
+                // Skip non-numeric values (strings, nulls)
+            }
+            active_bed_mesh_.probed_matrix.push_back(row_vec);
+        }
+
+        // Update counts based on parsed matrix
+        if (!active_bed_mesh_.probed_matrix.empty()) {
+            active_bed_mesh_.y_count = static_cast<int>(active_bed_mesh_.probed_matrix.size());
+            active_bed_mesh_.x_count = static_cast<int>(active_bed_mesh_.probed_matrix[0].size());
+        } else {
+            active_bed_mesh_.x_count = 0;
+            active_bed_mesh_.y_count = 0;
+        }
+    }
+
+    // Parse mesh_min (array [x, y])
+    if (bed_mesh.contains("mesh_min") && bed_mesh["mesh_min"].is_array() &&
+        bed_mesh["mesh_min"].size() >= 2) {
+        if (bed_mesh["mesh_min"][0].is_number()) {
+            active_bed_mesh_.mesh_min[0] = bed_mesh["mesh_min"][0].get<float>();
+        }
+        if (bed_mesh["mesh_min"][1].is_number()) {
+            active_bed_mesh_.mesh_min[1] = bed_mesh["mesh_min"][1].get<float>();
+        }
+    }
+
+    // Parse mesh_max (array [x, y])
+    if (bed_mesh.contains("mesh_max") && bed_mesh["mesh_max"].is_array() &&
+        bed_mesh["mesh_max"].size() >= 2) {
+        if (bed_mesh["mesh_max"][0].is_number()) {
+            active_bed_mesh_.mesh_max[0] = bed_mesh["mesh_max"][0].get<float>();
+        }
+        if (bed_mesh["mesh_max"][1].is_number()) {
+            active_bed_mesh_.mesh_max[1] = bed_mesh["mesh_max"][1].get<float>();
+        }
+    }
+
+    // Parse algorithm from mesh_params
+    if (bed_mesh.contains("mesh_params") && bed_mesh["mesh_params"].is_object()) {
+        const auto& params = bed_mesh["mesh_params"];
+        if (params.contains("algo") && params["algo"].is_string()) {
+            active_bed_mesh_.algo = params["algo"].get<std::string>();
+        }
+    }
+
+    // Parse profiles list
+    if (bed_mesh.contains("profiles") && bed_mesh["profiles"].is_object()) {
+        bed_mesh_profiles_.clear();
+        for (const auto& [key, value] : bed_mesh["profiles"].items()) {
+            bed_mesh_profiles_.push_back(key);
+        }
+    }
+
+    spdlog::debug("[MoonrakerClientMock] Parsed incoming bed mesh: profile='{}', size={}x{}",
+                  active_bed_mesh_.name, active_bed_mesh_.x_count, active_bed_mesh_.y_count);
 }
 
 void MoonrakerClientMock::generate_mock_bed_mesh() {

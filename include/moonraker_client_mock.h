@@ -616,6 +616,16 @@ class MoonrakerClientMock : public MoonrakerClient {
     void generate_mock_bed_mesh();
 
     /**
+     * @brief Parse incoming bed mesh JSON from dispatch_status_update
+     *
+     * Updates active_bed_mesh_ from status notification data. This allows
+     * tests to inject custom bed mesh configurations via dispatch_status_update.
+     *
+     * @param bed_mesh JSON object containing bed_mesh status fields
+     */
+    void parse_incoming_bed_mesh(const json& bed_mesh);
+
+    /**
      * @brief Generate bed mesh with slight variation
      *
      * Used by BED_MESH_CALIBRATE simulation to create new mesh data with
