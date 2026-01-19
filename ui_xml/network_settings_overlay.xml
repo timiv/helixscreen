@@ -27,7 +27,7 @@
                 style_radius="#border_radius" style_border_width="0" style_pad_all="#space_lg" scrollable="false"
                 flex_flow="column" style_pad_gap="#space_sm">
           <!-- Disable card when WiFi hardware unavailable -->
-          <lv_obj-bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
+          <bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
           <!-- Header Row: WiFi label + toggle -->
           <lv_obj width="100%"
                   height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
@@ -40,14 +40,14 @@
               <text_body text="WiFi" style_text_color="#text_primary"/>
               <!-- Only show band limitation if hardware doesn't support 5GHz -->
               <text_small text="2.4GHz only" style_text_color="#text_secondary">
-                <lv_obj-bind_flag_if_eq subject="wifi_only_24ghz" flag="hidden" ref_value="0"/>
-                <lv_obj-bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
+                <bind_flag_if_eq subject="wifi_only_24ghz" flag="hidden" ref_value="0"/>
+                <bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
               </text_small>
             </lv_obj>
             <!-- Toggle Switch (fixed width, won't shrink) -->
             <lv_switch name="wlan_toggle" width="50" height="#space_2xl" flex_shrink="0">
-              <lv_obj-bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
-              <lv_obj-bind_state_if_eq subject="wifi_enabled" state="checked" ref_value="1"/>
+              <bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
+              <bind_state_if_eq subject="wifi_enabled" state="checked" ref_value="1"/>
               <event_cb trigger="value_changed" callback="on_wlan_toggle_changed"/>
             </lv_switch>
           </lv_obj>
@@ -59,7 +59,7 @@
           <lv_obj name="wifi_unavailable_state"
                   width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                   scrollable="false" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
-            <lv_obj-bind_flag_if_eq subject="wifi_hardware_available" flag="hidden" ref_value="1"/>
+            <bind_flag_if_eq subject="wifi_hardware_available" flag="hidden" ref_value="1"/>
             <icon src="wifi_off" size="sm" variant="secondary"/>
             <text_body text="WiFi control unavailable" style_text_color="#text_secondary"/>
           </lv_obj>
@@ -67,8 +67,8 @@
           <lv_obj name="wifi_connected_state"
                   width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                   scrollable="false" flex_flow="column" style_pad_gap="#space_sm">
-            <lv_obj-bind_flag_if_eq subject="wifi_connected" flag="hidden" ref_value="0"/>
-            <lv_obj-bind_flag_if_eq subject="wifi_hardware_available" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="wifi_connected" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="wifi_hardware_available" flag="hidden" ref_value="0"/>
             <!-- SSID with checkmark and signal -->
             <lv_obj width="100%"
                     height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
@@ -98,8 +98,8 @@
           <lv_obj name="wifi_disconnected_state"
                   width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                   scrollable="false" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
-            <lv_obj-bind_flag_if_eq subject="wifi_connected" flag="hidden" ref_value="1"/>
-            <lv_obj-bind_flag_if_eq subject="wifi_hardware_available" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="wifi_connected" flag="hidden" ref_value="1"/>
+            <bind_flag_if_eq subject="wifi_hardware_available" flag="hidden" ref_value="0"/>
             <icon src="wifi_off" size="sm" variant="secondary"/>
             <text_body text="Not connected" style_text_color="#text_secondary"/>
           </lv_obj>
@@ -127,7 +127,7 @@
           <lv_obj name="eth_connected_state"
                   width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                   scrollable="false" flex_flow="column" style_pad_gap="#space_sm">
-            <lv_obj-bind_flag_if_eq subject="eth_connected" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="eth_connected" flag="hidden" ref_value="0"/>
             <!-- Connected indicator -->
             <lv_obj width="100%"
                     height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
@@ -155,7 +155,7 @@
           <lv_obj name="eth_disconnected_state"
                   width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                   scrollable="false" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
-            <lv_obj-bind_flag_if_eq subject="eth_connected" flag="hidden" ref_value="1"/>
+            <bind_flag_if_eq subject="eth_connected" flag="hidden" ref_value="1"/>
             <icon src="ethernet" size="sm" variant="secondary"/>
             <text_body text="Not connected" style_text_color="#text_secondary"/>
           </lv_obj>
@@ -169,7 +169,7 @@
                    width="100%" height="content" style_radius="#border_radius" style_border_width="0"
                    style_pad_ver="#space_sm">
           <!-- Disable when no network connected -->
-          <lv_obj-bind_state_if_eq subject="any_network_connected" state="disabled" ref_value="0"/>
+          <bind_state_if_eq subject="any_network_connected" state="disabled" ref_value="0"/>
           <lv_obj width="100%"
                   height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                   flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
@@ -205,18 +205,18 @@
           <lv_button name="refresh_btn"
                      width="content" height="36" style_radius="#border_radius" style_border_width="0"
                      style_pad_left="#space_lg" style_pad_right="#space_lg">
-            <lv_obj-bind_state_if_eq subject="wifi_scanning" state="disabled" ref_value="1"/>
-            <lv_obj-bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
+            <bind_state_if_eq subject="wifi_scanning" state="disabled" ref_value="1"/>
+            <bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
             <lv_obj width="content"
                     height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                     flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_xs">
               <!-- Static refresh icon (shown when not scanning) -->
               <icon name="refresh_icon" src="refresh" size="xs" variant="primary">
-                <lv_obj-bind_flag_if_eq subject="wifi_scanning" flag="hidden" ref_value="1"/>
+                <bind_flag_if_eq subject="wifi_scanning" flag="hidden" ref_value="1"/>
               </icon>
               <!-- Spinner (shown when scanning) -->
               <spinner name="scan_spinner" size="xs" hidden="true">
-                <lv_obj-bind_flag_if_eq subject="wifi_scanning" flag="hidden" ref_value="0"/>
+                <bind_flag_if_eq subject="wifi_scanning" flag="hidden" ref_value="0"/>
               </spinner>
             </lv_obj>
             <event_cb trigger="clicked" callback="on_refresh_clicked"/>
@@ -233,7 +233,7 @@
                   width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="#space_lg"
                   scrollable="false" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
                   style_flex_track_place="center">
-            <lv_obj-bind_flag_if_eq subject="wifi_hardware_available" flag="hidden" ref_value="1"/>
+            <bind_flag_if_eq subject="wifi_hardware_available" flag="hidden" ref_value="1"/>
             <icon src="wifi_off" size="md" variant="secondary"/>
             <text_small text="WiFi control unavailable" style_text_color="#text_secondary" style_margin_top="#space_sm"/>
           </lv_obj>
@@ -242,8 +242,8 @@
                   width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="#space_lg"
                   scrollable="false" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
                   style_flex_track_place="center">
-            <lv_obj-bind_flag_if_eq subject="wifi_enabled" flag="hidden" ref_value="1"/>
-            <lv_obj-bind_flag_if_eq subject="wifi_hardware_available" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="wifi_enabled" flag="hidden" ref_value="1"/>
+            <bind_flag_if_eq subject="wifi_hardware_available" flag="hidden" ref_value="0"/>
             <icon src="wifi_off" size="md" variant="secondary"/>
             <text_small text="Enable WiFi to scan" style_text_color="#text_secondary" style_margin_top="#space_sm"/>
           </lv_obj>
@@ -252,7 +252,7 @@
                   width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="#space_lg"
                   scrollable="false" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
                   style_flex_track_place="center" hidden="true">
-            <lv_obj-bind_flag_if_eq subject="wifi_scanning" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="wifi_scanning" flag="hidden" ref_value="0"/>
             <spinner size="md"/>
             <text_small text="Scanning for networks..." style_text_color="#text_secondary" style_margin_top="#space_sm"/>
           </lv_obj>
@@ -261,7 +261,7 @@
         <lv_button name="add_other_btn"
                    width="100%" height="content" style_radius="#border_radius" style_border_width="0"
                    style_pad_ver="#space_sm">
-          <lv_obj-bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
+          <bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
           <lv_obj width="100%"
                   height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                   flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"

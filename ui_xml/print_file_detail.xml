@@ -42,10 +42,10 @@
                   style_pad_left="#space_sm" style_pad_right="#space_sm" style_pad_top="#space_lg"
                   style_pad_bottom="#space_sm" style_pad_gap="#space_md" align="bottom_mid" flex_flow="column"
                   scrollable="false">
-            <!-- Filename with reactive binding - compact height for more metadata space -->
+            <!-- Filename with reactive binding - scrolls if too long for single line -->
             <!-- Uses selected_display_filename (without .gcode extension) for cleaner UI -->
             <text_body name="detail_filename_label"
-                       width="100%" height="content" bind_text="selected_display_filename" long_mode="dots"
+                       width="100%" height="content" bind_text="selected_display_filename" long_mode="scroll_circular"
                        style_pad_bottom="0" style_border_width="0"/>
             <!-- Metadata 2x2 grid - minimal gap from filename -->
             <lv_obj name="detail_metadata_grid"
@@ -131,7 +131,7 @@
         <lv_obj name="preprint_steps_section"
                 width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                 flex_flow="column" style_pad_gap="#space_xs">
-          <lv_obj-bind_flag_if_eq subject="selected_preprint_steps_visible" flag="hidden" ref_value="0"/>
+          <bind_flag_if_eq subject="selected_preprint_steps_visible" flag="hidden" ref_value="0"/>
           <text_small text="PRE-PRINT STEPS" style_text_color="#text_secondary"/>
           <text_body name="preprint_steps_label"
                      bind_text="selected_preprint_steps" long_mode="wrap" style_text_color="#text_primary"/>
@@ -156,7 +156,7 @@
                   width="100%" height="content" flex_flow="row" style_flex_main_place="space_between"
                   style_flex_cross_place="center" style_bg_opa="0" style_border_width="0" style_pad_ver="#space_xs"
                   scrollable="false">
-            <lv_obj-bind_flag_if_eq subject="can_show_bed_mesh" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="can_show_bed_mesh" flag="hidden" ref_value="0"/>
             <text_body text="Auto Bed Mesh"/>
             <lv_switch name="bed_mesh_checkbox" width="50" height="28">
               <bind_state_if_eq subject="preprint_bed_mesh" state="checked" ref_value="1"/>
@@ -167,7 +167,7 @@
                   width="100%" height="content" flex_flow="row" style_flex_main_place="space_between"
                   style_flex_cross_place="center" style_bg_opa="0" style_border_width="0" style_pad_ver="#space_xs"
                   scrollable="false">
-            <lv_obj-bind_flag_if_eq subject="can_show_qgl" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="can_show_qgl" flag="hidden" ref_value="0"/>
             <text_body text="Quad Gantry Level"/>
             <lv_switch name="qgl_checkbox" width="50" height="28">
               <bind_state_if_eq subject="preprint_qgl" state="checked" ref_value="1"/>
@@ -178,7 +178,7 @@
                   width="100%" height="content" flex_flow="row" style_flex_main_place="space_between"
                   style_flex_cross_place="center" style_bg_opa="0" style_border_width="0" style_pad_ver="#space_xs"
                   scrollable="false">
-            <lv_obj-bind_flag_if_eq subject="can_show_z_tilt" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="can_show_z_tilt" flag="hidden" ref_value="0"/>
             <text_body text="Z-Tilt Adjust"/>
             <lv_switch name="z_tilt_checkbox" width="50" height="28">
               <bind_state_if_eq subject="preprint_z_tilt" state="checked" ref_value="1"/>
@@ -189,7 +189,7 @@
                   width="100%" height="content" flex_flow="row" style_flex_main_place="space_between"
                   style_flex_cross_place="center" style_bg_opa="0" style_border_width="0" style_pad_ver="#space_xs"
                   scrollable="false">
-            <lv_obj-bind_flag_if_eq subject="can_show_nozzle_clean" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="can_show_nozzle_clean" flag="hidden" ref_value="0"/>
             <text_body text="Clean Nozzle"/>
             <lv_switch name="nozzle_clean_checkbox" width="50" height="28">
               <bind_state_if_eq subject="preprint_nozzle_clean" state="checked" ref_value="1"/>
@@ -200,7 +200,7 @@
                   width="100%" height="content" flex_flow="row" style_flex_main_place="space_between"
                   style_flex_cross_place="center" style_bg_opa="0" style_border_width="0" style_pad_ver="#space_xs"
                   scrollable="false">
-            <lv_obj-bind_flag_if_eq subject="can_show_purge_line" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="can_show_purge_line" flag="hidden" ref_value="0"/>
             <text_body text="Nozzle Priming"/>
             <lv_switch name="purge_line_checkbox" width="50" height="28">
               <bind_state_if_eq subject="preprint_purge_line" state="checked" ref_value="1"/>
@@ -212,7 +212,7 @@
                   width="100%" height="content" flex_flow="row" style_flex_main_place="space_between"
                   style_flex_cross_place="center" style_bg_opa="0" style_border_width="0" style_pad_ver="#space_xs"
                   scrollable="false">
-            <lv_obj-bind_flag_if_eq subject="printer_has_timelapse" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="printer_has_timelapse" flag="hidden" ref_value="0"/>
             <text_body text="Record Timelapse"/>
             <lv_switch name="timelapse_checkbox" width="50" height="28">
               <bind_state_if_eq subject="preprint_timelapse" state="checked" ref_value="1"/>
@@ -234,7 +234,7 @@
           <lv_button name="print_button" height="#button_height_lg" flex_grow="1" style_bg_color="#primary_color">
             <event_cb trigger="clicked" callback="on_print_select_print_button"/>
             <text_body text="Print" align="center" style_text_color="#FFFFFF"/>
-            <lv_obj-bind_state_if_eq subject="print_select_can_print" state="disabled" ref_value="0"/>
+            <bind_state_if_eq subject="print_select_can_print" state="disabled" ref_value="0"/>
           </lv_button>
         </lv_obj>
       </lv_obj>

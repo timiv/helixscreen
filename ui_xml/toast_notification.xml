@@ -14,24 +14,24 @@
         style_flex_main_place="start" style_flex_cross_place="center">
     <!-- INFO icon (circle-info) - shown when toast_severity=0 -->
     <lv_label name="icon_info" text="#icon_info_circle" style_text_font="mdi_icons_24" style_text_color="#info_color">
-      <lv_obj-bind_flag_if_not_eq subject="toast_severity" flag="hidden" ref_value="0"/>
+      <bind_flag_if_not_eq subject="toast_severity" flag="hidden" ref_value="0"/>
     </lv_label>
     <!-- SUCCESS icon (check) - shown when toast_severity=1 -->
     <lv_label name="icon_success"
               text="#icon_check" style_text_font="mdi_icons_24" style_text_color="#success_color" hidden="true">
-      <lv_obj-bind_flag_if_not_eq subject="toast_severity" flag="hidden" ref_value="1"/>
+      <bind_flag_if_not_eq subject="toast_severity" flag="hidden" ref_value="1"/>
     </lv_label>
     <!-- WARNING icon (triangle-exclamation) - shown when toast_severity=2 -->
     <lv_label name="icon_warning"
               text="#icon_triangle_exclamation" style_text_font="mdi_icons_24" style_text_color="#warning_color"
               hidden="true">
-      <lv_obj-bind_flag_if_not_eq subject="toast_severity" flag="hidden" ref_value="2"/>
+      <bind_flag_if_not_eq subject="toast_severity" flag="hidden" ref_value="2"/>
     </lv_label>
     <!-- ERROR icon (triangle-exclamation) - shown when toast_severity=3 -->
     <lv_label name="icon_error"
               text="#icon_triangle_exclamation" style_text_font="mdi_icons_24" style_text_color="#error_color"
               hidden="true">
-      <lv_obj-bind_flag_if_not_eq subject="toast_severity" flag="hidden" ref_value="3"/>
+      <bind_flag_if_not_eq subject="toast_severity" flag="hidden" ref_value="3"/>
     </lv_label>
     <!-- Message text (wraps to fit content) -->
     <text_body name="toast_message"
@@ -41,7 +41,7 @@
                width="content" height="36" style_min_width="72" style_radius="#border_radius_small"
                style_border_width="0" style_bg_color="#secondary_color" style_pad_left="#space_lg"
                style_pad_right="#space_lg" hidden="true" clickable="true">
-      <lv_obj-bind_flag_if_eq subject="toast_action_visible" flag="hidden" ref_value="0"/>
+      <bind_flag_if_eq subject="toast_action_visible" flag="hidden" ref_value="0"/>
       <text_body name="toast_action_label" align="center" style_text_color="#text_primary" bind_text="toast_action_text"/>
     </lv_button>
     <!-- Close button -->

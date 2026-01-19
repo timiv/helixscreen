@@ -41,9 +41,9 @@
                 align="top_left">
         <!-- Bindings control visibility: hidden in states 0, 4, 5 (visible in 1, 2, 3) -->
         <!-- NOTE: Do NOT add hidden="true" base attribute - bindings handle it -->
-        <lv_obj-bind_flag_if_eq subject="touch_cal_state" flag="hidden" ref_value="0"/>
-        <lv_obj-bind_flag_if_eq subject="touch_cal_state" flag="hidden" ref_value="4"/>
-        <lv_obj-bind_flag_if_eq subject="touch_cal_state" flag="hidden" ref_value="5"/>
+        <bind_flag_if_eq subject="touch_cal_state" flag="hidden" ref_value="0"/>
+        <bind_flag_if_eq subject="touch_cal_state" flag="hidden" ref_value="4"/>
+        <bind_flag_if_eq subject="touch_cal_state" flag="hidden" ref_value="5"/>
       </lv_label>
 
       <!-- Verify marker - shows where transformed touch lands during VERIFY state -->
@@ -68,8 +68,8 @@
               flag_clickable="true">
         <event_cb trigger="clicked" callback="on_touch_cal_overlay_touched"/>
         <!-- Bindings control visibility: hidden in states 0, 5 (visible in 1, 2, 3, 4) -->
-        <lv_obj-bind_flag_if_eq subject="touch_cal_state" flag="hidden" ref_value="0"/>
-        <lv_obj-bind_flag_if_eq subject="touch_cal_state" flag="hidden" ref_value="5"/>
+        <bind_flag_if_eq subject="touch_cal_state" flag="hidden" ref_value="0"/>
+        <bind_flag_if_eq subject="touch_cal_state" flag="hidden" ref_value="5"/>
       </lv_obj>
 
       <!-- Button container (bottom center) -->
@@ -88,21 +88,21 @@
         <!-- Start button - visible only in IDLE (state=0) -->
         <lv_button name="btn_start" width="200" height="#button_height">
           <event_cb trigger="clicked" callback="on_touch_cal_start_clicked"/>
-          <lv_obj-bind_flag_if_not_eq subject="touch_cal_state" flag="hidden" ref_value="0"/>
+          <bind_flag_if_not_eq subject="touch_cal_state" flag="hidden" ref_value="0"/>
           <text_body text="Start Calibration" align="center"/>
         </lv_button>
 
         <!-- Accept button - visible only in VERIFY (state=4) -->
         <lv_button name="btn_accept" width="150" height="#button_height">
           <event_cb trigger="clicked" callback="on_touch_cal_accept_clicked"/>
-          <lv_obj-bind_flag_if_not_eq subject="touch_cal_state" flag="hidden" ref_value="4"/>
+          <bind_flag_if_not_eq subject="touch_cal_state" flag="hidden" ref_value="4"/>
           <text_body text="Accept" align="center"/>
         </lv_button>
 
         <!-- Retry button - visible only in VERIFY (state=4) -->
         <lv_button name="btn_retry" width="150" height="#button_height" style_bg_color="#card_bg">
           <event_cb trigger="clicked" callback="on_touch_cal_retry_clicked"/>
-          <lv_obj-bind_flag_if_not_eq subject="touch_cal_state" flag="hidden" ref_value="4"/>
+          <bind_flag_if_not_eq subject="touch_cal_state" flag="hidden" ref_value="4"/>
           <text_body text="Retry" align="center"/>
         </lv_button>
 
@@ -110,8 +110,8 @@
         <lv_button name="btn_skip" width="100" height="#button_height" style_bg_color="#card_bg">
           <event_cb trigger="clicked" callback="on_touch_cal_skip_clicked"/>
           <!-- Hidden if state != 0 OR skip not allowed (skip_visible == 0) -->
-          <lv_obj-bind_flag_if_not_eq subject="touch_cal_state" flag="hidden" ref_value="0"/>
-          <lv_obj-bind_flag_if_eq subject="touch_cal_skip_visible" flag="hidden" ref_value="0"/>
+          <bind_flag_if_not_eq subject="touch_cal_state" flag="hidden" ref_value="0"/>
+          <bind_flag_if_eq subject="touch_cal_skip_visible" flag="hidden" ref_value="0"/>
           <text_body text="Skip" align="center"/>
         </lv_button>
       </lv_obj>

@@ -21,7 +21,7 @@
               width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
               style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg"
               scrollable="false">
-        <lv_obj-bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="0"/>
+        <bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="0"/>
         <!-- Instructions -->
         <lv_obj width="100%"
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
@@ -57,7 +57,7 @@
               width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
               style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg"
               scrollable="false">
-        <lv_obj-bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="1"/>
+        <bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="1"/>
         <spinner size="lg"/>
         <text_heading text="Probing Bed..." style_text_align="center"/>
         <text_small width="80%" text="Please wait while the printer homes and probes." style_text_align="center"/>
@@ -74,7 +74,7 @@
       <lv_obj name="state_adjusting"
               width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
               style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_lg" scrollable="false">
-        <lv_obj-bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="2"/>
+        <bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="2"/>
         <!-- Current Z Position Display -->
         <lv_obj width="100%"
                 height="80" style_bg_color="#section_bg_color" style_radius="#border_radius" style_pad_all="#space_md"
@@ -158,7 +158,7 @@
               width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
               style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg"
               scrollable="false">
-        <lv_obj-bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="3"/>
+        <bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="3"/>
         <spinner size="lg"/>
         <text_heading text="Saving Configuration..." style_text_align="center"/>
         <text_small width="80%"
@@ -172,7 +172,7 @@
               width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
               style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
               style_pad_gap="#space_lg" scrollable="false">
-        <lv_obj-bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="4"/>
+        <bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="4"/>
         <lv_label text="#icon_check_circle" style_text_font="mdi_icons_48" style_text_color="#success_color"/>
         <text_heading text="Calibration Complete!" style_text_align="center"/>
         <text_body name="final_offset_label" text="New Z-Offset: 0.000" style_text_color="#text_secondary"/>
@@ -188,7 +188,7 @@
               width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
               style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
               style_pad_gap="#space_lg" scrollable="false">
-        <lv_obj-bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="5"/>
+        <bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="5"/>
         <lv_label text="#icon_xmark_circle" style_text_font="mdi_icons_48" style_text_color="#error_color"/>
         <text_heading text="Calibration Failed" style_text_align="center"/>
         <text_body name="error_message"

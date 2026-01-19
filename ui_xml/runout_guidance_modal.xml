@@ -72,7 +72,7 @@
     <lv_obj width="100%"
             height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_gap="0"
             flex_flow="row">
-      <lv_obj-bind_flag_if_eq subject="print_state_enum" flag="hidden" ref_value="2"/>
+      <bind_flag_if_eq subject="print_state_enum" flag="hidden" ref_value="2"/>
       <lv_button name="btn_ok"
                  height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
                  clickable="true">
@@ -84,7 +84,7 @@
     <lv_obj width="100%"
             height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_gap="0"
             flex_flow="row">
-      <lv_obj-bind_flag_if_not_eq subject="print_state_enum" flag="hidden" ref_value="2"/>
+      <bind_flag_if_not_eq subject="print_state_enum" flag="hidden" ref_value="2"/>
       <!-- Cancel Print button -->
       <lv_button name="btn_cancel_print"
                  height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"

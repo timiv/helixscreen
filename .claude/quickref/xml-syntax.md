@@ -46,11 +46,18 @@
 **✅ CORRECT:**
 ```xml
 <lv_obj>
-  <lv_obj-bind_flag_if_eq subject="visible" flag="hidden" ref_value="0"/>
+  <bind_flag_if_eq subject="visible" flag="hidden" ref_value="0"/>
 </lv_obj>
 ```
 
 **Available conditionals:** `bind_flag_if_eq`, `bind_flag_if_ne`, `bind_flag_if_gt`, `bind_flag_if_ge`, `bind_flag_if_lt`, `bind_flag_if_le`
+
+**Initial state best practice:** Set explicit initial visibility on elements with `flag="hidden"` bindings to prevent flashing:
+```xml
+<lv_obj hidden="true">
+  <bind_flag_if_eq subject="should_show" flag="hidden" ref_value="0"/>
+</lv_obj>
+```
 
 ---
 
@@ -103,7 +110,7 @@
 | Widget not found | Missing `name=` on component | Add explicit name |
 | Flex not working | Missing properties | Add all 3: `main_place`, `cross_place`, `track_place` |
 | Flag not applied | Using `flag_` prefix | Remove prefix, use `hidden` not `flag_hidden` |
-| Binding not working | Using attribute syntax | Use child element: `<lv_obj-bind_flag_if_eq>` |
+| Binding not working | Using attribute syntax | Use child element: `<bind_flag_if_eq>` |
 | Height collapses to 0 | `height="LV_SIZE_CONTENT"` bug | Use `flex_grow="1"` instead |
 
 ---

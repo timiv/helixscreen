@@ -94,7 +94,7 @@
       <ui_card name="ams_status_card"
                width="100%" flex_grow="1" style_radius="#border_radius" style_pad_all="#space_md" flex_flow="column"
                style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_sm">
-        <lv_obj-bind_flag_if_eq subject="ams_type" flag="hidden" ref_value="0"/>
+        <bind_flag_if_eq subject="ams_type" flag="hidden" ref_value="0"/>
         <!-- Header row with icon -->
         <lv_obj width="100%"
                 height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" scrollable="false"
@@ -186,7 +186,7 @@
                    width="100%" height="#button_height" style_radius="#border_radius" style_border_width="0"
                    style_bg_color="#temp_gradient_cold" flex_flow="row" style_flex_main_place="center"
                    style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_xs">
-          <lv_obj-bind_flag_if_eq subject="filament_nozzle_heating" flag="hidden" ref_value="0"/>
+          <bind_flag_if_eq subject="filament_nozzle_heating" flag="hidden" ref_value="0"/>
           <event_cb trigger="clicked" callback="on_filament_cooldown"/>
           <icon src="cooldown" size="sm" variant="secondary"/>
           <text_body text="Cool Down"/>
@@ -243,7 +243,7 @@
                        height="#button_height" flex_grow="1" style_radius="#border_radius" style_border_width="0"
                        flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
                        style_flex_track_place="center" style_pad_gap="#space_xs">
-              <lv_obj-bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
+              <bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
               <event_cb trigger="clicked" callback="on_filament_load"/>
               <icon src="arrow_down" size="sm" variant="primary"/>
               <text_body text="Load"/>
@@ -252,7 +252,7 @@
                        height="#button_height" flex_grow="1" style_radius="#border_radius" style_border_width="0"
                        flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
                        style_flex_track_place="center" style_pad_gap="#space_xs">
-              <lv_obj-bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
+              <bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
               <event_cb trigger="clicked" callback="on_filament_unload"/>
               <icon src="arrow_up" size="sm" variant="primary"/>
               <text_body text="Unload"/>
@@ -263,7 +263,7 @@
                      width="100%" height="#button_height" style_radius="#border_radius" style_border_width="0"
                      flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
                      style_flex_track_place="center" style_pad_gap="#space_xs">
-            <lv_obj-bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
+            <bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
             <event_cb trigger="clicked" callback="on_filament_purge"/>
             <icon src="filament" size="sm" variant="primary"/>
             <text_body text="Purge"/>
@@ -274,7 +274,7 @@
                 width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                 scrollable="false" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
                 style_flex_track_place="center" style_pad_gap="#space_xs">
-          <lv_obj-bind_flag_if_eq subject="filament_safety_warning_visible" flag="hidden" ref_value="0"/>
+          <bind_flag_if_eq subject="filament_safety_warning_visible" flag="hidden" ref_value="0"/>
           <icon src="alert" size="sm" variant="warning"/>
           <text_small bind_text="filament_safety_warning_text"/>
         </lv_obj>

@@ -68,9 +68,9 @@
           <lv_button name="btn_test_connection" width="200" height="#button_height">
             <text_body text="Test Connection" align="center"/>
             <!-- Disable button while connection test is in progress -->
-            <lv_obj-bind_state_if_eq subject="connection_testing" state="disabled" ref_value="1"/>
+            <bind_state_if_eq subject="connection_testing" state="disabled" ref_value="1"/>
             <!-- Remove clickable flag when connection test is in progress -->
-            <lv_obj-bind_flag_if_eq subject="connection_testing" flag="clickable" ref_value="0"/>
+            <bind_flag_if_eq subject="connection_testing" flag="clickable" ref_value="0"/>
           </lv_button>
           <!-- Connection Status (icon + text) -->
           <lv_obj height="content"
@@ -78,11 +78,11 @@
                   style_flex_main_place="start" style_flex_cross_place="center" style_pad_column="#space_sm">
             <!-- Status Spinner (visible ONLY when discovering) -->
             <spinner name="connection_spinner" size="sm">
-              <lv_obj-bind_flag_if_eq subject="connection_discovering" flag="hidden" ref_value="0"/>
+              <bind_flag_if_eq subject="connection_discovering" flag="hidden" ref_value="0"/>
             </spinner>
             <!-- Status Icon - MDI (hidden when discovering) -->
             <lv_label name="connection_status_icon" bind_text="connection_status_icon" style_text_font="mdi_icons_16">
-              <lv_obj-bind_flag_if_eq subject="connection_discovering" flag="hidden" ref_value="1"/>
+              <bind_flag_if_eq subject="connection_discovering" flag="hidden" ref_value="1"/>
             </lv_label>
             <!-- Status Text (wrapping enabled to prevent overflow) -->
             <text_body name="connection_status_text" bind_text="connection_status_text"

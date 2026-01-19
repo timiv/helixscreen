@@ -65,9 +65,9 @@ lv_subject_set_int(&temp_value, 220);  // Label shows "220"
 
 ### Flag Binding (Conditional Show/Hide)
 ```xml
-<!-- XML - Hide when value == 0 -->
-<lv_obj name="indicator">
-  <lv_obj-bind_flag_if_eq subject="is_visible" flag="hidden" ref_value="0"/>
+<!-- XML - Hide when value == 0, start hidden until proven otherwise -->
+<lv_obj name="indicator" hidden="true">
+  <bind_flag_if_eq subject="is_visible" flag="hidden" ref_value="0"/>
 </lv_obj>
 ```
 ```cpp
@@ -86,7 +86,7 @@ lv_subject_set_int(&is_visible, 1);  // Element becomes visible
 ```xml
 <!-- XML - Button disabled when connection_ok == 0 -->
 <lv_button name="next_btn">
-  <lv_obj-bind_flag_if_eq subject="connection_ok" flag="clickable" ref_value="0" negate="true"/>
+  <bind_flag_if_eq subject="connection_ok" flag="clickable" ref_value="0" negate="true"/>
 </lv_button>
 ```
 ```cpp
@@ -139,7 +139,7 @@ if (my_label) {
 |---------|-------|----------|
 | Subject has default/empty value | Created XML before initializing subjects | Follow initialization order (see top) |
 | Can't find widget | Missing `name="..."` in XML | Add explicit names to all components |
-| Binding not working | Using attribute syntax | Use child element: `<lv_obj-bind_flag_if_eq>` |
+| Binding not working | Using attribute syntax | Use child element: `<bind_flag_if_eq>` |
 | UI not updating | Using wrong update function | Int: `set_int()`, String: `copy_string()` |
 
 ---

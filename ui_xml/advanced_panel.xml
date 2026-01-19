@@ -61,7 +61,7 @@
     <!-- Input Shaping (hidden if no accelerometer) -->
     <lv_obj name="container_input_shaping"
             width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
-      <lv_obj-bind_flag_if_eq subject="printer_has_accelerometer" flag="hidden" ref_value="0"/>
+      <bind_flag_if_eq subject="printer_has_accelerometer" flag="hidden" ref_value="0"/>
       <setting_action_row name="row_input_shaping"
                           label="Input Shaping" icon="inputshaper" description="Resonance compensation tuning">
         <event_cb trigger="clicked" callback="on_input_shaper_row_clicked"/>
@@ -70,7 +70,7 @@
     <!-- Z-Offset Calibration (hidden if no probe) -->
     <lv_obj name="container_z_offset"
             width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
-      <lv_obj-bind_flag_if_eq subject="printer_has_probe" flag="hidden" ref_value="0"/>
+      <bind_flag_if_eq subject="printer_has_probe" flag="hidden" ref_value="0"/>
       <setting_action_row name="row_z_offset"
                           label="Z-Offset Calibration" icon="z_closer" description="Interactive probe calibration">
         <event_cb trigger="clicked" callback="on_zoffset_row_clicked"/>
@@ -87,7 +87,7 @@
     <!-- Spoolman (hidden if not connected) -->
     <lv_obj name="container_spoolman"
             width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
-      <lv_obj-bind_flag_if_eq subject="printer_has_spoolman" flag="hidden" ref_value="0"/>
+      <bind_flag_if_eq subject="printer_has_spoolman" flag="hidden" ref_value="0"/>
       <setting_action_row name="row_spoolman"
                           label="Spoolman" icon="inventory" description="Filament tracking and inventory">
         <event_cb trigger="clicked" callback="on_advanced_spoolman"/>
@@ -96,7 +96,7 @@
     <!-- Fallback message when Spoolman not available -->
     <lv_obj name="container_no_spoolman"
             width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
-      <lv_obj-bind_flag_if_eq subject="printer_has_spoolman" flag="hidden" ref_value="1"/>
+      <bind_flag_if_eq subject="printer_has_spoolman" flag="hidden" ref_value="1"/>
       <setting_info_row name="row_no_spoolman" label="Spoolman" icon="inventory" value="Not configured"/>
     </lv_obj>
     <!-- ================================================================== -->
@@ -111,7 +111,7 @@
     <!-- Shows ONLY when value == 0 (not installed), hidden otherwise (-1 or 1) -->
     <lv_obj name="container_helix_plugin_install"
             width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
-      <lv_obj-bind_flag_if_not_eq subject="helix_plugin_installed" flag="hidden" ref_value="0"/>
+      <bind_flag_if_not_eq subject="helix_plugin_installed" flag="hidden" ref_value="0"/>
       <setting_action_row name="row_helix_plugin_install"
                           label="Install HelixPrint Plugin" icon="puzzle_outline"
                           description="Control optional print start features">
@@ -122,7 +122,7 @@
     <!-- Shows ONLY when value == 1 (installed), hidden otherwise (-1 or 0) -->
     <lv_obj name="container_helix_plugin_uninstall"
             width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
-      <lv_obj-bind_flag_if_not_eq subject="helix_plugin_installed" flag="hidden" ref_value="1"/>
+      <bind_flag_if_not_eq subject="helix_plugin_installed" flag="hidden" ref_value="1"/>
       <setting_action_row name="row_helix_plugin_uninstall"
                           label="Uninstall HelixPrint Plugin" icon="puzzle_outline"
                           description="Remove plugin from printer">
@@ -148,7 +148,7 @@
     <!-- Shows ONLY when value == 1 (installed), hidden otherwise (-1 or 0) -->
     <lv_obj name="container_phase_tracking"
             width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
-      <lv_obj-bind_flag_if_not_eq subject="helix_plugin_installed" flag="hidden" ref_value="1"/>
+      <bind_flag_if_not_eq subject="helix_plugin_installed" flag="hidden" ref_value="1"/>
       <setting_toggle_row name="row_phase_tracking"
                           label="Phase Tracking" icon="progress_clock"
                           description="Show detailed print preparation status" subject="phase_tracking_enabled"
@@ -157,7 +157,7 @@
     <!-- Timelapse Settings -->
     <setting_action_row name="row_timelapse"
                         label="Timelapse" icon="camera_timer" description="Configure timelapse recording">
-      <lv_obj-bind_flag_if_eq subject="printer_has_timelapse" flag="hidden" ref_value="0"/>
+      <bind_flag_if_eq subject="printer_has_timelapse" flag="hidden" ref_value="0"/>
       <event_cb trigger="clicked" callback="on_timelapse_row_clicked"/>
     </setting_action_row>
     <!-- ================================================================== -->

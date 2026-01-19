@@ -16,7 +16,7 @@
       <lv_obj name="state_idle"
               width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
               style_pad_gap="#space_md" scrollable="false">
-        <lv_obj-bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="0"/>
+        <bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="0"/>
         <!-- Hero section: icon + title + help button -->
         <lv_obj width="100%"
                 height="content" style_bg_color="#app_bg_color" style_bg_opa="255" style_radius="#border_radius"
@@ -80,7 +80,7 @@
       <lv_obj name="state_measuring"
               width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
               style_pad_gap="#space_lg" scrollable="false">
-        <lv_obj-bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="1"/>
+        <bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="1"/>
         <!-- Spinner and status container -->
         <lv_obj width="100%"
                 height="content" style_min_height="160" style_bg_color="#app_bg_color" style_bg_opa="255"
@@ -108,7 +108,7 @@
       <lv_obj name="state_results"
               width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
               style_pad_gap="#space_md" scrollable="false">
-        <lv_obj-bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="2"/>
+        <bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="2"/>
         <!-- Success banner with recommendation -->
         <lv_obj width="100%"
                 height="content" style_bg_color="#success_color" style_bg_opa="40" style_radius="#border_radius"
@@ -145,7 +145,7 @@
                   width="100%" height="40" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
                   style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj-bind_flag_if_eq subject="shaper_0_visible" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="shaper_0_visible" flag="hidden" ref_value="0"/>
             <lv_label width="40%" style_text_font="#font_body" style_text_color="#text_primary">
               <lv_label-bind_text subject="shaper_0_type"/>
             </lv_label>
@@ -161,7 +161,7 @@
                   width="100%" height="40" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
                   style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj-bind_flag_if_eq subject="shaper_1_visible" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="shaper_1_visible" flag="hidden" ref_value="0"/>
             <lv_label width="40%" style_text_font="#font_body" style_text_color="#text_primary">
               <lv_label-bind_text subject="shaper_1_type"/>
             </lv_label>
@@ -177,7 +177,7 @@
                   width="100%" height="40" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
                   style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj-bind_flag_if_eq subject="shaper_2_visible" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="shaper_2_visible" flag="hidden" ref_value="0"/>
             <lv_label width="40%" style_text_font="#font_body" style_text_color="#text_primary">
               <lv_label-bind_text subject="shaper_2_type"/>
             </lv_label>
@@ -193,7 +193,7 @@
                   width="100%" height="40" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
                   style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj-bind_flag_if_eq subject="shaper_3_visible" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="shaper_3_visible" flag="hidden" ref_value="0"/>
             <lv_label width="40%" style_text_font="#font_body" style_text_color="#text_primary">
               <lv_label-bind_text subject="shaper_3_type"/>
             </lv_label>
@@ -209,7 +209,7 @@
                   width="100%" height="40" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
                   style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj-bind_flag_if_eq subject="shaper_4_visible" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="shaper_4_visible" flag="hidden" ref_value="0"/>
             <lv_label width="40%" style_text_font="#font_body" style_text_color="#text_primary">
               <lv_label-bind_text subject="shaper_4_type"/>
             </lv_label>
@@ -275,7 +275,7 @@
       <lv_obj name="state_error"
               width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
               style_pad_gap="#space_md" scrollable="false">
-        <lv_obj-bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="3"/>
+        <bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="3"/>
         <!-- Error card -->
         <lv_obj width="100%"
                 height="content" style_bg_color="#error_color" style_bg_opa="25" style_radius="#border_radius"

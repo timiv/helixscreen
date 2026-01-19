@@ -40,7 +40,7 @@
               width="100%" flex_grow="1" flex_flow="column" style_flex_main_place="center"
               style_flex_cross_place="center" style_flex_gap_row="#space_md" style_pad_all="#space_xl" style_bg_opa="0"
               style_border_width="0">
-        <lv_obj-bind_flag_if_not_eq subject="history_list_panel_state" flag="hidden" ref_value="0"/>
+        <bind_flag_if_not_eq subject="history_list_panel_state" flag="hidden" ref_value="0"/>
         <!-- Loading spinner -->
         <lv_spinner name="loading_spinner" width="48" height="48"/>
         <text_body text="Loading history..." style_text_color="#text_secondary" style_text_align="center"/>
@@ -52,7 +52,7 @@
               width="100%" flex_grow="1" flex_flow="column" style_flex_main_place="center"
               style_flex_cross_place="center" style_flex_gap_row="#space_md" style_pad_all="#space_xl" style_bg_opa="0"
               style_border_width="0">
-        <lv_obj-bind_flag_if_not_eq subject="history_list_panel_state" flag="hidden" ref_value="1"/>
+        <bind_flag_if_not_eq subject="history_list_panel_state" flag="hidden" ref_value="1"/>
         <!-- Empty state icon (clock/history icon F0150) -->
         <lv_label name="empty_icon" text="󰅐" style_text_font="mdi_icons_48" style_text_color="#text_secondary"/>
         <!-- Empty state message -->
@@ -68,7 +68,7 @@
       <lv_obj name="list_rows"
               width="100%" height="content" flex_flow="column" style_flex_gap_row="#space_sm" style_pad_all="0"
               style_bg_opa="0" style_border_width="0" clickable="false">
-        <lv_obj-bind_flag_if_not_eq subject="history_list_panel_state" flag="hidden" ref_value="2"/>
+        <bind_flag_if_not_eq subject="history_list_panel_state" flag="hidden" ref_value="2"/>
       </lv_obj>
     </lv_obj>
   </view>

@@ -53,7 +53,7 @@
                  width="100%" height="100%" style_radius="#border_radius" style_border_width="0" style_shadow_width="0"
                  clickable="true">
         <!-- Disabled while test is running (test_complete=0) -->
-        <lv_obj-bind_state_if_eq subject="test_complete" state="disabled" ref_value="0"/>
+        <bind_state_if_eq subject="test_complete" state="disabled" ref_value="0"/>
         <text_body text="Close" align="center"/>
         <event_cb trigger="clicked" callback="on_network_test_close"/>
       </lv_button>

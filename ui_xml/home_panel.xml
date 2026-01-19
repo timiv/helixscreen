@@ -47,17 +47,17 @@
         </lv_image>
         <!-- Disconnected overlay - shown when NOT connected (state != 2) -->
         <icon name="disconnected_overlay" src="prohibited" size="xl" align="center" color="#error_color">
-          <lv_obj-bind_flag_if_eq subject="printer_connection_state" flag="hidden" ref_value="2"/>
+          <bind_flag_if_eq subject="printer_connection_state" flag="hidden" ref_value="2"/>
         </icon>
         <!-- Shutdown overlay - shown when klippy is SHUTDOWN (state 2) -->
         <icon name="shutdown_overlay" src="alert_octagon" size="xl" align="center" color="#warning_color" hidden="true">
-          <lv_obj-bind_flag_if_not_eq subject="klippy_state" flag="hidden" ref_value="2"/>
+          <bind_flag_if_not_eq subject="klippy_state" flag="hidden" ref_value="2"/>
         </icon>
         <!-- Printer info - subtle text at bottom -->
         <lv_obj name="printer_info_bar"
                 width="100%" height="content" align="bottom_mid" style_bg_opa="0" style_border_width="0"
                 style_pad_all="0" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
-          <lv_obj-bind_flag_if_eq subject="printer_info_visible" flag="hidden" ref_value="0"/>
+          <bind_flag_if_eq subject="printer_info_visible" flag="hidden" ref_value="0"/>
           <text_small width="100%"
                       bind_text="printer_type_text" style_text_color="#text_primary" style_text_align="center"
                       stroke_width="1" stroke_color="#000000" stroke_opa="180"/>
@@ -98,14 +98,14 @@
                  style_border_width="0" style_pad_all="#space_lg" style_shadow_width="0" flex_flow="column"
                  style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
                  style_pad_gap="#space_sm">
-        <lv_obj-bind_state_if_not_eq subject="printer_connection_state" state="disabled" ref_value="2"/>
+        <bind_state_if_not_eq subject="printer_connection_state" state="disabled" ref_value="2"/>
         <event_cb trigger="clicked" callback="print_card_clicked_cb"/>
         <!-- IDLE STATE: Benchy + "Print Files" (hidden when print_active == 1) -->
         <lv_obj name="print_card_idle"
                 width="100%" height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
                 style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm"
                 clickable="false">
-          <lv_obj-bind_flag_if_not_eq subject="print_active" flag="hidden" ref_value="0"/>
+          <bind_flag_if_not_eq subject="print_active" flag="hidden" ref_value="0"/>
           <lv_image name="print_card_thumb"
                     width="50%" height="100%" src="A:assets/images/benchy_thumbnail_white.png" inner_align="contain"/>
           <text_body name="print_card_label" text="Print Files"/>
@@ -115,7 +115,7 @@
                 width="100%" height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="#space_sm"
                 flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
                 style_pad_gap="#space_sm" hidden="true" clickable="false">
-          <lv_obj-bind_flag_if_eq subject="print_start_phase" flag="hidden" ref_value="0"/>
+          <bind_flag_if_eq subject="print_start_phase" flag="hidden" ref_value="0"/>
           <!-- "Preparing Print" heading -->
           <text_body text="Preparing Print" style_text_color="#text_primary"/>
           <!-- Progress bar -->
@@ -132,7 +132,7 @@
                 style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm"
                 scrollable="false" hidden="true" clickable="false">
           <!-- Single binding: show only when print_active==1 AND print_start_phase==IDLE -->
-          <lv_obj-bind_flag_if_eq subject="print_show_progress" flag="hidden" ref_value="0"/>
+          <bind_flag_if_eq subject="print_show_progress" flag="hidden" ref_value="0"/>
           <!-- Thumbnail (set programmatically via lv_image_set_src when print starts) -->
           <lv_image name="print_card_active_thumb"
                     width="50%" height="100%" src="A:assets/images/benchy_thumbnail_white.png" inner_align="contain"/>
@@ -177,19 +177,19 @@
               <event_cb trigger="clicked" callback="printer_status_clicked_cb"/>
               <!-- Ready (green) - state 0 -->
               <icon name="printer_icon_ready" src="printer_3d" size="#icon_size_card" variant="success" hidden="true">
-                <lv_obj-bind_flag_if_not_eq subject="printer_icon_state" flag="hidden" ref_value="0"/>
+                <bind_flag_if_not_eq subject="printer_icon_state" flag="hidden" ref_value="0"/>
               </icon>
               <!-- Warning (orange) - state 1 -->
               <icon name="printer_icon_warning" src="printer_3d" size="#icon_size_card" variant="warning" hidden="true">
-                <lv_obj-bind_flag_if_not_eq subject="printer_icon_state" flag="hidden" ref_value="1"/>
+                <bind_flag_if_not_eq subject="printer_icon_state" flag="hidden" ref_value="1"/>
               </icon>
               <!-- Error (red) - state 2 -->
               <icon name="printer_icon_error" src="printer_3d" size="#icon_size_card" variant="error" hidden="true">
-                <lv_obj-bind_flag_if_not_eq subject="printer_icon_state" flag="hidden" ref_value="2"/>
+                <bind_flag_if_not_eq subject="printer_icon_state" flag="hidden" ref_value="2"/>
               </icon>
               <!-- Disconnected (gray) - state 3 (default) -->
               <icon name="printer_icon_disconnected" src="printer_3d" size="#icon_size_card" variant="secondary">
-                <lv_obj-bind_flag_if_not_eq subject="printer_icon_state" flag="hidden" ref_value="3"/>
+                <bind_flag_if_not_eq subject="printer_icon_state" flag="hidden" ref_value="3"/>
               </icon>
             </lv_button>
           </lv_obj>
@@ -209,27 +209,27 @@
             <event_cb trigger="clicked" callback="network_clicked_cb"/>
             <!-- Disconnected (state 0) -->
             <icon name="net_disconnected" src="wifi_off" size="#icon_size_card" variant="disabled">
-              <lv_obj-bind_flag_if_not_eq subject="home_network_icon_state" flag="hidden" ref_value="0"/>
+              <bind_flag_if_not_eq subject="home_network_icon_state" flag="hidden" ref_value="0"/>
             </icon>
             <!-- WiFi strength 1 - weak (state 1) - warning color -->
             <icon name="net_wifi_1" src="wifi_strength_1_alert" size="#icon_size_card" variant="warning">
-              <lv_obj-bind_flag_if_not_eq subject="home_network_icon_state" flag="hidden" ref_value="1"/>
+              <bind_flag_if_not_eq subject="home_network_icon_state" flag="hidden" ref_value="1"/>
             </icon>
             <!-- WiFi strength 2 - fair (state 2) -->
             <icon name="net_wifi_2" src="wifi_strength_2" size="#icon_size_card" variant="secondary">
-              <lv_obj-bind_flag_if_not_eq subject="home_network_icon_state" flag="hidden" ref_value="2"/>
+              <bind_flag_if_not_eq subject="home_network_icon_state" flag="hidden" ref_value="2"/>
             </icon>
             <!-- WiFi strength 3 - good (state 3) -->
             <icon name="net_wifi_3" src="wifi_strength_3" size="#icon_size_card" variant="secondary">
-              <lv_obj-bind_flag_if_not_eq subject="home_network_icon_state" flag="hidden" ref_value="3"/>
+              <bind_flag_if_not_eq subject="home_network_icon_state" flag="hidden" ref_value="3"/>
             </icon>
             <!-- WiFi strength 4 - strong (state 4) -->
             <icon name="net_wifi_4" src="wifi_strength_4" size="#icon_size_card" variant="secondary">
-              <lv_obj-bind_flag_if_not_eq subject="home_network_icon_state" flag="hidden" ref_value="4"/>
+              <bind_flag_if_not_eq subject="home_network_icon_state" flag="hidden" ref_value="4"/>
             </icon>
             <!-- Ethernet (state 5) - success color indicates active wired connection -->
             <icon name="net_ethernet" src="ethernet" size="#icon_size_card" variant="success">
-              <lv_obj-bind_flag_if_not_eq subject="home_network_icon_state" flag="hidden" ref_value="5"/>
+              <bind_flag_if_not_eq subject="home_network_icon_state" flag="hidden" ref_value="5"/>
             </icon>
             <text_tiny name="network_label" width="100%" bind_text="network_label" style_text_align="center"/>
           </lv_button>
@@ -253,7 +253,7 @@
               <lv_obj name="notification_badge"
                       width="18" height="18" align="top_right" x="-#space_xxs" y="#space_xxs" style_radius="9"
                       style_border_width="0" style_pad_all="0" hidden="true" scrollable="false" clickable="true">
-                <lv_obj-bind_flag_if_eq subject="notification_count" flag="hidden" ref_value="0"/>
+                <bind_flag_if_eq subject="notification_count" flag="hidden" ref_value="0"/>
                 <event_cb trigger="clicked" callback="status_notification_history_clicked"/>
                 <!-- Background with severity-bound color -->
                 <lv_obj name="badge_bg"
@@ -273,14 +273,14 @@
           <lv_obj name="estop_divider"
                   width="1" height="80%" style_bg_color="#text_secondary" style_bg_opa="128" style_border_width="0"
                   style_pad_all="0" hidden="true">
-            <lv_obj-bind_flag_if_eq subject="estop_visible" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="estop_visible" flag="hidden" ref_value="0"/>
           </lv_obj>
 
           <!-- E-stop button container (ONLY visible when printing) -->
           <lv_obj height="100%"
                   flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
                   style_flex_main_place="center" style_flex_track_place="center" hidden="true">
-            <lv_obj-bind_flag_if_eq subject="estop_visible" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="estop_visible" flag="hidden" ref_value="0"/>
             <!-- Circular button: radius=24 is half of button_height_small (48px) -->
             <lv_button name="estop_button_home"
                        width="#button_height_sm" height="#button_height_sm" style_radius="24"
@@ -295,14 +295,14 @@
           <lv_obj name="firmware_restart_divider"
                   width="1" height="80%" style_bg_color="#text_secondary" style_bg_opa="128" style_border_width="0"
                   style_pad_all="0" hidden="true">
-            <lv_obj-bind_flag_if_not_eq subject="klippy_state" flag="hidden" ref_value="2"/>
+            <bind_flag_if_not_eq subject="klippy_state" flag="hidden" ref_value="2"/>
           </lv_obj>
 
           <!-- Firmware restart button container (ONLY visible when klippy SHUTDOWN) -->
           <lv_obj height="100%"
                   flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
                   style_flex_main_place="center" style_flex_track_place="center" hidden="true">
-            <lv_obj-bind_flag_if_not_eq subject="klippy_state" flag="hidden" ref_value="2"/>
+            <bind_flag_if_not_eq subject="klippy_state" flag="hidden" ref_value="2"/>
             <!-- Circular button: uses primary_color to indicate "safe" recovery action -->
             <lv_button name="firmware_restart_button_home"
                        width="#button_height_sm" height="#button_height_sm" style_radius="24"
@@ -326,7 +326,7 @@
                      height="100%" flex_grow="1" style_bg_opa="0" style_shadow_width="0" style_border_width="0"
                      style_radius="0" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
                      style_flex_cross_place="center">
-            <lv_obj-bind_state_if_not_eq subject="printer_connection_state" state="disabled" ref_value="2"/>
+            <bind_state_if_not_eq subject="printer_connection_state" state="disabled" ref_value="2"/>
             <event_cb trigger="clicked" callback="temp_clicked_cb"/>
             <icon name="temp_icon" src="heater" size="#icon_size_card" variant="secondary"/>
             <temp_display name="temp_text_label"
@@ -338,15 +338,15 @@
           <lv_obj name="divider2"
                   width="1" height="80%" style_bg_color="#text_secondary" style_bg_opa="50%" style_border_width="0"
                   style_pad_all="0">
-            <lv_obj-bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
           </lv_obj>
 
           <!-- Light control button - single icon with dynamic brightness/color -->
           <lv_button name="light_button"
                      height="100%" flex_grow="1" style_bg_opa="0%" style_border_width="0" style_pad_all="0"
                      style_shadow_width="0">
-            <lv_obj-bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
-            <lv_obj-bind_state_if_not_eq subject="printer_connection_state" state="disabled" ref_value="2"/>
+            <bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
+            <bind_state_if_not_eq subject="printer_connection_state" state="disabled" ref_value="2"/>
             <!-- Dynamic icon - source and color set by C++ based on LED brightness/color -->
             <icon name="light_icon"
                   src="lightbulb_outline" size="#icon_size_card" align="center" color="#light_icon_off"/>
@@ -357,12 +357,12 @@
           <lv_obj name="ams_divider"
                   width="1" height="80%" style_bg_color="#text_secondary" style_bg_opa="50%" style_border_width="0"
                   style_pad_all="0">
-            <lv_obj-bind_flag_if_eq subject="ams_slot_count" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="ams_slot_count" flag="hidden" ref_value="0"/>
           </lv_obj>
 
           <!-- AMS status indicator - visibility bound to ams_slot_count subject -->
           <lv_obj height="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0">
-            <lv_obj-bind_flag_if_eq subject="ams_slot_count" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="ams_slot_count" flag="hidden" ref_value="0"/>
             <!-- ams_mini_status auto-binds to AmsState and handles its own click -->
             <ams_mini_status/>
           </lv_obj>
@@ -371,7 +371,7 @@
           <lv_obj name="divider_filament"
                   width="1" height="80%" style_bg_color="#text_secondary" style_bg_opa="50%" style_border_width="0"
                   style_pad_all="0">
-            <lv_obj-bind_flag_if_eq subject="show_filament_status" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="show_filament_status" flag="hidden" ref_value="0"/>
           </lv_obj>
 
           <!-- Filament sensor status (hidden if no sensors, or has AMS and not in bypass) -->
@@ -379,13 +379,13 @@
                   height="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                   flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
                   style_flex_track_place="center">
-            <lv_obj-bind_flag_if_eq subject="show_filament_status" flag="hidden" ref_value="0"/>
+            <bind_flag_if_eq subject="show_filament_status" flag="hidden" ref_value="0"/>
             <filament_sensor_indicator/>
             <text_tiny text="Loaded" style_text_align="center">
-              <lv_obj-bind_flag_if_not_eq subject="filament_runout_detected" flag="hidden" ref_value="1"/>
+              <bind_flag_if_not_eq subject="filament_runout_detected" flag="hidden" ref_value="1"/>
             </text_tiny>
             <text_tiny text="Empty" style_text_align="center">
-              <lv_obj-bind_flag_if_not_eq subject="filament_runout_detected" flag="hidden" ref_value="0"/>
+              <bind_flag_if_not_eq subject="filament_runout_detected" flag="hidden" ref_value="0"/>
             </text_tiny>
           </lv_obj>
         </lv_obj>

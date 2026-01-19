@@ -31,7 +31,7 @@
     <!-- Filament Sensors (hidden if no sensors detected) -->
     <lv_obj name="container_filament_sensors"
             width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
-      <lv_obj-bind_flag_if_eq subject="filament_sensor_count" flag="hidden" ref_value="0"/>
+      <bind_flag_if_eq subject="filament_sensor_count" flag="hidden" ref_value="0"/>
       <setting_action_row name="row_filament_sensors"
                           label="Filament Sensors" icon="filament" description="Configure filament detection sensors"
                           callback="on_filament_sensors_clicked"/>
@@ -39,7 +39,7 @@
     <!-- LED Light Toggle (hidden if no LED capability) -->
     <lv_obj name="container_led_light"
             width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
-      <lv_obj-bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
+      <bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
       <setting_toggle_row name="row_led_light"
                           label="LED Light" icon="light" description="Toggle printer LED strip"
                           callback="on_led_light_changed"/>
@@ -47,7 +47,7 @@
     <!-- Firmware Retraction Settings (hidden if no firmware_retraction capability) -->
     <lv_obj name="container_firmware_retraction"
             width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
-      <lv_obj-bind_flag_if_eq subject="printer_has_firmware_retraction" flag="hidden" ref_value="0"/>
+      <bind_flag_if_eq subject="printer_has_firmware_retraction" flag="hidden" ref_value="0"/>
       <setting_action_row name="row_firmware_retraction"
                           label="Retraction Settings" icon="arrow_up_right"
                           description="Configure G10/G11 firmware retraction" callback="on_retraction_row_clicked"/>
@@ -67,7 +67,7 @@
     <!-- Sounds Toggle (hidden if no speaker capability) -->
     <lv_obj name="container_sounds"
             width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
-      <lv_obj-bind_flag_if_eq subject="printer_has_speaker" flag="hidden" ref_value="0"/>
+      <bind_flag_if_eq subject="printer_has_speaker" flag="hidden" ref_value="0"/>
       <setting_toggle_row name="row_sounds"
                           label="Sounds" icon="notifications" description="Enable audio feedback"
                           callback="on_sounds_changed"/>
@@ -99,7 +99,7 @@
     <!-- Hardware Issues (hidden when no issues) -->
     <lv_obj name="container_hardware_health"
             width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
-      <lv_obj-bind_flag_if_eq subject="hardware_has_issues" flag="hidden" ref_value="0"/>
+      <bind_flag_if_eq subject="hardware_has_issues" flag="hidden" ref_value="0"/>
       <!-- Label bound to hardware_issues_label subject in C++ for reactive updates -->
       <setting_action_row name="row_hardware_health"
                           label="Hardware Issues" icon="alert" description="Review detected hardware validation issues"

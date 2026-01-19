@@ -135,7 +135,7 @@ Ex: `PrintSelectPanel::set_api()` must call `file_provider_->set_api()`
 ## XML Gotchas
 
 1. `hidden="true"` not `flag_hidden="true"`
-2. Conditional bindings = child elements: `<lv_obj-bind_flag_if_eq>` not attributes
+2. Conditional bindings = child elements: `<bind_flag_if_eq>` not attributes (short syntax preferred)
 3. Three flex: `style_flex_main_place` + `style_flex_cross_place` + `style_flex_track_place`
 4. No subjects in `globals.xml`
 5. Component name = filename: `foo.xml` → `foo`

@@ -79,19 +79,19 @@
                 scrollable="false">
           <!-- Completed icon (status=0) -->
           <icon name="status_icon_completed" src="check_circle" size="sm" variant="success">
-            <lv_obj-bind_flag_if_not_eq subject="history_detail_status_code" flag="hidden" ref_value="0"/>
+            <bind_flag_if_not_eq subject="history_detail_status_code" flag="hidden" ref_value="0"/>
           </icon>
           <!-- Cancelled icon (status=1) -->
           <icon name="status_icon_cancelled" src="close_circle" size="sm" variant="warning" hidden="true">
-            <lv_obj-bind_flag_if_not_eq subject="history_detail_status_code" flag="hidden" ref_value="1"/>
+            <bind_flag_if_not_eq subject="history_detail_status_code" flag="hidden" ref_value="1"/>
           </icon>
           <!-- Error icon (status=2) -->
           <icon name="status_icon_error" src="alert" size="sm" variant="error" hidden="true">
-            <lv_obj-bind_flag_if_not_eq subject="history_detail_status_code" flag="hidden" ref_value="2"/>
+            <bind_flag_if_not_eq subject="history_detail_status_code" flag="hidden" ref_value="2"/>
           </icon>
           <!-- In Progress icon (status=3) -->
           <icon name="status_icon_progress" src="clock" size="sm" variant="secondary" hidden="true">
-            <lv_obj-bind_flag_if_not_eq subject="history_detail_status_code" flag="hidden" ref_value="3"/>
+            <bind_flag_if_not_eq subject="history_detail_status_code" flag="hidden" ref_value="3"/>
           </icon>
           <text_body name="status_label" bind_text="history_detail_status"/>
         </lv_obj>
@@ -176,7 +176,7 @@
         <lv_obj name="timelapse_section"
                 width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                 flex_flow="column" style_pad_gap="#space_sm" scrollable="false">
-          <lv_obj-bind_flag_if_eq subject="history_detail_has_timelapse" flag="hidden" ref_value="0"/>
+          <bind_flag_if_eq subject="history_detail_has_timelapse" flag="hidden" ref_value="0"/>
           <!-- Label row with icon -->
           <lv_obj width="100%"
                   height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
@@ -210,7 +210,7 @@
                      height="#button_height" flex_grow="1" style_radius="#border_radius" style_bg_color="#primary_color">
             <text_body text="Reprint" align="center"/>
             <event_cb trigger="clicked" callback="history_detail_reprint"/>
-            <lv_obj-bind_state_if_eq subject="history_detail_can_reprint" state="disabled" ref_value="0"/>
+            <bind_state_if_eq subject="history_detail_can_reprint" state="disabled" ref_value="0"/>
           </lv_button>
         </lv_obj>
       </lv_obj>

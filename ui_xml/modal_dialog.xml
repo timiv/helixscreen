@@ -18,15 +18,15 @@
             style_flex_cross_place="center" style_pad_gap="#space_sm">
       <!-- INFO icon - shown when dialog_severity=0 (default) -->
       <icon name="icon_info" src="info" size="md" variant="accent">
-        <lv_obj-bind_flag_if_not_eq subject="dialog_severity" flag="hidden" ref_value="0"/>
+        <bind_flag_if_not_eq subject="dialog_severity" flag="hidden" ref_value="0"/>
       </icon>
       <!-- WARNING icon - shown when dialog_severity=1 -->
       <icon name="icon_warning" src="alert" size="md" variant="warning" hidden="true">
-        <lv_obj-bind_flag_if_not_eq subject="dialog_severity" flag="hidden" ref_value="1"/>
+        <bind_flag_if_not_eq subject="dialog_severity" flag="hidden" ref_value="1"/>
       </icon>
       <!-- ERROR icon - shown when dialog_severity=2 -->
       <icon name="icon_error" src="alert_octagon" size="md" variant="error" hidden="true">
-        <lv_obj-bind_flag_if_not_eq subject="dialog_severity" flag="hidden" ref_value="2"/>
+        <bind_flag_if_not_eq subject="dialog_severity" flag="hidden" ref_value="2"/>
       </icon>
       <!-- Title -->
       <text_heading name="dialog_title" text="$title" style_text_align="left" flex_grow="1"/>
@@ -49,7 +49,7 @@
       <lv_button name="btn_secondary"
                  height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_shadow_width="0"
                  hidden="true" clickable="true">
-        <lv_obj-bind_flag_if_eq subject="dialog_show_cancel" flag="hidden" ref_value="0"/>
+        <bind_flag_if_eq subject="dialog_show_cancel" flag="hidden" ref_value="0"/>
         <!-- NOTE: Callbacks wired programmatically per-instance, not via XML -->
         <text_body name="btn_secondary_label" align="center" bind_text="dialog_cancel_text"/>
       </lv_button>
@@ -57,7 +57,7 @@
       <lv_obj name="btn_divider"
               width="1" height="100%" style_bg_color="#text_secondary" style_bg_opa="64" style_border_width="0"
               style_pad_all="0" hidden="true">
-        <lv_obj-bind_flag_if_eq subject="dialog_show_cancel" flag="hidden" ref_value="0"/>
+        <bind_flag_if_eq subject="dialog_show_cancel" flag="hidden" ref_value="0"/>
       </lv_obj>
       <!-- Primary button (always visible) -->
       <lv_button name="btn_primary"

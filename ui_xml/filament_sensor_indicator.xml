@@ -13,9 +13,9 @@
         extends="lv_obj" width="16" height="16" style_radius="1000" style_border_width="0" style_bg_opa="255"
         scrollable="false">
     <!-- Hidden when no sensor (value=-1) -->
-    <lv_obj-bind_flag_if_eq subject="filament_runout_detected" flag="hidden" ref_value="-1"/>
+    <bind_flag_if_eq subject="filament_runout_detected" flag="hidden" ref_value="-1"/>
     <!-- Hidden when master disabled -->
-    <lv_obj-bind_flag_if_eq subject="filament_master_enabled" flag="hidden" ref_value="0"/>
+    <bind_flag_if_eq subject="filament_master_enabled" flag="hidden" ref_value="0"/>
     <!-- Color bindings based on state -->
     <bind_style name="filament_loaded" subject="filament_runout_detected" ref_value="1"/>
     <bind_style name="filament_empty" subject="filament_runout_detected" ref_value="0"/>

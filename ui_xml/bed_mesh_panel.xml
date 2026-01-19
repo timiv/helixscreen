@@ -121,7 +121,7 @@
                     style_bg_opa="255" style_border_width="0" style_radius="#border_radius" style_pad_left="#space_sm"
                     style_pad_right="#space_sm" style_pad_top="0" style_pad_bottom="0" style_pad_gap="#space_xs"
                     clickable="true" scrollable="false">
-              <lv_obj-bind_flag_if_lt subject="bed_mesh_profile_count" flag="hidden" ref_value="1"/>
+              <bind_flag_if_lt subject="bed_mesh_profile_count" flag="hidden" ref_value="1"/>
               <event_cb trigger="clicked" callback="on_profile_0_clicked"/>
               <!-- Name -->
               <text_small name="profile_0_name"
@@ -133,13 +133,13 @@
               <!-- Rename icon (only when active) -->
               <icon name="profile_0_rename"
                     src="pencil" size="sm" color="#secondary_color" clickable="true" style_pad_all="#space_xs">
-                <lv_obj-bind_flag_if_eq subject="bed_mesh_profile_0_active" flag="hidden" ref_value="0"/>
+                <bind_flag_if_eq subject="bed_mesh_profile_0_active" flag="hidden" ref_value="0"/>
                 <event_cb trigger="clicked" callback="on_profile_0_rename"/>
               </icon>
               <!-- Load icon (only when NOT active) -->
               <icon name="profile_0_load"
                     src="arrow_up_circle" size="sm" color="#text_secondary" clickable="true" style_pad_all="#space_xs">
-                <lv_obj-bind_flag_if_eq subject="bed_mesh_profile_0_active" flag="hidden" ref_value="1"/>
+                <bind_flag_if_eq subject="bed_mesh_profile_0_active" flag="hidden" ref_value="1"/>
                 <event_cb trigger="clicked" callback="on_profile_0_clicked"/>
               </icon>
               <!-- Delete icon (always visible) -->
@@ -154,7 +154,7 @@
                     style_bg_opa="255" style_border_width="0" style_radius="#border_radius" style_pad_left="#space_sm"
                     style_pad_right="#space_sm" style_pad_top="0" style_pad_bottom="0" style_pad_gap="#space_xs"
                     clickable="true" scrollable="false">
-              <lv_obj-bind_flag_if_lt subject="bed_mesh_profile_count" flag="hidden" ref_value="2"/>
+              <bind_flag_if_lt subject="bed_mesh_profile_count" flag="hidden" ref_value="2"/>
               <event_cb trigger="clicked" callback="on_profile_1_clicked"/>
               <text_small name="profile_1_name"
                           bind_text="bed_mesh_profile_1_name" flex_grow="1" style_text_color="#text_primary"/>
@@ -163,12 +163,12 @@
                           style_text_align="right"/>
               <icon name="profile_1_rename"
                     src="pencil" size="sm" color="#secondary_color" clickable="true" style_pad_all="#space_xs">
-                <lv_obj-bind_flag_if_eq subject="bed_mesh_profile_1_active" flag="hidden" ref_value="0"/>
+                <bind_flag_if_eq subject="bed_mesh_profile_1_active" flag="hidden" ref_value="0"/>
                 <event_cb trigger="clicked" callback="on_profile_1_rename"/>
               </icon>
               <icon name="profile_1_load"
                     src="arrow_up_circle" size="sm" color="#text_secondary" clickable="true" style_pad_all="#space_xs">
-                <lv_obj-bind_flag_if_eq subject="bed_mesh_profile_1_active" flag="hidden" ref_value="1"/>
+                <bind_flag_if_eq subject="bed_mesh_profile_1_active" flag="hidden" ref_value="1"/>
                 <event_cb trigger="clicked" callback="on_profile_1_clicked"/>
               </icon>
               <icon name="profile_1_delete"
@@ -182,7 +182,7 @@
                     style_bg_opa="255" style_border_width="0" style_radius="#border_radius" style_pad_left="#space_sm"
                     style_pad_right="#space_sm" style_pad_top="0" style_pad_bottom="0" style_pad_gap="#space_xs"
                     clickable="true" scrollable="false">
-              <lv_obj-bind_flag_if_lt subject="bed_mesh_profile_count" flag="hidden" ref_value="3"/>
+              <bind_flag_if_lt subject="bed_mesh_profile_count" flag="hidden" ref_value="3"/>
               <event_cb trigger="clicked" callback="on_profile_2_clicked"/>
               <text_small name="profile_2_name"
                           bind_text="bed_mesh_profile_2_name" flex_grow="1" style_text_color="#text_primary"/>
@@ -191,12 +191,12 @@
                           style_text_align="right"/>
               <icon name="profile_2_rename"
                     src="pencil" size="sm" color="#secondary_color" clickable="true" style_pad_all="#space_xs">
-                <lv_obj-bind_flag_if_eq subject="bed_mesh_profile_2_active" flag="hidden" ref_value="0"/>
+                <bind_flag_if_eq subject="bed_mesh_profile_2_active" flag="hidden" ref_value="0"/>
                 <event_cb trigger="clicked" callback="on_profile_2_rename"/>
               </icon>
               <icon name="profile_2_load"
                     src="arrow_up_circle" size="sm" color="#text_secondary" clickable="true" style_pad_all="#space_xs">
-                <lv_obj-bind_flag_if_eq subject="bed_mesh_profile_2_active" flag="hidden" ref_value="1"/>
+                <bind_flag_if_eq subject="bed_mesh_profile_2_active" flag="hidden" ref_value="1"/>
                 <event_cb trigger="clicked" callback="on_profile_2_clicked"/>
               </icon>
               <icon name="profile_2_delete"
@@ -210,7 +210,7 @@
                     style_bg_opa="255" style_border_width="0" style_radius="#border_radius" style_pad_left="#space_sm"
                     style_pad_right="#space_sm" style_pad_top="0" style_pad_bottom="0" style_pad_gap="#space_xs"
                     clickable="true" scrollable="false">
-              <lv_obj-bind_flag_if_lt subject="bed_mesh_profile_count" flag="hidden" ref_value="4"/>
+              <bind_flag_if_lt subject="bed_mesh_profile_count" flag="hidden" ref_value="4"/>
               <event_cb trigger="clicked" callback="on_profile_3_clicked"/>
               <text_small name="profile_3_name"
                           bind_text="bed_mesh_profile_3_name" flex_grow="1" style_text_color="#text_primary"/>
@@ -219,12 +219,12 @@
                           style_text_align="right"/>
               <icon name="profile_3_rename"
                     src="pencil" size="sm" color="#secondary_color" clickable="true" style_pad_all="#space_xs">
-                <lv_obj-bind_flag_if_eq subject="bed_mesh_profile_3_active" flag="hidden" ref_value="0"/>
+                <bind_flag_if_eq subject="bed_mesh_profile_3_active" flag="hidden" ref_value="0"/>
                 <event_cb trigger="clicked" callback="on_profile_3_rename"/>
               </icon>
               <icon name="profile_3_load"
                     src="arrow_up_circle" size="sm" color="#text_secondary" clickable="true" style_pad_all="#space_xs">
-                <lv_obj-bind_flag_if_eq subject="bed_mesh_profile_3_active" flag="hidden" ref_value="1"/>
+                <bind_flag_if_eq subject="bed_mesh_profile_3_active" flag="hidden" ref_value="1"/>
                 <event_cb trigger="clicked" callback="on_profile_3_clicked"/>
               </icon>
               <icon name="profile_3_delete"
@@ -238,7 +238,7 @@
                     style_bg_opa="255" style_border_width="0" style_radius="#border_radius" style_pad_left="#space_sm"
                     style_pad_right="#space_sm" style_pad_top="0" style_pad_bottom="0" style_pad_gap="#space_xs"
                     clickable="true" scrollable="false">
-              <lv_obj-bind_flag_if_lt subject="bed_mesh_profile_count" flag="hidden" ref_value="5"/>
+              <bind_flag_if_lt subject="bed_mesh_profile_count" flag="hidden" ref_value="5"/>
               <event_cb trigger="clicked" callback="on_profile_4_clicked"/>
               <text_small name="profile_4_name"
                           bind_text="bed_mesh_profile_4_name" flex_grow="1" style_text_color="#text_primary"/>
@@ -247,12 +247,12 @@
                           style_text_align="right"/>
               <icon name="profile_4_rename"
                     src="pencil" size="sm" color="#secondary_color" clickable="true" style_pad_all="#space_xs">
-                <lv_obj-bind_flag_if_eq subject="bed_mesh_profile_4_active" flag="hidden" ref_value="0"/>
+                <bind_flag_if_eq subject="bed_mesh_profile_4_active" flag="hidden" ref_value="0"/>
                 <event_cb trigger="clicked" callback="on_profile_4_rename"/>
               </icon>
               <icon name="profile_4_load"
                     src="arrow_up_circle" size="sm" color="#text_secondary" clickable="true" style_pad_all="#space_xs">
-                <lv_obj-bind_flag_if_eq subject="bed_mesh_profile_4_active" flag="hidden" ref_value="1"/>
+                <bind_flag_if_eq subject="bed_mesh_profile_4_active" flag="hidden" ref_value="1"/>
                 <event_cb trigger="clicked" callback="on_profile_4_clicked"/>
               </icon>
               <icon name="profile_4_delete"
@@ -264,7 +264,7 @@
             <lv_obj name="no_profiles_message"
                     width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_md"
                     scrollable="false">
-              <lv_obj-bind_flag_if_gt subject="bed_mesh_profile_count" flag="hidden" ref_value="0"/>
+              <bind_flag_if_gt subject="bed_mesh_profile_count" flag="hidden" ref_value="0"/>
               <text_small width="100%"
                           text="No profiles available" style_text_color="#text_secondary" style_text_align="center"/>
             </lv_obj>

@@ -25,7 +25,7 @@
             width="content" height="content" hidden="true" align="top_mid" style_bg_color="#info_color"
             style_bg_opa="200" style_radius="#border_radius" style_pad_all="#space_sm" style_border_width="0"
             scrollable="false" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
-      <lv_obj-bind_flag_if_eq subject="pending_z_offset_delta" flag="hidden" ref_value="0"/>
+      <bind_flag_if_eq subject="pending_z_offset_delta" flag="hidden" ref_value="0"/>
       <lv_obj width="content"
               height="content" style_bg_opa="0" style_border_width="0" scrollable="false" flex_flow="column"
               style_pad_gap="#space_xxs">
@@ -166,7 +166,7 @@
                    width="100%" height="#button_height_sm" hidden="true" style_radius="#border_radius"
                    style_border_width="0" style_bg_color="#error_color" flex_flow="row" style_flex_main_place="center"
                    style_flex_cross_place="center" style_pad_gap="#space_sm">
-          <lv_obj-bind_flag_if_eq subject="estop_visible" flag="hidden" ref_value="0"/>
+          <bind_flag_if_eq subject="estop_visible" flag="hidden" ref_value="0"/>
           <event_cb trigger="clicked" callback="emergency_stop_clicked"/>
           <icon src="alert_octagon" size="sm" color="#text_primary"/>
           <text_body text="Emergency Stop" style_text_color="#text_primary"/>
@@ -221,7 +221,7 @@
                     width="90%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                     style_pad_top="#space_xs" hidden="true" flex_flow="row" style_flex_main_place="space_between"
                     style_flex_cross_place="center">
-              <lv_obj-bind_flag_if_eq subject="printer_has_chamber_sensor" flag="hidden" ref_value="0"/>
+              <bind_flag_if_eq subject="printer_has_chamber_sensor" flag="hidden" ref_value="0"/>
               <text_small text="Chamber" style_text_color="#text_secondary"/>
               <temp_display name="chamber_temp_display" size="md" show_target="false" bind_current="chamber_temp"/>
             </lv_obj>
@@ -325,13 +325,13 @@
                        style_shadow_width="0" style_bg_color="#card_bg" flex_flow="column"
                        style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
                        style_pad_all="#space_xs">
-              <lv_obj-bind_state_if_eq subject="motors_enabled" state="disabled" ref_value="0"/>
+              <bind_state_if_eq subject="motors_enabled" state="disabled" ref_value="0"/>
               <event_cb trigger="clicked" callback="on_calibration_motors"/>
               <icon src="engine" size="md" variant="warning">
-                <lv_obj-bind_flag_if_eq subject="motors_enabled" flag="hidden" ref_value="0"/>
+                <bind_flag_if_eq subject="motors_enabled" flag="hidden" ref_value="0"/>
               </icon>
               <icon src="engine_off" size="md" variant="secondary">
-                <lv_obj-bind_flag_if_eq subject="motors_enabled" flag="hidden" ref_value="1"/>
+                <bind_flag_if_eq subject="motors_enabled" flag="hidden" ref_value="1"/>
               </icon>
               <text_small text="Motors Off" style_pad_top="#space_xxs"/>
             </lv_button>
@@ -391,14 +391,14 @@
             <lv_button name="btn_macro_1"
                        width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                        style_bg_color="#secondary_color" style_bg_opa="40" style_border_width="0">
-              <lv_obj-bind_flag_if_eq subject="macro_1_visible" flag="hidden" ref_value="0"/>
+              <bind_flag_if_eq subject="macro_1_visible" flag="hidden" ref_value="0"/>
               <event_cb trigger="clicked" callback="on_controls_macro_1"/>
               <text_small name="macro_1_label" bind_text="macro_1_name" style_text_color="#text_primary" align="center"/>
             </lv_button>
             <lv_button name="btn_macro_2"
                        width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                        style_bg_color="#secondary_color" style_bg_opa="40" style_border_width="0">
-              <lv_obj-bind_flag_if_eq subject="macro_2_visible" flag="hidden" ref_value="0"/>
+              <bind_flag_if_eq subject="macro_2_visible" flag="hidden" ref_value="0"/>
               <event_cb trigger="clicked" callback="on_controls_macro_2"/>
               <text_small name="macro_2_label" bind_text="macro_2_name" style_text_color="#text_primary" align="center"/>
             </lv_button>
@@ -410,14 +410,14 @@
             <lv_button name="btn_macro_3"
                        width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                        style_bg_color="#secondary_color" style_bg_opa="40" style_border_width="0">
-              <lv_obj-bind_flag_if_eq subject="macro_3_visible" flag="hidden" ref_value="0"/>
+              <bind_flag_if_eq subject="macro_3_visible" flag="hidden" ref_value="0"/>
               <event_cb trigger="clicked" callback="on_controls_macro_3"/>
               <text_small name="macro_3_label" bind_text="macro_3_name" style_text_color="#text_primary" align="center"/>
             </lv_button>
             <lv_button name="btn_macro_4"
                        width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                        style_bg_color="#secondary_color" style_bg_opa="40" style_border_width="0">
-              <lv_obj-bind_flag_if_eq subject="macro_4_visible" flag="hidden" ref_value="0"/>
+              <bind_flag_if_eq subject="macro_4_visible" flag="hidden" ref_value="0"/>
               <event_cb trigger="clicked" callback="on_controls_macro_4"/>
               <text_small name="macro_4_label" bind_text="macro_4_name" style_text_color="#text_primary" align="center"/>
             </lv_button>

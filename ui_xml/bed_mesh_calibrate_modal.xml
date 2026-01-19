@@ -17,7 +17,7 @@
             style_pad_bottom="#space_lg" flex_flow="column" style_flex_cross_place="center"
             style_flex_main_place="start" style_flex_track_place="center" style_pad_gap="#space_md" hidden="true">
       <!-- Show only when state=1 -->
-      <lv_obj-bind_flag_if_ne subject="bed_mesh_calibrate_state" flag="hidden" ref_value="1"/>
+      <bind_flag_if_ne subject="bed_mesh_calibrate_state" flag="hidden" ref_value="1"/>
       <!-- Title -->
       <text_heading width="100%" text="Probing Bed Mesh" style_text_align="center"/>
       <!-- Progress text -->
@@ -55,7 +55,7 @@
             style_pad_bottom="#space_lg" flex_flow="column" style_flex_cross_place="center"
             style_flex_main_place="start" style_flex_track_place="center" style_pad_gap="#space_md" hidden="true">
       <!-- Show only when state=2 -->
-      <lv_obj-bind_flag_if_ne subject="bed_mesh_calibrate_state" flag="hidden" ref_value="2"/>
+      <bind_flag_if_ne subject="bed_mesh_calibrate_state" flag="hidden" ref_value="2"/>
       <!-- Success icon -->
       <icon src="check_circle" size="lg" color="#success_color"/>
       <!-- Title -->
@@ -78,7 +78,7 @@
             style_pad_bottom="#space_lg" flex_flow="column" style_flex_cross_place="center"
             style_flex_main_place="start" style_flex_track_place="center" style_pad_gap="#space_md" hidden="true">
       <!-- Show only when state=3 -->
-      <lv_obj-bind_flag_if_ne subject="bed_mesh_calibrate_state" flag="hidden" ref_value="3"/>
+      <bind_flag_if_ne subject="bed_mesh_calibrate_state" flag="hidden" ref_value="3"/>
       <!-- Error icon -->
       <icon src="alert_circle" size="lg" color="#error_color"/>
       <!-- Title -->
@@ -98,7 +98,7 @@
     <lv_obj name="probing_button_row"
             width="100%" height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0"
             style_pad_gap="0" flex_flow="row" hidden="true" scrollable="false">
-      <lv_obj-bind_flag_if_ne subject="bed_mesh_calibrate_state" flag="hidden" ref_value="1"/>
+      <bind_flag_if_ne subject="bed_mesh_calibrate_state" flag="hidden" ref_value="1"/>
       <!-- Cancel button -->
       <lv_button name="btn_cancel_probing"
                  height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
@@ -113,7 +113,7 @@
     <lv_obj name="naming_button_row"
             width="100%" height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0"
             style_pad_gap="0" flex_flow="row" hidden="true" scrollable="false">
-      <lv_obj-bind_flag_if_ne subject="bed_mesh_calibrate_state" flag="hidden" ref_value="2"/>
+      <bind_flag_if_ne subject="bed_mesh_calibrate_state" flag="hidden" ref_value="2"/>
       <!-- Don't Save button -->
       <lv_button name="btn_dont_save"
                  height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
@@ -139,7 +139,7 @@
     <lv_obj name="error_button_row"
             width="100%" height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0"
             style_pad_gap="0" flex_flow="row" hidden="true" scrollable="false">
-      <lv_obj-bind_flag_if_ne subject="bed_mesh_calibrate_state" flag="hidden" ref_value="3"/>
+      <bind_flag_if_ne subject="bed_mesh_calibrate_state" flag="hidden" ref_value="3"/>
       <!-- Close button -->
       <lv_button name="btn_close"
                  height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
