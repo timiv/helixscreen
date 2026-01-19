@@ -1192,7 +1192,9 @@ void MoonrakerAPI::get_spoolman_status(std::function<void(bool, int)> on_success
             if (response.contains("result")) {
                 const auto& result = response["result"];
                 connected = result.value("spoolman_connected", false);
-                active_spool_id = result.value("spool_id", 0);
+                if (result.contains("spool_id") && !result["spool_id"].is_null()) {
+                    active_spool_id = result["spool_id"].get<int>();
+                }
             }
 
             spdlog::debug("[Moonraker API] Spoolman status: connected={}, active_spool={}",

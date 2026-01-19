@@ -342,6 +342,66 @@ TEST_CASE("MoonrakerAPIMock - set_active_spool", "[filament][mock]") {
 // Integration-style Tests
 // ============================================================================
 
+// ============================================================================
+// JSON Null Handling Tests (server.spoolman.status parsing)
+// ============================================================================
+
+TEST_CASE("Spoolman status - spool_id null handling", "[filament][parsing]") {
+    // This test validates parsing of server.spoolman.status responses.
+    // When no spool is active, Moonraker returns: {"spool_id": null}
+    // Must use null-safe pattern: check contains() && !is_null() before get<int>()
+    // Using json::value() with null throws type_error.302.
+
+    SECTION("null spool_id should return default value (0)") {
+        // Simulate Moonraker response when no spool is active
+        auto response = nlohmann::json::parse(R"({
+            "result": {
+                "spoolman_connected": true,
+                "spool_id": null
+            }
+        })");
+
+        const auto& result = response["result"];
+        bool connected = result.value("spoolman_connected", false);
+
+        // Use null-safe pattern (matches moonraker_api_advanced.cpp:1195)
+        int active_spool_id = 0;
+        if (result.contains("spool_id") && !result["spool_id"].is_null()) {
+            active_spool_id = result["spool_id"].get<int>();
+        }
+
+        REQUIRE(connected == true);
+        REQUIRE(active_spool_id == 0); // null should fall back to default 0
+    }
+
+    SECTION("integer spool_id still works normally") {
+        auto response = nlohmann::json::parse(R"({
+            "result": {
+                "spoolman_connected": true,
+                "spool_id": 42
+            }
+        })");
+
+        const auto& result = response["result"];
+        int active_spool_id = result.value("spool_id", 0);
+
+        REQUIRE(active_spool_id == 42);
+    }
+
+    SECTION("missing spool_id uses default") {
+        auto response = nlohmann::json::parse(R"({
+            "result": {
+                "spoolman_connected": true
+            }
+        })");
+
+        const auto& result = response["result"];
+        int active_spool_id = result.value("spool_id", 0);
+
+        REQUIRE(active_spool_id == 0);
+    }
+}
+
 TEST_CASE("SpoolInfo - realistic spool scenarios", "[filament][integration]") {
     SECTION("Typical PLA spool usage") {
         SpoolInfo spool;

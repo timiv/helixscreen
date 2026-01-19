@@ -113,6 +113,7 @@ static const IconMapping ICON_MAP[] = {
 
     // Grid icons
     {"grid_large",         "\xF3\xB0\x9D\x98"},  // F0758 grid-large
+    {"grid_off",           "\xF3\xB0\x8B\x82"},  // F02C2 grid-off
     {"grid_view",          "\xF3\xB0\x95\xB0"},  // F0570 view-grid
 
     // Heat/Heating
@@ -125,6 +126,7 @@ static const IconMapping ICON_MAP[] = {
 
     // Info/Image
     {"image_broken_variant", "\xF3\xB0\x8B\xAE"}, // F02EE image-broken-variant (fallback)
+    {"inbox_outline",      "\xF3\xB1\x89\xB4"},  // F1274 inbox-outline
     {"info",               "\xF3\xB0\x8B\xBC"},  // F02FC information
     {"info_circle",        "\xF3\xB0\x8B\xBC"},  // F02FC information (alias for FontAwesome compat)
     {"info_outline",       "\xF3\xB0\x8B\xBD"},  // F02FD information-outline
