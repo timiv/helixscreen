@@ -1,8 +1,22 @@
 diff --git a/src/drivers/sdl/lv_sdl_window.c b/src/drivers/sdl/lv_sdl_window.c
-index 4429c94..c2a3ff7 100644
+index fe19304d3..3f5d5505a 100644
 --- a/src/drivers/sdl/lv_sdl_window.c
 +++ b/src/drivers/sdl/lv_sdl_window.c
-@@ -375,10 +375,60 @@ static void window_create(lv_display_t * disp)
+@@ -373,9 +373,10 @@ static void sdl_event_handler(lv_timer_t * t)
+             }
+         }
+         if(event.type == SDL_QUIT) {
+-            SDL_Quit();
+-            lv_deinit();
+-            inited = false;
++            /*Don't handle SDL_QUIT here - the application layer handles
++             *Cmd+Q via keyboard state polling and window close via
++             *SDL_WINDOWEVENT_CLOSE. Calling SDL_Quit() from within the
++             *event handler causes a crash on macOS.*/
+ #if LV_SDL_DIRECT_EXIT
+             exit(0);
+ #endif
+@@ -395,10 +396,60 @@ static void window_create(lv_display_t * disp)
  
      int32_t hor_res = (int32_t)((float)(disp->hor_res) * dsc->zoom);
      int32_t ver_res = (int32_t)((float)(disp->ver_res) * dsc->zoom);

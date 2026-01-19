@@ -41,15 +41,15 @@ reapply-patches: reset-patches apply-patches
 apply-patches:
 	$(ECHO) "$(CYAN)Checking LVGL patches...$(RESET)"
 	$(Q)if git -C $(LVGL_DIR) diff --quiet src/drivers/sdl/lv_sdl_window.c 2>/dev/null; then \
-		echo "$(YELLOW)→ Applying LVGL SDL window position patch...$(RESET)"; \
-		if git -C $(LVGL_DIR) apply --check ../../patches/lvgl_sdl_window_position.patch 2>/dev/null; then \
-			git -C $(LVGL_DIR) apply ../../patches/lvgl_sdl_window_position.patch && \
-			echo "$(GREEN)✓ SDL window position patch applied$(RESET)"; \
+		echo "$(YELLOW)→ Applying LVGL SDL window patch...$(RESET)"; \
+		if git -C $(LVGL_DIR) apply --check ../../patches/lvgl_sdl_window.patch 2>/dev/null; then \
+			git -C $(LVGL_DIR) apply ../../patches/lvgl_sdl_window.patch && \
+			echo "$(GREEN)✓ SDL window patch applied$(RESET)"; \
 		else \
 			echo "$(YELLOW)⚠ Cannot apply patch (already applied or conflicts)$(RESET)"; \
 		fi \
 	else \
-		echo "$(GREEN)✓ LVGL SDL window position patch already applied$(RESET)"; \
+		echo "$(GREEN)✓ LVGL SDL window patch already applied$(RESET)"; \
 	fi
 	$(Q)if git -C $(LVGL_DIR) diff --quiet src/themes/default/lv_theme_default.c 2>/dev/null; then \
 		echo "$(YELLOW)→ Applying LVGL theme breakpoints patch...$(RESET)"; \

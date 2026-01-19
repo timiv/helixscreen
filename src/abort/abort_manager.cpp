@@ -69,11 +69,12 @@ void AbortManager::deinit_subjects() {
     // Clear klippy observer before deinitializing subjects
     klippy_observer_.reset();
 
-    // Delete modal widget if it exists
-    if (modal_ && lv_is_initialized()) {
+    // Delete modal widget if it exists and display is still available
+    // (Display may already be deleted if window was closed via X button)
+    if (modal_ && lv_is_initialized() && lv_display_get_next(nullptr)) {
         lv_obj_delete(modal_);
-        modal_ = nullptr;
     }
+    modal_ = nullptr;
 
     // Deinitialize all subjects via RAII manager
     subjects_.deinit_all();

@@ -24,6 +24,8 @@
 #include <algorithm>
 
 #ifdef HELIX_DISPLAY_SDL
+#include "drivers/sdl/lv_sdl_window.h"
+
 #include <SDL.h>
 #endif
 
@@ -176,6 +178,13 @@ void DisplayManager::shutdown() {
 
     // Shutdown UI update queue before LVGL
     ui_update_queue_shutdown();
+
+    // Quit SDL before LVGL deinit - must be called outside the SDL event handler.
+    // When the SDL_QUIT event is received, the event handler just deletes displays
+    // to exit the main loop, then we clean up SDL here during proper shutdown.
+#ifdef HELIX_DISPLAY_SDL
+    lv_sdl_quit();
+#endif
 
     // Deinitialize LVGL (guard against static destruction order issues)
     if (lv_is_initialized()) {
