@@ -989,14 +989,17 @@ lv_obj_t* ui_modal_show_alert(const char* title, const char* message, ModalSever
         return nullptr;
     }
 
-    // Wire up OK button if callback provided
-    if (on_ok) {
-        lv_obj_t* ok_btn = lv_obj_find_by_name(dialog, "btn_primary");
-        if (ok_btn) {
+    // Wire up OK button - use provided callback or default close behavior
+    lv_obj_t* ok_btn = lv_obj_find_by_name(dialog, "btn_primary");
+    if (ok_btn) {
+        if (on_ok) {
             lv_obj_add_event_cb(ok_btn, on_ok, LV_EVENT_CLICKED, user_data);
         } else {
-            spdlog::warn("[Modal] btn_primary not found - OK callback not wired");
+            // Default behavior: close the modal when OK is clicked
+            lv_obj_add_event_cb(ok_btn, static_modal_close_cb, LV_EVENT_CLICKED, nullptr);
         }
+    } else {
+        spdlog::warn("[Modal] btn_primary not found - OK callback not wired");
     }
 
     spdlog::debug("[Modal] Alert dialog shown: '{}'", title);

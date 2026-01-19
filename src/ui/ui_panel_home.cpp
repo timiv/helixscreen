@@ -576,7 +576,7 @@ void HomePanel::handle_tip_text_clicked() {
 
     // Use alert helper which auto-handles OK button to close
     ui_modal_show_alert(current_tip_.title.c_str(), current_tip_.content.c_str(),
-                        ModalSeverity::Info, "Ok");
+                        ModalSeverity::Info);
 }
 
 void HomePanel::handle_tip_rotation_timer() {
