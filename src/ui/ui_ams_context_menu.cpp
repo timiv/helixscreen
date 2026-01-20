@@ -15,11 +15,21 @@ bool AmsContextMenu::callbacks_registered_ = false;
 // ============================================================================
 
 AmsContextMenu::AmsContextMenu() {
+    // Initialize the subject for Unload button enabled state
+    lv_subject_init_int(&slot_is_loaded_subject_, 0);
+    lv_xml_register_subject(nullptr, "ams_slot_is_loaded", &slot_is_loaded_subject_);
+    subject_initialized_ = true;
     spdlog::debug("[AmsContextMenu] Constructed");
 }
 
 AmsContextMenu::~AmsContextMenu() {
     hide();
+
+    // Clean up subject
+    if (subject_initialized_ && lv_is_initialized()) {
+        lv_subject_deinit(&slot_is_loaded_subject_);
+        subject_initialized_ = false;
+    }
     spdlog::debug("[AmsContextMenu] Destroyed");
 }
 
@@ -55,7 +65,8 @@ void AmsContextMenu::set_action_callback(ActionCallback callback) {
     action_callback_ = std::move(callback);
 }
 
-bool AmsContextMenu::show_near_widget(lv_obj_t* parent, int slot_index, lv_obj_t* near_widget) {
+bool AmsContextMenu::show_near_widget(lv_obj_t* parent, int slot_index, lv_obj_t* near_widget,
+                                      bool is_loaded) {
     // Hide any existing menu first
     hide();
 
@@ -70,6 +81,9 @@ bool AmsContextMenu::show_near_widget(lv_obj_t* parent, int slot_index, lv_obj_t
     // Store state
     parent_ = parent;
     slot_index_ = slot_index;
+
+    // Update subject for Unload button state (1=enabled, 0=disabled)
+    lv_subject_set_int(&slot_is_loaded_subject_, is_loaded ? 1 : 0);
 
     // Create context menu from XML
     menu_ = static_cast<lv_obj_t*>(lv_xml_create(parent, "ams_context_menu", nullptr));

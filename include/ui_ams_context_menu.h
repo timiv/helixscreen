@@ -58,9 +58,11 @@ class AmsContextMenu {
      * @param parent Parent screen for the menu
      * @param slot_index Slot this menu is for (0-based)
      * @param near_widget Widget to position menu near (typically slot widget)
+     * @param is_loaded True if filament is loaded to extruder (enables Unload button)
      * @return true if menu was shown successfully
      */
-    bool show_near_widget(lv_obj_t* parent, int slot_index, lv_obj_t* near_widget);
+    bool show_near_widget(lv_obj_t* parent, int slot_index, lv_obj_t* near_widget,
+                          bool is_loaded = false);
 
     /**
      * @brief Hide the context menu
@@ -92,6 +94,10 @@ class AmsContextMenu {
     lv_obj_t* parent_ = nullptr;
     int slot_index_ = -1;
     ActionCallback action_callback_;
+
+    // === Subject for Unload button state ===
+    lv_subject_t slot_is_loaded_subject_;
+    bool subject_initialized_ = false;
 
     // === Event Handlers ===
     void handle_backdrop_clicked();

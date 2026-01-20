@@ -12,7 +12,7 @@
     <event_cb trigger="clicked" callback="ams_context_backdrop_cb"/>
     <!-- Context menu card - positioned by C++ -->
     <lv_obj name="context_menu"
-            width="150" height="content" style_bg_color="#theme_grey" style_bg_opa="255" style_radius="#border_radius"
+            width="170" height="content" style_bg_color="#theme_grey" style_bg_opa="255" style_radius="#border_radius"
             style_border_width="0" style_pad_all="#space_sm" style_pad_gap="#space_xs" flex_flow="column"
             style_flex_main_place="start" style_flex_cross_place="start" scrollable="false" clickable="true">
       <!-- Load Button -->
@@ -24,11 +24,12 @@
         <text_body text="Load"/>
         <event_cb trigger="clicked" callback="ams_context_load_cb"/>
       </lv_button>
-      <!-- Unload Button -->
+      <!-- Unload Button (disabled when slot is not loaded) -->
       <lv_button name="btn_unload"
                  width="100%" height="#button_height_sm" style_radius="#border_radius" style_border_width="0"
                  style_shadow_width="0" style_bg_opa="0" flex_flow="row" style_flex_main_place="start"
                  style_flex_cross_place="center" style_pad_left="#space_sm" style_pad_gap="#space_sm" clickable="true">
+        <bind_state_if_eq subject="ams_slot_is_loaded" state="disabled" ref_value="0"/>
         <icon src="z_farther" size="sm" variant="primary"/>
         <text_body text="Unload"/>
         <event_cb trigger="clicked" callback="ams_context_unload_cb"/>

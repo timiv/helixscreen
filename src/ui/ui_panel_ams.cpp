@@ -1196,8 +1196,16 @@ void AmsPanel::show_context_menu(int slot_index, lv_obj_t* near_widget) {
             }
         });
 
+    // Determine if the slot is loaded (filament in extruder)
+    bool is_loaded = false;
+    AmsBackend* backend = AmsState::instance().get_backend();
+    if (backend) {
+        SlotInfo slot_info = backend->get_slot_info(slot_index);
+        is_loaded = (slot_info.status == SlotStatus::LOADED);
+    }
+
     // Show the menu near the slot widget
-    context_menu_->show_near_widget(parent_screen_, slot_index, near_widget);
+    context_menu_->show_near_widget(parent_screen_, slot_index, near_widget, is_loaded);
 }
 
 // ============================================================================

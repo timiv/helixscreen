@@ -108,12 +108,14 @@ class AmsEditModal : public Modal {
     lv_subject_t temp_bed_subject_;
     lv_subject_t remaining_pct_subject_;
     lv_subject_t remaining_mode_subject_; ///< 0=view, 1=edit
+    lv_subject_t save_btn_text_subject_;  ///< "Save" or "Close"
 
     char slot_indicator_buf_[32] = {0};
     char color_name_buf_[32] = {0};
     char temp_nozzle_buf_[16] = {0};
     char temp_bed_buf_[16] = {0};
     char remaining_pct_buf_[16] = {0};
+    char save_btn_text_buf_[16] = {0};
     bool subjects_initialized_ = false;
 
     // === Observer tracking for cleanup [L020] ===
@@ -122,6 +124,7 @@ class AmsEditModal : public Modal {
     lv_observer_t* temp_nozzle_observer_ = nullptr;
     lv_observer_t* temp_bed_observer_ = nullptr;
     lv_observer_t* remaining_pct_observer_ = nullptr;
+    lv_observer_t* save_btn_text_observer_ = nullptr;
 
     // === Async callback guard [L012] ===
     std::shared_ptr<bool> callback_guard_;

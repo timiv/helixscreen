@@ -157,6 +157,12 @@ void AmsEditModal::on_show() {
             lv_label_bind_text(remaining_pct_label, &remaining_pct_subject_, nullptr);
     }
 
+    lv_obj_t* save_btn_label = find_widget("btn_save_label");
+    if (save_btn_label) {
+        save_btn_text_observer_ =
+            lv_label_bind_text(save_btn_label, &save_btn_text_subject_, nullptr);
+    }
+
     // Update the modal UI with current slot data
     update_ui();
 
@@ -193,6 +199,10 @@ void AmsEditModal::on_hide() {
     if (remaining_pct_observer_) {
         lv_observer_remove(remaining_pct_observer_);
         remaining_pct_observer_ = nullptr;
+    }
+    if (save_btn_text_observer_) {
+        lv_observer_remove(save_btn_text_observer_);
+        save_btn_text_observer_ = nullptr;
     }
 
     // Reset edit mode subject
@@ -239,6 +249,12 @@ void AmsEditModal::init_subjects() {
                            sizeof(remaining_pct_buf_), "75%");
     subjects_.register_subject(&remaining_pct_subject_);
 
+    // Initialize save button text subject
+    snprintf(save_btn_text_buf_, sizeof(save_btn_text_buf_), "Close");
+    lv_subject_init_string(&save_btn_text_subject_, save_btn_text_buf_, nullptr,
+                           sizeof(save_btn_text_buf_), "Close");
+    subjects_.register_subject(&save_btn_text_subject_);
+
     // Initialize remaining mode subject (0=view, 1=edit) - registered globally for XML binding
     UI_MANAGED_SUBJECT_INT(remaining_mode_subject_, 0, "edit_remaining_mode", subjects_);
 
@@ -271,16 +287,53 @@ void AmsEditModal::update_ui() {
     snprintf(slot_indicator_buf_, sizeof(slot_indicator_buf_), "Slot %d", slot_index_ + 1);
     lv_subject_copy_string(&slot_indicator_subject_, slot_indicator_buf_);
 
+    // Update Spoolman ID label in header
+    lv_obj_t* spoolman_label = find_widget("spoolman_id_label");
+    if (spoolman_label) {
+        if (working_info_.spoolman_id > 0) {
+            char spoolman_text[32];
+            snprintf(spoolman_text, sizeof(spoolman_text), "#%d", working_info_.spoolman_id);
+            lv_label_set_text(spoolman_label, spoolman_text);
+            lv_obj_remove_flag(spoolman_label, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(spoolman_label, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
     // Set dropdown options (requires \n separators in C++)
+    static const char* vendors[] = {"Generic",  "Polymaker", "Bambu",   "eSUN",
+                                    "Overture", "Prusa",     "Hatchbox"};
+    static const char* materials[] = {"PLA", "PETG", "ABS", "ASA", "TPU", "PA", "PC"};
+
     lv_obj_t* vendor_dropdown = find_widget("vendor_dropdown");
     if (vendor_dropdown) {
         lv_dropdown_set_options(vendor_dropdown,
                                 "Generic\nPolymaker\nBambu\neSUN\nOverture\nPrusa\nHatchbox");
+
+        // Set initial selection based on working_info_.brand
+        int vendor_idx = 0; // Default to Generic
+        for (int i = 0; i < 7; i++) {
+            if (working_info_.brand == vendors[i]) {
+                vendor_idx = i;
+                break;
+            }
+        }
+        lv_dropdown_set_selected(vendor_dropdown, vendor_idx);
     }
 
     lv_obj_t* material_dropdown = find_widget("material_dropdown");
     if (material_dropdown) {
         lv_dropdown_set_options(material_dropdown, "PLA\nPETG\nABS\nASA\nTPU\nPA\nPC");
+
+        // Set initial selection based on working_info_.material
+        int material_idx = 0; // Default to PLA
+        for (int i = 0; i < 7; i++) {
+            if (working_info_.material == materials[i]) {
+                material_idx = i;
+                break;
+            }
+        }
+        lv_dropdown_set_selected(material_dropdown, material_idx);
     }
 
     // Update color swatch
@@ -390,13 +443,20 @@ void AmsEditModal::update_sync_button_state() {
         return;
     }
 
+    bool dirty = is_dirty();
+
+    // Update save button text based on dirty state
+    const char* btn_text = dirty ? "Save" : "Close";
+    snprintf(save_btn_text_buf_, sizeof(save_btn_text_buf_), "%s", btn_text);
+    lv_subject_copy_string(&save_btn_text_subject_, save_btn_text_buf_);
+
     lv_obj_t* sync_btn = find_widget("btn_sync_spoolman");
     if (!sync_btn) {
         return;
     }
 
     // Only enable if dirty and has Spoolman link
-    bool should_enable = is_dirty() && working_info_.spoolman_id > 0;
+    bool should_enable = dirty && working_info_.spoolman_id > 0;
 
     if (should_enable) {
         lv_obj_remove_state(sync_btn, LV_STATE_DISABLED);
@@ -672,7 +732,7 @@ void AmsEditModal::register_callbacks() {
         return;
     }
 
-    lv_xml_register_event_cb(nullptr, "ams_edit_dialog_close_cb", on_close_cb);
+    lv_xml_register_event_cb(nullptr, "ams_edit_modal_close_cb", on_close_cb);
     lv_xml_register_event_cb(nullptr, "ams_edit_vendor_changed_cb", on_vendor_changed_cb);
     lv_xml_register_event_cb(nullptr, "ams_edit_material_changed_cb", on_material_changed_cb);
     lv_xml_register_event_cb(nullptr, "ams_edit_color_clicked_cb", on_color_clicked_cb);
