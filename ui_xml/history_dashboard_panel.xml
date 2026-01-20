@@ -11,12 +11,10 @@
     <percentage name="stats_section_width" value="55%"/>
     <percentage name="chart_section_width" value="43%"/>
   </consts>
-  <!-- Styles for reactive filter button state binding -->
+  <!-- Styles for reactive filter button state binding (L040: two bind_styles pattern) -->
   <styles>
-    <!-- Applied to button when its filter is active (subject matches ref_value) -->
-    <style name="filter_btn_active" bg_color="0xAD2724"/>
-    <!-- Applied to label when its filter is active -->
-    <style name="filter_label_active" text_color="0xE6E8F0"/>
+    <style name="filter_btn_selected" bg_color="#tertiary_color" bg_opa="255"/>
+    <style name="filter_btn_unselected" bg_color="#tertiary_color" bg_opa="40"/>
   </styles>
   <view name="history_dashboard_panel" extends="overlay_panel" title="Print History">
     <!-- Content Area - scrollable to fit all content on small screens -->
@@ -28,49 +26,39 @@
               height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_bottom="#space_md"
               flex_flow="row" style_pad_gap="#space_xs" scrollable="false">
         <lv_button name="filter_day"
-                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#app_bg_color"
-                   style_pad_all="#space_sm">
-          <bind_style name="filter_btn_active" subject="history_filter" ref_value="0"/>
-          <text_small name="filter_day_label" text="Day" style_text_color="#text_secondary" align="center">
-            <bind_style name="filter_label_active" subject="history_filter" ref_value="0"/>
-          </text_small>
+                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_pad_all="#space_md">
+          <bind_style name="filter_btn_selected" subject="history_filter_day_active" ref_value="1"/>
+          <bind_style name="filter_btn_unselected" subject="history_filter_day_active" ref_value="0"/>
           <event_cb trigger="clicked" callback="history_filter_day_clicked"/>
+          <text_small name="filter_day_label" text="Day" style_text_color="#text_primary" align="center"/>
         </lv_button>
         <lv_button name="filter_week"
-                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#app_bg_color"
-                   style_pad_all="#space_sm">
-          <bind_style name="filter_btn_active" subject="history_filter" ref_value="1"/>
-          <text_small name="filter_week_label" text="Week" style_text_color="#text_secondary" align="center">
-            <bind_style name="filter_label_active" subject="history_filter" ref_value="1"/>
-          </text_small>
+                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_pad_all="#space_md">
+          <bind_style name="filter_btn_selected" subject="history_filter_week_active" ref_value="1"/>
+          <bind_style name="filter_btn_unselected" subject="history_filter_week_active" ref_value="0"/>
           <event_cb trigger="clicked" callback="history_filter_week_clicked"/>
+          <text_small name="filter_week_label" text="Week" style_text_color="#text_primary" align="center"/>
         </lv_button>
         <lv_button name="filter_month"
-                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#app_bg_color"
-                   style_pad_all="#space_sm">
-          <bind_style name="filter_btn_active" subject="history_filter" ref_value="2"/>
-          <text_small name="filter_month_label" text="Month" style_text_color="#text_secondary" align="center">
-            <bind_style name="filter_label_active" subject="history_filter" ref_value="2"/>
-          </text_small>
+                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_pad_all="#space_md">
+          <bind_style name="filter_btn_selected" subject="history_filter_month_active" ref_value="1"/>
+          <bind_style name="filter_btn_unselected" subject="history_filter_month_active" ref_value="0"/>
           <event_cb trigger="clicked" callback="history_filter_month_clicked"/>
+          <text_small name="filter_month_label" text="Month" style_text_color="#text_primary" align="center"/>
         </lv_button>
         <lv_button name="filter_year"
-                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#app_bg_color"
-                   style_pad_all="#space_sm">
-          <bind_style name="filter_btn_active" subject="history_filter" ref_value="3"/>
-          <text_small name="filter_year_label" text="Year" style_text_color="#text_secondary" align="center">
-            <bind_style name="filter_label_active" subject="history_filter" ref_value="3"/>
-          </text_small>
+                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_pad_all="#space_md">
+          <bind_style name="filter_btn_selected" subject="history_filter_year_active" ref_value="1"/>
+          <bind_style name="filter_btn_unselected" subject="history_filter_year_active" ref_value="0"/>
           <event_cb trigger="clicked" callback="history_filter_year_clicked"/>
+          <text_small name="filter_year_label" text="Year" style_text_color="#text_primary" align="center"/>
         </lv_button>
         <lv_button name="filter_all"
-                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_bg_color="#app_bg_color"
-                   style_pad_all="#space_sm">
-          <bind_style name="filter_btn_active" subject="history_filter" ref_value="4"/>
-          <text_small name="filter_all_label" text="All" style_text_color="#text_secondary" align="center">
-            <bind_style name="filter_label_active" subject="history_filter" ref_value="4"/>
-          </text_small>
+                   flex_grow="1" style_radius="#border_radius" style_border_width="0" style_pad_all="#space_md">
+          <bind_style name="filter_btn_selected" subject="history_filter_all_active" ref_value="1"/>
+          <bind_style name="filter_btn_unselected" subject="history_filter_all_active" ref_value="0"/>
           <event_cb trigger="clicked" callback="history_filter_all_clicked"/>
+          <text_small name="filter_all_label" text="All" style_text_color="#text_primary" align="center"/>
         </lv_button>
       </lv_obj>
       <!-- Top Row: Stats (left) + Filament Chart (right) - hidden when no jobs -->

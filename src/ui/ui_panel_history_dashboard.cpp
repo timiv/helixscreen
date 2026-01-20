@@ -76,10 +76,14 @@ void HistoryDashboardPanel::init_subjects() {
     // 0 = no history (show empty state), 1 = has history (show stats grid)
     UI_MANAGED_SUBJECT_INT(history_has_jobs_subject_, 0, "history_has_jobs", subjects_);
 
-    // Initialize subject for filter button state binding
-    // Values: 0=Day, 1=Week, 2=Month, 3=Year, 4=All (matches HistoryTimeFilter enum)
-    UI_MANAGED_SUBJECT_INT(history_filter_subject_, 4, "history_filter",
-                           subjects_); // Default to ALL_TIME
+    // Boolean subjects for filter button state binding (L040: two bind_styles pattern)
+    // Default to ALL_TIME (only "all" button is active)
+    UI_MANAGED_SUBJECT_INT(history_filter_day_active_, 0, "history_filter_day_active", subjects_);
+    UI_MANAGED_SUBJECT_INT(history_filter_week_active_, 0, "history_filter_week_active", subjects_);
+    UI_MANAGED_SUBJECT_INT(history_filter_month_active_, 0, "history_filter_month_active",
+                           subjects_);
+    UI_MANAGED_SUBJECT_INT(history_filter_year_active_, 0, "history_filter_year_active", subjects_);
+    UI_MANAGED_SUBJECT_INT(history_filter_all_active_, 1, "history_filter_all_active", subjects_);
 
     // Initialize string subjects for stat labels
     UI_MANAGED_SUBJECT_STRING(stat_total_prints_subject_, stat_total_prints_buf_, "0",
@@ -315,9 +319,12 @@ void HistoryDashboardPanel::set_time_filter(HistoryTimeFilter filter) {
 
     current_filter_ = filter;
 
-    // Update the subject to trigger reactive binding updates on buttons
-    // Values: 0=Day, 1=Week, 2=Month, 3=Year, 4=All
-    lv_subject_set_int(&history_filter_subject_, static_cast<int>(filter));
+    // Update boolean subjects for each button (L040: two bind_styles pattern)
+    lv_subject_set_int(&history_filter_day_active_, filter == HistoryTimeFilter::DAY ? 1 : 0);
+    lv_subject_set_int(&history_filter_week_active_, filter == HistoryTimeFilter::WEEK ? 1 : 0);
+    lv_subject_set_int(&history_filter_month_active_, filter == HistoryTimeFilter::MONTH ? 1 : 0);
+    lv_subject_set_int(&history_filter_year_active_, filter == HistoryTimeFilter::YEAR ? 1 : 0);
+    lv_subject_set_int(&history_filter_all_active_, filter == HistoryTimeFilter::ALL_TIME ? 1 : 0);
 
     refresh_data();
 }
@@ -544,7 +551,7 @@ int HistoryDashboardPanel::get_trend_period_count() const {
         return 12; // Monthly for year view
     case HistoryTimeFilter::ALL_TIME:
     default:
-        return 7; // Default to 7-day view
+        return 12; // Monthly-like buckets for all time
     }
 }
 
@@ -573,6 +580,22 @@ void HistoryDashboardPanel::update_trend_chart(const std::vector<PrintHistoryJob
     int period_count = get_trend_period_count();
     double period_seconds = get_trend_period_seconds();
     double now = static_cast<double>(std::time(nullptr));
+
+    // For ALL_TIME, calculate period dynamically from oldest job
+    if (current_filter_ == HistoryTimeFilter::ALL_TIME && !jobs.empty()) {
+        // Find oldest job
+        double oldest_time = now;
+        for (const auto& job : jobs) {
+            if (job.end_time < oldest_time && job.end_time > 0) {
+                oldest_time = job.end_time;
+            }
+        }
+        // Calculate span and divide by bucket count
+        double span = now - oldest_time;
+        if (span > 0) {
+            period_seconds = span / static_cast<double>(period_count);
+        }
+    }
 
     // Update period label text via subject (binding will update UI automatically)
     const char* period_text = "Last 7 days";
