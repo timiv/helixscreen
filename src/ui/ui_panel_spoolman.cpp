@@ -3,6 +3,7 @@
 
 #include "ui_panel_spoolman.h"
 
+#include "ui_global_panel_helper.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
 #include "ui_panel_common.h"
@@ -15,7 +16,6 @@
 #include "app_globals.h"
 #include "moonraker_api.h"
 #include "printer_state.h"
-#include "ui_global_panel_helper.h"
 
 #include <spdlog/spdlog.h>
 

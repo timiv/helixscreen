@@ -5,6 +5,7 @@
 
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
+#include "ui_global_panel_helper.h"
 #include "ui_keyboard_manager.h"
 #include "ui_nav.h"
 #include "ui_panel_common.h"
@@ -14,7 +15,6 @@
 
 #include "app_globals.h"
 #include "moonraker_client.h"
-#include "ui_global_panel_helper.h"
 
 #include <spdlog/spdlog.h>
 

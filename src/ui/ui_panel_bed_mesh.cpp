@@ -15,6 +15,7 @@
 
 #include "ui_bed_mesh.h"
 #include "ui_error_reporting.h"
+#include "ui_global_panel_helper.h"
 #include "ui_modal.h"
 #include "ui_nav.h"
 #include "ui_panel_common.h"
@@ -27,7 +28,6 @@
 #include "observer_factory.h"
 #include "printer_detector.h"
 #include "settings_manager.h"
-#include "ui_global_panel_helper.h"
 
 #include <spdlog/spdlog.h>
 
