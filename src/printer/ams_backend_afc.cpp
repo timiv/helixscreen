@@ -5,9 +5,9 @@
 
 #include "moonraker_api.h"
 
+#include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>
 
-#include <algorithm>
 #include <sstream>
 
 // ============================================================================
@@ -1171,6 +1171,9 @@ AmsError AmsBackendAfc::set_slot_info(int slot_index, const SlotInfo& info) {
             return AmsErrorHelper::invalid_slot(slot_index, system_info_.total_slots - 1);
         }
 
+        // Capture old spoolman_id before updating for clear detection
+        int old_spoolman_id = slot->spoolman_id;
+
         // Update local state
         slot->color_name = info.color_name;
         slot->color_rgb = info.color_rgb;
@@ -1186,14 +1189,51 @@ AmsError AmsBackendAfc::set_slot_info(int slot_index, const SlotInfo& info) {
 
         spdlog::info("[AMS AFC] Updated slot {} info: {} {}", slot_index, info.material,
                      info.color_name);
+
+        // Persist via G-code commands if AFC version supports it (v1.0.20+)
+        if (version_at_least("1.0.20")) {
+            std::string lane_name = get_lane_name(slot_index);
+            if (!lane_name.empty()) {
+                // Color (only if changed and valid - not 0 or default grey)
+                if (info.color_rgb != 0 && info.color_rgb != AMS_DEFAULT_SLOT_COLOR) {
+                    char color_hex[8];
+                    snprintf(color_hex, sizeof(color_hex), "%06X", info.color_rgb & 0xFFFFFF);
+                    execute_gcode(fmt::format("SET_COLOR LANE={} COLOR={}", lane_name, color_hex));
+                }
+
+                // Material (validate to prevent command injection)
+                if (!info.material.empty() && MoonrakerAPI::is_safe_gcode_param(info.material)) {
+                    execute_gcode(
+                        fmt::format("SET_MATERIAL LANE={} MATERIAL={}", lane_name, info.material));
+                } else if (!info.material.empty()) {
+                    spdlog::warn("[AMS AFC] Skipping SET_MATERIAL - unsafe characters in: {}",
+                                 info.material);
+                }
+
+                // Weight (if valid)
+                if (info.remaining_weight_g > 0) {
+                    execute_gcode(fmt::format("SET_WEIGHT LANE={} WEIGHT={:.0f}", lane_name,
+                                              info.remaining_weight_g));
+                }
+
+                // Spoolman ID
+                if (info.spoolman_id > 0) {
+                    execute_gcode(fmt::format("SET_SPOOL_ID LANE={} SPOOL_ID={}", lane_name,
+                                              info.spoolman_id));
+                } else if (info.spoolman_id == 0 && old_spoolman_id > 0) {
+                    // Clear Spoolman link with empty string (not -1)
+                    execute_gcode(fmt::format("SET_SPOOL_ID LANE={} SPOOL_ID=", lane_name));
+                }
+            }
+        } else if (afc_version_ != "unknown" && !afc_version_.empty()) {
+            spdlog::info("[AMS AFC] Version {} - slot changes stored locally only (upgrade to "
+                         "1.0.20+ for persistence)",
+                         afc_version_);
+        }
     }
 
     // Emit OUTSIDE the lock to avoid deadlock with callbacks
     emit_event(EVENT_SLOT_CHANGED, std::to_string(slot_index));
-
-    // AFC stores lane info in Moonraker database
-    // This could be extended to persist changes via server.database.post_item
-    // For now, we just update local state
 
     return AmsErrorHelper::success();
 }

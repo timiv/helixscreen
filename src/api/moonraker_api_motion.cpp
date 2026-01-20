@@ -434,6 +434,10 @@ void MoonrakerAPI::execute_gcode(const std::string& gcode, SuccessCallback on_su
         "printer.gcode.script", params, [on_success](json) { on_success(); }, on_error);
 }
 
+bool MoonrakerAPI::is_safe_gcode_param(const std::string& str) {
+    return moonraker_internal::is_safe_identifier(str);
+}
+
 // ============================================================================
 // Object Exclusion Operations
 // ============================================================================

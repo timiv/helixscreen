@@ -463,6 +463,17 @@ class MoonrakerAPI {
     void execute_gcode(const std::string& gcode, SuccessCallback on_success,
                        ErrorCallback on_error);
 
+    /**
+     * @brief Check if a string is safe to use as a G-code parameter
+     *
+     * Allows alphanumeric, underscore, and space. Rejects newlines, semicolons,
+     * and other characters that could enable G-code injection.
+     *
+     * @param str String to validate
+     * @return true if safe for G-code parameter use, false otherwise
+     */
+    static bool is_safe_gcode_param(const std::string& str);
+
     // ========================================================================
     // Object Exclusion Operations
     // ========================================================================

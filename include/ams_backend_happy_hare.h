@@ -96,6 +96,10 @@ class AmsBackendHappyHare : public AmsBackend {
     AmsError disable_bypass() override;
     [[nodiscard]] bool is_bypass_active() const override;
 
+  protected:
+    // Allow test helper access to private members
+    friend class AmsBackendHappyHareTestHelper;
+
   private:
     /**
      * @brief Handle status update notifications from Moonraker
@@ -136,10 +140,12 @@ class AmsBackendHappyHare : public AmsBackend {
     /**
      * @brief Execute a G-code command via MoonrakerAPI
      *
+     * Virtual to allow test overrides for G-code capture.
+     *
      * @param gcode The G-code command to execute
      * @return AmsError indicating success or failure to queue command
      */
-    AmsError execute_gcode(const std::string& gcode);
+    virtual AmsError execute_gcode(const std::string& gcode);
 
     /**
      * @brief Check common preconditions before operations

@@ -253,7 +253,7 @@ class AmsBackendAfc : public AmsBackend {
      * @param gcode The G-code command to execute
      * @return AmsError indicating success or failure to queue command
      */
-    AmsError execute_gcode(const std::string& gcode);
+    virtual AmsError execute_gcode(const std::string& gcode);
 
     /**
      * @brief Check common preconditions before operations

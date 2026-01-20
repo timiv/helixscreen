@@ -3,6 +3,10 @@
 
 #include "ams_backend_afc.h"
 #include "ams_types.h"
+#include "moonraker_api.h"
+
+#include <algorithm>
+#include <vector>
 
 #include "../catch_amalgamated.hpp"
 
@@ -104,6 +108,67 @@ class AmsBackendAfcTestHelper : public AmsBackendAfc {
         if (!lane_names_.empty() && !lanes_initialized_) {
             initialize_lanes(lane_names_);
         }
+    }
+
+    // Persistence testing helpers
+    void initialize_test_lanes_with_slots(int count) {
+        lane_names_.clear();
+        lane_name_to_index_.clear();
+        system_info_.units.clear();
+
+        AmsUnit unit;
+        unit.unit_index = 0;
+        unit.name = "Box Turtle 1";
+        unit.slot_count = count;
+        unit.first_slot_global_index = 0;
+
+        for (int i = 0; i < count; ++i) {
+            std::string name = "lane" + std::to_string(i + 1);
+            lane_names_.push_back(name);
+            lane_name_to_index_[name] = i;
+
+            SlotInfo slot;
+            slot.slot_index = i;
+            slot.global_index = i;
+            slot.status = SlotStatus::AVAILABLE;
+            slot.mapped_tool = i;
+            slot.color_rgb = AMS_DEFAULT_SLOT_COLOR;
+            unit.slots.push_back(slot);
+        }
+
+        system_info_.units.push_back(unit);
+        system_info_.total_slots = count;
+        lanes_initialized_ = true;
+    }
+
+    SlotInfo* get_mutable_slot(int slot_index) {
+        return system_info_.get_slot_global(slot_index);
+    }
+
+    // For persistence tests: capture G-code commands
+    std::vector<std::string> captured_gcodes;
+
+    // Override execute_gcode to capture commands for testing
+    AmsError execute_gcode(const std::string& gcode) override {
+        captured_gcodes.push_back(gcode);
+        return AmsErrorHelper::success();
+    }
+
+    void clear_captured_gcodes() {
+        captured_gcodes.clear();
+    }
+
+    bool has_gcode(const std::string& expected) const {
+        return std::find(captured_gcodes.begin(), captured_gcodes.end(), expected) !=
+               captured_gcodes.end();
+    }
+
+    bool has_gcode_starting_with(const std::string& prefix) const {
+        for (const auto& gcode : captured_gcodes) {
+            if (gcode.rfind(prefix, 0) == 0)
+                return true;
+        }
+        return false;
     }
 };
 
@@ -473,4 +538,261 @@ TEST_CASE("AFC segment: works with discovered lanes", "[ams][afc][discovery][seg
     helper.set_lane_load_sensor(1, true);
 
     REQUIRE(helper.test_compute_filament_segment() == PathSegment::LANE);
+}
+
+// ============================================================================
+// set_slot_info() Persistence Tests - AFC >= 1.0.20
+// ============================================================================
+//
+// These tests verify that set_slot_info() sends the appropriate G-code commands
+// to persist filament properties when AFC version >= 1.0.20.
+//
+// Commands expected:
+// - SET_COLOR LANE=<name> COLOR=<RRGGBB>
+// - SET_MATERIAL LANE=<name> MATERIAL=<type>
+// - SET_WEIGHT LANE=<name> WEIGHT=<grams>
+// - SET_SPOOL_ID LANE=<name> SPOOL_ID=<id>
+//
+// NOTE: These tests are designed to FAIL initially. The set_slot_info() method
+// currently only updates local state and does NOT send G-code commands.
+// Implementation must be added to make these tests pass.
+//
+// Testing approach: Since MoonrakerAPI::execute_gcode() is not virtual,
+// the test helper captures G-code via the protected execute_gcode() method
+// that AmsBackendAfc exposes. The implementation must call execute_gcode()
+// for these tests to pass.
+// ============================================================================
+
+TEST_CASE("AFC persistence: old version skips G-code commands", "[ams][afc][persistence]") {
+    AmsBackendAfcTestHelper helper;
+
+    helper.set_afc_version("1.0.19"); // Below 1.0.20 threshold
+    helper.initialize_test_lanes_with_slots(4);
+
+    SlotInfo info;
+    info.color_rgb = 0xFF0000; // Red
+    info.material = "PLA";
+    info.remaining_weight_g = 850;
+    info.spoolman_id = 42;
+
+    helper.set_slot_info(0, info);
+
+    // Old version should NOT send any persistence commands
+    // This test PASSES currently since no G-code is sent at all
+    REQUIRE(helper.captured_gcodes.empty());
+}
+
+TEST_CASE("AFC persistence: SET_COLOR command format", "[ams][afc][persistence]") {
+    AmsBackendAfcTestHelper helper;
+
+    helper.set_afc_version("1.0.20");
+    helper.initialize_test_lanes_with_slots(4);
+
+    SlotInfo info;
+    info.color_rgb = 0xFF0000; // Red
+
+    helper.set_slot_info(0, info);
+
+    // Should send: SET_COLOR LANE=lane1 COLOR=FF0000
+    // FAILS: set_slot_info doesn't call execute_gcode yet
+    REQUIRE(helper.has_gcode("SET_COLOR LANE=lane1 COLOR=FF0000"));
+}
+
+TEST_CASE("AFC persistence: SET_COLOR uppercase hex no prefix", "[ams][afc][persistence]") {
+    AmsBackendAfcTestHelper helper;
+
+    helper.set_afc_version("1.0.20");
+    helper.initialize_test_lanes_with_slots(4);
+
+    SlotInfo info;
+    info.color_rgb = 0x00FF00; // Green
+
+    helper.set_slot_info(1, info);
+
+    // Should send: SET_COLOR LANE=lane2 COLOR=00FF00 (uppercase, no #)
+    // FAILS: set_slot_info doesn't call execute_gcode yet
+    REQUIRE(helper.has_gcode("SET_COLOR LANE=lane2 COLOR=00FF00"));
+}
+
+TEST_CASE("AFC persistence: SET_MATERIAL command format", "[ams][afc][persistence]") {
+    AmsBackendAfcTestHelper helper;
+
+    helper.set_afc_version("1.0.20");
+    helper.initialize_test_lanes_with_slots(4);
+
+    SlotInfo info;
+    info.material = "PLA";
+
+    helper.set_slot_info(1, info);
+
+    // Should send: SET_MATERIAL LANE=lane2 MATERIAL=PLA
+    // FAILS: set_slot_info doesn't call execute_gcode yet
+    REQUIRE(helper.has_gcode("SET_MATERIAL LANE=lane2 MATERIAL=PLA"));
+}
+
+TEST_CASE("AFC persistence: SET_WEIGHT command format", "[ams][afc][persistence]") {
+    AmsBackendAfcTestHelper helper;
+
+    helper.set_afc_version("1.0.20");
+    helper.initialize_test_lanes_with_slots(4);
+
+    SlotInfo info;
+    info.remaining_weight_g = 850.5f; // Should be sent as integer
+
+    helper.set_slot_info(0, info);
+
+    // Should send: SET_WEIGHT LANE=lane1 WEIGHT=850 (no decimals)
+    // FAILS: set_slot_info doesn't call execute_gcode yet
+    REQUIRE(helper.has_gcode("SET_WEIGHT LANE=lane1 WEIGHT=850"));
+}
+
+TEST_CASE("AFC persistence: SET_SPOOL_ID command format", "[ams][afc][persistence]") {
+    AmsBackendAfcTestHelper helper;
+
+    helper.set_afc_version("1.0.20");
+    helper.initialize_test_lanes_with_slots(4);
+
+    SlotInfo info;
+    info.spoolman_id = 42;
+
+    helper.set_slot_info(0, info);
+
+    // Should send: SET_SPOOL_ID LANE=lane1 SPOOL_ID=42
+    // FAILS: set_slot_info doesn't call execute_gcode yet
+    REQUIRE(helper.has_gcode("SET_SPOOL_ID LANE=lane1 SPOOL_ID=42"));
+}
+
+TEST_CASE("AFC persistence: SET_SPOOL_ID clear with empty string", "[ams][afc][persistence]") {
+    AmsBackendAfcTestHelper helper;
+
+    helper.set_afc_version("1.0.20");
+    helper.initialize_test_lanes_with_slots(4);
+
+    // Pre-set existing spoolman_id on slot
+    SlotInfo* existing_slot = helper.get_mutable_slot(0);
+    REQUIRE(existing_slot != nullptr);
+    existing_slot->spoolman_id = 123;
+
+    // Now clear it by setting spoolman_id = 0
+    SlotInfo new_info;
+    new_info.spoolman_id = 0;
+
+    helper.set_slot_info(0, new_info);
+
+    // Should send: SET_SPOOL_ID LANE=lane1 SPOOL_ID= (empty to clear)
+    // FAILS: set_slot_info doesn't call execute_gcode yet
+    REQUIRE(helper.has_gcode("SET_SPOOL_ID LANE=lane1 SPOOL_ID="));
+}
+
+TEST_CASE("AFC persistence: skips SET_COLOR for default grey", "[ams][afc][persistence]") {
+    AmsBackendAfcTestHelper helper;
+
+    helper.set_afc_version("1.0.20");
+    helper.initialize_test_lanes_with_slots(4);
+
+    SlotInfo info;
+    info.color_rgb = 0x808080; // Default grey - should NOT send
+
+    helper.set_slot_info(0, info);
+
+    // Should NOT send SET_COLOR for grey default
+    // PASSES: no G-code sent at all currently
+    REQUIRE_FALSE(helper.has_gcode_starting_with("SET_COLOR"));
+}
+
+TEST_CASE("AFC persistence: skips SET_COLOR for zero", "[ams][afc][persistence]") {
+    AmsBackendAfcTestHelper helper;
+
+    helper.set_afc_version("1.0.20");
+    helper.initialize_test_lanes_with_slots(4);
+
+    SlotInfo info;
+    info.color_rgb = 0; // Zero color - should NOT send
+
+    helper.set_slot_info(0, info);
+
+    // Should NOT send SET_COLOR for zero
+    // PASSES: no G-code sent at all currently
+    REQUIRE_FALSE(helper.has_gcode_starting_with("SET_COLOR"));
+}
+
+TEST_CASE("AFC persistence: skips SET_MATERIAL for empty string", "[ams][afc][persistence]") {
+    AmsBackendAfcTestHelper helper;
+
+    helper.set_afc_version("1.0.20");
+    helper.initialize_test_lanes_with_slots(4);
+
+    SlotInfo info;
+    info.material = ""; // Empty - should NOT send
+
+    helper.set_slot_info(0, info);
+
+    // Should NOT send SET_MATERIAL for empty
+    // PASSES: no G-code sent at all currently
+    REQUIRE_FALSE(helper.has_gcode_starting_with("SET_MATERIAL"));
+}
+
+TEST_CASE("AFC persistence: skips SET_WEIGHT for zero or negative", "[ams][afc][persistence]") {
+    AmsBackendAfcTestHelper helper;
+
+    helper.set_afc_version("1.0.20");
+    helper.initialize_test_lanes_with_slots(4);
+
+    SECTION("zero weight") {
+        SlotInfo info;
+        info.remaining_weight_g = 0;
+        helper.set_slot_info(0, info);
+        // PASSES: no G-code sent at all currently
+        REQUIRE_FALSE(helper.has_gcode_starting_with("SET_WEIGHT"));
+    }
+
+    SECTION("negative weight (unknown)") {
+        helper.clear_captured_gcodes();
+        SlotInfo info;
+        info.remaining_weight_g = -1;
+        helper.set_slot_info(0, info);
+        // PASSES: no G-code sent at all currently
+        REQUIRE_FALSE(helper.has_gcode_starting_with("SET_WEIGHT"));
+    }
+}
+
+TEST_CASE("AFC persistence: skips SET_SPOOL_ID when both old and new are zero",
+          "[ams][afc][persistence]") {
+    AmsBackendAfcTestHelper helper;
+
+    helper.set_afc_version("1.0.20");
+    helper.initialize_test_lanes_with_slots(4);
+
+    // Slot starts with spoolman_id = 0 (default)
+    SlotInfo info;
+    info.spoolman_id = 0;
+
+    helper.set_slot_info(0, info);
+
+    // Should NOT send SET_SPOOL_ID when both old and new are 0
+    // PASSES: no G-code sent at all currently
+    REQUIRE_FALSE(helper.has_gcode_starting_with("SET_SPOOL_ID"));
+}
+
+TEST_CASE("AFC persistence: sends multiple commands for full slot info",
+          "[ams][afc][persistence]") {
+    AmsBackendAfcTestHelper helper;
+
+    helper.set_afc_version("1.0.20");
+    helper.initialize_test_lanes_with_slots(4);
+
+    SlotInfo info;
+    info.color_rgb = 0x0000FF; // Blue
+    info.material = "PETG";
+    info.remaining_weight_g = 750;
+    info.spoolman_id = 99;
+
+    helper.set_slot_info(0, info);
+
+    // Should send all four commands
+    // FAILS: set_slot_info doesn't call execute_gcode yet
+    REQUIRE(helper.has_gcode("SET_COLOR LANE=lane1 COLOR=0000FF"));
+    REQUIRE(helper.has_gcode("SET_MATERIAL LANE=lane1 MATERIAL=PETG"));
+    REQUIRE(helper.has_gcode("SET_WEIGHT LANE=lane1 WEIGHT=750"));
+    REQUIRE(helper.has_gcode("SET_SPOOL_ID LANE=lane1 SPOOL_ID=99"));
 }

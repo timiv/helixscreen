@@ -5,6 +5,7 @@
 
 #include "moonraker_api.h"
 
+#include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>
 
 #include <sstream>
@@ -622,6 +623,7 @@ AmsError AmsBackendHappyHare::cancel() {
 // ============================================================================
 
 AmsError AmsBackendHappyHare::set_slot_info(int slot_index, const SlotInfo& info) {
+    int old_spoolman_id = 0;
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
@@ -633,6 +635,9 @@ AmsError AmsBackendHappyHare::set_slot_info(int slot_index, const SlotInfo& info
         if (!slot) {
             return AmsErrorHelper::invalid_slot(slot_index, system_info_.total_slots - 1);
         }
+
+        // Capture old spoolman_id BEFORE updating (needed to detect clearing)
+        old_spoolman_id = slot->spoolman_id;
 
         // Update local state
         slot->color_name = info.color_name;
@@ -651,12 +656,41 @@ AmsError AmsBackendHappyHare::set_slot_info(int slot_index, const SlotInfo& info
                      info.color_name);
     }
 
+    // Persist via MMU_GATE_MAP command (Happy Hare stores in mmu_vars.cfg automatically)
+    bool has_changes = false;
+    std::string cmd = fmt::format("MMU_GATE_MAP GATE={}", slot_index);
+
+    // Color (hex format, no # prefix)
+    if (info.color_rgb != 0 && info.color_rgb != AMS_DEFAULT_SLOT_COLOR) {
+        cmd += fmt::format(" COLOR={:06X}", info.color_rgb & 0xFFFFFF);
+        has_changes = true;
+    }
+
+    // Material (validate to prevent command injection)
+    if (!info.material.empty() && MoonrakerAPI::is_safe_gcode_param(info.material)) {
+        cmd += fmt::format(" MATERIAL={}", info.material);
+        has_changes = true;
+    } else if (!info.material.empty()) {
+        spdlog::warn("[AMS HappyHare] Skipping MATERIAL - unsafe characters in: {}", info.material);
+    }
+
+    // Spoolman ID (-1 to clear)
+    if (info.spoolman_id > 0) {
+        cmd += fmt::format(" SPOOLID={}", info.spoolman_id);
+        has_changes = true;
+    } else if (info.spoolman_id == 0 && old_spoolman_id > 0) {
+        cmd += " SPOOLID=-1"; // Clear existing link
+        has_changes = true;
+    }
+
+    // Only send command if there are actual changes to persist
+    if (has_changes) {
+        execute_gcode(cmd);
+        spdlog::debug("[AMS HappyHare] Sent: {}", cmd);
+    }
+
     // Emit OUTSIDE the lock to avoid deadlock with callbacks
     emit_event(EVENT_SLOT_CHANGED, std::to_string(slot_index));
-
-    // Happy Hare stores gate info via MMU_GATE_MAP command
-    // This could be extended to persist changes, but for now we just update local state
-    // The actual gate_material and gate_color_rgb are typically set via Klipper config
 
     return AmsErrorHelper::success();
 }
