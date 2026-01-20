@@ -245,6 +245,10 @@ void ControlsPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_controls_home_xy", on_home_xy);
     lv_xml_register_event_cb(nullptr, "on_controls_home_z", on_home_z);
 
+    // Quick Actions: Leveling buttons (QGL / Z-Tilt)
+    lv_xml_register_event_cb(nullptr, "on_controls_qgl", on_qgl);
+    lv_xml_register_event_cb(nullptr, "on_controls_z_tilt", on_z_tilt);
+
     // Quick Actions: Macro buttons
     lv_xml_register_event_cb(nullptr, "on_controls_macro_1", on_macro_1);
     lv_xml_register_event_cb(nullptr, "on_controls_macro_2", on_macro_2);
@@ -928,6 +932,28 @@ void ControlsPanel::handle_home_z() {
     }
 }
 
+void ControlsPanel::handle_qgl() {
+    spdlog::debug("[{}] QGL clicked", get_name());
+    if (api_) {
+        api_->execute_gcode(
+            "QUAD_GANTRY_LEVEL", []() { NOTIFY_SUCCESS("Quad Gantry Level started"); },
+            [](const MoonrakerError& err) {
+                NOTIFY_ERROR("QGL failed: {}", err.user_message());
+            });
+    }
+}
+
+void ControlsPanel::handle_z_tilt() {
+    spdlog::debug("[{}] Z-Tilt clicked", get_name());
+    if (api_) {
+        api_->execute_gcode(
+            "Z_TILT_ADJUST", []() { NOTIFY_SUCCESS("Z-Tilt Adjust started"); },
+            [](const MoonrakerError& err) {
+                NOTIFY_ERROR("Z-Tilt failed: {}", err.user_message());
+            });
+    }
+}
+
 void ControlsPanel::handle_macro_1() {
     if (!macro_1_slot_) {
         spdlog::debug("[{}] Macro 1 clicked but no slot configured", get_name());
@@ -1377,6 +1403,20 @@ void ControlsPanel::on_home_z(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_home_z");
     (void)e;
     get_global_controls_panel().handle_home_z();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ControlsPanel::on_qgl(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_qgl");
+    (void)e;
+    get_global_controls_panel().handle_qgl();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ControlsPanel::on_z_tilt(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_z_tilt");
+    (void)e;
+    get_global_controls_panel().handle_z_tilt();
     LVGL_SAFE_EVENT_CB_END();
 }
 

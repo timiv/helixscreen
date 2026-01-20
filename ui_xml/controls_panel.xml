@@ -4,8 +4,12 @@
 <!-- Controls Panel Dashboard V3 - Position card + 70/30 bottom layout -->
 <component>
   <styles>
-    <style name="home_btn_homed" bg_color="#success_color" text_color="#text_primary"/>
+    <!-- Homing button styles -->
+    <style name="home_btn_homed" bg_color="#success_color"/>
     <style name="home_btn_unhomed" bg_color="#card_bg"/>
+    <!-- Homing label styles (applied to text_small inside buttons) -->
+    <style name="home_label_homed" text_color="#text_primary"/>
+    <style name="home_label_unhomed" text_color="#text_secondary"/>
     <!-- Motor icon styles: warning when enabled, dimmed when disabled -->
     <style name="icon_motors_enabled" text_color="#warning_color"/>
     <style name="icon_motors_disabled" text_color="#text_secondary"/>
@@ -361,7 +365,10 @@
             <bind_style name="home_btn_homed" subject="all_homed" ref_value="1"/>
             <bind_style name="home_btn_unhomed" subject="all_homed" ref_value="0"/>
             <event_cb trigger="clicked" callback="on_controls_home_all"/>
-            <text_small text="All" align="center"/>
+            <lv_label text="All" align="center" style_text_font="#font_small">
+              <bind_style name="home_label_homed" subject="all_homed" ref_value="1"/>
+              <bind_style name="home_label_unhomed" subject="all_homed" ref_value="0"/>
+            </lv_label>
           </lv_button>
           <lv_button name="btn_home_xy"
                      width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
@@ -369,7 +376,10 @@
             <bind_style name="home_btn_homed" subject="xy_homed" ref_value="1"/>
             <bind_style name="home_btn_unhomed" subject="xy_homed" ref_value="0"/>
             <event_cb trigger="clicked" callback="on_controls_home_xy"/>
-            <text_small text="XY" align="center"/>
+            <lv_label text="XY" align="center" style_text_font="#font_small">
+              <bind_style name="home_label_homed" subject="xy_homed" ref_value="1"/>
+              <bind_style name="home_label_unhomed" subject="xy_homed" ref_value="0"/>
+            </lv_label>
           </lv_button>
           <lv_button name="btn_home_z"
                      width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
@@ -377,17 +387,36 @@
             <bind_style name="home_btn_homed" subject="z_homed" ref_value="1"/>
             <bind_style name="home_btn_unhomed" subject="z_homed" ref_value="0"/>
             <event_cb trigger="clicked" callback="on_controls_home_z"/>
-            <text_small text="Z" align="center"/>
+            <lv_label text="Z" align="center" style_text_font="#font_small">
+              <bind_style name="home_label_homed" subject="z_homed" ref_value="1"/>
+              <bind_style name="home_label_unhomed" subject="z_homed" ref_value="0"/>
+            </lv_label>
           </lv_button>
         </lv_obj>
-        <!-- Macro buttons grid (2x2) -->
+        <!-- Macro buttons grid with QGL/Z-Tilt -->
         <lv_obj width="100%"
                 flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                 flex_flow="column" style_pad_gap="#space_xs" style_flex_main_place="end">
-          <!-- Macro row 1 -->
+          <!-- Macro row 1: QGL/Z-Tilt + macro_1 (Clean Nozzle) -->
           <lv_obj width="100%"
                   height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                   flex_flow="row" style_pad_gap="#space_xs">
+            <!-- QGL button - visible only if printer has quad_gantry_level -->
+            <lv_button name="btn_qgl"
+                       width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
+                       style_bg_color="#secondary_color" style_bg_opa="40" style_border_width="0" hidden="true">
+              <bind_flag_if_eq subject="printer_has_qgl" flag="hidden" ref_value="0"/>
+              <event_cb trigger="clicked" callback="on_controls_qgl"/>
+              <text_small text="Quad Gantry Level" style_text_color="#text_primary" align="center"/>
+            </lv_button>
+            <!-- Z-Tilt button - visible only if printer has z_tilt_adjust -->
+            <lv_button name="btn_z_tilt"
+                       width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
+                       style_bg_color="#secondary_color" style_bg_opa="40" style_border_width="0" hidden="true">
+              <bind_flag_if_eq subject="printer_has_z_tilt" flag="hidden" ref_value="0"/>
+              <event_cb trigger="clicked" callback="on_controls_z_tilt"/>
+              <text_small text="Z-Tilt Adjust" style_text_color="#text_primary" align="center"/>
+            </lv_button>
             <lv_button name="btn_macro_1"
                        width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                        style_bg_color="#secondary_color" style_bg_opa="40" style_border_width="0">
@@ -395,6 +424,11 @@
               <event_cb trigger="clicked" callback="on_controls_macro_1"/>
               <text_small name="macro_1_label" bind_text="macro_1_name" style_text_color="#text_primary" align="center"/>
             </lv_button>
+          </lv_obj>
+          <!-- Macro row 2 -->
+          <lv_obj width="100%"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                  flex_flow="row" style_pad_gap="#space_xs">
             <lv_button name="btn_macro_2"
                        width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                        style_bg_color="#secondary_color" style_bg_opa="40" style_border_width="0">
@@ -402,11 +436,6 @@
               <event_cb trigger="clicked" callback="on_controls_macro_2"/>
               <text_small name="macro_2_label" bind_text="macro_2_name" style_text_color="#text_primary" align="center"/>
             </lv_button>
-          </lv_obj>
-          <!-- Macro row 2 -->
-          <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                  flex_flow="row" style_pad_gap="#space_xs">
             <lv_button name="btn_macro_3"
                        width="0" height="#button_height_sm" flex_grow="1" style_radius="#border_radius"
                        style_bg_color="#secondary_color" style_bg_opa="40" style_border_width="0">
