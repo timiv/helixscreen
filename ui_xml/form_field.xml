@@ -14,14 +14,14 @@
     <prop name="label_style" type="string" default="body"/>
   </api>
   <view extends="lv_obj"
-        width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-        flex_flow="column" style_pad_gap="#space_xs" scrollable="false">
+        width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+        style_pad_gap="#space_xs" scrollable="false">
     <!-- Label text (uses text_body by default, can be overridden with label_style) -->
     <text_body text="$label" style_text_align="left"/>
     <!-- Textarea input with configurable name for C++ lookup -->
     <lv_textarea name="$input_name"
-                 width="100%" height="#input_height" placeholder="$placeholder" max_length="$max_length"
-                 one_line="true" password_mode="$password_mode" style_border_width="#input_border_width"
-                 style_pad_all="#space_md" style_text_font="#font_body"/>
+                 width="100%" height="#input_height" placeholder="$placeholder" max_length="$max_length" one_line="true"
+                 password_mode="$password_mode" style_border_width="#input_border_width" style_pad_all="#space_md"
+                 style_text_font="#font_body"/>
   </view>
 </component>

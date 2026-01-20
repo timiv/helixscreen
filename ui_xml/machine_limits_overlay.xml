@@ -214,8 +214,8 @@
     <divider_horizontal color="#theme_grey" opacity="100"/>
     <!-- Action buttons row - centered Reset button only (changes apply immediately) -->
     <lv_obj width="100%"
-            height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="#space_md"
-            flex_flow="row" style_flex_main_place="center" scrollable="false">
+            height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="#space_md" flex_flow="row"
+            style_flex_main_place="center" scrollable="false">
       <!-- Reset button - restores to original config values from API -->
       <lv_button name="btn_reset"
                  width="150" height="100%" style_radius="6" style_bg_color="#card_bg" style_border_width="1"

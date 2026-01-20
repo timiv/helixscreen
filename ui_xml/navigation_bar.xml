@@ -11,10 +11,9 @@
     <!-- ================================================================== -->
     <!-- Home Button (Panel 0) -->
     <lv_button name="nav_btn_home"
-            width="100%" height="content" scrollable="false"
-            style_bg_opa="0" style_border_width="0" style_shadow_width="0" style_radius="0"
-            style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-            style_flex_track_place="center">
+               width="100%" height="content" scrollable="false" style_bg_opa="0" style_border_width="0"
+               style_shadow_width="0" style_radius="0" style_pad_all="#space_sm" flex_flow="column"
+               style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center">
       <!-- Active icon (accent color) - shown when active_panel == 0 -->
       <icon name="nav_icon_home_active" src="home" size="lg" variant="accent" hidden="true">
         <bind_flag_if_not_eq subject="active_panel" flag="hidden" ref_value="0"/>
@@ -27,15 +26,15 @@
     <!-- Controls Button (Panel 2) - CONNECTION + KLIPPY READY REQUIRED -->
     <!-- Uses combined nav_buttons_enabled subject (1=enabled when connected AND klippy ready) -->
     <lv_button name="nav_btn_controls"
-            width="100%" height="content" scrollable="false"
-            style_bg_opa="0" style_border_width="0" style_shadow_width="0" style_radius="0"
-            style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-            style_flex_track_place="center">
+               width="100%" height="content" scrollable="false" style_bg_opa="0" style_border_width="0"
+               style_shadow_width="0" style_radius="0" style_pad_all="#space_sm" flex_flow="column"
+               style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center">
       <!-- Disabled clickability when not enabled (disconnected OR klippy not ready) -->
       <bind_state_if_not_eq subject="nav_buttons_enabled" state="disabled" ref_value="1"/>
       <!-- Normal icons container - visible only when enabled -->
-      <lv_obj name="nav_controls_icons" clickable="false"
-              width="content" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0">
+      <lv_obj name="nav_controls_icons"
+              width="content" height="content" clickable="false" style_bg_opa="0" style_pad_all="0"
+              style_border_width="0">
         <bind_flag_if_eq subject="nav_buttons_enabled" flag="hidden" ref_value="0"/>
         <!-- Active icon (accent) - shown when on controls panel -->
         <icon name="nav_icon_controls_active" src="fine_tune" size="lg" variant="accent" hidden="true">
@@ -54,15 +53,15 @@
     <!-- Filament Button (Panel 3) - CONNECTION + KLIPPY READY REQUIRED -->
     <!-- Uses combined nav_buttons_enabled subject (1=enabled when connected AND klippy ready) -->
     <lv_button name="nav_btn_filament"
-            width="100%" height="content" scrollable="false"
-            style_bg_opa="0" style_border_width="0" style_shadow_width="0" style_radius="0"
-            style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-            style_flex_track_place="center">
+               width="100%" height="content" scrollable="false" style_bg_opa="0" style_border_width="0"
+               style_shadow_width="0" style_radius="0" style_pad_all="#space_sm" flex_flow="column"
+               style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center">
       <!-- Disabled clickability when not enabled (disconnected OR klippy not ready) -->
       <bind_state_if_not_eq subject="nav_buttons_enabled" state="disabled" ref_value="1"/>
       <!-- Normal icons container - visible only when enabled -->
-      <lv_obj name="nav_filament_icons" clickable="false"
-              width="content" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0">
+      <lv_obj name="nav_filament_icons"
+              width="content" height="content" clickable="false" style_bg_opa="0" style_pad_all="0"
+              style_border_width="0">
         <bind_flag_if_eq subject="nav_buttons_enabled" flag="hidden" ref_value="0"/>
         <!-- Active icon (accent) - shown when on filament panel -->
         <icon name="nav_icon_filament_active" src="filament" size="lg" variant="accent" hidden="true">
@@ -80,10 +79,9 @@
     </lv_button>
     <!-- Settings Button (Panel 4) -->
     <lv_button name="nav_btn_settings"
-            width="100%" height="content" scrollable="false"
-            style_bg_opa="0" style_border_width="0" style_shadow_width="0" style_radius="0"
-            style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-            style_flex_track_place="center">
+               width="100%" height="content" scrollable="false" style_bg_opa="0" style_border_width="0"
+               style_shadow_width="0" style_radius="0" style_pad_all="#space_sm" flex_flow="column"
+               style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center">
       <icon name="nav_icon_settings_active" src="settings" size="lg" variant="accent" hidden="true">
         <bind_flag_if_not_eq subject="active_panel" flag="hidden" ref_value="4"/>
       </icon>
@@ -93,10 +91,9 @@
     </lv_button>
     <!-- Advanced Button (Panel 5) -->
     <lv_button name="nav_btn_advanced"
-            width="100%" height="content" scrollable="false"
-            style_bg_opa="0" style_border_width="0" style_shadow_width="0" style_radius="0"
-            style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-            style_flex_track_place="center">
+               width="100%" height="content" scrollable="false" style_bg_opa="0" style_border_width="0"
+               style_shadow_width="0" style_radius="0" style_pad_all="#space_sm" flex_flow="column"
+               style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center">
       <icon name="nav_icon_advanced_active" src="dots_vertical" size="lg" variant="accent" hidden="true">
         <bind_flag_if_not_eq subject="active_panel" flag="hidden" ref_value="5"/>
       </icon>

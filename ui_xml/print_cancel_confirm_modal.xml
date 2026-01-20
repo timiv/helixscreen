@@ -21,30 +21,9 @@
                  text="Are you sure you want to cancel this print? All progress will be lost." long_mode="wrap"
                  style_text_align="center" style_text_color="#text_secondary"/>
     </lv_obj>
-    <!-- Horizontal divider above buttons -->
-    <divider_horizontal/>
-    <!-- Button row - style_pad_gap="0" prevents flex gap between items -->
-    <lv_obj width="100%"
-            height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_gap="0"
-            flex_flow="row">
-      <!-- Keep Printing button (Modal wires this as "cancel") -->
-      <!-- style_radius="0" for full-bleed inside rounded parent (dialog clips to its corners) -->
-      <lv_button name="btn_cancel"
-                 height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
-                 clickable="true">
-        <event_cb trigger="clicked" callback="on_print_cancel_dismiss"/>
-        <text_body text="Keep Printing" align="center"/>
-      </lv_button>
-      <!-- Vertical divider -->
-      <divider_vertical/>
-      <!-- Stop button (Modal wires this as "ok" - danger styling) -->
-      <!-- style_radius="0" for full-bleed inside rounded parent (dialog clips to its corners) -->
-      <lv_button name="btn_ok"
-                 height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
-                 style_bg_color="#error_color" clickable="true">
-        <event_cb trigger="clicked" callback="on_print_cancel_confirm"/>
-        <text_body text="Stop" align="center" style_text_color="#text_primary"/>
-      </lv_button>
-    </lv_obj>
+    <!-- Button row -->
+    <modal_button_row secondary_text="Keep Printing"
+                      secondary_callback="on_print_cancel_dismiss" primary_text="Stop"
+                      primary_callback="on_print_cancel_confirm" primary_bg_color="#error_color"/>
   </view>
 </component>

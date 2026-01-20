@@ -25,27 +25,8 @@
       <text_small width="100%"
                   text="This will restart Klipper." style_text_align="center" style_text_color="#warning_color"/>
     </lv_obj>
-    <!-- Horizontal divider above buttons -->
-    <divider_horizontal/>
-    <!-- Button row -->
-    <lv_obj width="100%"
-            height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row">
-      <!-- Don't Save button -->
-      <lv_button name="save_config_no_btn"
-                 height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_shadow_width="0"
-                 clickable="true">
-        <event_cb trigger="clicked" callback="on_bed_mesh_save_config_no"/>
-        <text_body text="Don't Save" align="center"/>
-      </lv_button>
-      <!-- Vertical divider -->
-      <divider_vertical/>
-      <!-- Save button -->
-      <lv_button name="save_config_yes_btn"
-                 height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_shadow_width="0"
-                 clickable="true">
-        <event_cb trigger="clicked" callback="on_bed_mesh_save_config_yes"/>
-        <text_body text="Save" align="center"/>
-      </lv_button>
-    </lv_obj>
+    <modal_button_row primary_text="Save"
+                      secondary_text="Don't Save" primary_callback="on_bed_mesh_save_config_yes"
+                      secondary_callback="on_bed_mesh_save_config_no"/>
   </view>
 </component>

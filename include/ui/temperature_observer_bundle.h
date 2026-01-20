@@ -116,23 +116,25 @@ template <typename Panel> class TemperatureObserverBundle {
                      CacheBedTarget&& cache_bed_target, UpdateHandler&& update_handler) {
         clear();
 
+        // Copy update_handler since it's used by all 4 observers
+        // (forwarding an rvalue multiple times would move-from it)
+        auto update_copy = update_handler;
+
         nozzle_temp_observer_ =
             observe_int_async<Panel>(state.get_extruder_temp_subject(), panel,
-                                     std::forward<CacheNozzleTemp>(cache_nozzle_temp),
-                                     std::forward<UpdateHandler>(update_handler));
+                                     std::forward<CacheNozzleTemp>(cache_nozzle_temp), update_copy);
 
-        nozzle_target_observer_ =
-            observe_int_async<Panel>(state.get_extruder_target_subject(), panel,
-                                     std::forward<CacheNozzleTarget>(cache_nozzle_target),
-                                     std::forward<UpdateHandler>(update_handler));
+        nozzle_target_observer_ = observe_int_async<Panel>(
+            state.get_extruder_target_subject(), panel,
+            std::forward<CacheNozzleTarget>(cache_nozzle_target), update_copy);
 
-        bed_temp_observer_ = observe_int_async<Panel>(state.get_bed_temp_subject(), panel,
-                                                      std::forward<CacheBedTemp>(cache_bed_temp),
-                                                      std::forward<UpdateHandler>(update_handler));
+        bed_temp_observer_ =
+            observe_int_async<Panel>(state.get_bed_temp_subject(), panel,
+                                     std::forward<CacheBedTemp>(cache_bed_temp), update_copy);
 
         bed_target_observer_ = observe_int_async<Panel>(
             state.get_bed_target_subject(), panel, std::forward<CacheBedTarget>(cache_bed_target),
-            std::forward<UpdateHandler>(update_handler));
+            std::move(update_copy));
     }
 
     /**

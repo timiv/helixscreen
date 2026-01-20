@@ -4,7 +4,10 @@
 #pragma once
 #include "static_panel_registry.h"
 
+#include <spdlog/spdlog.h>
+
 #include <memory>
+#include <stdexcept>
 
 #define DEFINE_GLOBAL_PANEL(PanelType, global_var, getter_func)                                    \
     static std::unique_ptr<PanelType> global_var;                                                  \
@@ -16,3 +19,46 @@
         }                                                                                          \
         return *global_var;                                                                        \
     }
+
+/**
+ * @brief Define overlay global storage with strict getter (requires init)
+ *
+ * Unlike DEFINE_GLOBAL_PANEL which auto-initializes, this requires explicit
+ * init. Use for overlays that need constructor arguments.
+ *
+ * @code
+ * // In .cpp file:
+ * DEFINE_GLOBAL_OVERLAY_STORAGE(FanControlOverlay, g_fan_control, get_fan_control_overlay)
+ *
+ * void init_fan_control_overlay(PrinterState& state) {
+ *     INIT_GLOBAL_OVERLAY(FanControlOverlay, g_fan_control, state);
+ * }
+ * @endcode
+ */
+#define DEFINE_GLOBAL_OVERLAY_STORAGE(OverlayType, global_var, getter_func)                        \
+    static std::unique_ptr<OverlayType> global_var;                                                \
+    OverlayType& getter_func() {                                                                   \
+        if (!global_var) {                                                                         \
+            spdlog::error("[" #OverlayType "] Called before initialization!");                     \
+            throw std::runtime_error(#OverlayType " not initialized");                             \
+        }                                                                                          \
+        return *global_var;                                                                        \
+    }
+
+/**
+ * @brief Initialize overlay in init function body
+ *
+ * Use inside your init function to create the overlay instance.
+ * Handles double-init warning and registry cleanup registration.
+ */
+#define INIT_GLOBAL_OVERLAY(OverlayType, global_var, ...)                                          \
+    do {                                                                                           \
+        if (global_var) {                                                                          \
+            spdlog::warn("[" #OverlayType "] Already initialized, skipping");                      \
+            return;                                                                                \
+        }                                                                                          \
+        global_var = std::make_unique<OverlayType>(__VA_ARGS__);                                   \
+        StaticPanelRegistry::instance().register_destroy(#OverlayType,                             \
+                                                         []() { global_var.reset(); });            \
+        spdlog::debug("[" #OverlayType "] Global instance initialized");                           \
+    } while (0)

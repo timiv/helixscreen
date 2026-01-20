@@ -85,8 +85,8 @@
               <bind_flag_if_eq subject="connection_discovering" flag="hidden" ref_value="1"/>
             </lv_label>
             <!-- Status Text (wrapping enabled to prevent overflow) -->
-            <text_body name="connection_status_text" bind_text="connection_status_text"
-                       width="0" flex_grow="1" long_mode="wrap"/>
+            <text_body name="connection_status_text"
+                       width="0" bind_text="connection_status_text" flex_grow="1" long_mode="wrap"/>
           </lv_obj>
         </lv_obj>
         <!-- Help text: connection must be tested (hidden on successful auto-probe) -->

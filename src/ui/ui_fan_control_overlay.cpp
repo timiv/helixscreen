@@ -4,6 +4,7 @@
 #include "ui_fan_control_overlay.h"
 
 #include "ui_error_reporting.h"
+#include "ui_global_panel_helper.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
 #include "ui_notification.h"
@@ -12,7 +13,6 @@
 #include "lvgl/src/xml/lv_xml.h"
 #include "moonraker_api.h"
 #include "observer_factory.h"
-#include "static_panel_registry.h"
 
 #include <spdlog/spdlog.h>
 
@@ -22,26 +22,10 @@
 // GLOBAL INSTANCE
 // ============================================================================
 
-static std::unique_ptr<FanControlOverlay> g_fan_control_overlay;
-
-FanControlOverlay& get_fan_control_overlay() {
-    if (!g_fan_control_overlay) {
-        spdlog::error(
-            "[FanControlOverlay] get_fan_control_overlay() called before initialization!");
-        throw std::runtime_error("FanControlOverlay not initialized");
-    }
-    return *g_fan_control_overlay;
-}
+DEFINE_GLOBAL_OVERLAY_STORAGE(FanControlOverlay, g_fan_control_overlay, get_fan_control_overlay)
 
 void init_fan_control_overlay(PrinterState& printer_state) {
-    if (g_fan_control_overlay) {
-        spdlog::warn("[FanControlOverlay] Already initialized, skipping");
-        return;
-    }
-    g_fan_control_overlay = std::make_unique<FanControlOverlay>(printer_state);
-    StaticPanelRegistry::instance().register_destroy("FanControlOverlay",
-                                                     []() { g_fan_control_overlay.reset(); });
-    spdlog::debug("[FanControlOverlay] Global instance initialized");
+    INIT_GLOBAL_OVERLAY(FanControlOverlay, g_fan_control_overlay, printer_state);
 }
 
 // ============================================================================

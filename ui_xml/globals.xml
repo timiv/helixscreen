@@ -115,7 +115,7 @@
     <!-- Responsive Keypad Sizes (keypad_*)                                    -->
     <!-- ===================================================================== -->
     <!-- Runtime selects appropriate variant via ui_theme_register_responsive_spacing() -->
- 
+
     <!-- printer_img_size moved to home_panel.xml -->
     <!-- accent_bar_width moved to home_panel.xml -->
     <px name="accent_bar_height" value="28"/>
@@ -241,35 +241,59 @@
     <px name="anim_release" value="120"/>
 
     <!-- Graph/Visualization colors -->
-    <color name="graph_line_primary" value="#bf616a"/>    <!-- nord11 - Aurora red -->
-    <color name="graph_line_secondary" value="#ebcb8b"/>  <!-- nord13 - Aurora yellow -->
-    <color name="graph_line_target" value="#88c0d0"/>     <!-- nord8 - Frost cyan -->
-    <color name="graph_bg_dark" value="#2e3440"/>         <!-- nord0 - Polar Night -->
-    <color name="graph_bg_light" value="#eceff4"/>        <!-- nord6 - Snow Storm -->
+    <color name="graph_line_primary" value="#bf616a"/>
+    <!-- nord11 - Aurora red -->
+    <color name="graph_line_secondary" value="#ebcb8b"/>
+    <!-- nord13 - Aurora yellow -->
+    <color name="graph_line_target" value="#88c0d0"/>
+    <!-- nord8 - Frost cyan -->
+    <color name="graph_bg_dark" value="#2e3440"/>
+    <!-- nord0 - Polar Night -->
+    <color name="graph_bg_light" value="#eceff4"/>
+    <!-- nord6 - Snow Storm -->
 
     <!-- Mesh visualization gradient -->
-    <color name="mesh_low" value="#88c0d0"/>   <!-- nord8 - cold -->
-    <color name="mesh_mid" value="#a3be8c"/>   <!-- nord14 - neutral -->
-    <color name="mesh_high" value="#bf616a"/>  <!-- nord11 - hot -->
+    <color name="mesh_low" value="#88c0d0"/>
+    <!-- nord8 - cold -->
+    <color name="mesh_mid" value="#a3be8c"/>
+    <!-- nord14 - neutral -->
+    <color name="mesh_high" value="#bf616a"/>
+    <!-- nord11 - hot -->
     <!-- Selection/highlight states (theme-aware) -->
-    <color name="selection_highlight_light" value="#e5e9f0"/>  <!-- nord5 -->
-    <color name="selection_highlight_dark" value="#434c5e"/>   <!-- nord2 -->
+    <color name="selection_highlight_light" value="#e5e9f0"/>
+    <!-- nord5 -->
+    <color name="selection_highlight_dark" value="#434c5e"/>
+    <!-- nord2 -->
     <!-- Step progress colors (wizard steps) -->
-    <color name="step_pending" value="#4c566a"/>    <!-- nord3 -->
-    <color name="step_active" value="#5e81ac"/>     <!-- nord10 -->
-    <color name="step_completed" value="#a3be8c"/>  <!-- nord14 -->
-    <color name="step_label_inactive_light" value="#4c566a"/>  <!-- nord3 -->
-    <color name="step_label_inactive_dark" value="#d8dee9"/>   <!-- nord4 -->
+    <color name="step_pending" value="#4c566a"/>
+    <!-- nord3 -->
+    <color name="step_active" value="#5e81ac"/>
+    <!-- nord10 -->
+    <color name="step_completed" value="#a3be8c"/>
+    <!-- nord14 -->
+    <color name="step_label_inactive_light" value="#4c566a"/>
+    <!-- nord3 -->
+    <color name="step_label_inactive_dark" value="#d8dee9"/>
+    <!-- nord4 -->
     <!-- Filament path visualization colors -->
-    <color name="filament_idle_light" value="#d8dee9"/>         <!-- nord4 -->
-    <color name="filament_idle_dark" value="#4c566a"/>          <!-- nord3 -->
-    <color name="filament_error" value="#bf616a"/>              <!-- nord11 -->
-    <color name="filament_hub_bg_light" value="#e5e9f0"/>       <!-- nord5 -->
-    <color name="filament_hub_bg_dark" value="#3b4252"/>        <!-- nord1 -->
-    <color name="filament_hub_border_light" value="#d8dee9"/>   <!-- nord4 -->
-    <color name="filament_hub_border_dark" value="#4c566a"/>    <!-- nord3 -->
-    <color name="filament_nozzle_light" value="#4c566a"/>       <!-- nord3 -->
-    <color name="filament_nozzle_dark" value="#81a1c1"/>        <!-- nord9 -->
+    <color name="filament_idle_light" value="#d8dee9"/>
+    <!-- nord4 -->
+    <color name="filament_idle_dark" value="#4c566a"/>
+    <!-- nord3 -->
+    <color name="filament_error" value="#bf616a"/>
+    <!-- nord11 -->
+    <color name="filament_hub_bg_light" value="#e5e9f0"/>
+    <!-- nord5 -->
+    <color name="filament_hub_bg_dark" value="#3b4252"/>
+    <!-- nord1 -->
+    <color name="filament_hub_border_light" value="#d8dee9"/>
+    <!-- nord4 -->
+    <color name="filament_hub_border_dark" value="#4c566a"/>
+    <!-- nord3 -->
+    <color name="filament_nozzle_light" value="#4c566a"/>
+    <!-- nord3 -->
+    <color name="filament_nozzle_dark" value="#81a1c1"/>
+    <!-- nord9 -->
     <color name="filament_metal" value="#808890"/>
     <!-- Faceted toolhead base color (static - Voron-style red) -->
     <color name="toolhead_body" value="#E53935"/>
@@ -287,14 +311,21 @@
     <color name="light_icon_off" value="#808080"/>
     <color name="light_icon_on" value="#FFD700"/>
     <!-- Temperature gradient colors (for heating progress indicator) -->
-    <color name="temp_gradient_cold" value="#88c0d0"/>  <!-- nord8 - cold -->
-    <color name="temp_gradient_warm" value="#ebcb8b"/>  <!-- nord13 - warming -->
-    <color name="temp_gradient_hot" value="#bf616a"/>   <!-- nord11 - hot -->
+    <color name="temp_gradient_cold" value="#88c0d0"/>
+    <!-- nord8 - cold -->
+    <color name="temp_gradient_warm" value="#ebcb8b"/>
+    <!-- nord13 - warming -->
+    <color name="temp_gradient_hot" value="#bf616a"/>
+    <!-- nord11 - hot -->
     <!-- Heater-specific colors (theme-aware) -->
-    <color name="heating_color_light" value="#bf616a"/>  <!-- nord11 -->
-    <color name="heating_color_dark" value="#bf616a"/>   <!-- nord11 -->
-    <color name="cooling_color_light" value="#88c0d0"/>  <!-- nord8 -->
-    <color name="cooling_color_dark" value="#88c0d0"/>   <!-- nord8 -->
+    <color name="heating_color_light" value="#bf616a"/>
+    <!-- nord11 -->
+    <color name="heating_color_dark" value="#bf616a"/>
+    <!-- nord11 -->
+    <color name="cooling_color_light" value="#88c0d0"/>
+    <!-- nord8 -->
+    <color name="cooling_color_dark" value="#88c0d0"/>
+    <!-- nord8 -->
 
     <!-- ===================================================================== -->
     <!-- Nord Theme Color Reference (https://www.nordtheme.com)                -->
@@ -326,45 +357,69 @@
     <!-- ===================================================================== -->
 
     <!-- PRIMARY/SECONDARY/TERTIARY - Full Nord (same in both themes) -->
-    <color name="primary_color" value="#88c0d0"/>     <!-- nord8 - Frost cyan -->
-    <color name="secondary_color" value="#81a1c1"/>   <!-- nord9 - Frost blue -->
-    <color name="tertiary_color" value="#5e81ac"/>    <!-- nord10 - Frost deep blue -->
+    <color name="primary_color" value="#88c0d0"/>
+    <!-- nord8 - Frost cyan -->
+    <color name="secondary_color" value="#81a1c1"/>
+    <!-- nord9 - Frost blue -->
+    <color name="tertiary_color" value="#5e81ac"/>
+    <!-- nord10 - Frost deep blue -->
 
     <!-- Semantic feedback colors - Aurora colors (same in both themes) -->
-    <color name="error_color" value="#bf616a"/>    <!-- nord11 - red -->
-    <color name="warning_color" value="#d08770"/>  <!-- nord12 - orange -->
-    <color name="success_color" value="#a3be8c"/>  <!-- nord14 - green -->
-    <color name="info_color" value="#88c0d0"/>     <!-- nord8 - cyan -->
+    <color name="error_color" value="#bf616a"/>
+    <!-- nord11 - red -->
+    <color name="warning_color" value="#d08770"/>
+    <!-- nord12 - orange -->
+    <color name="success_color" value="#a3be8c"/>
+    <!-- nord14 - green -->
+    <color name="info_color" value="#88c0d0"/>
+    <!-- nord8 - cyan -->
 
     <!-- App background colors (theme-aware) -->
-    <color name="app_bg_color_light" value="#eceff4"/>  <!-- nord6 - brightest Snow Storm -->
-    <color name="app_bg_color_dark" value="#2e3440"/>   <!-- nord0 - darkest Polar Night -->
-    <color name="section_bg_color" value="#434c5e"/>    <!-- nord2 -->
+    <color name="app_bg_color_light" value="#eceff4"/>
+    <!-- nord6 - brightest Snow Storm -->
+    <color name="app_bg_color_dark" value="#2e3440"/>
+    <!-- nord0 - darkest Polar Night -->
+    <color name="section_bg_color" value="#434c5e"/>
+    <!-- nord2 -->
 
     <!-- Primary text colors (theme-aware) -->
-    <color name="text_primary_light" value="#2e3440"/>   <!-- nord0 - darkest for contrast -->
-    <color name="text_primary_dark" value="#eceff4"/>    <!-- nord6 -->
+    <color name="text_primary_light" value="#2e3440"/>
+    <!-- nord0 - darkest for contrast -->
+    <color name="text_primary_dark" value="#eceff4"/>
+    <!-- nord6 -->
     <!-- Header text colors (theme-aware) -->
-    <color name="header_text_light" value="#3b4252"/>    <!-- nord1 -->
-    <color name="header_text_dark" value="#eceff4"/>     <!-- nord5 -->
+    <color name="header_text_light" value="#3b4252"/>
+    <!-- nord1 -->
+    <color name="header_text_dark" value="#eceff4"/>
+    <!-- nord5 -->
     <!-- Secondary text color (theme-aware) -->
-    <color name="text_secondary_light" value="#4c566a"/> <!-- nord3 -->
-    <color name="text_secondary_dark" value="#9ca3af"/>  <!-- dimmed nord4 -->
+    <color name="text_secondary_light" value="#4c566a"/>
+    <!-- nord3 -->
+    <color name="text_secondary_dark" value="#9ca3af"/>
+    <!-- dimmed nord4 -->
     <!-- Card background colors (theme-aware) -->
-    <color name="card_bg_light" value="#e5e9f0"/>  <!-- nord5 - mid Snow Storm -->
-    <color name="card_bg_dark" value="#3b4252"/>   <!-- nord1 - mid Polar Night -->
+    <color name="card_bg_light" value="#e5e9f0"/>
+    <!-- nord5 - mid Snow Storm -->
+    <color name="card_bg_dark" value="#3b4252"/>
+    <!-- nord1 - mid Polar Night -->
     <!-- Image caption overlay (static) -->
     <color name="image_caption_bg" value="#000000"/>
     <!-- Theme grey colors (theme-aware) -->
-    <color name="theme_grey_light" value="#d8dee9"/>  <!-- nord4 -->
-    <color name="theme_grey_dark" value="#4c566a"/>   <!-- nord3 -->
+    <color name="theme_grey_light" value="#d8dee9"/>
+    <!-- nord4 -->
+    <color name="theme_grey_dark" value="#4c566a"/>
+    <!-- nord3 -->
 
     <!-- Keyboard key colors (theme-aware, iOS-style) -->
-    <color name="keyboard_key_light" value="#eceff4"/>  <!-- nord6 -->
-    <color name="keyboard_key_dark" value="#434c5e"/>   <!-- nord2 -->
+    <color name="keyboard_key_light" value="#eceff4"/>
+    <!-- nord6 -->
+    <color name="keyboard_key_dark" value="#434c5e"/>
+    <!-- nord2 -->
     <!-- Special/modifier keys (shift, backspace, return, ?123) -->
-    <color name="keyboard_key_special_light" value="#d8dee9"/>  <!-- nord4 -->
-    <color name="keyboard_key_special_dark" value="#3b4252"/>   <!-- nord1 -->
+    <color name="keyboard_key_special_light" value="#d8dee9"/>
+    <!-- nord4 -->
+    <color name="keyboard_key_special_dark" value="#3b4252"/>
+    <!-- nord1 -->
 
     <!-- ===================================================================== -->
     <!-- Material Design Icon constants - MDI codepoints (U+F0000 range)       -->

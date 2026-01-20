@@ -8,8 +8,7 @@
   </consts>
   <view name="ams_dryer_card"
         extends="lv_obj" width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-        scrollable="false" flex_flow="column" style_pad_gap="#space_sm"
-        hidden="true">
+        scrollable="false" flex_flow="column" style_pad_gap="#space_sm" hidden="true">
     <!-- Fail-safe: Start hidden (dryer unsupported). Binding clears hidden when dryer_supported != 0 -->
     <bind_flag_if_eq subject="dryer_supported" flag="hidden" ref_value="0"/>
     <!-- Inactive state: button with heat wave icon that opens modal -->

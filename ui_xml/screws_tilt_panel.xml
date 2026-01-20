@@ -51,14 +51,13 @@
                       text="This tool probes each bed screw and tells you how much to adjust." style_text_align="center"/>
           <!-- Generic text - not hex-key specific -->
           <text_small width="100%"
-                      text="Have your bed adjustment tool (screwdriver, hex-key, etc.) ready if your bed isn't adjusted with 
-                            thumb wheels or some other built-in mechanism." style_text_align="center"
-                      style_text_color="#text_secondary"/>
+                      text="Have your bed adjustment tool (screwdriver, hex-key, etc.) ready if your bed isn't adjusted with                              thumb wheels or some other built-in mechanism."
+                      style_text_align="center" style_text_color="#text_secondary"/>
         </lv_obj>
         <!-- Steps Preview -->
         <lv_obj width="90%"
-                height="content" style_bg_color="#section_bg_color" style_radius="#border_radius" style_pad_all="#space_lg"
-                style_border_width="0" flex_flow="column" style_pad_gap="#space_xs">
+                height="content" style_bg_color="#section_bg_color" style_radius="#border_radius"
+                style_pad_all="#space_lg" style_border_width="0" flex_flow="column" style_pad_gap="#space_xs">
           <text_small width="100%" text="1. Printer will home and probe each screw"/>
           <text_small width="100%" text="2. Results show how much to turn each screw"/>
           <text_small width="100%" text="3. Adjust screws, then re-probe to verify"/>

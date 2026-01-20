@@ -35,8 +35,8 @@ refactor(ui): [brief description] ([task IDs])
 | High Priority | 5 | 5 | 0 |
 | Medium Priority - C++ | 8 | 8 | 0 |
 | Medium Priority - XML | 6 | 6 | 0 |
-| Low Priority | 5 | 0 | 5 |
-| **Total** | **24** | **19** | **5** |
+| Low Priority | 5 | 5 | 0 |
+| **Total** | **24** | **24** | **0** |
 
 ---
 
@@ -128,8 +128,8 @@ some_observer_ = observe_int_sync<PanelName>(
 ---
 
 ### HP-3: Create XML Modal Button Row Component
-- **Status**: `[~]` Component created, awaiting modal updates
-- **Impact**: 12+ modal files simplified
+- **Status**: `[x]` Complete (2026-01-20)
+- **Impact**: 9 modal files simplified, 3 skipped (complex conditional bindings)
 - **Files**:
   - Created: `ui_xml/modal_button_row.xml`
   - Registered in `src/xml_registration.cpp`
@@ -190,18 +190,18 @@ some_observer_ = observe_int_sync<PanelName>(
 **Checklist**:
 - [x] Create `ui_xml/modal_button_row.xml` component
 - [x] Register component in XML system
-- [ ] Update `wifi_password_modal.xml`
-- [ ] Update `hidden_network_modal.xml`
-- [ ] Update `bed_mesh_rename_modal.xml`
-- [ ] Update `factory_reset_modal.xml`
-- [ ] Update `theme_restart_modal.xml`
-- [ ] Update `save_z_offset_modal.xml`
-- [ ] Update `estop_confirmation_dialog.xml`
-- [ ] Update `print_cancel_confirm_modal.xml`
-- [ ] Update `filament_preset_edit_modal.xml`
-- [ ] Update `modal_dialog.xml`
-- [ ] Update `bed_mesh_save_config_modal.xml`
-- [ ] Update `exclude_object_modal.xml`
+- [-] Update `wifi_password_modal.xml` (skipped: conditional visibility bindings)
+- [-] Update `hidden_network_modal.xml` (skipped: conditional visibility bindings)
+- [x] Update `bed_mesh_rename_modal.xml`
+- [x] Update `factory_reset_modal.xml`
+- [x] Update `theme_restart_modal.xml`
+- [x] Update `save_z_offset_modal.xml`
+- [x] Update `estop_confirmation_dialog.xml`
+- [x] Update `print_cancel_confirm_modal.xml`
+- [x] Update `filament_preset_edit_modal.xml`
+- [-] Update `modal_dialog.xml` (skipped: dynamic text bindings + programmatic callbacks)
+- [x] Update `bed_mesh_save_config_modal.xml`
+- [x] Update `exclude_object_modal.xml`
 
 ---
 
@@ -646,52 +646,72 @@ inline void ui_toggle_list_empty_state(lv_obj_t* list, lv_obj_t* empty_state, bo
 ## Low Priority Tasks
 
 ### LP-1: Create ModalGuard RAII Wrapper
-- **Status**: `[ ]` Pending
-- **Files**: `include/ui/ui_modal_guard.h`, panel destructors
+- **Status**: `[x]` Complete (2026-01-20)
+- **Impact**: RAII wrapper for modal cleanup, ~3 lines saved per modal
+- **Files**: `include/ui/ui_modal_guard.h`, `include/ui_panel_controls.h`, `src/ui/ui_panel_controls.cpp`
 
 **Checklist**:
-- [ ] Create `ModalGuard` class for modal cleanup
-- [ ] Refactor modal cleanup in panel destructors
+- [x] Create `ModalGuard` class for modal cleanup
+- [x] Refactor ControlsPanel to use ModalGuard (proof of concept)
+- [ ] (Future) Refactor other panels with modals
 
 ---
 
 ### LP-2: Create Position Observer Bundle
-- **Status**: `[ ]` Pending
-- **Files**: `include/ui/position_observer_bundle.h`, `ui_panel_controls.cpp`, `ui_panel_motion.cpp`
+- **Status**: `[x]` Complete (2026-01-20)
+- **Impact**: ~9 lines saved in ControlsPanel, pattern available for future use
+- **Files**: `include/ui/position_observer_bundle.h`, `include/ui_panel_controls.h`, `src/ui/ui_panel_controls.cpp`
 
 **Checklist**:
-- [ ] Create `PositionObserverBundle` class
-- [ ] Refactor X/Y/Z observer setup
+- [x] Create `PositionObserverBundle` class
+- [x] Refactor ControlsPanel X/Y/Z observer setup
+- [-] Refactor MotionPanel (skipped: has extra observers for actual Z and bed_moves)
 
 ---
 
 ### LP-3: Consolidate Static Callback Trampolines
-- **Status**: `[ ]` Pending
-- **Files**: Various overlay files
+- **Status**: `[x]` Complete (2026-01-20)
+- **Impact**: 47 trampolines across 27 files can now use macros (~15 lines saved per file on average)
+- **Files**: `include/ui/ui_event_trampoline.h`, `src/ui/ui_fan_dial.cpp` (proof of concept)
+
+**Macros created**:
+- `DEFINE_EVENT_TRAMPOLINE(Class, callback, handler)` - handler takes lv_event_t*
+- `DEFINE_EVENT_TRAMPOLINE_SIMPLE(Class, callback, handler)` - handler takes no args
+- `DEFINE_SINGLETON_TRAMPOLINE(Class, callback, getter, handler)` - for singleton pattern
 
 **Checklist**:
-- [ ] Create macro for static callback trampolines
-- [ ] Refactor repetitive static callbacks
+- [x] Create macro header for static callback trampolines
+- [x] Refactor FanDial (proof of concept: 18 lines → 3 lines)
+- [ ] (Future) Apply to remaining 44 trampolines across codebase
 
 ---
 
 ### LP-4: Create Overlay Global Instance Template
-- **Status**: `[ ]` Pending
-- **Files**: `include/ui/ui_singleton_holder.h`, overlay files
+- **Status**: `[x]` Complete (2026-01-20)
+- **Impact**: ~17 lines saved per overlay, macros added to existing helper
+- **Files**: `include/ui_global_panel_helper.h`, `src/ui/ui_fan_control_overlay.cpp`
+
+**Macros added**:
+- `DEFINE_GLOBAL_OVERLAY_STORAGE(Type, var, getter)` - strict getter that throws if not initialized
+- `INIT_GLOBAL_OVERLAY(Type, var, ...)` - init with args, registers cleanup
 
 **Checklist**:
-- [ ] Create `SingletonHolder<T>` template class
-- [ ] Refactor overlay global instance patterns
+- [x] Add macros to `ui_global_panel_helper.h`
+- [x] Refactor FanControlOverlay (proof of concept: 22 lines → 5 lines)
+- [ ] (Future) Apply to remaining overlays (RetractionSettings, Timelapse, etc.)
 
 ---
 
 ### LP-5: Standardize XML Widget Registration
-- **Status**: `[ ]` Pending
+- **Status**: `[-]` Skipped (2026-01-20)
+- **Reason**: Analysis showed widget handlers vary significantly (simple card vs complex spinner/switch). Macros would either be too simple to help or too complex to maintain. Low ROI.
 - **Files**: `ui_card.cpp`, `ui_dialog.cpp`, `ui_severity_card.cpp`, `ui_spinner.cpp`, `ui_icon.cpp`, `ui_switch.cpp`
 
-**Checklist**:
-- [ ] Create helper macros for XML widget registration boilerplate
-- [ ] Refactor 6+ widget registration files
+**Analysis Summary**:
+- Registration functions are similar (3 lines each) - minor savings
+- Create handlers have varied initialization logic
+- Apply handlers range from simple delegation to multi-pass attribute parsing
+- Future: Could revisit if more widgets are added with similar patterns
 
 ---
 
@@ -701,7 +721,7 @@ inline void ui_toggle_list_empty_state(lv_obj_t* list, lv_obj_t* empty_state, bo
 |------|------|-------|
 | 2026-01-20 | HP-5: Domain-specific observer helpers | Added `observe_connection_state` and `observe_print_state` to observer_factory.h |
 | 2026-01-20 | HP-2: Global panel singleton macro | Created macro, refactored 4 panels (console, spoolman, macros, bed_mesh) |
-| 2026-01-20 | HP-3: Modal button row component | Created component, registered in xml_registration.cpp |
+| 2026-01-20 | HP-3: Modal button row component | Refactored 9 modals to use component, 3 skipped (wifi/hidden_network: conditional bindings, modal_dialog: dynamic text) |
 | 2026-01-20 | HP-4: Divider components (complete) | Updated 34 XML files to use divider components, added color prop for flexibility, 72 inline dividers eliminated |
 | 2026-01-20 | MP-C1: Subject init/deinit guards | Added to PanelBase and OverlayBase, refactored 5 panels |
 | 2026-01-20 | MP-C2: Overlay creation helper | Added `create_overlay_from_xml()` to OverlayBase, refactored 3 overlay panels |
@@ -717,6 +737,12 @@ inline void ui_toggle_list_empty_state(lv_obj_t* list, lv_obj_t* empty_state, bo
 | 2026-01-20 | MP-C5: Modal button callbacks | Created `MODAL_BUTTON_CB_IMPL` macro, refactored 6 callbacks (-57 lines) |
 | 2026-01-20 | MP-C6: Temperature observer bundle | Created `TemperatureObserverBundle` class, refactored 3 panels |
 | 2026-01-20 | MP-X6: Form field component | Created `form_field.xml`, updated 2 modal files |
+| 2026-01-20 | HP-3: Modal button row (modals) | Refactored 9 modals to use component, 3 skipped (conditional bindings) |
+| 2026-01-20 | LP-2: Position observer bundle | Created `PositionObserverBundle`, refactored ControlsPanel |
+| 2026-01-20 | LP-1: ModalGuard RAII wrapper | Created `ModalGuard`, refactored ControlsPanel modal cleanup |
+| 2026-01-20 | LP-3: Event trampoline macros | Created 3 macros, refactored FanDial (18→3 lines) |
+| 2026-01-20 | LP-5: XML widget registration | Assessed, skipped due to low ROI (patterns too varied) |
+| 2026-01-20 | LP-4: Overlay global instance | Added DEFINE_GLOBAL_OVERLAY_STORAGE + INIT_GLOBAL_OVERLAY macros |
 
 ---
 

@@ -4,6 +4,7 @@
 #include "ui_fan_dial.h"
 
 #include "lvgl/src/xml/lv_xml.h"
+#include "ui/ui_event_trampoline.h"
 
 #include <spdlog/spdlog.h>
 
@@ -221,26 +222,9 @@ void FanDial::handle_on_clicked() {
 // Static Event Trampolines
 // ============================================================================
 
-void FanDial::on_arc_value_changed(lv_event_t* e) {
-    auto* dial = static_cast<FanDial*>(lv_event_get_user_data(e));
-    if (dial) {
-        dial->handle_arc_changed();
-    }
-}
-
-void FanDial::on_off_clicked(lv_event_t* e) {
-    auto* dial = static_cast<FanDial*>(lv_event_get_user_data(e));
-    if (dial) {
-        dial->handle_off_clicked();
-    }
-}
-
-void FanDial::on_on_clicked(lv_event_t* e) {
-    auto* dial = static_cast<FanDial*>(lv_event_get_user_data(e));
-    if (dial) {
-        dial->handle_on_clicked();
-    }
-}
+DEFINE_EVENT_TRAMPOLINE_SIMPLE(FanDial, on_arc_value_changed, handle_arc_changed)
+DEFINE_EVENT_TRAMPOLINE_SIMPLE(FanDial, on_off_clicked, handle_off_clicked)
+DEFINE_EVENT_TRAMPOLINE_SIMPLE(FanDial, on_on_clicked, handle_on_clicked)
 
 // ============================================================================
 // XML Callback Registration

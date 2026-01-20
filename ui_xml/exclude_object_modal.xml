@@ -28,27 +28,9 @@
             style_pad_bottom="#space_lg">
       <text_body name="dialog_message" width="100%" text="$message" style_text_align="left" long_mode="wrap"/>
     </lv_obj>
-    <!-- Horizontal divider above buttons -->
-    <divider_horizontal/>
     <!-- Button row -->
-    <lv_obj width="100%"
-            height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row">
-      <!-- Cancel button -->
-      <lv_button name="btn_cancel"
-                 height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_shadow_width="0"
-                 clickable="true">
-        <event_cb trigger="clicked" callback="on_exclude_object_cancel"/>
-        <text_body align="center" text="Cancel"/>
-      </lv_button>
-      <!-- Vertical divider between buttons -->
-      <divider_vertical/>
-      <!-- Exclude button (primary/destructive action) -->
-      <lv_button name="btn_ok"
-                 height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_shadow_width="0"
-                 clickable="true">
-        <event_cb trigger="clicked" callback="on_exclude_object_confirm"/>
-        <text_body align="center" text="Exclude" style_text_color="#error_color"/>
-      </lv_button>
-    </lv_obj>
+    <modal_button_row secondary_text="Cancel"
+                      secondary_callback="on_exclude_object_cancel" primary_text="Exclude"
+                      primary_callback="on_exclude_object_confirm"/>
   </view>
 </component>

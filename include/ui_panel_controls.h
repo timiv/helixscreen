@@ -9,7 +9,9 @@
 #include "config.h"
 #include "standard_macros.h"
 #include "subject_managed_panel.h"
+#include "ui/position_observer_bundle.h"
 #include "ui/temperature_observer_bundle.h"
+#include "ui/ui_modal_guard.h"
 
 #include <optional>
 
@@ -200,7 +202,7 @@ class ControlsPanel : public PanelBase {
     // === Modal Dialog State ===
     //
 
-    lv_obj_t* motors_confirmation_dialog_ = nullptr;
+    helix::ui::ModalGuard motors_confirmation_dialog_;
 
     //
     // === Dynamic UI Containers ===
@@ -245,9 +247,7 @@ class ControlsPanel : public PanelBase {
     char controls_pos_x_buf_[32] = {};
     char controls_pos_y_buf_[32] = {};
     char controls_pos_z_buf_[32] = {};
-    ObserverGuard position_x_observer_;
-    ObserverGuard position_y_observer_;
-    ObserverGuard position_z_observer_;
+    helix::ui::PositionObserverBundle<ControlsPanel> pos_observers_;
 
     //
     // === Speed/Flow Override Subjects ===

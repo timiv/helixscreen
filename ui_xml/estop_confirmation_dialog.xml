@@ -24,29 +24,10 @@
                    text="This will immediately halt all printer operations. The printer will require a restart to resume."
                    long_mode="wrap" style_text_align="center" style_text_color="#text_secondary"/>
       </lv_obj>
-      <!-- Horizontal divider above buttons -->
-      <divider_horizontal/>
       <!-- Button row -->
-      <lv_obj width="100%"
-              height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_gap="0"
-              flex_flow="row">
-        <!-- Cancel button -->
-        <lv_button name="btn_cancel"
-                   height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
-                   clickable="true">
-          <text_body text="Cancel" align="center"/>
-          <event_cb trigger="clicked" callback="estop_dialog_cancel_clicked"/>
-        </lv_button>
-        <!-- Vertical divider -->
-        <divider_vertical/>
-        <!-- STOP button (danger styling) -->
-        <lv_button name="btn_stop"
-                   height="100%" flex_grow="1" style_radius="0" style_border_width="0" style_shadow_width="0"
-                   style_bg_color="#error_color" clickable="true">
-          <text_body text="STOP" align="center" style_text_color="#text_primary"/>
-          <event_cb trigger="clicked" callback="estop_dialog_confirm_clicked"/>
-        </lv_button>
-      </lv_obj>
+      <modal_button_row secondary_text="Cancel"
+                        secondary_callback="estop_dialog_cancel_clicked" primary_text="STOP"
+                        primary_callback="estop_dialog_confirm_clicked" primary_bg_color="#error_color"/>
     </ui_dialog>
   </view>
 </component>

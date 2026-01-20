@@ -59,26 +59,8 @@
         </lv_obj>
       </lv_obj>
     </lv_obj>
-    <!-- Horizontal divider above buttons -->
-    <divider_horizontal/>
-    <!-- Action buttons row -->
-    <lv_obj width="100%"
-            height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-            scrollable="false">
-      <!-- Cancel button -->
-      <lv_button name="btn_cancel"
-                 height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_shadow_width="0">
-        <event_cb trigger="clicked" callback="filament_preset_edit_close_cb"/>
-        <text_body text="Cancel" align="center" style_text_color="#text_secondary"/>
-      </lv_button>
-      <!-- Vertical divider -->
-      <divider_vertical/>
-      <!-- Save button -->
-      <lv_button name="btn_save"
-                 height="100%" flex_grow="1" style_radius="#border_radius" style_border_width="0" style_shadow_width="0">
-        <event_cb trigger="clicked" callback="filament_preset_edit_save_cb"/>
-        <text_body text="Save" align="center" style_text_color="#text_primary"/>
-      </lv_button>
-    </lv_obj>
+    <modal_button_row primary_text="Save"
+                      secondary_text="Cancel" primary_callback="filament_preset_edit_save_cb"
+                      secondary_callback="filament_preset_edit_close_cb"/>
   </view>
 </component>

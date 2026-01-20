@@ -8,35 +8,55 @@
   <consts>
     <!-- Jog pad colors using Nord frost blues for contrast -->
     <!-- Outer ring background - lighter frost blue -->
-    <const name="jog_outer_ring_light" value="#88c0d0"/>    <!-- nord8 frost light blue -->
-    <const name="jog_outer_ring_dark" value="#81a1c1"/>     <!-- nord9 frost blue -->
+    <const name="jog_outer_ring_light" value="#88c0d0"/>
+    <!-- nord8 frost light blue -->
+    <const name="jog_outer_ring_dark" value="#81a1c1"/>
+    <!-- nord9 frost blue -->
     <!-- Inner circle background - darker frost blue -->
-    <const name="jog_inner_circle_light" value="#81a1c1"/>  <!-- nord9 frost blue -->
-    <const name="jog_inner_circle_dark" value="#5e81ac"/>   <!-- nord10 frost dark blue -->
+    <const name="jog_inner_circle_light" value="#81a1c1"/>
+    <!-- nord9 frost blue -->
+    <const name="jog_inner_circle_dark" value="#5e81ac"/>
+    <!-- nord10 frost dark blue -->
     <!-- Grid divider lines -->
-    <const name="jog_grid_lines_light" value="#2e3440"/>    <!-- nord0 dark for contrast -->
-    <const name="jog_grid_lines_dark" value="#2e3440"/>     <!-- nord0 -->
+    <const name="jog_grid_lines_light" value="#2e3440"/>
+    <!-- nord0 dark for contrast -->
+    <const name="jog_grid_lines_dark" value="#2e3440"/>
+    <!-- nord0 -->
     <!-- Home button background -->
-    <const name="jog_home_bg_light" value="#d8dee9"/>       <!-- nord4 -->
-    <const name="jog_home_bg_dark" value="#4c566a"/>        <!-- nord3 -->
+    <const name="jog_home_bg_light" value="#d8dee9"/>
+    <!-- nord4 -->
+    <const name="jog_home_bg_dark" value="#4c566a"/>
+    <!-- nord3 -->
     <!-- Home button border -->
-    <const name="jog_home_border_light" value="#81a1c1"/>   <!-- nord9 -->
-    <const name="jog_home_border_dark" value="#81a1c1"/>    <!-- nord9 -->
+    <const name="jog_home_border_light" value="#81a1c1"/>
+    <!-- nord9 -->
+    <const name="jog_home_border_dark" value="#81a1c1"/>
+    <!-- nord9 -->
     <!-- Home icon text color -->
-    <const name="jog_home_text_light" value="#2e3440"/>     <!-- nord0 -->
-    <const name="jog_home_text_dark" value="#eceff4"/>      <!-- nord6 -->
+    <const name="jog_home_text_light" value="#2e3440"/>
+    <!-- nord0 -->
+    <const name="jog_home_text_dark" value="#eceff4"/>
+    <!-- nord6 -->
     <!-- Zone boundary lines -->
-    <const name="jog_boundary_lines_light" value="#2e3440"/> <!-- nord0 dark for contrast -->
-    <const name="jog_boundary_lines_dark" value="#2e3440"/>  <!-- nord0 -->
+    <const name="jog_boundary_lines_light" value="#2e3440"/>
+    <!-- nord0 dark for contrast -->
+    <const name="jog_boundary_lines_dark" value="#2e3440"/>
+    <!-- nord0 -->
     <!-- Distance labels (1mm/10mm text) -->
-    <const name="jog_distance_labels_light" value="#2e3440"/> <!-- nord0 -->
-    <const name="jog_distance_labels_dark" value="#d8dee9"/>  <!-- nord4 -->
+    <const name="jog_distance_labels_light" value="#2e3440"/>
+    <!-- nord0 -->
+    <const name="jog_distance_labels_dark" value="#d8dee9"/>
+    <!-- nord4 -->
     <!-- Axis labels (X+/Y+ etc) -->
-    <const name="jog_axis_labels_light" value="#2e3440"/>   <!-- nord0 -->
-    <const name="jog_axis_labels_dark" value="#eceff4"/>    <!-- nord6 -->
+    <const name="jog_axis_labels_light" value="#2e3440"/>
+    <!-- nord0 -->
+    <const name="jog_axis_labels_dark" value="#eceff4"/>
+    <!-- nord6 -->
     <!-- Press highlight overlay -->
-    <const name="jog_highlight_light" value="#2e3440"/>     <!-- nord0 -->
-    <const name="jog_highlight_dark" value="#eceff4"/>      <!-- nord6 -->
+    <const name="jog_highlight_light" value="#2e3440"/>
+    <!-- nord0 -->
+    <const name="jog_highlight_dark" value="#eceff4"/>
+    <!-- nord6 -->
   </consts>
   <!-- Uses shared backdrop from navigation system -->
   <view name="motion_panel"
@@ -77,18 +97,21 @@
                 width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0"
                 flex_flow="column" style_flex_main_place="start" style_flex_cross_place="start"
                 style_pad_gap="#space_xs">
-          <lv_obj width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0"
-                  flex_flow="row" style_pad_gap="#space_xs">
+          <lv_obj width="100%"
+                  height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" flex_flow="row"
+                  style_pad_gap="#space_xs">
             <text_small text="X:" style_text_color="#text_secondary"/>
             <text_small name="pos_x" bind_text="motion_pos_x" style_text_color="#text_primary"/>
           </lv_obj>
-          <lv_obj width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0"
-                  flex_flow="row" style_pad_gap="#space_xs">
+          <lv_obj width="100%"
+                  height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" flex_flow="row"
+                  style_pad_gap="#space_xs">
             <text_small text="Y:" style_text_color="#text_secondary"/>
             <text_small name="pos_y" bind_text="motion_pos_y" style_text_color="#text_primary"/>
           </lv_obj>
-          <lv_obj width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0"
-                  flex_flow="row" style_pad_gap="#space_xs">
+          <lv_obj width="100%"
+                  height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" flex_flow="row"
+                  style_pad_gap="#space_xs">
             <text_small text="Z:" style_text_color="#text_secondary"/>
             <text_small name="pos_z" bind_text="motion_pos_z" style_text_color="#text_primary"/>
           </lv_obj>
