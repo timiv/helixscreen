@@ -25,6 +25,7 @@
 #pragma once
 
 #include "lvgl/lvgl.h"
+#include "overlay_base.h"
 
 #include <string>
 
@@ -62,7 +63,7 @@ namespace helix::settings {
  * using lv_obj_add_event_cb() for button callbacks and DELETE cleanup,
  * which is an acceptable exception to the declarative UI rule.
  */
-class HardwareHealthOverlay {
+class HardwareHealthOverlay : public OverlayBase {
   public:
     /**
      * @brief Default constructor
@@ -72,11 +73,56 @@ class HardwareHealthOverlay {
     /**
      * @brief Destructor
      */
-    ~HardwareHealthOverlay();
+    ~HardwareHealthOverlay() override;
 
-    // Non-copyable
-    HardwareHealthOverlay(const HardwareHealthOverlay&) = delete;
-    HardwareHealthOverlay& operator=(const HardwareHealthOverlay&) = delete;
+    // Non-copyable (inherited from OverlayBase)
+
+    //
+    // === OverlayBase Interface ===
+    //
+
+    /**
+     * @brief Initialize subjects (empty - no subjects needed)
+     */
+    void init_subjects() override {}
+
+    /**
+     * @brief Create the overlay UI (called lazily)
+     *
+     * @param parent Parent widget to attach overlay to (usually screen)
+     * @return Root object of overlay, or nullptr on failure
+     */
+    lv_obj_t* create(lv_obj_t* parent) override;
+
+    /**
+     * @brief Get human-readable overlay name
+     * @return "Hardware Health"
+     */
+    const char* get_name() const override {
+        return "Hardware Health";
+    }
+
+    /**
+     * @brief Register event callbacks with lv_xml system
+     *
+     * Registers callbacks for:
+     * - on_hardware_health_clicked (entry point from SettingsPanel)
+     */
+    void register_callbacks() override;
+
+    /**
+     * @brief Called when overlay becomes visible
+     *
+     * Populates hardware issues from validation result.
+     */
+    void on_activate() override;
+
+    /**
+     * @brief Called when overlay is being hidden
+     *
+     * Cleans up any open modal dialogs.
+     */
+    void on_deactivate() override;
 
     //
     // === Initialization ===
@@ -89,26 +135,6 @@ class HardwareHealthOverlay {
     void set_printer_state(PrinterState* printer_state) {
         printer_state_ = printer_state;
     }
-
-    /**
-     * @brief Register event callbacks with lv_xml system
-     *
-     * Registers callbacks for:
-     * - on_hardware_health_clicked (entry point from SettingsPanel)
-     */
-    void register_callbacks();
-
-    //
-    // === UI Creation ===
-    //
-
-    /**
-     * @brief Create the overlay UI (called lazily)
-     *
-     * @param parent Parent widget to attach overlay to (usually screen)
-     * @return Root object of overlay, or nullptr on failure
-     */
-    lv_obj_t* create(lv_obj_t* parent);
 
     /**
      * @brief Show the overlay (populates issues first)
@@ -127,27 +153,11 @@ class HardwareHealthOverlay {
     //
 
     /**
-     * @brief Get root overlay widget
-     * @return Root widget, or nullptr if not created
-     */
-    lv_obj_t* get_root() const {
-        return overlay_;
-    }
-
-    /**
      * @brief Check if overlay has been created
      * @return true if create() was called successfully
      */
     bool is_created() const {
-        return overlay_ != nullptr;
-    }
-
-    /**
-     * @brief Get human-readable overlay name
-     * @return "Hardware Health"
-     */
-    const char* get_name() const {
-        return "Hardware Health";
+        return overlay_root_ != nullptr;
     }
 
     //
@@ -189,8 +199,6 @@ class HardwareHealthOverlay {
     // === State ===
     //
 
-    lv_obj_t* overlay_{nullptr};
-    lv_obj_t* parent_screen_{nullptr};
     PrinterState* printer_state_{nullptr};
 
     /// Hardware name pending save confirmation

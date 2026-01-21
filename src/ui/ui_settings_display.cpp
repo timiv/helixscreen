@@ -86,25 +86,26 @@ void DisplaySettingsOverlay::register_callbacks() {
 // ============================================================================
 
 lv_obj_t* DisplaySettingsOverlay::create(lv_obj_t* parent) {
-    if (overlay_) {
+    if (overlay_root_) {
         spdlog::warn("[{}] create() called but overlay already exists", get_name());
-        return overlay_;
+        return overlay_root_;
     }
 
     spdlog::debug("[{}] Creating overlay...", get_name());
 
     // Create from XML component
-    overlay_ = static_cast<lv_obj_t*>(lv_xml_create(parent, "display_settings_overlay", nullptr));
-    if (!overlay_) {
+    overlay_root_ =
+        static_cast<lv_obj_t*>(lv_xml_create(parent, "display_settings_overlay", nullptr));
+    if (!overlay_root_) {
         spdlog::error("[{}] Failed to create overlay from XML", get_name());
         return nullptr;
     }
 
     // Initially hidden until show() pushes it
-    lv_obj_add_flag(overlay_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(overlay_root_, LV_OBJ_FLAG_HIDDEN);
 
     spdlog::info("[{}] Overlay created", get_name());
-    return overlay_;
+    return overlay_root_;
 }
 
 void DisplaySettingsOverlay::show(lv_obj_t* parent_screen) {
@@ -119,14 +120,28 @@ void DisplaySettingsOverlay::show(lv_obj_t* parent_screen) {
     }
 
     // Lazy create overlay
-    if (!overlay_ && parent_screen_) {
+    if (!overlay_root_ && parent_screen_) {
         create(parent_screen_);
     }
 
-    if (!overlay_) {
+    if (!overlay_root_) {
         spdlog::error("[{}] Cannot show - overlay not created", get_name());
         return;
     }
+
+    // Register for lifecycle callbacks
+    NavigationManager::instance().register_overlay_instance(overlay_root_, this);
+
+    // Push onto navigation stack (on_activate will initialize dropdowns)
+    ui_nav_push_overlay(overlay_root_);
+}
+
+// ============================================================================
+// LIFECYCLE
+// ============================================================================
+
+void DisplaySettingsOverlay::on_activate() {
+    OverlayBase::on_activate();
 
     // Initialize all widget values from SettingsManager
     init_brightness_controls();
@@ -134,9 +149,10 @@ void DisplaySettingsOverlay::show(lv_obj_t* parent_screen) {
     init_bed_mesh_dropdown();
     init_gcode_dropdown();
     init_time_format_dropdown();
+}
 
-    // Push onto navigation stack
-    ui_nav_push_overlay(overlay_);
+void DisplaySettingsOverlay::on_deactivate() {
+    OverlayBase::on_deactivate();
 }
 
 // ============================================================================
@@ -144,10 +160,10 @@ void DisplaySettingsOverlay::show(lv_obj_t* parent_screen) {
 // ============================================================================
 
 void DisplaySettingsOverlay::init_brightness_controls() {
-    if (!overlay_)
+    if (!overlay_root_)
         return;
 
-    lv_obj_t* brightness_slider = lv_obj_find_by_name(overlay_, "brightness_slider");
+    lv_obj_t* brightness_slider = lv_obj_find_by_name(overlay_root_, "brightness_slider");
     if (brightness_slider) {
         // Set initial value from settings
         int brightness = SettingsManager::instance().get_brightness();
@@ -162,10 +178,10 @@ void DisplaySettingsOverlay::init_brightness_controls() {
 }
 
 void DisplaySettingsOverlay::init_sleep_dropdown() {
-    if (!overlay_)
+    if (!overlay_root_)
         return;
 
-    lv_obj_t* sleep_row = lv_obj_find_by_name(overlay_, "row_display_sleep");
+    lv_obj_t* sleep_row = lv_obj_find_by_name(overlay_root_, "row_display_sleep");
     lv_obj_t* sleep_dropdown = sleep_row ? lv_obj_find_by_name(sleep_row, "dropdown") : nullptr;
     if (sleep_dropdown) {
         // Set dropdown options
@@ -183,10 +199,10 @@ void DisplaySettingsOverlay::init_sleep_dropdown() {
 }
 
 void DisplaySettingsOverlay::init_bed_mesh_dropdown() {
-    if (!overlay_)
+    if (!overlay_root_)
         return;
 
-    lv_obj_t* bed_mesh_row = lv_obj_find_by_name(overlay_, "row_bed_mesh_mode");
+    lv_obj_t* bed_mesh_row = lv_obj_find_by_name(overlay_root_, "row_bed_mesh_mode");
     lv_obj_t* bed_mesh_dropdown =
         bed_mesh_row ? lv_obj_find_by_name(bed_mesh_row, "dropdown") : nullptr;
     if (bed_mesh_dropdown) {
@@ -204,11 +220,11 @@ void DisplaySettingsOverlay::init_bed_mesh_dropdown() {
 }
 
 void DisplaySettingsOverlay::init_gcode_dropdown() {
-    if (!overlay_)
+    if (!overlay_root_)
         return;
 
     // G-code mode row is hidden by default, but we still initialize it
-    lv_obj_t* gcode_row = lv_obj_find_by_name(overlay_, "row_gcode_mode");
+    lv_obj_t* gcode_row = lv_obj_find_by_name(overlay_root_, "row_gcode_mode");
     lv_obj_t* gcode_dropdown = gcode_row ? lv_obj_find_by_name(gcode_row, "dropdown") : nullptr;
     if (gcode_dropdown) {
         // Set dropdown options
@@ -245,10 +261,10 @@ void DisplaySettingsOverlay::init_theme_preset_dropdown(lv_obj_t* root) {
 }
 
 void DisplaySettingsOverlay::init_time_format_dropdown() {
-    if (!overlay_)
+    if (!overlay_root_)
         return;
 
-    lv_obj_t* time_format_row = lv_obj_find_by_name(overlay_, "row_time_format");
+    lv_obj_t* time_format_row = lv_obj_find_by_name(overlay_root_, "row_time_format");
     lv_obj_t* time_format_dropdown =
         time_format_row ? lv_obj_find_by_name(time_format_row, "dropdown") : nullptr;
     if (time_format_dropdown) {

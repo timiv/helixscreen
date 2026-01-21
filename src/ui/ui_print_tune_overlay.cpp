@@ -170,7 +170,7 @@ void PrintTuneOverlay::show(lv_obj_t* parent_screen, MoonrakerAPI* api,
 
     // Initialize subjects if not already done (before XML creation)
     if (!subjects_initialized_) {
-        init_subjects();
+        init_subjects_internal();
     }
 
     // Create panel lazily
@@ -186,6 +186,10 @@ void PrintTuneOverlay::show(lv_obj_t* parent_screen, MoonrakerAPI* api,
         // Setup panel (back button, etc.)
         setup_panel();
         lv_obj_add_flag(tune_panel_, LV_OBJ_FLAG_HIDDEN);
+
+        // Keep base class in sync for cleanup and get_root()
+        overlay_root_ = tune_panel_;
+
         spdlog::info("[PrintTuneOverlay] Panel created");
     }
 
@@ -194,10 +198,10 @@ void PrintTuneOverlay::show(lv_obj_t* parent_screen, MoonrakerAPI* api,
         return;
     }
 
-    // Sync sliders and displays to current state before showing
-    sync_sliders_to_state();
+    // Register with NavigationManager for lifecycle callbacks
+    NavigationManager::instance().register_overlay_instance(tune_panel_, this);
 
-    // Push onto navigation stack
+    // Push onto navigation stack (on_activate will be called after animation)
     ui_nav_push_overlay(tune_panel_);
 }
 
@@ -205,7 +209,7 @@ void PrintTuneOverlay::show(lv_obj_t* parent_screen, MoonrakerAPI* api,
 // INTERNAL: INITIALIZATION
 // ============================================================================
 
-void PrintTuneOverlay::init_subjects() {
+void PrintTuneOverlay::init_subjects_internal() {
     if (subjects_initialized_) {
         return;
     }
@@ -239,6 +243,21 @@ void PrintTuneOverlay::init_subjects() {
 
     subjects_initialized_ = true;
     spdlog::debug("[PrintTuneOverlay] Subjects initialized");
+}
+
+// ============================================================================
+// LIFECYCLE HOOKS
+// ============================================================================
+
+void PrintTuneOverlay::on_activate() {
+    OverlayBase::on_activate();
+    sync_sliders_to_state();
+    spdlog::debug("[PrintTuneOverlay] Activated - sliders synced to state");
+}
+
+void PrintTuneOverlay::on_deactivate() {
+    OverlayBase::on_deactivate();
+    spdlog::debug("[PrintTuneOverlay] Deactivated");
 }
 
 void PrintTuneOverlay::setup_panel() {

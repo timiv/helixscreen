@@ -67,25 +67,26 @@ void FilamentSensorSettingsOverlay::register_callbacks() {
 // ============================================================================
 
 lv_obj_t* FilamentSensorSettingsOverlay::create(lv_obj_t* parent) {
-    if (overlay_) {
+    if (overlay_root_) {
         spdlog::warn("[{}] create() called but overlay already exists", get_name());
-        return overlay_;
+        return overlay_root_;
     }
 
     spdlog::debug("[{}] Creating overlay...", get_name());
 
     // Create from XML component
-    overlay_ = static_cast<lv_obj_t*>(lv_xml_create(parent, "filament_sensors_overlay", nullptr));
-    if (!overlay_) {
+    overlay_root_ =
+        static_cast<lv_obj_t*>(lv_xml_create(parent, "filament_sensors_overlay", nullptr));
+    if (!overlay_root_) {
         spdlog::error("[{}] Failed to create overlay from XML", get_name());
         return nullptr;
     }
 
     // Initially hidden until show() pushes it
-    lv_obj_add_flag(overlay_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(overlay_root_, LV_OBJ_FLAG_HIDDEN);
 
     spdlog::info("[{}] Overlay created", get_name());
-    return overlay_;
+    return overlay_root_;
 }
 
 void FilamentSensorSettingsOverlay::show(lv_obj_t* parent_screen) {
@@ -94,21 +95,36 @@ void FilamentSensorSettingsOverlay::show(lv_obj_t* parent_screen) {
     parent_screen_ = parent_screen;
 
     // Lazy create overlay
-    if (!overlay_ && parent_screen_) {
+    if (!overlay_root_ && parent_screen_) {
         create(parent_screen_);
     }
 
-    if (!overlay_) {
+    if (!overlay_root_) {
         spdlog::error("[{}] Cannot show - overlay not created", get_name());
         return;
     }
 
-    // Update sensor count and populate list
+    // Register with NavigationManager for lifecycle callbacks
+    NavigationManager::instance().register_overlay_instance(overlay_root_, this);
+
+    // Update sensor count (populate_sensor_list called in on_activate)
     update_sensor_count_label();
-    populate_sensor_list();
 
     // Push onto navigation stack
-    ui_nav_push_overlay(overlay_);
+    ui_nav_push_overlay(overlay_root_);
+}
+
+// ============================================================================
+// LIFECYCLE HOOKS
+// ============================================================================
+
+void FilamentSensorSettingsOverlay::on_activate() {
+    OverlayBase::on_activate();
+    populate_sensor_list();
+}
+
+void FilamentSensorSettingsOverlay::on_deactivate() {
+    OverlayBase::on_deactivate();
 }
 
 // ============================================================================
@@ -132,21 +148,21 @@ FilamentSensorSettingsOverlay::get_standalone_sensors() const {
 }
 
 void FilamentSensorSettingsOverlay::update_sensor_count_label() {
-    if (!overlay_)
+    if (!overlay_root_)
         return;
 
-    lv_obj_t* count_label = lv_obj_find_by_name(overlay_, "sensor_count_label");
+    lv_obj_t* count_label = lv_obj_find_by_name(overlay_root_, "sensor_count_label");
     if (count_label) {
         lv_label_set_text_fmt(count_label, "(%zu)", get_standalone_sensors().size());
     }
 }
 
 void FilamentSensorSettingsOverlay::populate_sensor_list() {
-    if (!overlay_) {
+    if (!overlay_root_) {
         return;
     }
 
-    lv_obj_t* sensors_list = lv_obj_find_by_name(overlay_, "sensors_list");
+    lv_obj_t* sensors_list = lv_obj_find_by_name(overlay_root_, "sensors_list");
     if (!sensors_list) {
         spdlog::error("[{}] Could not find sensors_list container", get_name());
         return;

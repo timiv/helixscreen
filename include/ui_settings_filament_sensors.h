@@ -22,9 +22,9 @@
 
 #pragma once
 
-#include "lvgl/lvgl.h"
-
 #include "filament_sensor_types.h"
+#include "lvgl/lvgl.h"
+#include "overlay_base.h"
 
 #include <string>
 #include <vector>
@@ -60,7 +60,7 @@ namespace helix::settings {
  * dropdown and toggle callbacks, which is an acceptable exception to the
  * declarative UI rule.
  */
-class FilamentSensorSettingsOverlay {
+class FilamentSensorSettingsOverlay : public OverlayBase {
   public:
     /**
      * @brief Default constructor
@@ -70,7 +70,7 @@ class FilamentSensorSettingsOverlay {
     /**
      * @brief Destructor
      */
-    ~FilamentSensorSettingsOverlay();
+    ~FilamentSensorSettingsOverlay() override;
 
     // Non-copyable
     FilamentSensorSettingsOverlay(const FilamentSensorSettingsOverlay&) = delete;
@@ -87,7 +87,7 @@ class FilamentSensorSettingsOverlay {
      * - on_filament_sensors_clicked (entry point from SettingsPanel)
      * - on_filament_master_toggle_changed (master enable toggle)
      */
-    void register_callbacks();
+    void register_callbacks() override;
 
     //
     // === UI Creation ===
@@ -99,7 +99,7 @@ class FilamentSensorSettingsOverlay {
      * @param parent Parent widget to attach overlay to (usually screen)
      * @return Root object of overlay, or nullptr on failure
      */
-    lv_obj_t* create(lv_obj_t* parent);
+    lv_obj_t* create(lv_obj_t* parent) override;
 
     /**
      * @brief Show the overlay (populates sensor list first)
@@ -119,28 +119,31 @@ class FilamentSensorSettingsOverlay {
     //
 
     /**
-     * @brief Get root overlay widget
-     * @return Root widget, or nullptr if not created
-     */
-    lv_obj_t* get_root() const {
-        return overlay_;
-    }
-
-    /**
-     * @brief Check if overlay has been created
-     * @return true if create() was called successfully
-     */
-    bool is_created() const {
-        return overlay_ != nullptr;
-    }
-
-    /**
      * @brief Get human-readable overlay name
      * @return "Filament Sensors"
      */
-    const char* get_name() const {
+    const char* get_name() const override {
         return "Filament Sensors";
     }
+
+    /**
+     * @brief Initialize subjects (none needed for this overlay)
+     */
+    void init_subjects() override {}
+
+    /**
+     * @brief Called when overlay becomes visible
+     *
+     * Calls OverlayBase::on_activate() then populates sensor list.
+     */
+    void on_activate() override;
+
+    /**
+     * @brief Called when overlay is being hidden
+     *
+     * Calls OverlayBase::on_deactivate().
+     */
+    void on_deactivate() override;
 
     //
     // === Event Handlers (public for static callbacks) ===
@@ -179,9 +182,7 @@ class FilamentSensorSettingsOverlay {
     //
     // === State ===
     //
-
-    lv_obj_t* overlay_{nullptr};
-    lv_obj_t* parent_screen_{nullptr};
+    // Note: overlay_root_ and parent_screen_ are inherited from OverlayBase
 
     //
     // === Static Callbacks ===

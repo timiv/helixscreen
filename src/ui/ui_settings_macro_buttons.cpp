@@ -97,17 +97,17 @@ lv_obj_t* MacroButtonsOverlay::create(lv_obj_t* parent) {
     }
 
     // Create overlay from XML
-    overlay_ = static_cast<lv_obj_t*>(lv_xml_create(parent, "macro_buttons_overlay", nullptr));
-    if (!overlay_) {
+    overlay_root_ = static_cast<lv_obj_t*>(lv_xml_create(parent, "macro_buttons_overlay", nullptr));
+    if (!overlay_root_) {
         spdlog::error("[{}] Failed to create overlay from XML", get_name());
         return nullptr;
     }
 
     // Initially hidden
-    lv_obj_add_flag(overlay_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(overlay_root_, LV_OBJ_FLAG_HIDDEN);
     spdlog::info("[{}] Overlay created", get_name());
 
-    return overlay_;
+    return overlay_root_;
 }
 
 void MacroButtonsOverlay::show(lv_obj_t* parent_screen) {
@@ -120,20 +120,34 @@ void MacroButtonsOverlay::show(lv_obj_t* parent_screen) {
     }
 
     // Create overlay on first access (lazy initialization)
-    if (!overlay_ && parent_screen) {
+    if (!overlay_root_ && parent_screen) {
         create(parent_screen);
     }
 
-    if (!overlay_) {
+    if (!overlay_root_) {
         spdlog::error("[{}] Failed to create overlay", get_name());
         return;
     }
 
-    // Populate dropdowns every time overlay is shown (handles printer reconnection)
-    populate_dropdowns();
+    // Register with NavigationManager for lifecycle callbacks
+    NavigationManager::instance().register_overlay_instance(overlay_root_, this);
 
     // Push overlay onto navigation history and show it
-    ui_nav_push_overlay(overlay_);
+    ui_nav_push_overlay(overlay_root_);
+}
+
+// ============================================================================
+// LIFECYCLE
+// ============================================================================
+
+void MacroButtonsOverlay::on_activate() {
+    OverlayBase::on_activate();
+    // Populate dropdowns when overlay becomes visible (handles printer reconnection)
+    populate_dropdowns();
+}
+
+void MacroButtonsOverlay::on_deactivate() {
+    OverlayBase::on_deactivate();
 }
 
 // ============================================================================
@@ -141,7 +155,7 @@ void MacroButtonsOverlay::show(lv_obj_t* parent_screen) {
 // ============================================================================
 
 void MacroButtonsOverlay::populate_dropdowns() {
-    if (!overlay_) {
+    if (!overlay_root_) {
         return;
     }
 
@@ -177,7 +191,7 @@ void MacroButtonsOverlay::populate_dropdowns() {
     };
 
     // Quick Button 1
-    lv_obj_t* qb1_row = lv_obj_find_by_name(overlay_, "row_quick_button_1");
+    lv_obj_t* qb1_row = lv_obj_find_by_name(overlay_root_, "row_quick_button_1");
     lv_obj_t* qb1_dropdown = qb1_row ? lv_obj_find_by_name(qb1_row, "dropdown") : nullptr;
     if (qb1_dropdown) {
         lv_dropdown_set_options(qb1_dropdown, quick_button_options.c_str());
@@ -185,7 +199,7 @@ void MacroButtonsOverlay::populate_dropdowns() {
     }
 
     // Quick Button 2
-    lv_obj_t* qb2_row = lv_obj_find_by_name(overlay_, "row_quick_button_2");
+    lv_obj_t* qb2_row = lv_obj_find_by_name(overlay_root_, "row_quick_button_2");
     lv_obj_t* qb2_dropdown = qb2_row ? lv_obj_find_by_name(qb2_row, "dropdown") : nullptr;
     if (qb2_dropdown) {
         lv_dropdown_set_options(qb2_dropdown, quick_button_options.c_str());
@@ -219,7 +233,7 @@ void MacroButtonsOverlay::populate_dropdowns() {
     };
 
     for (const auto& [slot, row_name] : slot_rows) {
-        lv_obj_t* row = lv_obj_find_by_name(overlay_, row_name.c_str());
+        lv_obj_t* row = lv_obj_find_by_name(overlay_root_, row_name.c_str());
         lv_obj_t* dropdown = row ? lv_obj_find_by_name(row, "dropdown") : nullptr;
         if (!dropdown)
             continue;

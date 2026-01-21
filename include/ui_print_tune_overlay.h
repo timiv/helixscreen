@@ -6,6 +6,7 @@
 #include "ui_save_z_offset_modal.h"
 
 #include "lvgl/lvgl.h"
+#include "overlay_base.h"
 #include "subject_managed_panel.h"
 
 // Forward declarations
@@ -28,10 +29,10 @@ class PrinterState;
  * @pattern Lazy singleton with subject management
  * @threading Main thread only (LVGL)
  */
-class PrintTuneOverlay {
+class PrintTuneOverlay : public OverlayBase {
   public:
     PrintTuneOverlay();
-    ~PrintTuneOverlay();
+    ~PrintTuneOverlay() override;
 
     // Non-copyable
     PrintTuneOverlay(const PrintTuneOverlay&) = delete;
@@ -142,16 +143,55 @@ class PrintTuneOverlay {
         return tune_panel_;
     }
 
+    //
+    // === OverlayBase Interface ===
+    //
+
     /**
-     * @brief Check if subjects have been initialized
-     * @return true if init_subjects() was called
+     * @brief Get overlay name for logging
+     * @return "Print Tune"
      */
-    bool are_subjects_initialized() const {
-        return subjects_initialized_;
+    const char* get_name() const override {
+        return "Print Tune";
     }
 
+    /**
+     * @brief Initialize subjects (OverlayBase pure virtual)
+     *
+     * This overlay uses init_subjects_internal() called from show().
+     * This method delegates to that implementation.
+     */
+    void init_subjects() override {
+        init_subjects_internal();
+    }
+
+    /**
+     * @brief Create overlay UI (OverlayBase pure virtual)
+     *
+     * This overlay uses show() for creation with additional parameters.
+     * This method returns nullptr; use show() instead.
+     *
+     * @param parent Unused - show() provides parent
+     * @return nullptr (use show() for proper creation)
+     */
+    lv_obj_t* create(lv_obj_t* /*parent*/) override {
+        return nullptr;
+    }
+
+    /**
+     * @brief Called when overlay becomes visible
+     *
+     * Syncs sliders to current printer state values.
+     */
+    void on_activate() override;
+
+    /**
+     * @brief Called when overlay is being hidden
+     */
+    void on_deactivate() override;
+
   private:
-    void init_subjects();
+    void init_subjects_internal();
     void setup_panel();
     void update_display();
     void sync_sliders_to_state();
@@ -162,7 +202,6 @@ class PrintTuneOverlay {
 
     MoonrakerAPI* api_ = nullptr;
     PrinterState* printer_state_ = nullptr;
-    lv_obj_t* parent_screen_ = nullptr;
     lv_obj_t* tune_panel_ = nullptr;
 
     //
@@ -170,7 +209,6 @@ class PrintTuneOverlay {
     //
 
     SubjectManager subjects_;
-    bool subjects_initialized_ = false;
 
     // Subjects for reactive UI
     lv_subject_t tune_speed_subject_;

@@ -22,6 +22,7 @@
 #pragma once
 
 #include "lvgl/lvgl.h"
+#include "overlay_base.h"
 
 namespace helix::settings {
 
@@ -44,7 +45,7 @@ namespace helix::settings {
  * overlay.show(parent_screen);  // Creates overlay if needed, initializes widgets, shows
  * @endcode
  */
-class DisplaySettingsOverlay {
+class DisplaySettingsOverlay : public OverlayBase {
   public:
     /**
      * @brief Default constructor
@@ -54,14 +55,10 @@ class DisplaySettingsOverlay {
     /**
      * @brief Destructor
      */
-    ~DisplaySettingsOverlay();
-
-    // Non-copyable
-    DisplaySettingsOverlay(const DisplaySettingsOverlay&) = delete;
-    DisplaySettingsOverlay& operator=(const DisplaySettingsOverlay&) = delete;
+    ~DisplaySettingsOverlay() override;
 
     //
-    // === Initialization ===
+    // === OverlayBase Interface ===
     //
 
     /**
@@ -69,14 +66,34 @@ class DisplaySettingsOverlay {
      *
      * Must be called before overlay creation.
      */
-    void init_subjects();
+    void init_subjects() override;
 
     /**
      * @brief Register event callbacks with lv_xml system
      *
      * Registers callbacks for brightness slider and dropdown changes.
      */
-    void register_callbacks();
+    void register_callbacks() override;
+
+    /**
+     * @brief Get human-readable overlay name
+     * @return "Display Settings"
+     */
+    const char* get_name() const override {
+        return "Display Settings";
+    }
+
+    /**
+     * @brief Called when overlay becomes visible
+     *
+     * Initializes dropdown values from settings.
+     */
+    void on_activate() override;
+
+    /**
+     * @brief Called when overlay is being hidden
+     */
+    void on_deactivate() override;
 
     //
     // === UI Creation ===
@@ -88,7 +105,7 @@ class DisplaySettingsOverlay {
      * @param parent Parent widget to attach overlay to (usually screen)
      * @return Root object of overlay, or nullptr on failure
      */
-    lv_obj_t* create(lv_obj_t* parent);
+    lv_obj_t* create(lv_obj_t* parent) override;
 
     /**
      * @brief Show the overlay
@@ -107,27 +124,11 @@ class DisplaySettingsOverlay {
     //
 
     /**
-     * @brief Get root overlay widget
-     * @return Root widget, or nullptr if not created
-     */
-    lv_obj_t* get_root() const {
-        return overlay_;
-    }
-
-    /**
      * @brief Check if overlay has been created
      * @return true if create() was called successfully
      */
     bool is_created() const {
-        return overlay_ != nullptr;
-    }
-
-    /**
-     * @brief Get human-readable overlay name
-     * @return "Display Settings"
-     */
-    const char* get_name() const {
-        return "Display Settings";
+        return overlay_root_ != nullptr;
     }
 
     //
@@ -195,16 +196,12 @@ class DisplaySettingsOverlay {
     // === State ===
     //
 
-    lv_obj_t* overlay_{nullptr};
-    lv_obj_t* parent_screen_{nullptr};
     lv_obj_t* theme_settings_overlay_{nullptr};
     lv_obj_t* theme_preview_overlay_{nullptr};
 
     /// Subject for brightness value label binding
     lv_subject_t brightness_value_subject_;
     char brightness_value_buf_[8]; // e.g., "100%"
-
-    bool subjects_initialized_{false};
 
     //
     // === Static Callbacks ===

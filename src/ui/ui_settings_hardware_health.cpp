@@ -67,25 +67,26 @@ void HardwareHealthOverlay::register_callbacks() {
 // ============================================================================
 
 lv_obj_t* HardwareHealthOverlay::create(lv_obj_t* parent) {
-    if (overlay_) {
+    if (overlay_root_) {
         spdlog::warn("[{}] create() called but overlay already exists", get_name());
-        return overlay_;
+        return overlay_root_;
     }
 
     spdlog::debug("[{}] Creating overlay...", get_name());
 
     // Create from XML component
-    overlay_ = static_cast<lv_obj_t*>(lv_xml_create(parent, "hardware_health_overlay", nullptr));
-    if (!overlay_) {
+    overlay_root_ =
+        static_cast<lv_obj_t*>(lv_xml_create(parent, "hardware_health_overlay", nullptr));
+    if (!overlay_root_) {
         spdlog::error("[{}] Failed to create overlay from XML", get_name());
         return nullptr;
     }
 
     // Initially hidden until show() pushes it
-    lv_obj_add_flag(overlay_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(overlay_root_, LV_OBJ_FLAG_HIDDEN);
 
     spdlog::info("[{}] Overlay created", get_name());
-    return overlay_;
+    return overlay_root_;
 }
 
 void HardwareHealthOverlay::show(lv_obj_t* parent_screen) {
@@ -94,20 +95,42 @@ void HardwareHealthOverlay::show(lv_obj_t* parent_screen) {
     parent_screen_ = parent_screen;
 
     // Lazy create overlay
-    if (!overlay_ && parent_screen_) {
+    if (!overlay_root_ && parent_screen_) {
         create(parent_screen_);
     }
 
-    if (!overlay_) {
+    if (!overlay_root_) {
         spdlog::error("[{}] Cannot show - overlay not created", get_name());
         return;
     }
 
+    // Register with NavigationManager for lifecycle callbacks
+    NavigationManager::instance().register_overlay_instance(overlay_root_, this);
+
+    // Push onto navigation stack (on_activate will be called, which populates issues)
+    ui_nav_push_overlay(overlay_root_);
+}
+
+// ============================================================================
+// LIFECYCLE HOOKS
+// ============================================================================
+
+void HardwareHealthOverlay::on_activate() {
+    OverlayBase::on_activate();
+
     // Populate issues from validation result
     populate_hardware_issues();
+}
 
-    // Push onto navigation stack
-    ui_nav_push_overlay(overlay_);
+void HardwareHealthOverlay::on_deactivate() {
+    OverlayBase::on_deactivate();
+
+    // Clean up any open modal dialog
+    if (hardware_save_dialog_) {
+        ui_modal_hide(hardware_save_dialog_);
+        hardware_save_dialog_ = nullptr;
+    }
+    pending_hardware_save_.clear();
 }
 
 // ============================================================================
@@ -115,7 +138,7 @@ void HardwareHealthOverlay::show(lv_obj_t* parent_screen) {
 // ============================================================================
 
 void HardwareHealthOverlay::populate_hardware_issues() {
-    if (!overlay_) {
+    if (!overlay_root_) {
         return;
     }
 
@@ -141,7 +164,7 @@ void HardwareHealthOverlay::populate_hardware_issues() {
 
     // Helper to populate a list with issues
     auto populate_list = [&](const char* list_name, const std::vector<HardwareIssue>& issues) {
-        lv_obj_t* list = lv_obj_find_by_name(overlay_, list_name);
+        lv_obj_t* list = lv_obj_find_by_name(overlay_root_, list_name);
         if (!list) {
             spdlog::warn("[{}] Could not find list: {}", get_name(), list_name);
             return;

@@ -24,6 +24,7 @@
 #pragma once
 
 #include "lvgl/lvgl.h"
+#include "overlay_base.h"
 #include "standard_macros.h"
 #include "subject_managed_panel.h"
 
@@ -52,7 +53,7 @@ namespace helix::settings {
  * overlay.show(parent_screen);  // Creates overlay if needed, populates dropdowns, shows
  * @endcode
  */
-class MacroButtonsOverlay {
+class MacroButtonsOverlay : public OverlayBase {
   public:
     /**
      * @brief Default constructor
@@ -62,7 +63,7 @@ class MacroButtonsOverlay {
     /**
      * @brief Destructor - cleans up subjects
      */
-    ~MacroButtonsOverlay();
+    ~MacroButtonsOverlay() override;
 
     // Non-copyable
     MacroButtonsOverlay(const MacroButtonsOverlay&) = delete;
@@ -78,7 +79,7 @@ class MacroButtonsOverlay {
      * Must be called BEFORE create() to ensure bindings work.
      * Currently no subjects needed for this overlay.
      */
-    void init_subjects();
+    void init_subjects() override;
 
     /**
      * @brief Register event callbacks with lv_xml system
@@ -88,7 +89,7 @@ class MacroButtonsOverlay {
      * - on_quick_button_2_changed
      * - on_load_filament_changed, on_unload_filament_changed, etc.
      */
-    void register_callbacks();
+    void register_callbacks() override;
 
     //
     // === UI Creation ===
@@ -100,7 +101,7 @@ class MacroButtonsOverlay {
      * @param parent Parent widget to attach overlay to (usually screen)
      * @return Root object of overlay, or nullptr on failure
      */
-    lv_obj_t* create(lv_obj_t* parent);
+    lv_obj_t* create(lv_obj_t* parent) override;
 
     /**
      * @brief Show the overlay (populates dropdowns first)
@@ -115,40 +116,28 @@ class MacroButtonsOverlay {
     void show(lv_obj_t* parent_screen);
 
     //
-    // === Accessors ===
+    // === Lifecycle ===
     //
-
-    /**
-     * @brief Get root overlay widget
-     * @return Root widget, or nullptr if not created
-     */
-    lv_obj_t* get_root() const {
-        return overlay_;
-    }
-
-    /**
-     * @brief Check if overlay has been created
-     * @return true if create() was called successfully
-     */
-    bool is_created() const {
-        return overlay_ != nullptr;
-    }
-
-    /**
-     * @brief Check if subjects have been initialized
-     * @return true if init_subjects() was called
-     */
-    bool are_subjects_initialized() const {
-        return subjects_initialized_;
-    }
 
     /**
      * @brief Get human-readable overlay name
      * @return "Macro Buttons"
      */
-    const char* get_name() const {
+    const char* get_name() const override {
         return "Macro Buttons";
     }
+
+    /**
+     * @brief Called when overlay becomes visible
+     *
+     * Populates dropdowns with current macro data.
+     */
+    void on_activate() override;
+
+    /**
+     * @brief Called when overlay is being hidden
+     */
+    void on_deactivate() override;
 
     //
     // === Event Handlers (public for static callbacks) ===
@@ -206,7 +195,6 @@ class MacroButtonsOverlay {
     // === State ===
     //
 
-    lv_obj_t* overlay_{nullptr};
     std::vector<std::string> printer_macros_; ///< Cached sorted list of printer macros
 
     //
@@ -214,7 +202,6 @@ class MacroButtonsOverlay {
     //
 
     SubjectManager subjects_;
-    bool subjects_initialized_{false};
 
     //
     // === Static Callbacks ===

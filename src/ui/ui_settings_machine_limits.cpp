@@ -62,27 +62,21 @@ void MachineLimitsOverlay::set_api(MoonrakerAPI* api) {
 // ============================================================================
 
 void MachineLimitsOverlay::init_subjects() {
-    if (subjects_initialized_) {
-        spdlog::warn("[{}] init_subjects() called twice - ignoring", get_name());
-        return;
-    }
+    init_subjects_guarded([this]() {
+        // Initialize display subjects for XML binding
+        // Use em-dash (—) for unknown values instead of double-hyphen (--)
+        UI_MANAGED_SUBJECT_STRING(max_velocity_display_subject_, velocity_buf_, "— mm/s",
+                                  "max_velocity_display", subjects_);
 
-    // Initialize display subjects for XML binding
-    // Use em-dash (—) for unknown values instead of double-hyphen (--)
-    UI_MANAGED_SUBJECT_STRING(max_velocity_display_subject_, velocity_buf_, "— mm/s",
-                              "max_velocity_display", subjects_);
+        UI_MANAGED_SUBJECT_STRING(max_accel_display_subject_, accel_buf_, "— mm/s²",
+                                  "max_accel_display", subjects_);
 
-    UI_MANAGED_SUBJECT_STRING(max_accel_display_subject_, accel_buf_, "— mm/s²",
-                              "max_accel_display", subjects_);
+        UI_MANAGED_SUBJECT_STRING(accel_to_decel_display_subject_, a2d_buf_, "— mm/s²",
+                                  "accel_to_decel_display", subjects_);
 
-    UI_MANAGED_SUBJECT_STRING(accel_to_decel_display_subject_, a2d_buf_, "— mm/s²",
-                              "accel_to_decel_display", subjects_);
-
-    UI_MANAGED_SUBJECT_STRING(square_corner_velocity_display_subject_, scv_buf_, "— mm/s",
-                              "square_corner_velocity_display", subjects_);
-
-    subjects_initialized_ = true;
-    spdlog::debug("[{}] Subjects initialized", get_name());
+        UI_MANAGED_SUBJECT_STRING(square_corner_velocity_display_subject_, scv_buf_, "— mm/s",
+                                  "square_corner_velocity_display", subjects_);
+    });
 }
 
 void MachineLimitsOverlay::register_callbacks() {
@@ -99,8 +93,7 @@ void MachineLimitsOverlay::register_callbacks() {
 }
 
 void MachineLimitsOverlay::deinit_subjects() {
-    // SubjectManager handles cleanup automatically via RAII
-    subjects_initialized_ = false;
+    deinit_subjects_base(subjects_);
 }
 
 // ============================================================================
@@ -114,17 +107,18 @@ lv_obj_t* MachineLimitsOverlay::create(lv_obj_t* parent) {
     }
 
     // Create overlay from XML
-    overlay_ = static_cast<lv_obj_t*>(lv_xml_create(parent, "machine_limits_overlay", nullptr));
-    if (!overlay_) {
+    overlay_root_ =
+        static_cast<lv_obj_t*>(lv_xml_create(parent, "machine_limits_overlay", nullptr));
+    if (!overlay_root_) {
         spdlog::error("[{}] Failed to create overlay from XML", get_name());
         return nullptr;
     }
 
     // Initially hidden
-    lv_obj_add_flag(overlay_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(overlay_root_, LV_OBJ_FLAG_HIDDEN);
     spdlog::info("[{}] Overlay created", get_name());
 
-    return overlay_;
+    return overlay_root_;
 }
 
 void MachineLimitsOverlay::show(lv_obj_t* parent_screen) {
@@ -137,19 +131,47 @@ void MachineLimitsOverlay::show(lv_obj_t* parent_screen) {
     }
 
     // Create overlay on first access (lazy initialization)
-    if (!overlay_ && parent_screen) {
+    if (!overlay_root_ && parent_screen) {
         create(parent_screen);
     }
 
-    if (!overlay_) {
+    if (!overlay_root_) {
         spdlog::error("[{}] Failed to create overlay", get_name());
         ui_toast_show(ToastSeverity::ERROR, "Failed to load overlay", 2000);
         return;
     }
 
-    // Query current limits from printer and show
-    query_and_show(parent_screen);
+    // Register with NavigationManager for lifecycle callbacks
+    NavigationManager::instance().register_overlay_instance(overlay_root_, this);
+
+    // Push overlay onto navigation stack - on_activate() will be called by NavigationManager
+    ui_nav_push_overlay(overlay_root_);
 }
+
+// ============================================================================
+// LIFECYCLE HOOKS
+// ============================================================================
+
+void MachineLimitsOverlay::on_activate() {
+    // Call base class first
+    OverlayBase::on_activate();
+
+    spdlog::debug("[{}] on_activate()", get_name());
+
+    // Refresh data from printer
+    query_and_show(nullptr);
+}
+
+void MachineLimitsOverlay::on_deactivate() {
+    spdlog::debug("[{}] on_deactivate()", get_name());
+
+    // Call base class
+    OverlayBase::on_deactivate();
+}
+
+// ============================================================================
+// DATA REFRESH
+// ============================================================================
 
 void MachineLimitsOverlay::query_and_show(lv_obj_t* /*parent_screen*/) {
     if (api_) {
@@ -170,8 +192,9 @@ void MachineLimitsOverlay::query_and_show(lv_obj_t* /*parent_screen*/) {
                     update_sliders();
 
                     // Update read-only Z values
-                    if (overlay_) {
-                        lv_obj_t* z_vel_row = lv_obj_find_by_name(overlay_, "row_max_z_velocity");
+                    if (overlay_root_) {
+                        lv_obj_t* z_vel_row =
+                            lv_obj_find_by_name(overlay_root_, "row_max_z_velocity");
                         if (z_vel_row) {
                             lv_obj_t* value = lv_obj_find_by_name(z_vel_row, "value");
                             if (value) {
@@ -180,7 +203,8 @@ void MachineLimitsOverlay::query_and_show(lv_obj_t* /*parent_screen*/) {
                                 lv_label_set_text(value, buf);
                             }
                         }
-                        lv_obj_t* z_accel_row = lv_obj_find_by_name(overlay_, "row_max_z_accel");
+                        lv_obj_t* z_accel_row =
+                            lv_obj_find_by_name(overlay_root_, "row_max_z_accel");
                         if (z_accel_row) {
                             lv_obj_t* value = lv_obj_find_by_name(z_accel_row, "value");
                             if (value) {
@@ -189,11 +213,6 @@ void MachineLimitsOverlay::query_and_show(lv_obj_t* /*parent_screen*/) {
                                 lv_label_set_text(value, buf);
                             }
                         }
-                    }
-
-                    // Push overlay onto navigation history and show it
-                    if (overlay_) {
-                        ui_nav_push_overlay(overlay_);
                     }
                 });
             },
@@ -205,11 +224,8 @@ void MachineLimitsOverlay::query_and_show(lv_obj_t* /*parent_screen*/) {
                 });
             });
     } else {
-        // No API - show overlay with default values
+        // No API - overlay is already shown via ui_nav_push_overlay
         spdlog::warn("[{}] No API available, showing defaults", get_name());
-        if (overlay_) {
-            ui_nav_push_overlay(overlay_);
-        }
     }
 }
 
@@ -236,32 +252,32 @@ void MachineLimitsOverlay::update_display() {
 }
 
 void MachineLimitsOverlay::update_sliders() {
-    if (!overlay_) {
+    if (!overlay_root_) {
         return;
     }
 
     // Update max velocity slider
-    lv_obj_t* vel_slider = lv_obj_find_by_name(overlay_, "max_velocity_slider");
+    lv_obj_t* vel_slider = lv_obj_find_by_name(overlay_root_, "max_velocity_slider");
     if (vel_slider) {
         lv_slider_set_value(vel_slider, static_cast<int>(current_limits_.max_velocity),
                             LV_ANIM_OFF);
     }
 
     // Update max accel slider
-    lv_obj_t* accel_slider = lv_obj_find_by_name(overlay_, "max_accel_slider");
+    lv_obj_t* accel_slider = lv_obj_find_by_name(overlay_root_, "max_accel_slider");
     if (accel_slider) {
         lv_slider_set_value(accel_slider, static_cast<int>(current_limits_.max_accel), LV_ANIM_OFF);
     }
 
     // Update accel to decel slider
-    lv_obj_t* a2d_slider = lv_obj_find_by_name(overlay_, "accel_to_decel_slider");
+    lv_obj_t* a2d_slider = lv_obj_find_by_name(overlay_root_, "accel_to_decel_slider");
     if (a2d_slider) {
         lv_slider_set_value(a2d_slider, static_cast<int>(current_limits_.max_accel_to_decel),
                             LV_ANIM_OFF);
     }
 
     // Update square corner velocity slider
-    lv_obj_t* scv_slider = lv_obj_find_by_name(overlay_, "square_corner_velocity_slider");
+    lv_obj_t* scv_slider = lv_obj_find_by_name(overlay_root_, "square_corner_velocity_slider");
     if (scv_slider) {
         lv_slider_set_value(scv_slider, static_cast<int>(current_limits_.square_corner_velocity),
                             LV_ANIM_OFF);

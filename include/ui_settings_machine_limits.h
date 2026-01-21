@@ -25,6 +25,7 @@
 
 #include "calibration_types.h"
 #include "lvgl/lvgl.h"
+#include "overlay_base.h"
 #include "subject_managed_panel.h"
 
 // Forward declarations
@@ -56,7 +57,7 @@ namespace helix::settings {
  * overlay.show(parent_screen);  // Queries current limits, then shows overlay
  * @endcode
  */
-class MachineLimitsOverlay {
+class MachineLimitsOverlay : public OverlayBase {
   public:
     /**
      * @brief Default constructor
@@ -66,11 +67,7 @@ class MachineLimitsOverlay {
     /**
      * @brief Destructor - cleans up subjects
      */
-    ~MachineLimitsOverlay();
-
-    // Non-copyable
-    MachineLimitsOverlay(const MachineLimitsOverlay&) = delete;
-    MachineLimitsOverlay& operator=(const MachineLimitsOverlay&) = delete;
+    ~MachineLimitsOverlay() override;
 
     //
     // === Configuration ===
@@ -98,7 +95,7 @@ class MachineLimitsOverlay {
      *
      * Must be called BEFORE create() to ensure bindings work.
      */
-    void init_subjects();
+    void init_subjects() override;
 
     /**
      * @brief Register event callbacks with lv_xml system
@@ -111,7 +108,7 @@ class MachineLimitsOverlay {
      * - on_limits_reset
      * - on_limits_apply
      */
-    void register_callbacks();
+    void register_callbacks() override;
 
     //
     // === UI Creation ===
@@ -123,7 +120,7 @@ class MachineLimitsOverlay {
      * @param parent Parent widget to attach overlay to (usually screen)
      * @return Root object of overlay, or nullptr on failure
      */
-    lv_obj_t* create(lv_obj_t* parent);
+    lv_obj_t* create(lv_obj_t* parent) override;
 
     /**
      * @brief Show the overlay (queries current limits first)
@@ -139,39 +136,39 @@ class MachineLimitsOverlay {
     void show(lv_obj_t* parent_screen);
 
     //
-    // === Accessors ===
+    // === OverlayBase Interface ===
     //
 
     /**
-     * @brief Get root overlay widget
-     * @return Root widget, or nullptr if not created
+     * @brief Get human-readable overlay name
+     * @return "Machine Limits"
      */
-    lv_obj_t* get_root() const {
-        return overlay_;
+    const char* get_name() const override {
+        return "Machine Limits";
     }
+
+    /**
+     * @brief Called when overlay becomes visible
+     *
+     * Refreshes machine limits data from printer.
+     */
+    void on_activate() override;
+
+    /**
+     * @brief Called when overlay is being hidden
+     */
+    void on_deactivate() override;
+
+    //
+    // === Accessors ===
+    //
 
     /**
      * @brief Check if overlay has been created
      * @return true if create() was called successfully
      */
     bool is_created() const {
-        return overlay_ != nullptr;
-    }
-
-    /**
-     * @brief Check if subjects have been initialized
-     * @return true if init_subjects() was called
-     */
-    bool are_subjects_initialized() const {
-        return subjects_initialized_;
-    }
-
-    /**
-     * @brief Get human-readable overlay name
-     * @return "Machine Limits"
-     */
-    const char* get_name() const {
-        return "Machine Limits";
+        return overlay_root_ != nullptr;
     }
 
     //
@@ -246,7 +243,6 @@ class MachineLimitsOverlay {
     //
 
     MoonrakerAPI* api_{nullptr};
-    lv_obj_t* overlay_{nullptr};
 
     //
     // === State Tracking ===
@@ -260,7 +256,6 @@ class MachineLimitsOverlay {
     //
 
     SubjectManager subjects_;
-    bool subjects_initialized_{false};
 
     // Display subjects for XML binding
     lv_subject_t max_velocity_display_subject_{};
