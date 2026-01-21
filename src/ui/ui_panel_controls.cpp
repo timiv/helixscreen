@@ -99,12 +99,6 @@ ControlsPanel::~ControlsPanel() {
         lv_obj_del(screws_panel_);
         screws_panel_ = nullptr;
     }
-    if (print_tune_panel_) {
-        // Clear global accessor before deleting
-        set_global_print_tune_overlay(nullptr);
-        lv_obj_del(print_tune_panel_);
-        print_tune_panel_ = nullptr;
-    }
     // Modal dialogs: ModalGuard handles cleanup automatically via RAII
     // See docs/DEVELOPER_QUICK_REFERENCE.md "Modal Dialog Lifecycle"
 }
@@ -739,61 +733,100 @@ void ControlsPanel::update_controls_z_offset_display(int offset_microns) {
 void ControlsPanel::handle_zoffset_tune() {
     spdlog::debug("[{}] Z-offset tune clicked - opening Print Tune overlay", get_name());
 
-    // Create print tune overlay on first access (lazy initialization)
-    if (!print_tune_panel_ && parent_screen_) {
-        // Initialize subjects if not already done
-        if (!print_tune_overlay_.are_subjects_initialized()) {
-            print_tune_overlay_.init_subjects(printer_state_);
-        }
-
-        // Create overlay UI
-        print_tune_panel_ =
-            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "print_tune_panel", nullptr));
-        if (!print_tune_panel_) {
-            NOTIFY_ERROR("Failed to load print tune panel");
-            return;
-        }
-
-        // Setup the overlay with dependencies
-        print_tune_overlay_.setup(print_tune_panel_, parent_screen_, api_, printer_state_);
-
-        // Register as global so XML event callbacks work
-        set_global_print_tune_overlay(&print_tune_overlay_);
-
-        spdlog::info("[{}] Print Tune panel created for Z-offset tuning", get_name());
-    }
-
-    if (print_tune_panel_) {
-        ui_nav_push_overlay(print_tune_panel_);
-    }
+    // Use singleton - handles lazy init, subject registration, and nav push
+    get_print_tune_overlay().show(parent_screen_, api_, printer_state_);
 }
 
 void ControlsPanel::handle_save_z_offset() {
-    int delta_microns = printer_state_.get_pending_z_offset_delta();
-    if (delta_microns == 0) {
+    // Get current gcode Z-offset (displayed offset, not pending delta)
+    int offset_microns = 0;
+    if (auto* subj = printer_state_.get_gcode_z_offset_subject()) {
+        offset_microns = lv_subject_get_int(subj);
+    }
+
+    if (offset_microns == 0) {
         spdlog::debug("[{}] No Z-offset adjustment to save", get_name());
         return;
     }
 
-    double delta_mm = static_cast<double>(delta_microns) / 1000.0;
-    spdlog::info("[{}] Saving Z-offset adjustment: {:+.3f}mm", get_name(), delta_mm);
+    double offset_mm = static_cast<double>(offset_microns) / 1000.0;
+    spdlog::info("[{}] Save Z-offset clicked: {:+.3f}mm", get_name(), offset_mm);
 
-    if (!api_) {
-        NOTIFY_ERROR("No printer connection");
+    // Show confirmation dialog - SAVE_CONFIG will restart Klipper
+    save_z_offset_confirmation_dialog_ = ui_modal_show_confirmation(
+        "Save Z-Offset?",
+        "This will apply the Z-offset to your endstop and restart Klipper to save the "
+        "configuration. The printer will briefly disconnect.",
+        ModalSeverity::Warning, "Save", on_save_z_offset_confirm, on_save_z_offset_cancel, this);
+
+    if (!save_z_offset_confirmation_dialog_) {
+        LOG_ERROR_INTERNAL("Failed to create save Z-offset confirmation dialog");
+        NOTIFY_ERROR("Failed to show confirmation dialog");
         return;
     }
 
-    // Use Z_OFFSET_APPLY_ENDSTOP to save the current gcode_offset to the endstop position
-    // This is preferred over SAVE_CONFIG because it doesn't require a Klipper restart
+    spdlog::info("[{}] Save Z-offset confirmation dialog shown", get_name());
+}
+
+void ControlsPanel::handle_save_z_offset_confirm() {
+    spdlog::debug("[{}] Save Z-offset confirmed", get_name());
+
+    // Guard against double-click race condition
+    if (save_z_offset_in_progress_) {
+        spdlog::warn("[{}] Save Z-offset already in progress, ignoring", get_name());
+        return;
+    }
+    save_z_offset_in_progress_ = true;
+
+    // Hide dialog first - ModalGuard handles cleanup
+    save_z_offset_confirmation_dialog_.hide();
+
+    if (!api_) {
+        NOTIFY_ERROR("No printer connection");
+        save_z_offset_in_progress_ = false;
+        return;
+    }
+
+    // Get current gcode Z-offset for logging
+    int offset_microns = 0;
+    if (auto* subj = printer_state_.get_gcode_z_offset_subject()) {
+        offset_microns = lv_subject_get_int(subj);
+    }
+    double offset_mm = static_cast<double>(offset_microns) / 1000.0;
+
+    // Execute Z_OFFSET_APPLY_ENDSTOP first, then SAVE_CONFIG
+    // Z_OFFSET_APPLY_ENDSTOP applies current gcode Z-offset to the endstop position
+    // SAVE_CONFIG persists the config and restarts Klipper
     api_->execute_gcode(
         "Z_OFFSET_APPLY_ENDSTOP",
-        [this, delta_mm]() {
-            NOTIFY_SUCCESS("Z-offset saved ({:+.3f}mm)", delta_mm);
+        [this, offset_mm]() {
+            spdlog::info("[{}] Z_OFFSET_APPLY_ENDSTOP success, executing SAVE_CONFIG", get_name());
 
-            // Clear the pending delta since it's now saved
-            printer_state_.clear_pending_z_offset_delta();
+            // Now save the config (this will restart Klipper)
+            api_->execute_gcode(
+                "SAVE_CONFIG",
+                [this, offset_mm]() {
+                    NOTIFY_SUCCESS("Z-offset saved ({:+.3f}mm). Klipper restarting...", offset_mm);
+                    save_z_offset_in_progress_ = false;
+                },
+                [this](const MoonrakerError& err) {
+                    NOTIFY_ERROR("SAVE_CONFIG failed: {}. Z-offset was applied but not saved. "
+                                 "Run SAVE_CONFIG manually or the offset will be lost on restart.",
+                                 err.user_message());
+                    save_z_offset_in_progress_ = false;
+                });
         },
-        [](const MoonrakerError& err) { NOTIFY_ERROR("Save failed: {}", err.user_message()); });
+        [this](const MoonrakerError& err) {
+            NOTIFY_ERROR("Z_OFFSET_APPLY_ENDSTOP failed: {}", err.user_message());
+            save_z_offset_in_progress_ = false;
+        });
+}
+
+void ControlsPanel::handle_save_z_offset_cancel() {
+    spdlog::debug("[{}] Save Z-offset cancelled", get_name());
+
+    // ModalGuard handles cleanup
+    save_z_offset_confirmation_dialog_.hide();
 }
 
 // ============================================================================
@@ -1387,6 +1420,24 @@ void ControlsPanel::on_motors_cancel(lv_event_t* e) {
     auto* self = static_cast<ControlsPanel*>(lv_event_get_user_data(e));
     if (self) {
         self->handle_motors_cancel();
+    }
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ControlsPanel::on_save_z_offset_confirm(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_save_z_offset_confirm");
+    auto* self = static_cast<ControlsPanel*>(lv_event_get_user_data(e));
+    if (self) {
+        self->handle_save_z_offset_confirm();
+    }
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ControlsPanel::on_save_z_offset_cancel(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_save_z_offset_cancel");
+    auto* self = static_cast<ControlsPanel*>(lv_event_get_user_data(e));
+    if (self) {
+        self->handle_save_z_offset_cancel();
     }
     LVGL_SAFE_EVENT_CB_END();
 }

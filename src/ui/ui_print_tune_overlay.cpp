@@ -4,118 +4,134 @@
 #include "ui_print_tune_overlay.h"
 
 #include "ui_error_reporting.h"
+#include "ui_nav_manager.h"
 #include "ui_panel_common.h"
 #include "ui_toast.h"
 
 #include "moonraker_api.h"
 #include "printer_state.h"
+#include "static_panel_registry.h"
 
 #include <spdlog/spdlog.h>
 
 #include <cstdio>
 #include <cstring>
+#include <memory>
 
 // ============================================================================
-// GLOBAL INSTANCE ACCESSOR
+// SINGLETON ACCESSOR
 // ============================================================================
 
-static PrintTuneOverlay* g_print_tune_overlay = nullptr;
+static std::unique_ptr<PrintTuneOverlay> g_print_tune_overlay;
 
-PrintTuneOverlay& get_global_print_tune_overlay() {
+PrintTuneOverlay& get_print_tune_overlay() {
     if (!g_print_tune_overlay) {
-        spdlog::error("[PrintTuneOverlay] Global instance not set!");
-        // This will crash, but it's a programming error that should never happen
-        static PrintTuneOverlay fallback;
-        return fallback;
+        g_print_tune_overlay = std::make_unique<PrintTuneOverlay>();
+        StaticPanelRegistry::instance().register_destroy("PrintTuneOverlay",
+                                                         []() { g_print_tune_overlay.reset(); });
     }
     return *g_print_tune_overlay;
-}
-
-void set_global_print_tune_overlay(PrintTuneOverlay* overlay) {
-    g_print_tune_overlay = overlay;
 }
 
 // ============================================================================
 // XML EVENT CALLBACKS (free functions using global accessor)
 // ============================================================================
 
-static void on_tune_speed_changed_cb(lv_event_t* e) {
+// Speed slider: display update while dragging (no G-code)
+static void on_tune_speed_display_cb(lv_event_t* e) {
     lv_obj_t* slider = static_cast<lv_obj_t*>(lv_event_get_target(e));
     if (slider) {
         int value = lv_slider_get_value(slider);
-        get_global_print_tune_overlay().handle_speed_changed(value);
+        get_print_tune_overlay().handle_speed_display(value);
     }
 }
 
-static void on_tune_flow_changed_cb(lv_event_t* e) {
+// Speed slider: send G-code on release
+static void on_tune_speed_send_cb(lv_event_t* e) {
     lv_obj_t* slider = static_cast<lv_obj_t*>(lv_event_get_target(e));
     if (slider) {
         int value = lv_slider_get_value(slider);
-        get_global_print_tune_overlay().handle_flow_changed(value);
+        spdlog::debug("[PrintTuneOverlay] Speed slider released at {}", value);
+        get_print_tune_overlay().handle_speed_send(value);
+    }
+}
+
+// Flow slider: display update while dragging (no G-code)
+static void on_tune_flow_display_cb(lv_event_t* e) {
+    lv_obj_t* slider = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    if (slider) {
+        int value = lv_slider_get_value(slider);
+        get_print_tune_overlay().handle_flow_display(value);
+    }
+}
+
+// Flow slider: send G-code on release
+static void on_tune_flow_send_cb(lv_event_t* e) {
+    lv_obj_t* slider = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    if (slider) {
+        int value = lv_slider_get_value(slider);
+        spdlog::debug("[PrintTuneOverlay] Flow slider released at {}", value);
+        get_print_tune_overlay().handle_flow_send(value);
     }
 }
 
 static void on_tune_reset_clicked_cb(lv_event_t* /*e*/) {
-    get_global_print_tune_overlay().handle_reset();
+    get_print_tune_overlay().handle_reset();
 }
 
 /**
- * @brief Single callback for all Z-offset buttons
+ * @brief Callback for Z-offset amount selector buttons (radio behavior)
  *
- * Parses button name to determine direction and magnitude:
- *   - btn_z_closer_01  -> -0.1mm (closer = negative = more squish)
- *   - btn_z_closer_005 -> -0.05mm
- *   - btn_z_closer_001 -> -0.01mm
- *   - btn_z_farther_001 -> +0.01mm (farther = positive = less squish)
- *   - btn_z_farther_005 -> +0.05mm
- *   - btn_z_farther_01 -> +0.1mm
+ * Parses button name to get amount:
+ *   - btn_z_amount_005   -> 0.05mm
+ *   - btn_z_amount_0025  -> 0.025mm
+ *   - btn_z_amount_001   -> 0.01mm
+ *   - btn_z_amount_00025 -> 0.0025mm
  */
-static void on_tune_z_offset_cb(lv_event_t* e) {
+static void on_tune_z_amount_select_cb(lv_event_t* e) {
     lv_obj_t* btn = static_cast<lv_obj_t*>(lv_event_get_target(e));
     if (!btn) {
         return;
     }
 
-    // Get button name to determine delta
     const char* name = lv_obj_get_name(btn);
     if (!name) {
-        spdlog::warn("[on_tune_z_offset_cb] Button has no name");
+        spdlog::warn("[on_tune_z_amount_select_cb] Button has no name");
         return;
     }
 
-    // Parse direction: "closer" = negative, "farther" = positive
-    double delta = 0.0;
-    bool is_closer = (strstr(name, "closer") != nullptr);
-    bool is_farther = (strstr(name, "farther") != nullptr);
-
-    if (!is_closer && !is_farther) {
-        spdlog::warn("[on_tune_z_offset_cb] Unknown button name: {}", name);
-        return;
-    }
-
-    // Parse magnitude from suffix: "_01" = 0.1, "_005" = 0.05, "_001" = 0.01
-    if (strstr(name, "_01") && !strstr(name, "_001")) {
-        delta = 0.1;
-    } else if (strstr(name, "_005")) {
-        delta = 0.05;
+    // Parse amount from button name suffix
+    double amount = 0.05; // default
+    if (strstr(name, "_00025")) {
+        amount = 0.0025;
+    } else if (strstr(name, "_0025")) {
+        amount = 0.025;
     } else if (strstr(name, "_001")) {
-        delta = 0.01;
-    } else {
-        spdlog::warn("[on_tune_z_offset_cb] Unknown delta in button name: {}", name);
-        return;
+        amount = 0.01;
+    } else if (strstr(name, "_005")) {
+        amount = 0.05;
     }
 
-    // Apply direction: closer = more squish = negative Z adjust
-    if (is_closer) {
-        delta = -delta;
-    }
+    spdlog::trace("[on_tune_z_amount_select_cb] Selected amount: {}mm", amount);
+    get_print_tune_overlay().handle_z_amount_select(amount);
+}
 
-    spdlog::trace("[on_tune_z_offset_cb] Button '{}' -> delta {:+.3f}mm", name, delta);
-    get_global_print_tune_overlay().handle_z_offset_changed(delta);
+/**
+ * @brief Callback for Z closer button (more squish = negative Z adjust)
+ */
+static void on_tune_z_closer_cb(lv_event_t* /*e*/) {
+    get_print_tune_overlay().handle_z_closer();
+}
+
+/**
+ * @brief Callback for Z farther button (less squish = positive Z adjust)
+ */
+static void on_tune_z_farther_cb(lv_event_t* /*e*/) {
+    get_print_tune_overlay().handle_z_farther();
 }
 
 static void on_tune_save_z_offset_cb(lv_event_t* /*e*/) {
-    get_global_print_tune_overlay().handle_save_z_offset();
+    get_print_tune_overlay().handle_save_z_offset();
 }
 
 // ============================================================================
@@ -127,27 +143,72 @@ PrintTuneOverlay::PrintTuneOverlay() {
 }
 
 PrintTuneOverlay::~PrintTuneOverlay() {
-    deinit_subjects();
-
-    // Clear global accessor if we're the current instance
-    if (g_print_tune_overlay == this) {
-        g_print_tune_overlay = nullptr;
+    // Clean up subjects
+    if (subjects_initialized_) {
+        subjects_.deinit_all();
+        subjects_initialized_ = false;
     }
+
+    // Panel widget is owned by LVGL parent, will be cleaned up when parent is deleted
+    tune_panel_ = nullptr;
 
     spdlog::debug("[PrintTuneOverlay] Destroyed");
 }
 
 // ============================================================================
-// SUBJECT MANAGEMENT
+// SHOW (PUBLIC ENTRY POINT)
 // ============================================================================
 
-void PrintTuneOverlay::init_subjects(PrinterState& printer_state) {
-    if (subjects_initialized_) {
-        spdlog::warn("[PrintTuneOverlay] init_subjects() called twice - ignoring");
+void PrintTuneOverlay::show(lv_obj_t* parent_screen, MoonrakerAPI* api,
+                            PrinterState& printer_state) {
+    spdlog::debug("[PrintTuneOverlay] show() called");
+
+    // Store dependencies
+    parent_screen_ = parent_screen;
+    api_ = api;
+    printer_state_ = &printer_state;
+
+    // Initialize subjects if not already done (before XML creation)
+    if (!subjects_initialized_) {
+        init_subjects();
+    }
+
+    // Create panel lazily
+    if (!tune_panel_ && parent_screen_) {
+        tune_panel_ =
+            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "print_tune_panel", nullptr));
+        if (!tune_panel_) {
+            spdlog::error("[PrintTuneOverlay] Failed to create panel from XML");
+            NOTIFY_ERROR("Failed to load print tune panel");
+            return;
+        }
+
+        // Setup panel (back button, etc.)
+        setup_panel();
+        lv_obj_add_flag(tune_panel_, LV_OBJ_FLAG_HIDDEN);
+        spdlog::info("[PrintTuneOverlay] Panel created");
+    }
+
+    if (!tune_panel_) {
+        spdlog::error("[PrintTuneOverlay] Cannot show - panel not created");
         return;
     }
 
-    printer_state_ = &printer_state;
+    // Sync sliders and displays to current state before showing
+    sync_sliders_to_state();
+
+    // Push onto navigation stack
+    ui_nav_push_overlay(tune_panel_);
+}
+
+// ============================================================================
+// INTERNAL: INITIALIZATION
+// ============================================================================
+
+void PrintTuneOverlay::init_subjects() {
+    if (subjects_initialized_) {
+        return;
+    }
 
     // Initialize tune panel subjects
     UI_MANAGED_SUBJECT_STRING(tune_speed_subject_, tune_speed_buf_, "100%", "tune_speed_display",
@@ -157,52 +218,82 @@ void PrintTuneOverlay::init_subjects(PrinterState& printer_state) {
     UI_MANAGED_SUBJECT_STRING(tune_z_offset_subject_, tune_z_offset_buf_, "0.000mm",
                               "tune_z_offset_display", subjects_);
 
+    // Z-offset amount button active states (for bind_style)
+    // Default: 0.01mm selected
+    UI_MANAGED_SUBJECT_INT(z_amount_005_subject_, 0, "z_amount_005_active", subjects_);
+    UI_MANAGED_SUBJECT_INT(z_amount_0025_subject_, 0, "z_amount_0025_active", subjects_);
+    UI_MANAGED_SUBJECT_INT(z_amount_001_subject_, 1, "z_amount_001_active", subjects_);
+    UI_MANAGED_SUBJECT_INT(z_amount_00025_subject_, 0, "z_amount_00025_active", subjects_);
+
     // Register XML event callbacks
-    lv_xml_register_event_cb(nullptr, "on_tune_speed_changed", on_tune_speed_changed_cb);
-    lv_xml_register_event_cb(nullptr, "on_tune_flow_changed", on_tune_flow_changed_cb);
+    // Speed/flow sliders: separate display (while dragging) and send (on release) callbacks
+    lv_xml_register_event_cb(nullptr, "on_tune_speed_display", on_tune_speed_display_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_speed_send", on_tune_speed_send_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_flow_display", on_tune_flow_display_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_flow_send", on_tune_flow_send_cb);
     lv_xml_register_event_cb(nullptr, "on_tune_reset_clicked", on_tune_reset_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "on_tune_z_offset", on_tune_z_offset_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_z_amount_select", on_tune_z_amount_select_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_z_closer", on_tune_z_closer_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_z_farther", on_tune_z_farther_cb);
     lv_xml_register_event_cb(nullptr, "on_tune_save_z_offset", on_tune_save_z_offset_cb);
 
     subjects_initialized_ = true;
-    spdlog::debug("[PrintTuneOverlay] Subjects initialized (3 subjects, 5 callbacks)");
+    spdlog::debug("[PrintTuneOverlay] Subjects initialized");
 }
 
-void PrintTuneOverlay::deinit_subjects() {
-    if (!subjects_initialized_) {
+void PrintTuneOverlay::setup_panel() {
+    if (!tune_panel_ || !parent_screen_) {
         return;
     }
 
-    subjects_.deinit_all();
-    subjects_initialized_ = false;
-
-    spdlog::debug("[PrintTuneOverlay] Subjects deinitialized");
-}
-
-// ============================================================================
-// SETUP
-// ============================================================================
-
-void PrintTuneOverlay::setup(lv_obj_t* panel, lv_obj_t* parent_screen, MoonrakerAPI* api,
-                             PrinterState& printer_state) {
-    tune_panel_ = panel;
-    api_ = api;
-    printer_state_ = &printer_state;
-
     // Use standard overlay panel setup for back button handling
-    ui_overlay_panel_setup_standard(panel, parent_screen, "overlay_header", "overlay_content");
+    ui_overlay_panel_setup_standard(tune_panel_, parent_screen_, "overlay_header",
+                                    "overlay_content");
 
     // Update Z-offset icons based on printer kinematics
-    update_z_offset_icons(panel);
+    update_z_offset_icons(tune_panel_);
 
-    spdlog::debug("[PrintTuneOverlay] Setup complete (events wired via XML)");
+    spdlog::debug("[PrintTuneOverlay] Panel setup complete");
+}
+
+void PrintTuneOverlay::sync_sliders_to_state() {
+    if (!tune_panel_ || !printer_state_) {
+        return;
+    }
+
+    // Get current values from PrinterState
+    int speed = lv_subject_get_int(printer_state_->get_speed_factor_subject());
+    int flow = lv_subject_get_int(printer_state_->get_flow_factor_subject());
+
+    // Update our cached values
+    speed_percent_ = speed;
+    flow_percent_ = flow;
+
+    // Update displays
+    update_display();
+
+    // Set slider positions
+    lv_obj_t* overlay_content = lv_obj_find_by_name(tune_panel_, "overlay_content");
+    if (overlay_content) {
+        lv_obj_t* speed_slider = lv_obj_find_by_name(overlay_content, "speed_slider");
+        lv_obj_t* flow_slider = lv_obj_find_by_name(overlay_content, "flow_slider");
+
+        if (speed_slider) {
+            lv_slider_set_value(speed_slider, speed, LV_ANIM_OFF);
+        }
+        if (flow_slider) {
+            lv_slider_set_value(flow_slider, flow, LV_ANIM_OFF);
+        }
+    }
+
+    spdlog::debug("[PrintTuneOverlay] Synced to state: speed={}%, flow={}%", speed, flow);
 }
 
 // ============================================================================
 // ICON UPDATES
 // ============================================================================
 
-void PrintTuneOverlay::update_z_offset_icons(lv_obj_t* panel) {
+void PrintTuneOverlay::update_z_offset_icons(lv_obj_t* /*panel*/) {
     if (!printer_state_) {
         spdlog::warn("[PrintTuneOverlay] Cannot update icons - no printer_state_");
         return;
@@ -213,33 +304,9 @@ void PrintTuneOverlay::update_z_offset_icons(lv_obj_t* panel) {
     int kin = lv_subject_get_int(printer_state_->get_printer_bed_moves_subject());
     bool bed_moves_z = (kin == 1);
 
-    // Select icon codepoints based on kinematics
-    // CoreXY (bed moves): expand icons show bed motion
-    // Cartesian/Delta (head moves): arrow icons show head motion
-    const char* closer_icon =
-        bed_moves_z ? "\xF3\xB0\x9E\x93" : "\xF3\xB0\x81\x85"; // arrow-expand-down : arrow-down
-    const char* farther_icon =
-        bed_moves_z ? "\xF3\xB0\x9E\x96" : "\xF3\xB0\x81\x9D"; // arrow-expand-up : arrow-up
-
-    // Find and update all closer icons (3 buttons)
-    const char* closer_names[] = {"icon_z_closer_01", "icon_z_closer_005", "icon_z_closer_001"};
-    for (const char* name : closer_names) {
-        lv_obj_t* icon = lv_obj_find_by_name(panel, name);
-        if (icon) {
-            lv_label_set_text(icon, closer_icon);
-        }
-    }
-
-    // Find and update all farther icons (3 buttons)
-    const char* farther_names[] = {"icon_z_farther_001", "icon_z_farther_005", "icon_z_farther_01"};
-    for (const char* name : farther_names) {
-        lv_obj_t* icon = lv_obj_find_by_name(panel, name);
-        if (icon) {
-            lv_label_set_text(icon, farther_icon);
-        }
-    }
-
-    spdlog::debug("[PrintTuneOverlay] Z-offset icons set for {} kinematics",
+    // Icons are now handled via XML bind_flag_if_eq on printer_bed_moves subject
+    // This function just logs the kinematics for debugging
+    spdlog::debug("[PrintTuneOverlay] Z-offset icons set for {} kinematics (via XML binding)",
                   bed_moves_z ? "bed-moves-Z" : "head-moves-Z");
 }
 
@@ -281,14 +348,16 @@ void PrintTuneOverlay::update_z_offset_display(int microns) {
 // EVENT HANDLERS
 // ============================================================================
 
-void PrintTuneOverlay::handle_speed_changed(int value) {
+void PrintTuneOverlay::handle_speed_display(int value) {
     speed_percent_ = value;
 
-    // Update display immediately for responsive feel
+    // Update display while dragging (no G-code)
     std::snprintf(tune_speed_buf_, sizeof(tune_speed_buf_), "%d%%", value);
     lv_subject_copy_string(&tune_speed_subject_, tune_speed_buf_);
+}
 
-    // Send G-code command
+void PrintTuneOverlay::handle_speed_send(int value) {
+    // Send G-code when slider is released
     if (api_) {
         std::string gcode = "M220 S" + std::to_string(value);
         api_->execute_gcode(
@@ -300,14 +369,16 @@ void PrintTuneOverlay::handle_speed_changed(int value) {
     }
 }
 
-void PrintTuneOverlay::handle_flow_changed(int value) {
+void PrintTuneOverlay::handle_flow_display(int value) {
     flow_percent_ = value;
 
-    // Update display immediately for responsive feel
+    // Update display while dragging (no G-code)
     std::snprintf(tune_flow_buf_, sizeof(tune_flow_buf_), "%d%%", value);
     lv_subject_copy_string(&tune_flow_subject_, tune_flow_buf_);
+}
 
-    // Send G-code command
+void PrintTuneOverlay::handle_flow_send(int value) {
+    // Send G-code when slider is released
     if (api_) {
         std::string gcode = "M221 S" + std::to_string(value);
         api_->execute_gcode(
@@ -389,6 +460,28 @@ void PrintTuneOverlay::handle_z_offset_changed(double delta) {
                 NOTIFY_ERROR("Z-offset failed: {}", err.user_message());
             });
     }
+}
+
+void PrintTuneOverlay::handle_z_amount_select(double amount_mm) {
+    selected_z_amount_ = amount_mm;
+    spdlog::debug("[PrintTuneOverlay] Z-offset amount selected: {}mm", amount_mm);
+
+    // Update subjects for bind_style (radio behavior via boolean subjects)
+    // Set selected button's subject to 1, all others to 0
+    lv_subject_set_int(&z_amount_005_subject_, amount_mm == 0.05 ? 1 : 0);
+    lv_subject_set_int(&z_amount_0025_subject_, amount_mm == 0.025 ? 1 : 0);
+    lv_subject_set_int(&z_amount_001_subject_, amount_mm == 0.01 ? 1 : 0);
+    lv_subject_set_int(&z_amount_00025_subject_, amount_mm == 0.0025 ? 1 : 0);
+}
+
+void PrintTuneOverlay::handle_z_closer() {
+    // Closer = more squish = negative Z adjust
+    handle_z_offset_changed(-selected_z_amount_);
+}
+
+void PrintTuneOverlay::handle_z_farther() {
+    // Farther = less squish = positive Z adjust
+    handle_z_offset_changed(selected_z_amount_);
 }
 
 void PrintTuneOverlay::handle_save_z_offset() {

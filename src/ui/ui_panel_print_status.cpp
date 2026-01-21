@@ -222,11 +222,8 @@ void PrintStatusPanel::init_subjects() {
     // Viewer mode subject (0=thumbnail, 1=3D gcode viewer, 2=2D gcode viewer)
     UI_MANAGED_SUBJECT_INT(gcode_viewer_mode_subject_, 0, "gcode_viewer_mode", subjects_);
 
-    // Initialize tune overlay subjects and callbacks (extracted Phase 3)
-    tune_overlay_.init_subjects(printer_state_);
-    set_global_print_tune_overlay(&tune_overlay_);
-
     // Register XML event callbacks for print status panel buttons
+    // (tune overlay subjects/callbacks registered by singleton on first show())
     // (light and timelapse callbacks are registered by light_timelapse_controls_.init_subjects())
     lv_xml_register_event_cb(nullptr, "on_print_status_pause", on_pause_clicked);
     lv_xml_register_event_cb(nullptr, "on_print_status_tune", on_tune_clicked);
@@ -270,9 +267,7 @@ void PrintStatusPanel::deinit_subjects() {
     if (!subjects_initialized_)
         return;
 
-    // Clear tune overlay global accessor
-    set_global_print_tune_overlay(nullptr);
-    tune_overlay_.deinit_subjects();
+    // Tune overlay singleton handles its own cleanup via StaticPanelRegistry
 
     // Clear light/timelapse global accessor
     set_global_light_timelapse_controls(nullptr);
@@ -846,44 +841,8 @@ void PrintStatusPanel::handle_pause_button() {
 void PrintStatusPanel::handle_tune_button() {
     spdlog::info("[{}] Tune button clicked - opening tuning panel", get_name());
 
-    // Create tune panel on first access (lazy initialization)
-    lv_obj_t* tune_panel = tune_overlay_.get_panel();
-    if (!tune_panel && parent_screen_) {
-        spdlog::debug("[{}] Creating tuning panel...", get_name());
-
-        tune_panel =
-            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "print_tune_panel", nullptr));
-        if (tune_panel) {
-            tune_overlay_.setup(tune_panel, parent_screen_, api_, printer_state_);
-            lv_obj_add_flag(tune_panel, LV_OBJ_FLAG_HIDDEN);
-            spdlog::info("[{}] Tuning panel created and initialized", get_name());
-        } else {
-            spdlog::error("[{}] Failed to create tuning panel from XML", get_name());
-            NOTIFY_ERROR("Failed to load tuning panel");
-            return;
-        }
-    }
-
-    // Update displays with current values before showing
-    tune_overlay_.update_speed_flow_display(speed_percent_, flow_percent_);
-
-    // Set slider values to current PrinterState values
-    tune_panel = tune_overlay_.get_panel();
-    if (tune_panel) {
-        lv_obj_t* overlay_content = lv_obj_find_by_name(tune_panel, "overlay_content");
-        if (overlay_content) {
-            lv_obj_t* speed_slider = lv_obj_find_by_name(overlay_content, "speed_slider");
-            lv_obj_t* flow_slider = lv_obj_find_by_name(overlay_content, "flow_slider");
-
-            if (speed_slider) {
-                lv_slider_set_value(speed_slider, speed_percent_, LV_ANIM_OFF);
-            }
-            if (flow_slider) {
-                lv_slider_set_value(flow_slider, flow_percent_, LV_ANIM_OFF);
-            }
-        }
-        ui_nav_push_overlay(tune_panel);
-    }
+    // Use singleton - handles lazy init, subject registration, slider sync, and nav push
+    get_print_tune_overlay().show(parent_screen_, api_, printer_state_);
 }
 
 void PrintStatusPanel::handle_cancel_button() {
@@ -1267,8 +1226,8 @@ void PrintStatusPanel::on_flow_factor_changed(int flow) {
 }
 
 void PrintStatusPanel::on_gcode_z_offset_changed(int microns) {
-    // Delegate to tune overlay (extracted Phase 3)
-    tune_overlay_.update_z_offset_display(microns);
+    // Delegate to tune overlay singleton
+    get_print_tune_overlay().update_z_offset_display(microns);
 }
 
 void PrintStatusPanel::on_led_state_changed(int state) {
@@ -1601,13 +1560,9 @@ void PrintStatusPanel::animate_print_cancelled() {
     spdlog::debug("[{}] Print cancelled animation started", get_name());
 }
 
-// Tune panel handlers delegated to PrintTuneOverlay:
-// - handle_tune_speed_changed -> tune_overlay_.handle_speed_changed()
-// - handle_tune_flow_changed -> tune_overlay_.handle_flow_changed()
-// - handle_tune_reset -> tune_overlay_.handle_reset()
-// - handle_tune_z_offset_changed -> tune_overlay_.handle_z_offset_changed()
-// - handle_tune_save_z_offset -> tune_overlay_.handle_save_z_offset()
-// XML callbacks are registered in ui_print_tune_overlay.cpp
+// Tune panel handlers delegated to PrintTuneOverlay singleton:
+// See get_print_tune_overlay() and handle_*() methods in ui_print_tune_overlay.cpp
+// XML callbacks are registered in ui_print_tune_overlay.cpp on first show()
 
 // ============================================================================
 // THUMBNAIL LOADING

@@ -14,17 +14,18 @@ class PrinterState;
 
 /**
  * @file ui_print_tune_overlay.h
- * @brief Tune panel functionality extracted from PrintStatusPanel
+ * @brief Tune panel singleton for print speed, flow, and Z-offset adjustment
  *
  * Manages the tune overlay panel that allows adjusting:
  * - Print speed (M220 command)
  * - Flow rate (M221 command)
  * - Z-offset / baby stepping (SET_GCODE_OFFSET command)
  *
- * This class is a helper owned by PrintStatusPanel, not a standalone overlay.
- * It manages the subjects and callbacks for the tune panel's reactive UI.
+ * Accessed via get_print_tune_overlay() singleton. Can be shown from:
+ * - PrintStatusPanel (Tune button during active print)
+ * - ControlsPanel (Z-Offset row click for calibration)
  *
- * @pattern Helper class with subject management
+ * @pattern Lazy singleton with subject management
  * @threading Main thread only (LVGL)
  */
 class PrintTuneOverlay {
@@ -37,46 +38,43 @@ class PrintTuneOverlay {
     PrintTuneOverlay& operator=(const PrintTuneOverlay&) = delete;
 
     /**
-     * @brief Initialize subjects for XML binding
+     * @brief Show the tune panel overlay
      *
-     * Registers tune_speed_display, tune_flow_display, tune_z_offset_display
-     * subjects and XML event callbacks.
+     * Lazy initialization - creates panel on first call. Handles:
+     * - Subject initialization
+     * - Panel creation from XML
+     * - Standard overlay setup (back button, scrolling)
+     * - Pushes onto navigation stack
      *
-     * @param printer_state Reference to PrinterState for kinematics info
+     * @param parent_screen The parent screen for the overlay
+     * @param api MoonrakerAPI for sending G-code commands
+     * @param printer_state Reference to PrinterState for kinematics/values
      */
-    void init_subjects(PrinterState& printer_state);
+    void show(lv_obj_t* parent_screen, MoonrakerAPI* api, PrinterState& printer_state);
 
     /**
-     * @brief Deinitialize subjects
-     *
-     * Called during cleanup. Safe to call multiple times.
-     */
-    void deinit_subjects();
-
-    /**
-     * @brief Setup the tune panel after it's created
-     *
-     * Configures back button handling and updates Z-offset icons based on kinematics.
-     *
-     * @param panel The tune panel widget (tune_overlay from XML)
-     * @param parent_screen The parent screen for overlay panel setup
-     * @param api MoonrakerAPI for sending commands
-     * @param printer_state Reference to PrinterState
-     */
-    void setup(lv_obj_t* panel, lv_obj_t* parent_screen, MoonrakerAPI* api,
-               PrinterState& printer_state);
-
-    /**
-     * @brief Handle speed slider value change
+     * @brief Update speed display while dragging (no G-code)
      * @param value New speed percentage (50-200)
      */
-    void handle_speed_changed(int value);
+    void handle_speed_display(int value);
 
     /**
-     * @brief Handle flow slider value change
+     * @brief Send speed G-code when slider released
+     * @param value Speed percentage to send
+     */
+    void handle_speed_send(int value);
+
+    /**
+     * @brief Update flow display while dragging (no G-code)
      * @param value New flow percentage (75-125)
      */
-    void handle_flow_changed(int value);
+    void handle_flow_display(int value);
+
+    /**
+     * @brief Send flow G-code when slider released
+     * @param value Flow percentage to send
+     */
+    void handle_flow_send(int value);
 
     /**
      * @brief Handle reset button click - resets speed/flow to 100%
@@ -88,6 +86,22 @@ class PrintTuneOverlay {
      * @param delta Z-offset change in mm (negative = closer/more squish)
      */
     void handle_z_offset_changed(double delta);
+
+    /**
+     * @brief Handle Z-offset amount selector click (radio behavior)
+     * @param amount_mm The amount in mm (0.05, 0.025, 0.01, 0.0025)
+     */
+    void handle_z_amount_select(double amount_mm);
+
+    /**
+     * @brief Handle Z closer button (more squish = negative Z adjust)
+     */
+    void handle_z_closer();
+
+    /**
+     * @brief Handle Z farther button (less squish = positive Z adjust)
+     */
+    void handle_z_farther();
 
     /**
      * @brief Handle save Z-offset button click
@@ -137,7 +151,10 @@ class PrintTuneOverlay {
     }
 
   private:
+    void init_subjects();
+    void setup_panel();
     void update_display();
+    void sync_sliders_to_state();
 
     //
     // === Dependencies ===
@@ -145,6 +162,7 @@ class PrintTuneOverlay {
 
     MoonrakerAPI* api_ = nullptr;
     PrinterState* printer_state_ = nullptr;
+    lv_obj_t* parent_screen_ = nullptr;
     lv_obj_t* tune_panel_ = nullptr;
 
     //
@@ -159,6 +177,12 @@ class PrintTuneOverlay {
     lv_subject_t tune_flow_subject_;
     lv_subject_t tune_z_offset_subject_;
 
+    // Z-offset amount button selection subjects (for bind_style)
+    lv_subject_t z_amount_005_subject_;
+    lv_subject_t z_amount_0025_subject_;
+    lv_subject_t z_amount_001_subject_;
+    lv_subject_t z_amount_00025_subject_;
+
     // Subject storage buffers
     char tune_speed_buf_[16] = "100%";
     char tune_flow_buf_[16] = "100%";
@@ -169,6 +193,7 @@ class PrintTuneOverlay {
     //
 
     double current_z_offset_ = 0.0;
+    double selected_z_amount_ = 0.01; ///< Currently selected Z-offset amount in mm
     int speed_percent_ = 100;
     int flow_percent_ = 100;
 
@@ -180,20 +205,12 @@ class PrintTuneOverlay {
 };
 
 /**
- * @brief Get global PrintTuneOverlay instance
+ * @brief Get the singleton PrintTuneOverlay instance
  *
- * Used by XML event callbacks to route events to the overlay instance.
- * The instance is managed by PrintStatusPanel.
+ * Lazy singleton - creates on first access, registers with StaticPanelRegistry
+ * for cleanup on shutdown. Used by XML event callbacks and panels that need
+ * to show the tuning overlay.
  *
- * @return Reference to PrintTuneOverlay
+ * @return Reference to the shared PrintTuneOverlay instance
  */
-PrintTuneOverlay& get_global_print_tune_overlay();
-
-/**
- * @brief Set global PrintTuneOverlay instance
- *
- * Called by PrintStatusPanel during initialization.
- *
- * @param overlay Pointer to PrintTuneOverlay (or nullptr to clear)
- */
-void set_global_print_tune_overlay(PrintTuneOverlay* overlay);
+PrintTuneOverlay& get_print_tune_overlay();

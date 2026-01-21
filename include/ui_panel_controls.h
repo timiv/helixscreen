@@ -198,19 +198,14 @@ class ControlsPanel : public PanelBase {
     lv_obj_t* bed_mesh_panel_ = nullptr;
     lv_obj_t* zoffset_panel_ = nullptr;
     lv_obj_t* screws_panel_ = nullptr;
-    lv_obj_t* print_tune_panel_ = nullptr;
-
-    //
-    // === Print Tune Overlay (for Z-offset live tuning) ===
-    //
-
-    PrintTuneOverlay print_tune_overlay_;
 
     //
     // === Modal Dialog State ===
     //
 
     helix::ui::ModalGuard motors_confirmation_dialog_;
+    helix::ui::ModalGuard save_z_offset_confirmation_dialog_;
+    bool save_z_offset_in_progress_ = false; ///< Guard against double-click race condition
 
     //
     // === Dynamic UI Containers ===
@@ -305,6 +300,8 @@ class ControlsPanel : public PanelBase {
 
     // Z-Offset save handler
     void handle_save_z_offset();
+    void handle_save_z_offset_confirm();
+    void handle_save_z_offset_cancel();
 
     //
     // === V2 Card Click Handlers (navigation to full panels) ===
@@ -379,6 +376,8 @@ class ControlsPanel : public PanelBase {
     static void on_secondary_fans_clicked(lv_event_t* e);
     static void on_motors_confirm(lv_event_t* e);
     static void on_motors_cancel(lv_event_t* e);
+    static void on_save_z_offset_confirm(lv_event_t* e);
+    static void on_save_z_offset_cancel(lv_event_t* e);
 
     //
     // === Calibration Button Trampolines (XML event_cb - global accessor) ===

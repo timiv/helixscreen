@@ -2,6 +2,11 @@
 <!-- Copyright (C) 2025-2026 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <component>
+  <!-- Styles for reactive Z-offset amount button state binding (L040: no inline bg attrs) -->
+  <styles>
+    <style name="z_amount_selected" bg_color="#tertiary_color" bg_opa="255"/>
+    <style name="z_amount_unselected" bg_color="#tertiary_color" bg_opa="40"/>
+  </styles>
   <!-- Print Tuning Panel: Speed and Flow adjustment during active print -->
   <view name="print_tune_panel" extends="overlay_panel" title="Print Tuning">
     <!-- Content Area -->
@@ -12,37 +17,33 @@
       <!-- Speed + Flow Row (side by side) -->
       <lv_obj name="speed_flow_row"
               width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-              flex_flow="row" style_pad_gap="#space_sm" flag_overflow_visible="true">
-        <!-- Speed Control Card (left) -->
-        <ui_card name="speed_card"
-                 height="content" flex_grow="1" style_radius="#border_radius" flex_flow="column"
-                 style_pad_all="#space_sm" style_pad_gap="#space_xs" flag_overflow_visible="true">
+              flex_flow="row" style_pad_gap="#space_lg" flag_overflow_visible="true">
+        <!-- Speed Control (left) -->
+        <lv_obj name="speed_section"
+                height="content" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                flex_flow="column" style_pad_gap="#space_sm" flag_overflow_visible="true" scrollable="false">
           <text_small text="Print Speed"/>
           <text_heading name="speed_display" bind_text="tune_speed_display"/>
-          <lv_obj name="speed_slider_container"
-                  width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                  scrollable="false" flex_flow="row" style_flex_cross_place="center" flag_overflow_visible="true">
-            <lv_slider name="speed_slider" flex_grow="1" min_value="50" max_value="200" value="100">
-              <event_cb trigger="value_changed" callback="on_tune_speed_changed"/>
-            </lv_slider>
-          </lv_obj>
+          <lv_slider name="speed_slider" width="100%" height="#space_lg" min_value="50" max_value="200" value="100"
+                     style_bg_color="#theme_grey" style_radius="#space_md">
+            <event_cb trigger="value_changed" callback="on_tune_speed_display"/>
+            <event_cb trigger="released" callback="on_tune_speed_send"/>
+          </lv_slider>
           <text_small text="Movement speed" style_text_color="#text_secondary"/>
-        </ui_card>
-        <!-- Flow Control Card (right) -->
-        <ui_card name="flow_card"
-                 height="content" flex_grow="1" style_radius="#border_radius" flex_flow="column"
-                 style_pad_all="#space_sm" style_pad_gap="#space_xs" flag_overflow_visible="true">
+        </lv_obj>
+        <!-- Flow Control (right) -->
+        <lv_obj name="flow_section"
+                height="content" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                flex_flow="column" style_pad_gap="#space_sm" flag_overflow_visible="true" scrollable="false">
           <text_small text="Flow Rate"/>
           <text_heading name="flow_display" bind_text="tune_flow_display"/>
-          <lv_obj name="flow_slider_container"
-                  width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                  scrollable="false" flex_flow="row" style_flex_cross_place="center" flag_overflow_visible="true">
-            <lv_slider name="flow_slider" flex_grow="1" min_value="75" max_value="125" value="100">
-              <event_cb trigger="value_changed" callback="on_tune_flow_changed"/>
-            </lv_slider>
-          </lv_obj>
+          <lv_slider name="flow_slider" width="100%" height="#space_lg" min_value="75" max_value="125" value="100"
+                     style_bg_color="#theme_grey" style_radius="#space_md">
+            <event_cb trigger="value_changed" callback="on_tune_flow_display"/>
+            <event_cb trigger="released" callback="on_tune_flow_send"/>
+          </lv_slider>
           <text_small text="Extrusion rate" style_text_color="#text_secondary"/>
-        </ui_card>
+        </lv_obj>
       </lv_obj>
       <!-- Reset Speed & Flow Button (under sliders) -->
       <lv_button name="btn_reset"
@@ -55,9 +56,9 @@
       <!-- Spacer to push Z-offset to bottom -->
       <lv_obj flex_grow="1" style_bg_opa="0" style_border_width="0" scrollable="false"/>
       <!-- Z-Offset Baby Stepping Section -->
-      <ui_card name="z_offset_card"
-               width="100%" height="content" style_radius="#border_radius" flex_flow="column" style_pad_all="#space_sm"
-               style_pad_gap="#space_xs">
+      <lv_obj name="z_offset_section"
+              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+              flex_flow="column" style_pad_gap="#space_xs" scrollable="false">
         <!-- Header Row -->
         <lv_obj width="100%"
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
@@ -65,122 +66,83 @@
           <text_body text="Z-Offset"/>
           <text_heading name="z_offset_display" bind_text="tune_z_offset_display"/>
         </lv_obj>
-        <!-- Buttons Container -->
-        <!-- All buttons use same callback; delta extracted from button name (closer=negative, farther=positive) -->
+
+        <!-- Buttons Container: Amount selectors (left) + Up/Down (right) -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                style_pad_gap="#space_xs" scrollable="false">
-          <!-- Row 1: Closer to bed (negative Z adjust = more squish) -->
-          <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false">
+         
+          <!-- Amount selector buttons (radio-style, one selected at a time) -->
+          <lv_obj flex_grow="1"
                   height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_pad_gap="#space_xs" scrollable="false">
-            <lv_button name="btn_z_closer_01"
-                       height="content" flex_grow="1" style_radius="#border_radius" style_border_width="0"
-                       flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
-                       style_pad_gap="#space_xs">
-              <event_cb trigger="clicked" callback="on_tune_z_offset"/>
-              <!-- Dual icons: show based on printer kinematics -->
-              <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0">
-                <icon src="arrow_expand_up" size="sm">
-                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
-                </icon>
-                <icon src="arrow_down" size="sm">
-                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
-                </icon>
-              </lv_obj>
-              <text_small text="0.1" align="center"/>
+                  style_flex_cross_place="center" style_pad_gap="#space_xxs" scrollable="false">
+            <lv_button name="btn_z_amount_005"
+                       height="#button_height" flex_grow="1" style_radius="#border_radius" style_border_width="0">
+              <bind_style name="z_amount_selected" subject="z_amount_005_active" ref_value="1"/>
+              <bind_style name="z_amount_unselected" subject="z_amount_005_active" ref_value="0"/>
+              <event_cb trigger="clicked" callback="on_tune_z_amount_select"/>
+              <text_small text="0.05" align="center" style_text_color="#text_primary"/>
             </lv_button>
-            <lv_button name="btn_z_closer_005"
-                       height="content" flex_grow="1" style_radius="#border_radius" style_border_width="0"
-                       flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
-                       style_pad_gap="#space_xs">
-              <event_cb trigger="clicked" callback="on_tune_z_offset"/>
-              <!-- Dual icons: show based on printer kinematics -->
-              <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0">
-                <icon src="arrow_expand_up" size="sm">
-                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
-                </icon>
-                <icon src="arrow_down" size="sm">
-                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
-                </icon>
-              </lv_obj>
-              <text_small text="0.05" align="center"/>
+            <lv_button name="btn_z_amount_0025"
+                       height="#button_height" flex_grow="1" style_radius="#border_radius" style_border_width="0">
+              <bind_style name="z_amount_selected" subject="z_amount_0025_active" ref_value="1"/>
+              <bind_style name="z_amount_unselected" subject="z_amount_0025_active" ref_value="0"/>
+              <event_cb trigger="clicked" callback="on_tune_z_amount_select"/>
+              <text_small text="0.025" align="center" style_text_color="#text_primary"/>
             </lv_button>
-            <lv_button name="btn_z_closer_001"
-                       height="content" flex_grow="1" style_radius="#border_radius" style_border_width="0"
-                       flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
-                       style_pad_gap="#space_xs">
-              <event_cb trigger="clicked" callback="on_tune_z_offset"/>
-              <!-- Dual icons: show based on printer kinematics -->
-              <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0">
-                <icon src="arrow_expand_up" size="sm">
-                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
-                </icon>
-                <icon src="arrow_down" size="sm">
-                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
-                </icon>
-              </lv_obj>
-              <text_small text="0.01" align="center"/>
+            <lv_button name="btn_z_amount_001"
+                       height="#button_height" flex_grow="1" style_radius="#border_radius" style_border_width="0">
+              <bind_style name="z_amount_selected" subject="z_amount_001_active" ref_value="1"/>
+              <bind_style name="z_amount_unselected" subject="z_amount_001_active" ref_value="0"/>
+              <event_cb trigger="clicked" callback="on_tune_z_amount_select"/>
+              <text_small text="0.01" align="center" style_text_color="#text_primary"/>
+            </lv_button>
+            <lv_button name="btn_z_amount_00025"
+                       height="#button_height" flex_grow="1" style_radius="#border_radius" style_border_width="0">
+              <bind_style name="z_amount_selected" subject="z_amount_00025_active" ref_value="1"/>
+              <bind_style name="z_amount_unselected" subject="z_amount_00025_active" ref_value="0"/>
+              <event_cb trigger="clicked" callback="on_tune_z_amount_select"/>
+              <text_small text="0.0025" align="center" style_text_color="#text_primary"/>
             </lv_button>
           </lv_obj>
-          <!-- Row 2: Farther from bed (positive Z adjust = less squish) -->
-          <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_pad_gap="#space_xs" scrollable="false">
-            <lv_button name="btn_z_farther_001"
-                       height="content" flex_grow="1" style_radius="#border_radius" style_border_width="0"
-                       flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
-                       style_pad_gap="#space_xs">
-              <event_cb trigger="clicked" callback="on_tune_z_offset"/>
-              <!-- Dual icons: show based on printer kinematics -->
-              <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0">
-                <icon src="arrow_expand_down" size="sm">
-                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
-                </icon>
-                <icon src="arrow_up" size="sm">
-                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
-                </icon>
-              </lv_obj>
-              <text_small text="0.01" align="center"/>
+          <!-- Up/Down direction buttons (stacked vertically) -->
+          <lv_obj width="56"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                  style_pad_gap="#space_xxs" scrollable="false">
+            <!-- Closer button (more squish) - icon depends on kinematics -->
+            <lv_button name="btn_z_closer"
+                       width="100%" height="#button_height" style_radius="#border_radius" style_border_width="0"
+                       flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center">
+              <event_cb trigger="clicked" callback="on_tune_z_closer"/>
+              <!-- Bed moves Z (CoreXY): bed goes up = arrow_expand_up -->
+              <icon src="arrow_expand_up" size="sm">
+                <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
+              </icon>
+              <!-- Head moves Z (Cartesian): head goes down = arrow_down -->
+              <icon src="arrow_down" size="sm">
+                <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
+              </icon>
             </lv_button>
-            <lv_button name="btn_z_farther_005"
-                       height="content" flex_grow="1" style_radius="#border_radius" style_border_width="0"
-                       flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
-                       style_pad_gap="#space_xs">
-              <event_cb trigger="clicked" callback="on_tune_z_offset"/>
-              <!-- Dual icons: show based on printer kinematics -->
-              <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0">
-                <icon src="arrow_expand_down" size="sm">
-                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
-                </icon>
-                <icon src="arrow_up" size="sm">
-                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
-                </icon>
-              </lv_obj>
-              <text_small text="0.05" align="center"/>
-            </lv_button>
-            <lv_button name="btn_z_farther_01"
-                       height="content" flex_grow="1" style_radius="#border_radius" style_border_width="0"
-                       flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
-                       style_pad_gap="#space_xs">
-              <event_cb trigger="clicked" callback="on_tune_z_offset"/>
-              <!-- Dual icons: show based on printer kinematics -->
-              <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0">
-                <icon src="arrow_expand_down" size="sm">
-                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
-                </icon>
-                <icon src="arrow_up" size="sm">
-                  <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
-                </icon>
-              </lv_obj>
-              <text_small text="0.1" align="center"/>
+            <!-- Farther button (less squish) - icon depends on kinematics -->
+            <lv_button name="btn_z_farther"
+                       width="100%" height="#button_height" style_radius="#border_radius" style_border_width="0"
+                       flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center">
+              <event_cb trigger="clicked" callback="on_tune_z_farther"/>
+              <!-- Bed moves Z (CoreXY): bed goes down = arrow_expand_down -->
+              <icon src="arrow_expand_down" size="sm">
+                <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
+              </icon>
+              <!-- Head moves Z (Cartesian): head goes up = arrow_up -->
+              <icon src="arrow_up" size="sm">
+                <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
+              </icon>
             </lv_button>
           </lv_obj>
         </lv_obj>
         <text_small text="Closer = more squish | Farther = less squish" style_text_color="#text_secondary"/>
         <text_small name="z_offset_help_text"
-                    text="Temporary adjustment for this print" style_text_color="#text_secondary"/>
-      </ui_card>
+                    text="Temporary adjustment for this print, unless saved on Controls panel" style_text_color="#text_secondary"/>
+      </lv_obj>
     </lv_obj>
   </view>
 </component>
