@@ -9,6 +9,7 @@
 #include "ui_ams_settings_overlay.h"
 
 #include "ui_ams_behavior_overlay.h"
+#include "ui_ams_maintenance_overlay.h"
 #include "ui_ams_spoolman_overlay.h"
 #include "ui_ams_tool_mapping_overlay.h"
 #include "ui_event_safety.h"
@@ -246,8 +247,14 @@ void AmsSettingsOverlay::on_endless_spool_clicked(lv_event_t* e) {
 void AmsSettingsOverlay::on_maintenance_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[AmsSettingsOverlay] on_maintenance_clicked");
     LV_UNUSED(e);
-    spdlog::info("[AmsSettingsOverlay] Maintenance clicked (not yet implemented)");
-    // TODO: Push maintenance sub-panel
+
+    auto& overlay = get_ams_maintenance_overlay();
+    if (!overlay.are_subjects_initialized()) {
+        overlay.init_subjects();
+        overlay.register_callbacks();
+    }
+    overlay.show(get_ams_settings_overlay().get_parent_screen());
+
     LVGL_SAFE_EVENT_CB_END();
 }
 

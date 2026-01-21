@@ -1,0 +1,106 @@
+<?xml version="1.0"?>
+<!-- Copyright (C) 2025-2026 356C LLC -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- AMS Maintenance Settings Overlay Panel -->
+<!-- Sub-panel for AMS maintenance actions: home, recover, abort -->
+<component>
+  <view name="ams_settings_maintenance"
+        extends="overlay_panel" width="#overlay_panel_width_full" title="Maintenance" bg_color="#app_bg_color">
+    <!-- Content Area (scrollable) -->
+    <lv_obj name="overlay_content"
+            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_md" scrollable="true" scroll_dir="ver"
+            style_border_width="0" flex_flow="column" style_pad_gap="#space_sm">
+      <!-- Description text -->
+      <text_small name="description"
+                  width="100%" text="Perform maintenance actions on the AMS system." style_text_color="#text_secondary"/>
+      <!-- ================================================================== -->
+      <!-- Home Action Card                                                    -->
+      <!-- ================================================================== -->
+      <ui_card name="home_card"
+               width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_md" flex_flow="row"
+               style_flex_main_place="space_between" style_flex_cross_place="center">
+        <!-- Left side: Icon + Label/Description -->
+        <lv_obj width="content"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false" flex_grow="1">
+          <icon src="home" size="sm" variant="secondary"/>
+          <lv_obj width="content"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                  style_pad_gap="#space_xs" scrollable="false">
+            <text_body text="Home" style_text_color="#text_primary"/>
+            <text_small text="Reset AMS to home position" style_text_color="#text_secondary"/>
+          </lv_obj>
+        </lv_obj>
+        <!-- Right side: Action button -->
+        <lv_button name="home_button" width="80" height="36" style_radius="#border_radius">
+          <text_body text="Home" align="center" style_text_color="#text_primary"/>
+          <event_cb trigger="clicked" callback="on_ams_home_clicked"/>
+        </lv_button>
+      </ui_card>
+      <!-- ================================================================== -->
+      <!-- Recover Action Card                                                 -->
+      <!-- ================================================================== -->
+      <ui_card name="recover_card"
+               width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_md" flex_flow="row"
+               style_flex_main_place="space_between" style_flex_cross_place="center">
+        <!-- Left side: Icon + Label/Description -->
+        <lv_obj width="content"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false" flex_grow="1">
+          <icon src="refresh" size="sm" variant="secondary"/>
+          <lv_obj width="content"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                  style_pad_gap="#space_xs" scrollable="false">
+            <text_body text="Recover" style_text_color="#text_primary"/>
+            <text_small text="Attempt error recovery" style_text_color="#text_secondary"/>
+          </lv_obj>
+        </lv_obj>
+        <!-- Right side: Action button -->
+        <lv_button name="recover_button" width="80" height="36" style_radius="#border_radius">
+          <text_body text="Recover" align="center" style_text_color="#text_primary"/>
+          <event_cb trigger="clicked" callback="on_ams_recover_clicked"/>
+        </lv_button>
+      </ui_card>
+      <!-- ================================================================== -->
+      <!-- Abort Action Card                                                   -->
+      <!-- ================================================================== -->
+      <ui_card name="abort_card"
+               width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_md" flex_flow="row"
+               style_flex_main_place="space_between" style_flex_cross_place="center">
+        <!-- Left side: Icon + Label/Description -->
+        <lv_obj width="content"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false" flex_grow="1">
+          <icon src="stop" size="sm" variant="secondary"/>
+          <lv_obj width="content"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                  style_pad_gap="#space_xs" scrollable="false">
+            <text_body text="Abort" style_text_color="#text_primary"/>
+            <text_small text="Abort current operation" style_text_color="#text_secondary"/>
+          </lv_obj>
+        </lv_obj>
+        <!-- Right side: Action button -->
+        <lv_button name="abort_button" width="80" height="36" style_radius="#border_radius">
+          <text_body text="Abort" align="center" style_text_color="#text_primary"/>
+          <event_cb trigger="clicked" callback="on_ams_abort_clicked"/>
+        </lv_button>
+      </ui_card>
+      <!-- ================================================================== -->
+      <!-- Status Card                                                         -->
+      <!-- ================================================================== -->
+      <ui_card name="status_card"
+               width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_md" flex_flow="row"
+               style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_sm">
+        <!-- Left side: Icon -->
+        <icon src="info" size="sm" variant="secondary"/>
+        <!-- Middle: Status text -->
+        <lv_obj width="content"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                style_pad_gap="#space_xs" scrollable="false" flex_grow="1">
+          <text_body text="Current Status" style_text_color="#text_primary"/>
+          <text_small name="status_label" bind_text="ams_maintenance_status" style_text_color="#text_secondary"/>
+        </lv_obj>
+      </ui_card>
+    </lv_obj>
+  </view>
+</component>
