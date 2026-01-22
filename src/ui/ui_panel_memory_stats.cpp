@@ -3,11 +3,11 @@
 
 #include "ui_panel_memory_stats.h"
 
-#include "static_panel_registry.h"
 #include "ui_theme.h"
 
 #include "lvgl/src/xml/lv_xml.h"
 #include "memory_utils.h"
+#include "static_panel_registry.h"
 
 #include <spdlog/spdlog.h>
 

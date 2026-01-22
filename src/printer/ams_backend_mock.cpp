@@ -182,19 +182,63 @@ AmsBackendMock::AmsBackendMock(int slot_count) {
     using helix::printer::ActionType;
     mock_device_actions_ = {
         // Calibration section
-        {"calibration_wizard", "Run Calibration Wizard", "play", "calibration",
-         "Interactive calibration for all lanes", ActionType::BUTTON, {}, {}, 0, 100, "", -1, true,
+        {"calibration_wizard",
+         "Run Calibration Wizard",
+         "play",
+         "calibration",
+         "Interactive calibration for all lanes",
+         ActionType::BUTTON,
+         {},
+         {},
+         0,
+         100,
+         "",
+         -1,
+         true,
          ""},
-        {"bowden_length", "Bowden Length", "ruler", "calibration",
-         "Distance from hub to toolhead", ActionType::SLIDER, 450.0f, {}, 100.0f, 1000.0f, "mm", -1,
-         true, ""},
+        {"bowden_length",
+         "Bowden Length",
+         "ruler",
+         "calibration",
+         "Distance from hub to toolhead",
+         ActionType::SLIDER,
+         450.0f,
+         {},
+         100.0f,
+         1000.0f,
+         "mm",
+         -1,
+         true,
+         ""},
         // Speed section
-        {"speed_fwd", "Forward Multiplier", "fast-forward", "speed",
-         "Speed multiplier for forward moves", ActionType::SLIDER, 1.0f, {}, 0.5f, 2.0f, "x", -1,
-         true, ""},
-        {"speed_rev", "Reverse Multiplier", "rewind", "speed",
-         "Speed multiplier for reverse moves", ActionType::SLIDER, 1.0f, {}, 0.5f, 2.0f, "x", -1,
-         true, ""},
+        {"speed_fwd",
+         "Forward Multiplier",
+         "fast-forward",
+         "speed",
+         "Speed multiplier for forward moves",
+         ActionType::SLIDER,
+         1.0f,
+         {},
+         0.5f,
+         2.0f,
+         "x",
+         -1,
+         true,
+         ""},
+        {"speed_rev",
+         "Reverse Multiplier",
+         "rewind",
+         "speed",
+         "Speed multiplier for reverse moves",
+         ActionType::SLIDER,
+         1.0f,
+         {},
+         0.5f,
+         2.0f,
+         "x",
+         -1,
+         true,
+         ""},
     };
 
     spdlog::debug("[AmsBackendMock] Created with {} slots", slot_count);
@@ -1314,7 +1358,8 @@ std::vector<helix::printer::DeviceAction> AmsBackendMock::get_device_actions() c
     return mock_device_actions_;
 }
 
-AmsError AmsBackendMock::execute_device_action(const std::string& action_id, const std::any& value) {
+AmsError AmsBackendMock::execute_device_action(const std::string& action_id,
+                                               const std::any& value) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     // Store for test verification

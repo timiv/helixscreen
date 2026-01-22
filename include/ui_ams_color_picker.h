@@ -78,6 +78,12 @@ class AmsColorPicker : public Modal {
      */
     void set_color_callback(ColorCallback callback);
 
+    /**
+     * @brief Set callback for when picker is dismissed (any close - select, cancel, or backdrop)
+     * @param callback Function to call on dismiss
+     */
+    void set_dismiss_callback(std::function<void()> callback);
+
     // Modal interface
     [[nodiscard]] const char* get_name() const override {
         return "Color Picker";
@@ -95,6 +101,7 @@ class AmsColorPicker : public Modal {
     // === State ===
     uint32_t selected_color_ = 0x808080;
     ColorCallback color_callback_;
+    std::function<void()> dismiss_callback_;
 
     // === Subjects for XML binding ===
     SubjectManager subjects_;

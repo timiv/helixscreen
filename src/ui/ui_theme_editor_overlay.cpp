@@ -16,7 +16,6 @@
 
 #include <spdlog/spdlog.h>
 
-#include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <cstdlib>
@@ -93,14 +92,12 @@ lv_obj_t* ThemeEditorOverlay::create(lv_obj_t* parent) {
     }
 
     // Find swatch widgets (swatch_0 through swatch_15)
+    lv_obj_t* swatch_list = lv_obj_find_by_name(overlay_root_, "theme_swatch_list");
+    lv_obj_t* search_root = swatch_list ? swatch_list : overlay_root_;
     for (size_t i = 0; i < swatch_objects_.size(); ++i) {
         char swatch_name[16];
         std::snprintf(swatch_name, sizeof(swatch_name), "swatch_%zu", i);
-        swatch_objects_[i] = lv_obj_find_by_name(overlay_root_, swatch_name);
-        if (!swatch_objects_[i]) {
-            spdlog::trace("[{}] Swatch '{}' not found (may be added later)", get_name(),
-                          swatch_name);
-        }
+        swatch_objects_[i] = lv_obj_find_by_name(search_root, swatch_name);
     }
 
     spdlog::debug("[{}] Created overlay", get_name());
@@ -394,19 +391,12 @@ void ThemeEditorOverlay::on_swatch_clicked(lv_event_t* e) {
     if (target) {
         // Determine which swatch was clicked by checking against our stored references
         auto& overlay = get_theme_editor_overlay();
-        bool found = false;
         for (size_t i = 0; i < overlay.swatch_objects_.size(); ++i) {
             if (overlay.swatch_objects_[i] == target) {
                 overlay.handle_swatch_click(static_cast<int>(i));
-                found = true;
                 break;
             }
         }
-        if (!found) {
-            spdlog::warn("[ThemeEditorOverlay] on_swatch_clicked: unknown swatch target");
-        }
-    } else {
-        spdlog::warn("[ThemeEditorOverlay] on_swatch_clicked: no target");
     }
 
     LVGL_SAFE_EVENT_CB_END();

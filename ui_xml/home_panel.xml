@@ -23,17 +23,20 @@
   <view extends="lv_obj"
         width="100%" height="100%" style_pad_all="0" style_pad_gap="0" style_border_width="0" flex_flow="column"
         style_bg_color="#app_bg_color" scrollable="false">
-    
+
     <!-- Top section: Printer visualization + Tip -->
-    <lv_obj width="100%" flex_grow="2" style_bg_opa="0" style_border_width="0" style_pad_all="#space_sm"
-            style_pad_left="0" style_pad_gap="0" flex_flow="row" style_flex_main_place="center" 
-            style_flex_cross_place="center" scrollable="false">
+    <lv_obj width="100%"
+            flex_grow="2" style_bg_opa="0" style_border_width="0" style_pad_all="#space_sm" style_pad_left="0"
+            style_pad_gap="0" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
+            scrollable="false">
 
       <!-- Printer Image Container: fixed percentage width, image scales to fit via inner_align="contain" -->
-      <lv_obj flex_flow="column" width="#printer_container_width" height="100%" style_bg_opa="0" style_border_width="0"
-              style_pad_all="0" style_pad_right="#space_sm" style_pad_gap="0" scrollable="false">
-        <lv_obj name="printer_container" flex_grow="1" width="100%" style_bg_opa="0%" style_border_width="0"
-                style_pad_all="0" style_pad_bottom="0" scrollable="false" align="center" flex_flow="row">
+      <lv_obj width="#printer_container_width"
+              height="100%" flex_flow="column" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+              style_pad_right="#space_sm" style_pad_gap="0" scrollable="false">
+        <lv_obj name="printer_container"
+                width="100%" flex_grow="1" style_bg_opa="0%" style_border_width="0" style_pad_all="0"
+                style_pad_bottom="0" scrollable="false" align="center" flex_flow="row">
           <lv_image name="printer_image" width="100%" height="100%" align="center" inner_align="contain">
             <!-- Dim image when disconnected (state 0) or connecting (state 1) -->
             <bind_style name="image_dimmed" subject="printer_connection_state" ref_value="0"/>
@@ -47,18 +50,20 @@
             <bind_flag_if_eq subject="printer_connection_state" flag="hidden" ref_value="2"/>
           </icon>
           <!-- Shutdown overlay - shown when klippy is SHUTDOWN (state 2) -->
-          <icon name="shutdown_overlay" src="alert_octagon" size="xl" align="center" color="#warning_color" hidden="true">
+          <icon name="shutdown_overlay"
+                src="alert_octagon" size="xl" align="center" color="#warning_color" hidden="true">
             <bind_flag_if_not_eq subject="klippy_state" flag="hidden" ref_value="2"/>
           </icon>
-        </lv_obj> <!-- printer_container -->
+        </lv_obj>
+        <!-- printer_container -->
 
         <!-- Printer info - subtle text at bottom -->
         <lv_obj name="printer_info_bar"
                 width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0">
           <bind_flag_if_eq subject="printer_info_visible" flag="hidden" ref_value="0"/>
-          <text_small width="100%" height="content"
-                      bind_text="printer_type_text" style_text_color="#text_primary" style_text_align="center"
-                      stroke_width="1" stroke_color="#000000" stroke_opa="180"/>
+          <text_small width="100%"
+                      height="content" bind_text="printer_type_text" style_text_color="#text_primary"
+                      style_text_align="center" stroke_width="1" stroke_color="#000000" stroke_opa="180"/>
         </lv_obj>
       </lv_obj>
 
@@ -87,8 +92,8 @@
 
     <!-- Bottom section: Info cards (40% of height via flex_grow="2", balances with top section's flex_grow="3") -->
     <lv_obj width="100%"
-            flex_grow="2" flex_flow="row" style_flex_cross_place="start" style_bg_opa="0%" style_border_width="0" 
-            style_pad_all="#space_sm" style_pad_left="0" style_pad_gap="#space_md"  scrollable="false">
+            flex_grow="2" flex_flow="row" style_flex_cross_place="start" style_bg_opa="0%" style_border_width="0"
+            style_pad_all="#space_sm" style_pad_left="0" style_pad_gap="#space_md" scrollable="false">
 
       <!-- Print Files Card - Benchy thumbnail + text in horizontal layout -->
       <!-- Disabled when not connected (state != 2) using LVGL's native disabled state -->
@@ -337,8 +342,7 @@
             <bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
             <bind_state_if_not_eq subject="printer_connection_state" state="disabled" ref_value="2"/>
             <!-- Dynamic icon - source and color set by C++ based on LED brightness/color -->
-            <icon name="light_icon"
-                  src="lightbulb_outline" size="#icon_size_card" align="center" color="#theme_gray"/>
+            <icon name="light_icon" src="lightbulb_outline" size="#icon_size_card" align="center" color="#theme_gray"/>
             <event_cb trigger="clicked" callback="light_toggle_cb"/>
           </lv_button>
 

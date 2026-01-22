@@ -145,7 +145,7 @@ static void ensure_ams_widgets_registered() {
     lv_xml_register_component_from_file("A:ui_xml/spoolman_spool_item.xml");
     lv_xml_register_component_from_file("A:ui_xml/spoolman_picker_modal.xml");
     lv_xml_register_component_from_file("A:ui_xml/ams_edit_modal.xml");
-    lv_xml_register_component_from_file("A:ui_xml/color_picker.xml");
+    // NOTE: color_picker.xml is registered at startup in xml_registration.cpp
 
     s_ams_widgets_registered = true;
     spdlog::debug("[AMS Panel] Widget and XML registration complete");

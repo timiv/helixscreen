@@ -30,15 +30,17 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#bg_darkest"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_0"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#bg_darkest" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
               <text_body text="Dark Background" style_text_color="#text_primary"/>
-              <text_small text="Dark mode app background" style_text_color="#text_secondary"/>
+              <text_small text="#swatch_0_desc" style_text_color="#text_secondary"/>
             </lv_obj>
           </lv_obj>
           <lv_obj width="0"
@@ -46,15 +48,17 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#bg_dark"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_1"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#bg_dark" style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey"
+                    style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
               <text_body text="Card Surface" style_text_color="#text_primary"/>
-              <text_small text="Elevated surfaces and cards" style_text_color="#text_secondary"/>
+              <text_small text="#swatch_1_desc" style_text_color="#text_secondary"/>
             </lv_obj>
           </lv_obj>
         </lv_obj>
@@ -66,15 +70,17 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#bg_dark_highlight"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_2"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#bg_dark_highlight" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
               <text_body text="Selection Highlight" style_text_color="#text_primary"/>
-              <text_small text="Selection/highlight background" style_text_color="#text_secondary"/>
+              <text_small text="#swatch_2_desc" style_text_color="#text_secondary"/>
             </lv_obj>
           </lv_obj>
           <lv_obj width="0"
@@ -82,15 +88,17 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#border_muted"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_3"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#border_muted" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
               <text_body text="Borders &amp; Muted" style_text_color="#text_primary"/>
-              <text_small text="Borders, dividers, and muted text" style_text_color="#text_secondary"/>
+              <text_small text="#swatch_3_desc" style_text_color="#text_secondary"/>
             </lv_obj>
           </lv_obj>
         </lv_obj>
@@ -102,15 +110,17 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#text_light"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_4"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#text_light" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
               <text_body text="Light Text" style_text_color="#text_primary"/>
-              <text_small text="Primary text on dark surfaces" style_text_color="#text_secondary"/>
+              <text_small text="#swatch_4_desc" style_text_color="#text_secondary"/>
             </lv_obj>
           </lv_obj>
           <lv_obj width="0"
@@ -118,10 +128,12 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#bg_light"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_5"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#bg_light" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
@@ -138,10 +150,12 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#bg_lightest"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_6"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#bg_lightest" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
@@ -154,10 +168,12 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#accent_highlight"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_7"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#accent_highlight" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
@@ -174,10 +190,12 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#accent_primary"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_8"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#accent_primary" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
@@ -190,10 +208,12 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#accent_secondary"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_9"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#accent_secondary" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
@@ -210,10 +230,12 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#accent_tertiary"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_10"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#accent_tertiary" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
@@ -226,10 +248,12 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#status_error"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_11"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#status_error" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
@@ -246,10 +270,12 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#status_danger"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_12"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#status_danger" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
@@ -262,10 +288,12 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#status_warning"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_13"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#status_warning" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
@@ -282,10 +310,12 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#status_success"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_14"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#status_success" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
@@ -298,10 +328,12 @@
                   style_bg_color="#card_bg" style_bg_opa="255" style_radius="#border_radius_small"
                   style_border_width="1" style_border_color="#theme_grey" style_border_opa="40"
                   style_flex_cross_place="center" scrollable="false">
-            <lv_obj width="#color_preview_size"
-                    height="#color_preview_size" style_radius="#border_radius_small" style_bg_color="#status_special"
-                    style_bg_opa="255" style_border_width="1" style_border_color="#theme_grey" style_border_opa="80"
-                    scrollable="false"/>
+            <lv_obj name="swatch_15"
+                    width="#color_preview_size" height="#color_preview_size" style_radius="#border_radius_small"
+                    style_bg_color="#status_special" style_bg_opa="255" style_border_width="1"
+                    style_border_color="#theme_grey" style_border_opa="80" scrollable="false" clickable="true">
+              <event_cb trigger="clicked" callback="on_theme_swatch_clicked"/>
+            </lv_obj>
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
@@ -317,58 +349,52 @@
       <setting_section_header title="STYLE PROPERTIES" icon="tune_variant"/>
 
       <setting_slider_row name="row_border_radius"
-                          label="Border Radius" icon="cube"
-                          description="Corner roundness (0 = sharp, 20 = very round)"
+                          label="Border Radius" icon="cube" description="Corner roundness (0 = sharp, 20 = very round)"
                           min="0" max="20" value="8" min_icon="minus" max_icon="plus"
                           callback="on_border_radius_changed"/>
 
       <setting_slider_row name="row_border_width"
-                          label="Border Width" icon="ruler"
-                          description="Default border thickness"
-                          min="0" max="4" value="1" min_icon="minus" max_icon="plus"
-                          callback="on_border_width_changed"/>
+                          label="Border Width" icon="ruler" description="Default border thickness" min="0" max="4"
+                          value="1" min_icon="minus" max_icon="plus" callback="on_border_width_changed"/>
 
       <setting_slider_row name="row_border_opacity"
                           label="Border Opacity" icon="layers"
-                          description="Border transparency (0 = invisible, 255 = solid)"
-                          min="0" max="255" value="128" min_icon="minus" max_icon="plus"
-                          callback="on_border_opacity_changed"/>
+                          description="Border transparency (0 = invisible, 255 = solid)" min="0" max="255" value="128"
+                          min_icon="minus" max_icon="plus" callback="on_border_opacity_changed"/>
 
       <setting_slider_row name="row_shadow_intensity"
-                          label="Shadow Intensity" icon="animation"
-                          description="Drop shadow strength (0 = disabled)"
-                          min="0" max="50" value="0" min_icon="minus" max_icon="plus"
-                          callback="on_shadow_changed"/>
+                          label="Shadow Intensity" icon="animation" description="Drop shadow strength (0 = disabled)"
+                          min="0" max="50" value="0" min_icon="minus" max_icon="plus" callback="on_shadow_changed"/>
 
       <!-- ================================================================== -->
       <!-- ACTION BUTTONS -->
       <!-- ================================================================== -->
-      <lv_obj name="action_buttons" width="100%" height="content"
-              style_pad_left="#space_lg" style_pad_right="#space_lg" style_pad_top="#space_lg"
-              style_pad_bottom="#space_lg" flex_flow="row" style_pad_gap="#space_md"
+      <lv_obj name="action_buttons"
+              width="100%" height="content" style_pad_left="#space_lg" style_pad_right="#space_lg"
+              style_pad_top="#space_lg" style_pad_bottom="#space_lg" flex_flow="row" style_pad_gap="#space_md"
               style_bg_opa="0" style_border_width="0" scrollable="false">
 
-        <lv_button name="btn_revert" flex_grow="1" height="#button_height"
-                   style_radius="#border_radius" style_bg_color="#card_bg" style_bg_opa="255"
-                   style_border_width="1" style_border_color="#text_secondary" style_border_opa="80"
-                   style_shadow_width="0">
+        <lv_button name="btn_revert"
+                   height="#button_height" flex_grow="1" style_radius="#border_radius" style_bg_color="#card_bg"
+                   style_bg_opa="255" style_border_width="1" style_border_color="#text_secondary" style_border_opa="80"
+                   style_shadow_width="0" scroll_on_focus="false">
           <event_cb trigger="clicked" callback="on_theme_revert_clicked"/>
           <text_body text="Revert" align="center" style_text_color="#text_primary"/>
         </lv_button>
 
-        <lv_button name="btn_save_as" flex_grow="1" height="#button_height"
-                   style_radius="#border_radius" style_bg_color="#card_bg" style_bg_opa="255"
-                   style_border_width="1" style_border_color="#text_secondary" style_border_opa="80"
-                   style_shadow_width="0">
+        <lv_button name="btn_save_as"
+                   height="#button_height" flex_grow="1" style_radius="#border_radius" style_bg_color="#card_bg"
+                   style_bg_opa="255" style_border_width="1" style_border_color="#text_secondary" style_border_opa="80"
+                   style_shadow_width="0" scroll_on_focus="false">
           <event_cb trigger="clicked" callback="on_theme_save_as_clicked"/>
           <text_body text="Save As New" align="center" style_text_color="#text_primary"/>
         </lv_button>
 
-        <lv_button name="btn_save" flex_grow="1" height="#button_height"
-                   style_radius="#border_radius" style_bg_color="#accent_primary" style_bg_opa="255"
-                   style_border_width="0" style_shadow_width="0">
+        <lv_button name="btn_save"
+                   height="#button_height" flex_grow="1" style_radius="#border_radius" style_bg_color="#accent_primary"
+                   style_bg_opa="255" style_border_width="0" style_shadow_width="0" scroll_on_focus="false">
           <event_cb trigger="clicked" callback="on_theme_save_clicked"/>
-          <text_body text="Save" align="center" style_text_color="#text_light"/>
+          <text_body text="Save" align="center" style_text_color="#text_primary"/>
         </lv_button>
       </lv_obj>
 

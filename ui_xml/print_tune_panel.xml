@@ -24,7 +24,8 @@
                 flex_flow="column" style_pad_gap="#space_sm" flag_overflow_visible="true" scrollable="false">
           <text_small text="Print Speed"/>
           <text_heading name="speed_display" bind_text="tune_speed_display"/>
-          <lv_slider name="speed_slider" width="100%" height="#space_lg" min_value="50" max_value="200" value="100"
+          <lv_slider name="speed_slider"
+                     width="100%" height="#space_lg" min_value="50" max_value="200" value="100"
                      style_bg_color="#theme_grey" style_radius="#space_md">
             <event_cb trigger="value_changed" callback="on_tune_speed_display"/>
             <event_cb trigger="released" callback="on_tune_speed_send"/>
@@ -37,7 +38,8 @@
                 flex_flow="column" style_pad_gap="#space_sm" flag_overflow_visible="true" scrollable="false">
           <text_small text="Flow Rate"/>
           <text_heading name="flow_display" bind_text="tune_flow_display"/>
-          <lv_slider name="flow_slider" width="100%" height="#space_lg" min_value="75" max_value="125" value="100"
+          <lv_slider name="flow_slider"
+                     width="100%" height="#space_lg" min_value="75" max_value="125" value="100"
                      style_bg_color="#theme_grey" style_radius="#space_md">
             <event_cb trigger="value_changed" callback="on_tune_flow_display"/>
             <event_cb trigger="released" callback="on_tune_flow_send"/>
@@ -57,8 +59,8 @@
       <lv_obj flex_grow="1" style_bg_opa="0" style_border_width="0" scrollable="false"/>
       <!-- Z-Offset Baby Stepping Section -->
       <lv_obj name="z_offset_section"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-              flex_flow="column" style_pad_gap="#space_xs" scrollable="false">
+              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+              style_pad_gap="#space_xs" scrollable="false">
         <!-- Header Row -->
         <lv_obj width="100%"
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
@@ -71,10 +73,10 @@
         <lv_obj width="100%"
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
                 style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false">
-         
+
           <!-- Amount selector buttons (radio-style, one selected at a time) -->
-          <lv_obj flex_grow="1"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+          <lv_obj height="content"
+                  flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
                   style_flex_cross_place="center" style_pad_gap="#space_xxs" scrollable="false">
             <lv_button name="btn_z_amount_005"
                        height="#button_height" flex_grow="1" style_radius="#border_radius" style_border_width="0">
@@ -141,7 +143,8 @@
         </lv_obj>
         <text_small text="Closer = more squish | Farther = less squish" style_text_color="#text_secondary"/>
         <text_small name="z_offset_help_text"
-                    text="Temporary adjustment for this print, unless saved on Controls panel" style_text_color="#text_secondary"/>
+                    text="Temporary adjustment for this print, unless saved on Controls panel"
+                    style_text_color="#text_secondary"/>
       </lv_obj>
     </lv_obj>
   </view>

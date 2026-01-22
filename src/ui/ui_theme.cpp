@@ -47,6 +47,25 @@ lv_color_t ui_theme_parse_hex_color(const char* hex_str) {
     return lv_color_hex(hex);
 }
 
+/**
+ * @brief Darken a hex color string by a percentage
+ * @param hex_str Color in "#RRGGBB" format
+ * @param percent Percentage to keep (0.0-1.0), e.g., 0.7 = 70% brightness
+ * @return New hex string (static buffer, not thread-safe)
+ */
+static const char* darken_hex_color(const char* hex_str, float percent) {
+    static char result[8];
+    if (!hex_str || hex_str[0] != '#' || strlen(hex_str) < 7) {
+        return hex_str; // Return original on error
+    }
+    uint32_t hex = static_cast<uint32_t>(strtoul(hex_str + 1, NULL, 16));
+    uint8_t r = static_cast<uint8_t>(((hex >> 16) & 0xFF) * percent);
+    uint8_t g = static_cast<uint8_t>(((hex >> 8) & 0xFF) * percent);
+    uint8_t b = static_cast<uint8_t>((hex & 0xFF) * percent);
+    snprintf(result, sizeof(result), "#%02x%02x%02x", r, g, b);
+    return result;
+}
+
 // No longer needed - helix_theme.c handles all color patching and input widget styling
 
 /**
@@ -379,6 +398,25 @@ static void ui_theme_register_semantic_colors(lv_xml_component_scope_t* scope,
     lv_xml_register_const(scope, "success_color", c.status_success.c_str());
     lv_xml_register_const(scope, "special_color", c.status_special.c_str());
     lv_xml_register_const(scope, "info_color", c.accent_primary.c_str());
+
+    // Theme editor swatch descriptions (mode-dependent for background/text colors)
+    register_themed("swatch_0_desc", "App background", "Primary text");
+    register_themed("swatch_1_desc", "Card surfaces", "Header text");
+    register_themed("swatch_2_desc", "Selection highlight", "Selection highlight");
+    register_themed("swatch_3_desc", "Borders and dividers", "Secondary text");
+    register_themed("swatch_4_desc", "Secondary text", "Borders and dividers");
+    register_themed("swatch_5_desc", "Header text", "Card surfaces");
+    register_themed("swatch_6_desc", "Primary text", "App background");
+    // Accent/status colors - same in both modes
+    lv_xml_register_const(scope, "swatch_7_desc", "Subtle accents and highlights");
+    lv_xml_register_const(scope, "swatch_8_desc", "Primary accents and links");
+    lv_xml_register_const(scope, "swatch_9_desc", "Secondary accents");
+    lv_xml_register_const(scope, "swatch_10_desc", "Tertiary accents and icons");
+    lv_xml_register_const(scope, "swatch_11_desc", "Error states and alerts");
+    lv_xml_register_const(scope, "swatch_12_desc", "Warning banners");
+    lv_xml_register_const(scope, "swatch_13_desc", "Attention highlights");
+    lv_xml_register_const(scope, "swatch_14_desc", "Success confirmations");
+    lv_xml_register_const(scope, "swatch_15_desc", "Special accents");
 
     spdlog::debug("[Theme] Registered semantic colors from palette");
 }

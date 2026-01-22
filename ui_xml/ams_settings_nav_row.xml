@@ -15,8 +15,7 @@
   <!-- Root button - receives all bubbled click events -->
   <view name="ams_settings_nav_row"
         extends="lv_button" width="100%" height="content" style_bg_color="#card_bg" style_bg_opa="255"
-        style_border_width="0" style_pad_all="0" style_shadow_width="0" style_radius="#border_radius"
-        scrollable="false">
+        style_border_width="0" style_pad_all="0" style_shadow_width="0" style_radius="#border_radius" scrollable="false">
     <!-- Content container: clickable=false so clicks bubble to button -->
     <lv_obj width="100%"
             height="content" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
@@ -26,9 +25,12 @@
       <!-- Left side: Icon -->
       <icon name="row_icon" src="$icon" size="sm" variant="secondary" clickable="false" event_bubble="true"/>
       <!-- Middle: Label (flex_grow fills available space) -->
-      <text_body name="label" text="$label" style_text_color="#text_primary" flex_grow="1" clickable="false" event_bubble="true"/>
+      <text_body name="label"
+                 text="$label" style_text_color="#text_primary" flex_grow="1" clickable="false" event_bubble="true"/>
       <!-- Right side: Summary text (optional, supports both static and bound) -->
-      <text_body name="summary" text="$summary" bind_text="$summary_bind" style_text_color="#text_secondary" clickable="false" event_bubble="true"/>
+      <text_body name="summary"
+                 text="$summary" bind_text="$summary_bind" style_text_color="#text_secondary" clickable="false"
+                 event_bubble="true"/>
       <!-- Right side: Chevron icon -->
       <icon src="chevron_right" size="sm" variant="secondary" clickable="false" event_bubble="true"/>
     </lv_obj>

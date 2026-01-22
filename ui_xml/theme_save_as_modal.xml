@@ -16,7 +16,9 @@
       <!-- Title -->
       <text_heading width="100%" text="Save Theme As" style_text_align="center"/>
       <!-- Instructions -->
-      <text_small width="100%" text="Enter a name for your custom theme:" style_text_align="center" style_text_color="#text_secondary"/>
+      <text_small width="100%"
+                  text="Enter a name for your custom theme:" style_text_align="center"
+                  style_text_color="#text_secondary"/>
       <!-- Theme name input -->
       <lv_textarea name="theme_name_input"
                    width="100%" height="#input_height" placeholder="My Custom Theme" max_length="32" one_line="true"

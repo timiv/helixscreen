@@ -22,9 +22,8 @@
 
 #pragma once
 
-#include "lvgl/lvgl.h"
-
 #include "filament_sensor_types.h"
+#include "lvgl/lvgl.h"
 
 #include <string>
 #include <vector>

@@ -86,6 +86,10 @@ void AmsColorPicker::set_color_callback(ColorCallback callback) {
     color_callback_ = std::move(callback);
 }
 
+void AmsColorPicker::set_dismiss_callback(std::function<void()> callback) {
+    dismiss_callback_ = std::move(callback);
+}
+
 bool AmsColorPicker::show_with_color(lv_obj_t* parent, uint32_t initial_color) {
     // Register callbacks once (idempotent)
     register_callbacks();
@@ -149,6 +153,11 @@ void AmsColorPicker::on_hide() {
     // because the destructor calls deinit_subjects() before the Modal base destructor
     // calls on_hide(), which would leave us with stale observer pointers.
     spdlog::debug("[AmsColorPicker] on_hide()");
+
+    // Call dismiss callback if set (fires on any close - select, cancel, or backdrop)
+    if (dismiss_callback_) {
+        dismiss_callback_();
+    }
 }
 
 void AmsColorPicker::on_cancel() {

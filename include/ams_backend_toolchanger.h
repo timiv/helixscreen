@@ -127,7 +127,8 @@ class AmsBackendToolChanger : public AmsBackend {
     // Device Actions (stub - not applicable for tool changers)
     [[nodiscard]] std::vector<helix::printer::DeviceSection> get_device_sections() const override;
     [[nodiscard]] std::vector<helix::printer::DeviceAction> get_device_actions() const override;
-    AmsError execute_device_action(const std::string& action_id, const std::any& value = {}) override;
+    AmsError execute_device_action(const std::string& action_id,
+                                   const std::any& value = {}) override;
 
   private:
     /**

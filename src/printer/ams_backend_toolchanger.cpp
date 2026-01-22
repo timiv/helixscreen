@@ -625,7 +625,7 @@ std::vector<helix::printer::DeviceAction> AmsBackendToolChanger::get_device_acti
 }
 
 AmsError AmsBackendToolChanger::execute_device_action(const std::string& action_id,
-                                                       const std::any& value) {
+                                                      const std::any& value) {
     (void)action_id;
     (void)value;
     return AmsErrorHelper::not_supported("Device actions");
