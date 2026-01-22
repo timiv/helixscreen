@@ -25,6 +25,13 @@ LV_FONT_DECLARE(noto_sans_24);
 LV_FONT_DECLARE(noto_sans_26);
 LV_FONT_DECLARE(noto_sans_28);
 
+// Noto Sans - Light weight with extended Unicode (for text_small)
+LV_FONT_DECLARE(noto_sans_light_10);
+LV_FONT_DECLARE(noto_sans_light_12);
+LV_FONT_DECLARE(noto_sans_light_14);
+LV_FONT_DECLARE(noto_sans_light_16);
+LV_FONT_DECLARE(noto_sans_light_18);
+
 // Noto Sans - Bold weight with extended Unicode
 LV_FONT_DECLARE(noto_sans_bold_14);
 LV_FONT_DECLARE(noto_sans_bold_16);

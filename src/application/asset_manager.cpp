@@ -56,6 +56,13 @@ void AssetManager::register_fonts() {
     lv_xml_register_font(NULL, "noto_sans_26", &noto_sans_26);
     lv_xml_register_font(NULL, "noto_sans_28", &noto_sans_28);
 
+    // Noto Sans Light fonts (for text_small)
+    lv_xml_register_font(NULL, "noto_sans_light_10", &noto_sans_light_10);
+    lv_xml_register_font(NULL, "noto_sans_light_12", &noto_sans_light_12);
+    lv_xml_register_font(NULL, "noto_sans_light_14", &noto_sans_light_14);
+    lv_xml_register_font(NULL, "noto_sans_light_16", &noto_sans_light_16);
+    lv_xml_register_font(NULL, "noto_sans_light_18", &noto_sans_light_18);
+
     // Noto Sans Bold fonts
     lv_xml_register_font(NULL, "noto_sans_bold_14", &noto_sans_bold_14);
     lv_xml_register_font(NULL, "noto_sans_bold_16", &noto_sans_bold_16);
