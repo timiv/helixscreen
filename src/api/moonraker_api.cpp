@@ -98,7 +98,10 @@ MoonrakerAPI::~MoonrakerAPI() {
             std::this_thread::sleep_for(kPollInterval);
         }
 
-        if (joined.load()) {
+        // Use joinable() check - returns false after detach(), preventing UB
+        // from calling join() on a detached thread (race between timeout and
+        // helper completion)
+        if (join_helper.joinable()) {
             join_helper.join();
         }
     }
