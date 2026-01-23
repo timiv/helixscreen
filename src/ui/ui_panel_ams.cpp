@@ -6,6 +6,7 @@
 #include "ui_ams_dryer_card.h"
 #include "ui_ams_settings_overlay.h"
 #include "ui_ams_slot.h"
+#include "ui_ams_slot_edit_popup.h"
 #include "ui_endless_spool_arrows.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
@@ -147,6 +148,7 @@ static void ensure_ams_widgets_registered() {
     lv_xml_register_component_from_file("A:ui_xml/ams_settings_device_actions.xml");
     lv_xml_register_component_from_file("A:ui_xml/ams_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/ams_context_menu.xml");
+    lv_xml_register_component_from_file("A:ui_xml/ams_slot_edit_popup.xml");
     lv_xml_register_component_from_file("A:ui_xml/spoolman_spool_item.xml");
     lv_xml_register_component_from_file("A:ui_xml/spoolman_picker_modal.xml");
     lv_xml_register_component_from_file("A:ui_xml/ams_edit_modal.xml");
@@ -394,6 +396,7 @@ void AmsPanel::clear_panel_reference() {
     dryer_card_.reset();
     spoolman_picker_.reset();
     context_menu_.reset();
+    slot_edit_popup_.reset();
     edit_modal_.reset();
 
     // Clear observer guards BEFORE clearing widget pointers (they reference widgets)
@@ -1380,6 +1383,55 @@ void AmsPanel::show_context_menu(int slot_index, lv_obj_t* near_widget) {
 
     // Show the menu near the slot widget
     context_menu_->show_near_widget(parent_screen_, slot_index, near_widget, is_loaded);
+}
+
+// ============================================================================
+// Slot Edit Popup Management (delegates to helix::ui::AmsSlotEditPopup)
+// ============================================================================
+
+void AmsPanel::show_slot_edit_popup(int slot_index, lv_obj_t* near_widget) {
+    if (!parent_screen_ || !near_widget) {
+        return;
+    }
+
+    // Create popup on first use
+    if (!slot_edit_popup_) {
+        slot_edit_popup_ = std::make_unique<helix::ui::AmsSlotEditPopup>();
+    }
+
+    AmsBackend* backend = AmsState::instance().get_backend();
+
+    // Set callbacks for load/unload actions
+    slot_edit_popup_->set_load_callback([this](int slot) {
+        AmsBackend* backend = AmsState::instance().get_backend();
+        if (!backend) {
+            NOTIFY_WARNING("AMS not available");
+            return;
+        }
+        // Check if backend is busy
+        AmsSystemInfo info = backend->get_system_info();
+        if (info.action != AmsAction::IDLE && info.action != AmsAction::ERROR) {
+            NOTIFY_WARNING("AMS is busy: {}", ams_action_to_string(info.action));
+            return;
+        }
+        // Use preheat-aware load
+        this->handle_load_with_preheat(slot);
+    });
+
+    slot_edit_popup_->set_unload_callback([]() {
+        AmsBackend* backend = AmsState::instance().get_backend();
+        if (!backend) {
+            NOTIFY_WARNING("AMS not available");
+            return;
+        }
+        AmsError error = backend->unload_filament();
+        if (error.result != AmsResult::SUCCESS) {
+            NOTIFY_ERROR("Unload failed: {}", error.user_msg);
+        }
+    });
+
+    // Show the popup near the slot widget
+    slot_edit_popup_->show_for_slot(parent_screen_, slot_index, near_widget, backend);
 }
 
 // ============================================================================
