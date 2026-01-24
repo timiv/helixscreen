@@ -181,6 +181,7 @@ lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
     lv_style_init(&helix_theme_instance->input_bg_style);
     lv_style_set_bg_color(&helix_theme_instance->input_bg_style, theme_grey);
     lv_style_set_bg_opa(&helix_theme_instance->input_bg_style, LV_OPA_COVER);
+    lv_style_set_text_color(&helix_theme_instance->input_bg_style, text_primary_color);
 
     // Initialize global disabled state style (50% opacity)
     lv_style_init(&helix_theme_instance->disabled_style);
@@ -294,8 +295,9 @@ void theme_core_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t car
     // Update our custom styles in-place
     helix_theme_instance->is_dark_mode = is_dark;
 
-    // Input widgets use border_muted color (theme_grey)
+    // Input widgets use border_muted color (theme_grey) and text_primary for text
     lv_style_set_bg_color(&helix_theme_instance->input_bg_style, theme_grey);
+    lv_style_set_text_color(&helix_theme_instance->input_bg_style, text_primary_color);
 
     // Update button style colors
     lv_style_set_bg_color(&helix_theme_instance->button_style, theme_grey);
@@ -374,8 +376,9 @@ void theme_core_preview_colors(bool is_dark, const char* colors[16], int32_t bor
     // Update the helix_theme instance
     helix_theme_instance->is_dark_mode = is_dark;
 
-    // Input widgets use border_muted color
+    // Input widgets use border_muted color and text_primary for text
     lv_style_set_bg_color(&helix_theme_instance->input_bg_style, border_muted);
+    lv_style_set_text_color(&helix_theme_instance->input_bg_style, text_primary);
 
     // Update button style
     lv_style_set_bg_color(&helix_theme_instance->button_style, border_muted);
