@@ -5,9 +5,8 @@
 
 #include "nozzle_renderer_bambu.h"
 
-#include "ui_theme.h"
-
 #include "nozzle_renderer_common.h"
+#include "theme_manager.h"
 
 void draw_nozzle_bambu(lv_layer_t* layer, int32_t cx, int32_t cy, lv_color_t filament_color,
                        int32_t scale_unit) {
@@ -16,7 +15,7 @@ void draw_nozzle_bambu(lv_layer_t* layer, int32_t cx, int32_t cy, lv_color_t fil
     // cy is the CENTER of the entire print head assembly
 
     // Base colors - light gray metallic (like Bambu's silver/white head)
-    lv_color_t metal_base = ui_theme_get_color("filament_metal");
+    lv_color_t metal_base = theme_manager_get_color("filament_metal");
 
     // Lighting: light comes from top-left
     lv_color_t front_light = nr_lighten(metal_base, 40);
@@ -226,8 +225,8 @@ void draw_nozzle_bambu(lv_layer_t* layer, int32_t cx, int32_t cy, lv_color_t fil
         lv_color_t tip_right = nr_darken(metal_base, 20);
 
         // If filament loaded, tint the nozzle tip
-        lv_color_t nozzle_dark = ui_theme_get_color("filament_nozzle_dark");
-        lv_color_t nozzle_light = ui_theme_get_color("filament_nozzle_light");
+        lv_color_t nozzle_dark = theme_manager_get_color("filament_nozzle_dark");
+        lv_color_t nozzle_light = theme_manager_get_color("filament_nozzle_light");
         if (!lv_color_eq(filament_color, nr_darken(metal_base, 10)) &&
             !lv_color_eq(filament_color, nozzle_dark) &&
             !lv_color_eq(filament_color, nozzle_light)) {

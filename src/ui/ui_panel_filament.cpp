@@ -12,7 +12,6 @@
 #include "ui_panel_temp_control.h"
 #include "ui_subject_registry.h"
 #include "ui_temperature_utils.h"
-#include "ui_theme.h"
 #include "ui_update_queue.h"
 #include "ui_utils.h"
 
@@ -26,6 +25,7 @@
 #include "printer_state.h"
 #include "standard_macros.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>

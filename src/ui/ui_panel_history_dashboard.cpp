@@ -7,7 +7,6 @@
 #include "ui_nav_manager.h"
 #include "ui_panel_common.h"
 #include "ui_panel_history_list.h"
-#include "ui_theme.h"
 #include "ui_toast.h"
 #include "ui_utils.h"
 
@@ -17,6 +16,7 @@
 #include "moonraker_client.h"
 #include "printer_state.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -505,7 +505,7 @@ void HistoryDashboardPanel::create_trend_chart() {
     // Series line style - use secondary color (gold) for visibility
     // Must resolve XML constant first, then parse the hex string
     const char* secondary_str = lv_xml_get_const(nullptr, "secondary_color");
-    lv_color_t line_color = secondary_str ? ui_theme_parse_hex_color(secondary_str)
+    lv_color_t line_color = secondary_str ? theme_manager_parse_hex_color(secondary_str)
                                           : lv_color_hex(0xD4A84B); // Fallback gold
     lv_obj_set_style_line_width(trend_chart_, 2, LV_PART_ITEMS);
     lv_obj_set_style_line_color(trend_chart_, line_color, LV_PART_ITEMS);
@@ -734,7 +734,7 @@ void HistoryDashboardPanel::update_filament_chart(const std::vector<PrintHistory
     lv_color_t primary_color = lv_color_hex(0xB83232); // Fallback red
     const char* primary_str = lv_xml_get_const(nullptr, "primary_color");
     if (primary_str) {
-        primary_color = ui_theme_parse_hex_color(primary_str);
+        primary_color = theme_manager_parse_hex_color(primary_str);
     }
 
     // Convert primary to HSV to generate palette
@@ -769,7 +769,7 @@ void HistoryDashboardPanel::update_filament_chart(const std::vector<PrintHistory
     lv_color_t text_primary = lv_color_hex(0xE6E8F0); // Fallback (text_primary_dark)
     const char* text_primary_str = lv_xml_get_const(nullptr, "text_primary");
     if (text_primary_str) {
-        text_primary = ui_theme_parse_hex_color(text_primary_str);
+        text_primary = theme_manager_parse_hex_color(text_primary_str);
     }
 
     // Create labeled bar rows

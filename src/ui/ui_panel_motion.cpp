@@ -11,7 +11,6 @@
 #include "ui_panel_common.h"
 #include "ui_panel_singleton_macros.h"
 #include "ui_subject_registry.h"
-#include "ui_theme.h"
 #include "ui_utils.h"
 
 #include "app_globals.h"
@@ -19,6 +18,7 @@
 #include "observer_factory.h"
 #include "printer_state.h"
 #include "subject_managed_panel.h"
+#include "theme_manager.h"
 #include "unit_conversions.h"
 
 #include <spdlog/spdlog.h>

@@ -5,11 +5,11 @@
 
 #include "ui_fonts.h"
 #include "ui_icon_codepoints.h"
-#include "ui_theme.h"
 
 #include "app_globals.h"
 #include "printer_state.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 
 #include <lvgl/lvgl.h>
 #include <spdlog/spdlog.h>
@@ -31,12 +31,12 @@ static lv_obj_t* create_icon_item(lv_obj_t* parent, const ui_icon::IconMapping& 
     lv_obj_t* item = lv_obj_create(parent);
     lv_obj_set_width(item, LV_PCT(100));
     lv_obj_set_height(item, LV_SIZE_CONTENT);
-    lv_obj_set_style_bg_color(item, ui_theme_get_color("card_bg"), 0);
+    lv_obj_set_style_bg_color(item, theme_manager_get_color("card_bg"), 0);
     lv_obj_set_style_bg_opa(item, LV_OPA_COVER, 0);
     lv_obj_set_style_pad_all(item, 8, 0);
     lv_obj_set_style_radius(item, 8, 0);
     lv_obj_set_style_border_width(item, 1, 0);
-    lv_obj_set_style_border_color(item, ui_theme_get_color("text_secondary"), 0);
+    lv_obj_set_style_border_color(item, theme_manager_get_color("text_secondary"), 0);
     lv_obj_set_style_border_opa(item, LV_OPA_50, 0);
 
     // Flex row layout: [Icon] Name
@@ -47,14 +47,14 @@ static lv_obj_t* create_icon_item(lv_obj_t* parent, const ui_icon::IconMapping& 
     // Icon label - use MDI font with UTF-8 codepoint
     lv_obj_t* icon_label = lv_label_create(item);
     lv_label_set_text(icon_label, icon.codepoint);
-    lv_obj_set_style_text_color(icon_label, ui_theme_get_color("text_primary"), 0);
+    lv_obj_set_style_text_color(icon_label, theme_manager_get_color("text_primary"), 0);
     lv_obj_set_style_text_font(icon_label, &mdi_icons_48, 0);
     lv_obj_set_width(icon_label, 56); // Fixed width for alignment
 
     // Name label
     lv_obj_t* name_label = lv_label_create(item);
     lv_label_set_text(name_label, icon.name);
-    lv_obj_set_style_text_color(name_label, ui_theme_get_color("text_primary"), 0);
+    lv_obj_set_style_text_color(name_label, theme_manager_get_color("text_primary"), 0);
     lv_obj_set_style_text_font(name_label, &noto_sans_16, 0);
     lv_obj_set_flex_grow(name_label, 1);
 

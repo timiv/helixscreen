@@ -1,10 +1,10 @@
 // Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "ui_theme.h"
 #include "ui_utils.h"
 
 #include "../ui_test_utils.h"
+#include "theme_manager.h"
 
 #include <cstring>
 
@@ -177,10 +177,10 @@ TEST_CASE("UI Utils: format_modified_date - edge cases", "[ui_utils][format][edg
 // ============================================================================
 
 // NOTE: After the responsive spacing unification (Phase 7), ui_get_header_content_padding()
-// now uses the unified space_* token system. The function returns ui_theme_get_spacing("space_lg"),
-// which is a responsive value set at theme init time based on the display breakpoint.
-// These tests verify the function returns a consistent, positive value (not screen-height
-// dependent).
+// now uses the unified space_* token system. The function returns
+// theme_manager_get_spacing("space_lg"), which is a responsive value set at theme init time based
+// on the display breakpoint. These tests verify the function returns a consistent, positive value
+// (not screen-height dependent).
 
 TEST_CASE("UI Utils: ui_get_header_content_padding - returns space_lg value",
           "[ui_utils][responsive]") {

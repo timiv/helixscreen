@@ -1,7 +1,7 @@
 // Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "helix_theme.h"
+#include "theme_core.h"
 
 #include "ui_fonts.h"
 
@@ -126,7 +126,7 @@ static void helix_theme_apply(lv_theme_t* theme, lv_obj_t* obj) {
 #endif
 }
 
-lv_theme_t* helix_theme_init(lv_display_t* display, lv_color_t primary_color,
+lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
                              lv_color_t secondary_color, lv_color_t text_primary_color,
                              bool is_dark, const lv_font_t* base_font, lv_color_t screen_bg,
                              lv_color_t card_bg, lv_color_t theme_grey, int32_t border_radius) {
@@ -231,7 +231,7 @@ lv_theme_t* helix_theme_init(lv_display_t* display, lv_color_t primary_color,
     // CRITICAL: Now we need to patch the default theme's color fields
     // This is necessary because LVGL's default theme bakes colors into pre-computed
     // styles during init. We must update both the theme color fields AND the styles.
-    // This mirrors the approach in ui_theme_patch_colors() but is cleaner since
+    // This mirrors the approach in theme_manager_patch_colors() but is cleaner since
     // we control the theme lifecycle.
 
     // Access internal default theme structure to patch colors
@@ -285,7 +285,7 @@ lv_theme_t* helix_theme_init(lv_display_t* display, lv_color_t primary_color,
     return (lv_theme_t*)helix_theme_instance;
 }
 
-void helix_theme_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t card_bg,
+void theme_core_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t card_bg,
                                lv_color_t theme_grey, lv_color_t text_primary_color) {
     if (!helix_theme_instance) {
         return;
@@ -302,7 +302,7 @@ void helix_theme_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t ca
     lv_style_set_text_color(&helix_theme_instance->button_style, text_primary_color);
 
     // Update LVGL default theme's internal styles
-    // This is the same private API access pattern used in helix_theme_init
+    // This is the same private API access pattern used in theme_core_init
     typedef enum {
         DISP_SMALL = 0,
         DISP_MEDIUM = 1,
@@ -348,7 +348,7 @@ void helix_theme_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t ca
     lv_obj_report_style_change(NULL);
 }
 
-void helix_theme_preview_colors(bool is_dark, const char* colors[16], int32_t border_radius) {
+void theme_core_preview_colors(bool is_dark, const char* colors[16], int32_t border_radius) {
     if (!helix_theme_instance) {
         return;
     }

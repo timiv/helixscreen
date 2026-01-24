@@ -15,7 +15,8 @@
 #include "ui_switch.h"
 #include "ui_text.h"
 #include "ui_text_input.h"
-#include "ui_theme.h"
+
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 

@@ -3,13 +3,12 @@
 
 #include "ui_severity_card.h"
 
-#include "ui_theme.h"
-
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "lvgl/src/xml/lv_xml_parser.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -162,5 +161,5 @@ void ui_severity_card_finalize(lv_obj_t* obj) {
 
 lv_color_t ui_severity_get_color(const char* severity) {
     const char* color_const = severity_to_color_const(severity);
-    return ui_theme_parse_hex_color(lv_xml_get_const(NULL, color_const));
+    return theme_manager_parse_hex_color(lv_xml_get_const(NULL, color_const));
 }

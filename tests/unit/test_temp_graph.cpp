@@ -1,12 +1,12 @@
 // Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include "../../include/theme_manager.h"
 #include "../../include/ui_temp_graph.h"
-#include "../../include/ui_theme.h"
+#include "../ui_test_utils.h"
 #include "lvgl/lvgl.h"
 
 #include "../catch_amalgamated.hpp"
-#include "../ui_test_utils.h"
 
 // Test fixture for temperature graph tests
 class TempGraphTestFixture {

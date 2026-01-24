@@ -8,7 +8,6 @@
 #include "ui_fonts.h"
 #include "ui_panel_base.h"
 #include "ui_status_bar.h"
-#include "ui_theme.h"
 #include "ui_update_queue.h"
 
 #include "app_globals.h"
@@ -17,6 +16,7 @@
 #include "overlay_base.h"
 #include "printer_state.h" // For KlippyState enum
 #include "settings_manager.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 

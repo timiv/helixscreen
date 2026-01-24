@@ -3,11 +3,10 @@
 
 #include "ui_panel_memory_stats.h"
 
-#include "ui_theme.h"
-
 #include "lvgl/src/xml/lv_xml.h"
 #include "memory_utils.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -195,13 +194,13 @@ void MemoryStatsOverlay::update() {
             lv_label_set_text_fmt(delta_label_, "%s%d.%d", delta_kb >= 0 ? "+" : "-", mb, dec);
             // Color based on growth: green = stable, yellow = growing, red = high growth
             if (delta_kb < 500) {
-                lv_obj_set_style_text_color(delta_label_, ui_theme_get_color("success_color"),
+                lv_obj_set_style_text_color(delta_label_, theme_manager_get_color("success_color"),
                                             LV_PART_MAIN);
             } else if (delta_kb < 2000) {
-                lv_obj_set_style_text_color(delta_label_, ui_theme_get_color("warning_color"),
+                lv_obj_set_style_text_color(delta_label_, theme_manager_get_color("warning_color"),
                                             LV_PART_MAIN);
             } else {
-                lv_obj_set_style_text_color(delta_label_, ui_theme_get_color("error_color"),
+                lv_obj_set_style_text_color(delta_label_, theme_manager_get_color("error_color"),
                                             LV_PART_MAIN);
             }
         }

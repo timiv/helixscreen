@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "ui_fonts.h"
-#include "ui_theme.h"
 
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
+#include "theme_manager.h"
 
 #include <SDL.h>
 #include <cstdio>

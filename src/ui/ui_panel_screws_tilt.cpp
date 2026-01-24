@@ -6,12 +6,12 @@
 #include "ui_fonts.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
-#include "ui_theme.h"
 #include "ui_utils.h"
 
 #include "moonraker_api.h"
 #include "moonraker_client.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -617,9 +617,9 @@ lv_color_t ScrewsTiltPanel::get_adjustment_color(const ScrewTiltResult& screw,
     auto get_theme_color = [](const char* const_name) -> lv_color_t {
         const char* hex = lv_xml_get_const(nullptr, const_name);
         if (hex) {
-            return ui_theme_parse_hex_color(hex);
+            return theme_manager_parse_hex_color(hex);
         }
-        return ui_theme_get_color(const_name); // Fallback to direct token lookup
+        return theme_manager_get_color(const_name); // Fallback to direct token lookup
     };
 
     if (screw.is_reference) {

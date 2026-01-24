@@ -6,7 +6,6 @@
 #include "ui_modal.h"
 #include "ui_nav_manager.h"
 #include "ui_panel_print_status.h"
-#include "ui_theme.h"
 #include "ui_toast.h"
 #include "ui_utils.h"
 
@@ -17,6 +16,7 @@
 #include "moonraker_manager.h"
 #include "printer_state.h"
 #include "settings_manager.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -109,7 +109,7 @@ static void show_rich_completion_modal(PrintJobState state, const char* filename
         if (icon_label) {
             // Icon component stores the icon name, we need to update via the icon API
             // For now, just update the color - the icon is set in XML
-            lv_color_t color = ui_theme_get_color(icon_color_token);
+            lv_color_t color = theme_manager_get_color(icon_color_token);
             lv_obj_set_style_text_color(icon_label, color, LV_PART_MAIN);
         }
     }

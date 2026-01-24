@@ -1,9 +1,8 @@
 // Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "ui_theme.h"
-
 #include "../lvgl_test_fixture.h"
+#include "theme_manager.h"
 
 #include <filesystem>
 #include <fstream>
@@ -25,8 +24,8 @@ class ThemeConstantsFixture : public LVGLTestFixture {
 
     void setup_temp_xml_dir() {
         // Use PID in path to avoid race conditions when running parallel test shards
-        temp_dir =
-            fs::temp_directory_path() / ("test_ui_theme_constants_" + std::to_string(getpid()));
+        temp_dir = fs::temp_directory_path() /
+                   ("test_theme_manager_constants_" + std::to_string(getpid()));
         fs::remove_all(temp_dir);
         fs::create_directories(temp_dir);
     }
@@ -64,7 +63,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: static color with no variants
 </component>
 )");
 
-    auto result = ui_theme_parse_all_xml_for_element(temp_dir.string().c_str(), "color");
+    auto result = theme_manager_parse_all_xml_for_element(temp_dir.string().c_str(), "color");
 
     REQUIRE(has_key(result, "test_color"));
     REQUIRE(result["test_color"] == "#FF0000");
@@ -86,7 +85,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: multiple static colors are re
 </component>
 )");
 
-    auto result = ui_theme_parse_all_xml_for_element(temp_dir.string().c_str(), "color");
+    auto result = theme_manager_parse_all_xml_for_element(temp_dir.string().c_str(), "color");
 
     REQUIRE(result.size() == 3);
     REQUIRE(result["primary_color"] == "#3B82F6");
@@ -112,7 +111,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: static px with no variants is
 </component>
 )");
 
-    auto result = ui_theme_parse_all_xml_for_element(temp_dir.string().c_str(), "px");
+    auto result = theme_manager_parse_all_xml_for_element(temp_dir.string().c_str(), "px");
 
     REQUIRE(has_key(result, "test_size"));
     REQUIRE(result["test_size"] == "42");
@@ -134,7 +133,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: multiple static px values are
 </component>
 )");
 
-    auto result = ui_theme_parse_all_xml_for_element(temp_dir.string().c_str(), "px");
+    auto result = theme_manager_parse_all_xml_for_element(temp_dir.string().c_str(), "px");
 
     REQUIRE(result.size() == 3);
     REQUIRE(result["border_radius"] == "8");
@@ -163,9 +162,9 @@ TEST_CASE_METHOD(ThemeConstantsFixture,
 </component>
 )");
 
-    // ui_theme_parse_all_xml_for_element returns ALL elements
+    // theme_manager_parse_all_xml_for_element returns ALL elements
     // The static registration logic filters them out separately
-    auto result = ui_theme_parse_all_xml_for_element(temp_dir.string().c_str(), "color");
+    auto result = theme_manager_parse_all_xml_for_element(temp_dir.string().c_str(), "color");
 
     // Both should be present in the raw parse (filtering happens in registration)
     REQUIRE(has_key(result, "test_light"));
@@ -194,9 +193,9 @@ TEST_CASE_METHOD(ThemeConstantsFixture,
 
     // Test suffix parsing - should extract base name
     auto light_result =
-        ui_theme_parse_all_xml_for_suffix(temp_dir.string().c_str(), "color", "_light");
+        theme_manager_parse_all_xml_for_suffix(temp_dir.string().c_str(), "color", "_light");
     auto dark_result =
-        ui_theme_parse_all_xml_for_suffix(temp_dir.string().c_str(), "color", "_dark");
+        theme_manager_parse_all_xml_for_suffix(temp_dir.string().c_str(), "color", "_dark");
 
     // Base names should be extracted (suffix stripped)
     REQUIRE(has_key(light_result, "app_bg_color"));
@@ -231,7 +230,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture,
 </component>
 )");
 
-    auto result = ui_theme_parse_all_xml_for_element(temp_dir.string().c_str(), "px");
+    auto result = theme_manager_parse_all_xml_for_element(temp_dir.string().c_str(), "px");
 
     // All should be present in raw parse
     REQUIRE(has_key(result, "size_small"));
@@ -257,11 +256,11 @@ TEST_CASE_METHOD(ThemeConstantsFixture,
 )");
 
     auto small_result =
-        ui_theme_parse_all_xml_for_suffix(temp_dir.string().c_str(), "px", "_small");
+        theme_manager_parse_all_xml_for_suffix(temp_dir.string().c_str(), "px", "_small");
     auto medium_result =
-        ui_theme_parse_all_xml_for_suffix(temp_dir.string().c_str(), "px", "_medium");
+        theme_manager_parse_all_xml_for_suffix(temp_dir.string().c_str(), "px", "_medium");
     auto large_result =
-        ui_theme_parse_all_xml_for_suffix(temp_dir.string().c_str(), "px", "_large");
+        theme_manager_parse_all_xml_for_suffix(temp_dir.string().c_str(), "px", "_large");
 
     REQUIRE(has_key(small_result, "space_lg"));
     REQUIRE(small_result["space_lg"] == "12");
@@ -295,7 +294,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: static and dynamic constants 
 </component>
 )");
 
-    auto all_result = ui_theme_parse_all_xml_for_element(temp_dir.string().c_str(), "px");
+    auto all_result = theme_manager_parse_all_xml_for_element(temp_dir.string().c_str(), "px");
 
     // All four should be present in raw parse
     REQUIRE(all_result.size() == 4);
@@ -330,7 +329,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: suffix parsing does not match
 
     // Suffix parsing should only find radius_small, not radius
     auto small_result =
-        ui_theme_parse_all_xml_for_suffix(temp_dir.string().c_str(), "px", "_small");
+        theme_manager_parse_all_xml_for_suffix(temp_dir.string().c_str(), "px", "_small");
 
     // Should extract "radius" as base name from "radius_small"
     REQUIRE(small_result.size() == 1);
@@ -350,8 +349,8 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: empty XML directory - gracefu
 
     // Don't write any XML files - directory is empty
 
-    auto color_result = ui_theme_parse_all_xml_for_element(temp_dir.string().c_str(), "color");
-    auto px_result = ui_theme_parse_all_xml_for_element(temp_dir.string().c_str(), "px");
+    auto color_result = theme_manager_parse_all_xml_for_element(temp_dir.string().c_str(), "color");
+    auto px_result = theme_manager_parse_all_xml_for_element(temp_dir.string().c_str(), "px");
 
     // Should return empty maps, no crash
     REQUIRE(color_result.empty());
@@ -365,7 +364,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: non-existent directory - grac
     // Use a path that definitely doesn't exist
     std::string nonexistent = "/tmp/definitely_does_not_exist_12345";
 
-    auto result = ui_theme_parse_all_xml_for_element(nonexistent.c_str(), "color");
+    auto result = theme_manager_parse_all_xml_for_element(nonexistent.c_str(), "color");
 
     // Should return empty map, no crash
     REQUIRE(result.empty());
@@ -373,7 +372,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: non-existent directory - grac
 
 TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: NULL directory - graceful handling",
                  "[ui_theme][constants][edge]") {
-    auto result = ui_theme_parse_all_xml_for_element(nullptr, "color");
+    auto result = theme_manager_parse_all_xml_for_element(nullptr, "color");
 
     // Should return empty map, no crash
     REQUIRE(result.empty());
@@ -399,7 +398,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: malformed XML - graceful degr
 )");
 
     // Should not crash, may return partial results or empty
-    REQUIRE_NOTHROW(ui_theme_parse_all_xml_for_element(temp_dir.string().c_str(), "color"));
+    REQUIRE_NOTHROW(theme_manager_parse_all_xml_for_element(temp_dir.string().c_str(), "color"));
 
     cleanup_temp_dir();
 }
@@ -424,7 +423,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: malformed XML does not affect
         <color name="broken" value
 )");
 
-    auto result = ui_theme_parse_all_xml_for_element(temp_dir.string().c_str(), "color");
+    auto result = theme_manager_parse_all_xml_for_element(temp_dir.string().c_str(), "color");
 
     // Valid file should still be processed
     REQUIRE(has_key(result, "valid_color"));
@@ -446,7 +445,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: find_xml_files returns sorted
     write_xml("apple.xml", "<component/>");
     write_xml("mango.xml", "<component/>");
 
-    auto files = ui_theme_find_xml_files(temp_dir.string().c_str());
+    auto files = theme_manager_find_xml_files(temp_dir.string().c_str());
 
     REQUIRE(files.size() == 3);
 
@@ -468,7 +467,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: find_xml_files ignores non-xm
     std::ofstream(temp_dir / "readme.txt") << "test";
     std::ofstream(temp_dir / "data.json") << "{}";
 
-    auto files = ui_theme_find_xml_files(temp_dir.string().c_str());
+    auto files = theme_manager_find_xml_files(temp_dir.string().c_str());
 
     REQUIRE(files.size() == 1);
     REQUIRE(files[0].find("test.xml") != std::string::npos);
@@ -502,7 +501,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: later files override earlier 
 </component>
 )");
 
-    auto result = ui_theme_parse_all_xml_for_element(temp_dir.string().c_str(), "px");
+    auto result = theme_manager_parse_all_xml_for_element(temp_dir.string().c_str(), "px");
 
     // widget.xml value should win (last alphabetically)
     REQUIRE(result["button_height"] == "48");
@@ -527,7 +526,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: string elements are parsed co
 </component>
 )");
 
-    auto result = ui_theme_parse_all_xml_for_element(temp_dir.string().c_str(), "string");
+    auto result = theme_manager_parse_all_xml_for_element(temp_dir.string().c_str(), "string");
 
     REQUIRE(result.size() == 2);
     REQUIRE(result["font_body"] == "noto_sans_18");
@@ -554,7 +553,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: complete responsive px set pa
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 
@@ -575,7 +574,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture,
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.size() == 1);
     REQUIRE(warnings[0].find("button_height") != std::string::npos);
@@ -599,7 +598,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture,
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.size() == 1);
     REQUIRE(warnings[0].find("button_height") != std::string::npos);
@@ -625,7 +624,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture,
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 
@@ -645,7 +644,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: complete theme color pair pas
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 
@@ -665,7 +664,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture,
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.size() == 1);
     REQUIRE(warnings[0].find("card_bg") != std::string::npos);
@@ -688,7 +687,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture,
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.size() == 1);
     REQUIRE(warnings[0].find("card_bg") != std::string::npos);
@@ -712,7 +711,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: un-themed color (no suffix) p
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 
@@ -737,7 +736,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture,
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.size() == 2);
 
@@ -778,7 +777,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: defined constant reference pa
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 
@@ -801,7 +800,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: undefined constant reference 
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.size() == 1);
     REQUIRE(warnings[0].find("#space_xxl") != std::string::npos);
@@ -831,7 +830,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture,
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 
@@ -856,7 +855,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: themed color base name is val
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 
@@ -878,7 +877,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: hex color values are not flag
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 
@@ -902,7 +901,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: local constant in same file i
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 
@@ -931,7 +930,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: constant defined in different
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 
@@ -953,7 +952,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: string constant is valid refe
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 
@@ -976,7 +975,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: str (icon glyph) constant is 
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 
@@ -998,7 +997,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture, "ui_theme: percentage constant is valid 
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 
@@ -1018,7 +1017,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture,
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     // Find warnings for undefined constants
     bool found_padding = false;
@@ -1057,7 +1056,7 @@ TEST_CASE_METHOD(ThemeConstantsFixture,
 </component>
 )");
 
-    auto warnings = ui_theme_validate_constant_sets(temp_dir.string().c_str());
+    auto warnings = theme_manager_validate_constant_sets(temp_dir.string().c_str());
 
     REQUIRE(warnings.empty());
 

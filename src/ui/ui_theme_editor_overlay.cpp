@@ -9,10 +9,10 @@
 #include "ui_keyboard_manager.h"
 #include "ui_modal.h"
 #include "ui_nav.h"
-#include "ui_theme.h"
 
 #include "lvgl/src/xml/lv_xml.h"
 #include "settings_manager.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -239,7 +239,7 @@ void ThemeEditorOverlay::update_swatch_colors() {
         }
 
         // Parse hex color and apply to swatch background
-        lv_color_t color = ui_theme_parse_hex_color(color_hex.c_str());
+        lv_color_t color = theme_manager_parse_hex_color(color_hex.c_str());
         lv_obj_set_style_bg_color(swatch_objects_[i], color, LV_PART_MAIN);
         lv_obj_set_style_bg_opa(swatch_objects_[i], LV_OPA_COVER, LV_PART_MAIN);
 
@@ -485,28 +485,28 @@ void ThemeEditorOverlay::handle_back_clicked() {
 void ThemeEditorOverlay::handle_border_radius_changed(int value) {
     editing_theme_.properties.border_radius = value;
     mark_dirty();
-    ui_theme_preview(editing_theme_);
+    theme_manager_preview(editing_theme_);
     spdlog::debug("[{}] Border radius changed to {}", get_name(), value);
 }
 
 void ThemeEditorOverlay::handle_border_width_changed(int value) {
     editing_theme_.properties.border_width = value;
     mark_dirty();
-    ui_theme_preview(editing_theme_);
+    theme_manager_preview(editing_theme_);
     spdlog::debug("[{}] Border width changed to {}", get_name(), value);
 }
 
 void ThemeEditorOverlay::handle_border_opacity_changed(int value) {
     editing_theme_.properties.border_opacity = value;
     mark_dirty();
-    ui_theme_preview(editing_theme_);
+    theme_manager_preview(editing_theme_);
     spdlog::debug("[{}] Border opacity changed to {}", get_name(), value);
 }
 
 void ThemeEditorOverlay::handle_shadow_intensity_changed(int value) {
     editing_theme_.properties.shadow_intensity = value;
     mark_dirty();
-    ui_theme_preview(editing_theme_);
+    theme_manager_preview(editing_theme_);
     spdlog::debug("[{}] Shadow intensity changed to {}", get_name(), value);
 }
 
@@ -554,7 +554,7 @@ void ThemeEditorOverlay::handle_revert_clicked() {
             update_property_sliders();
 
             // Preview the original theme
-            ui_theme_preview(editing_theme_);
+            theme_manager_preview(editing_theme_);
 
             spdlog::info("[{}] Theme reverted to original state", get_name());
         });
@@ -637,7 +637,7 @@ void ThemeEditorOverlay::show_color_picker(int palette_index) {
 
         // Mark dirty and preview
         mark_dirty();
-        ui_theme_preview(editing_theme_);
+        theme_manager_preview(editing_theme_);
 
         spdlog::info("[{}] Color {} updated to {}", get_name(), editing_color_index_, hex_buf);
 
@@ -906,7 +906,7 @@ void ThemeEditorOverlay::on_theme_preview_clicked(lv_event_t* e) {
 
 void ThemeEditorOverlay::handle_preview_clicked() {
     // Apply the editing theme (selected from dropdown) for preview
-    ui_theme_preview(editing_theme_);
+    theme_manager_preview(editing_theme_);
 
     spdlog::debug("[{}] Preview clicked - applied editing theme '{}'", get_name(),
                   editing_theme_.name);

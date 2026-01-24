@@ -3,12 +3,11 @@
 
 #include "gcode_layer_renderer.h"
 
-#include "ui_theme.h"
-
 #include "config.h"
 #include "gcode_parser.h"
 #include "memory_monitor.h"
 #include "memory_utils.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -134,13 +133,13 @@ void GCodeLayerRenderer::set_support_color(lv_color_t color) {
 void GCodeLayerRenderer::reset_colors() {
     // Use theme colors for default appearance
     // Extrusion: info blue for visibility against dark background
-    color_extrusion_ = ui_theme_get_color("info_color");
+    color_extrusion_ = theme_manager_get_color("info_color");
 
     // Travel: subtle secondary color (grey)
-    color_travel_ = ui_theme_get_color("text_secondary");
+    color_travel_ = theme_manager_get_color("text_secondary");
 
     // Support: orange/warning color to distinguish from model
-    color_support_ = ui_theme_get_color("warning_color");
+    color_support_ = theme_manager_get_color("warning_color");
 
     use_custom_extrusion_color_ = false;
     use_custom_travel_color_ = false;

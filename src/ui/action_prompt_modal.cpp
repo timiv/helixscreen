@@ -3,7 +3,7 @@
 
 #include "action_prompt_modal.h"
 
-#include "ui_theme.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -119,8 +119,8 @@ void ActionPromptModal::create_text_lines() {
         lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
 
         // Apply body text styling
-        lv_obj_set_style_text_font(label, ui_theme_get_font("font_body"), LV_PART_MAIN);
-        lv_obj_set_style_text_color(label, ui_theme_get_color("text_primary"), LV_PART_MAIN);
+        lv_obj_set_style_text_font(label, theme_manager_get_font("font_body"), LV_PART_MAIN);
+        lv_obj_set_style_text_color(label, theme_manager_get_color("text_primary"), LV_PART_MAIN);
 
         created_text_labels_.push_back(label);
     }
@@ -185,13 +185,13 @@ void ActionPromptModal::create_button(const PromptButton& btn, lv_obj_t* contain
 
     // For footer buttons, use flex_grow for equal sizing
     if (btn.is_footer) {
-        lv_obj_set_height(button, ui_theme_get_spacing("space_xl") * 2 + 10); // ~button_height
+        lv_obj_set_height(button, theme_manager_get_spacing("space_xl") * 2 + 10); // ~button_height
         lv_obj_set_flex_grow(button, 1);
     } else {
         // Regular buttons with padding
-        lv_obj_set_size(button, LV_SIZE_CONTENT, ui_theme_get_spacing("space_xl") * 2);
-        lv_obj_set_style_pad_left(button, ui_theme_get_spacing("space_lg"), LV_PART_MAIN);
-        lv_obj_set_style_pad_right(button, ui_theme_get_spacing("space_lg"), LV_PART_MAIN);
+        lv_obj_set_size(button, LV_SIZE_CONTENT, theme_manager_get_spacing("space_xl") * 2);
+        lv_obj_set_style_pad_left(button, theme_manager_get_spacing("space_lg"), LV_PART_MAIN);
+        lv_obj_set_style_pad_right(button, theme_manager_get_spacing("space_lg"), LV_PART_MAIN);
     }
 
     // Apply button styling
@@ -208,7 +208,7 @@ void ActionPromptModal::create_button(const PromptButton& btn, lv_obj_t* contain
     lv_obj_t* label = lv_label_create(button);
     lv_label_set_text(label, btn.label.c_str());
     lv_obj_center(label);
-    lv_obj_set_style_text_font(label, ui_theme_get_font("font_body"), LV_PART_MAIN);
+    lv_obj_set_style_text_font(label, theme_manager_get_font("font_body"), LV_PART_MAIN);
     lv_obj_set_style_text_color(label, lv_color_white(), LV_PART_MAIN);
 
     // Store the gcode in user_data for callback
@@ -238,20 +238,20 @@ void ActionPromptModal::create_button(const PromptButton& btn, lv_obj_t* contain
 lv_color_t ActionPromptModal::get_button_color(const std::string& color_name) {
     // Map Klipper color hints to design tokens
     if (color_name == "primary" || color_name.empty()) {
-        return ui_theme_get_color("primary_color");
+        return theme_manager_get_color("primary_color");
     } else if (color_name == "secondary") {
-        return ui_theme_get_color("secondary_color");
+        return theme_manager_get_color("secondary_color");
     } else if (color_name == "info") {
-        return ui_theme_get_color("info_color");
+        return theme_manager_get_color("info_color");
     } else if (color_name == "warning") {
-        return ui_theme_get_color("warning_color");
+        return theme_manager_get_color("warning_color");
     } else if (color_name == "error") {
-        return ui_theme_get_color("error_color");
+        return theme_manager_get_color("error_color");
     }
 
     // Unknown color - default to primary
     spdlog::debug("[ActionPromptModal] Unknown color '{}', using primary", color_name);
-    return ui_theme_get_color("primary_color");
+    return theme_manager_get_color("primary_color");
 }
 
 void ActionPromptModal::clear_dynamic_content() {

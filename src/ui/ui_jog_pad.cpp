@@ -4,9 +4,10 @@
 #include "ui_jog_pad.h"
 
 #include "ui_fonts.h"
-#include "ui_theme.h"
 #include "ui_utils.h"
 #include "ui_widget_memory.h"
+
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -35,13 +36,13 @@ static const lv_font_t* get_icon_font(lv_coord_t radius) {
 
 // Axis labels (X+, Y-, etc) - use small font from theme
 static const lv_font_t* get_label_font([[maybe_unused]] lv_coord_t radius) {
-    const lv_font_t* font = ui_theme_get_font("font_small");
+    const lv_font_t* font = theme_manager_get_font("font_small");
     return font ? font : &noto_sans_14; // Fallback if theme not ready
 }
 
 // Distance labels (1mm, 10mm) - use extra small font from theme
 static const lv_font_t* get_distance_font([[maybe_unused]] lv_coord_t radius) {
-    const lv_font_t* font = ui_theme_get_font("font_xs");
+    const lv_font_t* font = theme_manager_get_font("font_xs");
     return font ? font : &noto_sans_10; // Fallback if theme not ready
 }
 
@@ -90,21 +91,21 @@ static void load_colors(jog_pad_state_t* state, const char* component_scope_name
         spdlog::debug("[JogPad] No component scope '{}', using fallback colors",
                       component_scope_name ? component_scope_name : "(null)");
         // Fallback to theme token defaults based on current mode
-        bool use_dark_mode = ui_theme_is_dark_mode();
+        bool use_dark_mode = theme_manager_is_dark_mode();
         state->jog_color_outer_ring =
-            ui_theme_get_color(use_dark_mode ? "jog_outer_ring_dark" : "jog_outer_ring_light");
-        state->jog_color_inner_circle =
-            ui_theme_get_color(use_dark_mode ? "jog_inner_circle_dark" : "jog_inner_circle_light");
+            theme_manager_get_color(use_dark_mode ? "jog_outer_ring_dark" : "jog_outer_ring_light");
+        state->jog_color_inner_circle = theme_manager_get_color(
+            use_dark_mode ? "jog_inner_circle_dark" : "jog_inner_circle_light");
         state->jog_color_grid_lines =
-            ui_theme_get_color(use_dark_mode ? "jog_grid_lines_dark" : "jog_grid_lines_light");
+            theme_manager_get_color(use_dark_mode ? "jog_grid_lines_dark" : "jog_grid_lines_light");
         state->jog_color_home_bg =
-            ui_theme_get_color(use_dark_mode ? "jog_home_bg_dark" : "jog_home_bg_light");
-        state->jog_color_home_border =
-            ui_theme_get_color(use_dark_mode ? "jog_home_border_dark" : "jog_home_border_light");
+            theme_manager_get_color(use_dark_mode ? "jog_home_bg_dark" : "jog_home_bg_light");
+        state->jog_color_home_border = theme_manager_get_color(
+            use_dark_mode ? "jog_home_border_dark" : "jog_home_border_light");
         state->jog_color_home_text = lv_color_white();
-        state->jog_color_boundary_lines = ui_theme_get_color(
+        state->jog_color_boundary_lines = theme_manager_get_color(
             use_dark_mode ? "jog_boundary_lines_dark" : "jog_boundary_lines_light");
-        state->jog_color_distance_labels = ui_theme_get_color(
+        state->jog_color_distance_labels = theme_manager_get_color(
             use_dark_mode ? "jog_distance_labels_dark" : "jog_distance_labels_light");
         state->jog_color_axis_labels = lv_color_white();
         state->jog_color_highlight = lv_color_white();
@@ -112,7 +113,7 @@ static void load_colors(jog_pad_state_t* state, const char* component_scope_name
     }
 
     // Read light/dark variants for each color
-    bool use_dark_mode = ui_theme_is_dark_mode();
+    bool use_dark_mode = theme_manager_is_dark_mode();
 
     const char* outer_ring =
         lv_xml_get_const(scope, use_dark_mode ? "jog_outer_ring_dark" : "jog_outer_ring_light");
@@ -136,19 +137,23 @@ static void load_colors(jog_pad_state_t* state, const char* component_scope_name
         lv_xml_get_const(scope, use_dark_mode ? "jog_highlight_dark" : "jog_highlight_light");
 
     // Parse colors using theme utility
-    state->jog_color_outer_ring = ui_theme_parse_hex_color(outer_ring ? outer_ring : "#3A3A3A");
+    state->jog_color_outer_ring =
+        theme_manager_parse_hex_color(outer_ring ? outer_ring : "#3A3A3A");
     state->jog_color_inner_circle =
-        ui_theme_parse_hex_color(inner_circle ? inner_circle : "#2A2A2A");
-    state->jog_color_grid_lines = ui_theme_parse_hex_color(grid_lines ? grid_lines : "#000000");
-    state->jog_color_home_bg = ui_theme_parse_hex_color(home_bg ? home_bg : "#404040");
-    state->jog_color_home_border = ui_theme_parse_hex_color(home_border ? home_border : "#606060");
-    state->jog_color_home_text = ui_theme_parse_hex_color(home_text ? home_text : "#FFFFFF");
+        theme_manager_parse_hex_color(inner_circle ? inner_circle : "#2A2A2A");
+    state->jog_color_grid_lines =
+        theme_manager_parse_hex_color(grid_lines ? grid_lines : "#000000");
+    state->jog_color_home_bg = theme_manager_parse_hex_color(home_bg ? home_bg : "#404040");
+    state->jog_color_home_border =
+        theme_manager_parse_hex_color(home_border ? home_border : "#606060");
+    state->jog_color_home_text = theme_manager_parse_hex_color(home_text ? home_text : "#FFFFFF");
     state->jog_color_boundary_lines =
-        ui_theme_parse_hex_color(boundary_lines ? boundary_lines : "#484848");
+        theme_manager_parse_hex_color(boundary_lines ? boundary_lines : "#484848");
     state->jog_color_distance_labels =
-        ui_theme_parse_hex_color(distance_labels ? distance_labels : "#CCCCCC");
-    state->jog_color_axis_labels = ui_theme_parse_hex_color(axis_labels ? axis_labels : "#FFFFFF");
-    state->jog_color_highlight = ui_theme_parse_hex_color(highlight ? highlight : "#FFFFFF");
+        theme_manager_parse_hex_color(distance_labels ? distance_labels : "#CCCCCC");
+    state->jog_color_axis_labels =
+        theme_manager_parse_hex_color(axis_labels ? axis_labels : "#FFFFFF");
+    state->jog_color_highlight = theme_manager_parse_hex_color(highlight ? highlight : "#FFFFFF");
 
     spdlog::debug("[JogPad] Colors loaded from component scope '{}' ({} mode)",
                   component_scope_name, use_dark_mode ? "dark" : "light");

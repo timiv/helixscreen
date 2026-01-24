@@ -6,12 +6,12 @@
 #include "ui_event_safety.h"
 #include "ui_fonts.h"
 #include "ui_text_input.h"
-#include "ui_theme.h"
 #include "ui_utils.h"
 
 #include "config.h"
 #include "keyboard_layout_provider.h"
 #include "settings_manager.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -169,16 +169,17 @@ void KeyboardManager::show_overlay(const lv_area_t* key_area, const char* altern
     lv_obj_set_size(overlay_, overlay_width, overlay_height);
 
     const char* card_bg_str =
-        lv_xml_get_const(NULL, ui_theme_is_dark_mode() ? "card_bg_dark" : "card_bg_light");
+        lv_xml_get_const(NULL, theme_manager_is_dark_mode() ? "card_bg_dark" : "card_bg_light");
     if (card_bg_str) {
-        lv_obj_set_style_bg_color(overlay_, ui_theme_parse_hex_color(card_bg_str), LV_PART_MAIN);
+        lv_obj_set_style_bg_color(overlay_, theme_manager_parse_hex_color(card_bg_str),
+                                  LV_PART_MAIN);
     }
     lv_obj_set_style_bg_opa(overlay_, LV_OPA_90, LV_PART_MAIN);
     lv_obj_set_style_border_width(overlay_, 2, LV_PART_MAIN);
 
     const char* border_color_str = lv_xml_get_const(NULL, "secondary_color");
     if (border_color_str) {
-        lv_obj_set_style_border_color(overlay_, ui_theme_parse_hex_color(border_color_str),
+        lv_obj_set_style_border_color(overlay_, theme_manager_parse_hex_color(border_color_str),
                                       LV_PART_MAIN);
     }
 
@@ -192,9 +193,9 @@ void KeyboardManager::show_overlay(const lv_area_t* key_area, const char* altern
     lv_obj_set_style_pad_all(overlay_, padding, LV_PART_MAIN);
 
     const char* text_color_str = lv_xml_get_const(
-        NULL, ui_theme_is_dark_mode() ? "text_primary_dark" : "text_primary_light");
-    lv_color_t text_color = text_color_str ? ui_theme_parse_hex_color(text_color_str)
-                                           : ui_theme_get_color("text_primary");
+        NULL, theme_manager_is_dark_mode() ? "text_primary_dark" : "text_primary_light");
+    lv_color_t text_color = text_color_str ? theme_manager_parse_hex_color(text_color_str)
+                                           : theme_manager_get_color("text_primary");
 
     for (size_t i = 0; i < alt_count; i++) {
         lv_obj_t* label = lv_label_create(overlay_);
@@ -604,9 +605,9 @@ void KeyboardManager::keyboard_draw_alternative_chars(lv_event_t* e) {
         return;
 
     const char* gray_color_str = lv_xml_get_const(
-        NULL, ui_theme_is_dark_mode() ? "text_secondary_dark" : "text_secondary_light");
-    lv_color_t gray_color = gray_color_str ? ui_theme_parse_hex_color(gray_color_str)
-                                           : ui_theme_get_color("text_secondary");
+        NULL, theme_manager_is_dark_mode() ? "text_secondary_dark" : "text_secondary_light");
+    lv_color_t gray_color = gray_color_str ? theme_manager_parse_hex_color(gray_color_str)
+                                           : theme_manager_get_color("text_secondary");
 
     for (uint32_t i = 0; map[i][0] != '\0'; i++) {
         if (strcmp(map[i], "\n") == 0) {
@@ -711,11 +712,11 @@ void KeyboardManager::init(lv_obj_t* parent) {
     mode_ = MODE_ALPHA_LC;
     apply_keyboard_mode();
 
-    lv_color_t keyboard_bg = ui_theme_parse_hex_color(lv_xml_get_const(NULL, "app_bg_color"));
-    lv_color_t key_bg = ui_theme_parse_hex_color(lv_xml_get_const(NULL, "keyboard_key"));
+    lv_color_t keyboard_bg = theme_manager_parse_hex_color(lv_xml_get_const(NULL, "app_bg_color"));
+    lv_color_t key_bg = theme_manager_parse_hex_color(lv_xml_get_const(NULL, "keyboard_key"));
     lv_color_t key_special_bg =
-        ui_theme_parse_hex_color(lv_xml_get_const(NULL, "keyboard_key_special"));
-    lv_color_t key_text = ui_theme_parse_hex_color(lv_xml_get_const(NULL, "header_text"));
+        theme_manager_parse_hex_color(lv_xml_get_const(NULL, "keyboard_key_special"));
+    lv_color_t key_text = theme_manager_parse_hex_color(lv_xml_get_const(NULL, "header_text"));
 
     lv_obj_set_style_bg_color(keyboard_, keyboard_bg, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(keyboard_, LV_OPA_COVER, LV_PART_MAIN);

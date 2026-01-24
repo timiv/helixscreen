@@ -3,10 +3,9 @@
 
 #include "ui_utils.h"
 
-#include "ui_theme.h"
-
 #include "format_utils.h"
 #include "settings_manager.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -211,7 +210,7 @@ lv_coord_t ui_get_header_content_padding(lv_coord_t screen_height) {
 
     // Use unified space_* system - values are already responsive based on breakpoint
     // set during theme initialization (space_lg = 12/16/20px at small/medium/large)
-    int32_t spacing = ui_theme_get_spacing("space_lg");
+    int32_t spacing = theme_manager_get_spacing("space_lg");
 
     // Fallback if theme not initialized (e.g., in unit tests)
     constexpr int32_t DEFAULT_SPACE_LG = 16; // Medium breakpoint value
@@ -422,7 +421,7 @@ void ui_create_ripple(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, int start_si
     lv_obj_set_style_radius(ripple, LV_RADIUS_CIRCLE, 0);
 
     // Style: primary color, semi-transparent
-    lv_obj_set_style_bg_color(ripple, ui_theme_get_color("primary_color"), 0);
+    lv_obj_set_style_bg_color(ripple, theme_manager_get_color("primary_color"), 0);
     lv_obj_set_style_bg_opa(ripple, LV_OPA_50, 0);
     lv_obj_set_style_border_width(ripple, 0, 0);
 

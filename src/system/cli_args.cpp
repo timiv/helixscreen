@@ -3,11 +3,10 @@
 
 #include "cli_args.h"
 
-#include "ui_theme.h"
-
 #include "app_globals.h"
 #include "helix_version.h"
 #include "runtime_config.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 

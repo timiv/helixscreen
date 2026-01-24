@@ -18,7 +18,6 @@
 #include "ui_settings_macro_buttons.h"
 #include "ui_settings_plugins.h"
 #include "ui_severity_card.h"
-#include "ui_theme.h"
 #include "ui_toast.h"
 #include "ui_touch_calibration_overlay.h"
 #include "ui_update_queue.h"
@@ -36,6 +35,7 @@
 #include "sound_manager.h"
 #include "standard_macros.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 #include "wizard_config_paths.h"
 
 #include <spdlog/spdlog.h>

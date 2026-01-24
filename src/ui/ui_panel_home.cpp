@@ -15,7 +15,6 @@
 #include "ui_panel_temp_control.h"
 #include "ui_subject_registry.h"
 #include "ui_temperature_utils.h"
-#include "ui_theme.h"
 #include "ui_update_queue.h"
 #include "ui_utils.h"
 
@@ -33,6 +32,7 @@
 #include "runtime_config.h"
 #include "settings_manager.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 #include "wifi_manager.h"
 #include "wizard_config_paths.h"
 
@@ -700,7 +700,7 @@ void HomePanel::update_light_icon() {
     // Calculate icon color from LED RGBW values
     if (brightness == 0) {
         // OFF state - use muted gray from design tokens
-        ui_icon_set_color(light_icon_, ui_theme_get_color("light_icon_off"), LV_OPA_COVER);
+        ui_icon_set_color(light_icon_, theme_manager_get_color("light_icon_off"), LV_OPA_COVER);
     } else {
         // Get RGB values from PrinterState
         int r = lv_subject_get_int(printer_state_.get_led_r_subject());
@@ -711,7 +711,7 @@ void HomePanel::update_light_icon() {
         lv_color_t icon_color;
         // If white channel dominant or RGB near white, use gold from design tokens
         if (w > std::max({r, g, b}) || (r > 200 && g > 200 && b > 200)) {
-            icon_color = ui_theme_get_color("light_icon_on");
+            icon_color = theme_manager_get_color("light_icon_on");
         } else {
             // Use actual LED color, boost if too dark for visibility
             int max_val = std::max({r, g, b});

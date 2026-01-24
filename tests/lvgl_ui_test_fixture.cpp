@@ -7,7 +7,7 @@
 #include "asset_manager.h"
 
 // Theme
-#include "ui_theme.h"
+#include "theme_manager.h"
 
 // Custom widgets (must be registered before XML components that use them)
 #include "ui_bed_mesh.h"
@@ -47,7 +47,7 @@ LVGLUITestFixture::LVGLUITestFixture() {
     spdlog::debug("[LVGLUITestFixture] Starting initialization...");
 
     // The parent constructor (LVGLTestFixture) creates a test screen.
-    // We need to delete it temporarily because ui_theme_init() hangs
+    // We need to delete it temporarily because theme_manager_init() hangs
     // if called when screens exist. We'll recreate it after theme init.
     if (m_test_screen != nullptr) {
         lv_obj_delete(m_test_screen);
@@ -113,7 +113,7 @@ void LVGLUITestFixture::init_theme() {
 
     // Initialize theme in light mode for test consistency
     // (dark mode can make screenshots harder to compare)
-    ui_theme_init(lv_display_get_default(), false);
+    theme_manager_init(lv_display_get_default(), false);
     m_theme_initialized = true;
     spdlog::debug("[LVGLUITestFixture] Theme initialized");
 }

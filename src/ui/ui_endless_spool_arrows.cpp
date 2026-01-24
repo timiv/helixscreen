@@ -3,7 +3,6 @@
 
 #include "ui_endless_spool_arrows.h"
 
-#include "ui_theme.h"
 #include "ui_widget_memory.h"
 
 #include "lvgl/lvgl.h"
@@ -11,6 +10,7 @@
 #include "lvgl/src/xml/lv_xml_parser.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -74,10 +74,10 @@ static EndlessSpoolArrowsData* get_data(lv_obj_t* obj) {
 // Load theme-aware colors
 static void load_theme_colors(EndlessSpoolArrowsData* data) {
     // Use text_secondary for subtle arrow color
-    data->arrow_color = ui_theme_get_color("text_secondary");
+    data->arrow_color = theme_manager_get_color("text_secondary");
 
     // Get responsive sizing from theme
-    int32_t space_xxs = ui_theme_get_spacing("space_xxs");
+    int32_t space_xxs = theme_manager_get_spacing("space_xxs");
     data->line_width = LV_MAX(2, space_xxs);
 
     spdlog::trace("[EndlessSpoolArrows] Theme colors loaded");

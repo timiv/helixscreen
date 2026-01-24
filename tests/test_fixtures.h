@@ -29,13 +29,13 @@
  */
 
 #include "ui_test_utils.h"
-#include "ui_theme.h"
 
 #include "asset_manager.h"
 #include "lvgl_test_fixture.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
 #include "printer_state.h"
+#include "theme_manager.h"
 
 #include <memory>
 
@@ -255,7 +255,7 @@ inline lv_obj_t* create_test_textarea(lv_obj_t* parent, const char* placeholder 
  * Extends MoonrakerTestFixture with:
  * - Font registration via AssetManager::register_all()
  * - globals.xml component registration (for theme constants)
- * - Theme initialization via ui_theme_init()
+ * - Theme initialization via theme_manager_init()
  * - Helpers to register and create XML components
  * - Subject registration for XML bindings
  *

@@ -6,7 +6,6 @@
 #include "ui_error_reporting.h"
 #include "ui_panel_home.h"
 #include "ui_subject_registry.h"
-#include "ui_theme.h"
 #include "ui_wizard_ams_identify.h"
 #include "ui_wizard_connection.h"
 #include "ui_wizard_fan_select.h"
@@ -30,6 +29,7 @@
 #include "moonraker_client.h"
 #include "runtime_config.h"
 #include "subject_managed_panel.h"
+#include "theme_manager.h"
 #include "wizard_config_paths.h"
 
 #include <spdlog/spdlog.h>

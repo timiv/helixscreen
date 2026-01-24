@@ -17,13 +17,13 @@
  *   1 - Found incomplete constant sets
  */
 
-#include "ui_theme.h"
+#include "theme_manager.h"
 
 #include <iostream>
 
 int main(int argc, char* argv[]) {
     const char* directory = (argc > 1) ? argv[1] : "ui_xml";
-    auto warnings = ui_theme_validate_constant_sets(directory);
+    auto warnings = theme_manager_validate_constant_sets(directory);
 
     if (warnings.empty()) {
         std::cout << "All XML constant sets are complete" << std::endl;

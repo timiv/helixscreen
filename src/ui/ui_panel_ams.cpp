@@ -19,7 +19,6 @@
 #include "ui_panel_common.h"
 #include "ui_spool_canvas.h"
 #include "ui_step_progress.h"
-#include "ui_theme.h"
 #include "ui_utils.h"
 
 #include "ams_backend.h"
@@ -34,6 +33,7 @@
 #include "observer_factory.h"
 #include "printer_state.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 #include "wizard_config_paths.h"
 
 #include <spdlog/spdlog.h>

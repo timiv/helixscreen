@@ -4,11 +4,11 @@
 #include "ui_panel_test.h"
 
 #include "ui_keyboard.h"
-#include "ui_theme.h"
 
 #include "app_globals.h"
 #include "printer_state.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 

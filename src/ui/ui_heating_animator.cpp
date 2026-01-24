@@ -5,7 +5,8 @@
 
 #include "ui_icon.h"
 #include "ui_temperature_utils.h"
-#include "ui_theme.h"
+
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -120,7 +121,7 @@ void HeatingIconAnimator::update(int current_temp, int target_temp) {
         case State::AT_TARGET:
             // Reached target - stop pulse, solid hot color
             stop_pulse();
-            current_color_ = ui_theme_get_color("temp_gradient_hot");
+            current_color_ = theme_manager_get_color("temp_gradient_hot");
             current_opacity_ = LV_OPA_COVER;
             spdlog::debug("[HeatingIconAnimator] State: AT_TARGET");
             break;
@@ -148,9 +149,9 @@ lv_color_t HeatingIconAnimator::calculate_gradient_color(float progress) {
     // 0.0 - 0.5: cold (blue) → warm (amber)
     // 0.5 - 1.0: warm (amber) → hot (red)
 
-    lv_color_t cold = ui_theme_get_color("temp_gradient_cold");
-    lv_color_t warm = ui_theme_get_color("temp_gradient_warm");
-    lv_color_t hot = ui_theme_get_color("temp_gradient_hot");
+    lv_color_t cold = theme_manager_get_color("temp_gradient_cold");
+    lv_color_t warm = theme_manager_get_color("temp_gradient_warm");
+    lv_color_t hot = theme_manager_get_color("temp_gradient_hot");
 
     if (progress < 0.5f) {
         // Cold → Warm
@@ -217,7 +218,7 @@ void HeatingIconAnimator::apply_color() {
 
 lv_color_t HeatingIconAnimator::get_secondary_color() {
     // Use theme's text_secondary color for "off" state
-    return ui_theme_get_color("text_secondary");
+    return theme_manager_get_color("text_secondary");
 }
 
 void HeatingIconAnimator::pulse_anim_cb(void* var, int32_t value) {

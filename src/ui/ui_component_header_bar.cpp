@@ -3,11 +3,11 @@
 
 #include "ui_component_header_bar.h"
 
-#include "ui_theme.h"
 #include "ui_utils.h"
 
 #include "display_manager.h"
 #include "spdlog/spdlog.h"
+#include "theme_manager.h"
 
 #include <algorithm>
 #include <stdio.h>

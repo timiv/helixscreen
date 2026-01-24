@@ -3,8 +3,6 @@
 
 #include "settings_manager.h"
 
-#include "ui_theme.h"
-
 #include "config.h"
 #include "display_manager.h"
 #include "moonraker_api.h"
@@ -12,6 +10,7 @@
 #include "runtime_config.h"
 #include "spdlog/spdlog.h"
 #include "theme_loader.h"
+#include "theme_manager.h"
 
 #include <algorithm>
 #include <cstring>

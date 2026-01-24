@@ -4,8 +4,9 @@
 #include "ui_step_progress.h"
 
 #include "ui_fonts.h" // For mdi_icons_16 font
-#include "ui_theme.h"
 #include "ui_widget_memory.h"
+
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -32,7 +33,7 @@ static lv_color_t color_label_inactive;
 // Initialize colors from component scope
 static void init_step_progress_colors(const char* scope_name) {
     lv_xml_component_scope_t* scope = scope_name ? lv_xml_component_get_scope(scope_name) : nullptr;
-    bool use_dark_mode = ui_theme_is_dark_mode();
+    bool use_dark_mode = theme_manager_is_dark_mode();
 
     if (scope) {
         // Read theme-aware colors from component scope
@@ -51,30 +52,31 @@ static void init_step_progress_colors(const char* scope_name) {
         const char* lbl_inactive = lv_xml_get_const(
             scope, use_dark_mode ? "step_label_inactive_dark" : "step_label_inactive_light");
 
-        color_pending = ui_theme_parse_hex_color(pending ? pending : "#808080");
-        color_active = ui_theme_parse_hex_color(active ? active : "#FF4444");
-        color_completed = ui_theme_parse_hex_color(completed ? completed : "#4CAF50");
-        color_number_pending = ui_theme_parse_hex_color(
+        color_pending = theme_manager_parse_hex_color(pending ? pending : "#808080");
+        color_active = theme_manager_parse_hex_color(active ? active : "#FF4444");
+        color_completed = theme_manager_parse_hex_color(completed ? completed : "#4CAF50");
+        color_number_pending = theme_manager_parse_hex_color(
             num_pending ? num_pending : (use_dark_mode ? "#000000" : "#FFFFFF"));
-        color_number_active = ui_theme_parse_hex_color(num_active ? num_active : "#FFFFFF");
-        color_label_active = ui_theme_parse_hex_color(
+        color_number_active = theme_manager_parse_hex_color(num_active ? num_active : "#FFFFFF");
+        color_label_active = theme_manager_parse_hex_color(
             lbl_active ? lbl_active : (use_dark_mode ? "#FFFFFF" : "#000000"));
-        color_label_inactive = ui_theme_parse_hex_color(
+        color_label_inactive = theme_manager_parse_hex_color(
             lbl_inactive ? lbl_inactive : (use_dark_mode ? "#CCCCCC" : "#666666"));
 
         spdlog::debug("[StepProgress] Colors loaded from scope '{}' for {} mode", scope_name,
                       use_dark_mode ? "dark" : "light");
     } else {
         // Fallback to theme token defaults
-        color_pending = ui_theme_get_color("step_pending");
-        color_active = ui_theme_get_color("step_active");
-        color_completed = ui_theme_get_color("step_completed");
+        color_pending = theme_manager_get_color("step_pending");
+        color_active = theme_manager_get_color("step_active");
+        color_completed = theme_manager_get_color("step_completed");
         color_number_pending =
-            use_dark_mode ? ui_theme_get_color("ams_hub_dark") : lv_color_white();
+            use_dark_mode ? theme_manager_get_color("ams_hub_dark") : lv_color_white();
         color_number_active = lv_color_white();
-        color_label_active = use_dark_mode ? lv_color_white() : ui_theme_get_color("ams_hub_dark");
-        color_label_inactive = ui_theme_get_color(use_dark_mode ? "step_label_inactive_dark"
-                                                                : "step_label_inactive_light");
+        color_label_active =
+            use_dark_mode ? lv_color_white() : theme_manager_get_color("ams_hub_dark");
+        color_label_inactive = theme_manager_get_color(use_dark_mode ? "step_label_inactive_dark"
+                                                                     : "step_label_inactive_light");
 
         spdlog::debug("[StepProgress] Using fallback colors for {} mode",
                       use_dark_mode ? "dark" : "light");
@@ -161,10 +163,11 @@ static void apply_step_styling(lv_obj_t* step_item, ui_step_state_t state) {
     // Apply label styling (larger + brighter for active, dimmed for others)
     if (label) {
         if (state == UI_STEP_STATE_ACTIVE) {
-            lv_obj_set_style_text_font(label, ui_theme_get_font("font_heading"), 0); // Larger
+            lv_obj_set_style_text_font(label, theme_manager_get_font("font_heading"), 0); // Larger
             lv_obj_set_style_text_color(label, color_label_active, 0); // Theme-aware active color
         } else {
-            lv_obj_set_style_text_font(label, ui_theme_get_font("font_body"), 0); // Normal size
+            lv_obj_set_style_text_font(label, theme_manager_get_font("font_body"),
+                                       0); // Normal size
             lv_obj_set_style_text_color(label, color_label_inactive,
                                         0); // Theme-aware inactive color
         }
@@ -321,7 +324,7 @@ lv_obj_t* ui_step_progress_create(lv_obj_t* parent, const ui_step_t* steps, int 
         snprintf(num_buf, sizeof(num_buf), "%d", i + 1); // 1-indexed step numbers
         lv_label_set_text(step_number, num_buf);
         lv_obj_align(step_number, LV_ALIGN_CENTER, 0, 0);
-        lv_obj_set_style_text_font(step_number, ui_theme_get_font("font_body"), 0);
+        lv_obj_set_style_text_font(step_number, theme_manager_get_font("font_body"), 0);
         lv_obj_set_style_text_color(step_number, color_number_active,
                                     0); // Theme-aware, will be updated by apply_step_styling()
 

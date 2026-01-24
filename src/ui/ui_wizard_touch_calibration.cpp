@@ -4,13 +4,13 @@
 #include "ui_wizard_touch_calibration.h"
 
 #include "ui_subject_registry.h"
-#include "ui_theme.h"
 #include "ui_utils.h"
 
 #include "config.h"
 #include "display_manager.h"
 #include "settings_manager.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 

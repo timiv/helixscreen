@@ -7,7 +7,6 @@
 #include "ui_event_safety.h"
 #include "ui_keyboard.h"
 #include "ui_subject_registry.h"
-#include "ui_theme.h"
 #include "ui_wizard.h"
 
 #include "app_globals.h"
@@ -18,6 +17,7 @@
 #include "printer_detector.h"
 #include "printer_images.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 #include "wizard_config_paths.h"
 
 #include <spdlog/spdlog.h>
@@ -381,15 +381,15 @@ void WizardPrinterIdentifyStep::handle_printer_name_changed(lv_event_t* event) {
 
     // Apply error state to textarea for validation feedback
     if (is_too_long) {
-        lv_color_t error_color = ui_theme_get_color("error_color");
+        lv_color_t error_color = theme_manager_get_color("error_color");
         lv_obj_set_style_border_color(ta, error_color, LV_PART_MAIN);
         lv_obj_set_style_border_width(ta, 2, LV_PART_MAIN);
         spdlog::debug("[{}] Validation: name too long ({} > {})", get_name(), trimmed.length(),
                       max_length);
     } else if (!is_empty) {
         const char* sec_color_str = lv_xml_get_const(NULL, "secondary_color");
-        lv_color_t valid_color = sec_color_str ? ui_theme_parse_hex_color(sec_color_str)
-                                               : ui_theme_get_color("secondary_color");
+        lv_color_t valid_color = sec_color_str ? theme_manager_parse_hex_color(sec_color_str)
+                                               : theme_manager_get_color("secondary_color");
         lv_obj_set_style_border_color(ta, valid_color, LV_PART_MAIN);
         lv_obj_set_style_border_width(ta, 1, LV_PART_MAIN);
     } else {

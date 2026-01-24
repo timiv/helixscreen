@@ -21,9 +21,8 @@
  * along with HelixScreen. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ui_theme.h"
-
 #include "lvgl/lvgl.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 

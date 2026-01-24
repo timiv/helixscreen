@@ -1,8 +1,8 @@
 // Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include "../../include/theme_manager.h"
 #include "../../include/ui_nav.h"
-#include "../../include/ui_theme.h"
 #include "../ui_test_utils.h"
 #include "lvgl/lvgl.h"
 

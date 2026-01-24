@@ -3,8 +3,6 @@
 
 #include "ui_text.h"
 
-#include "ui_theme.h"
-
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "lvgl/src/xml/lv_xml_parser.h"
@@ -12,6 +10,7 @@
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_label_parser.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 

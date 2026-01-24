@@ -3,8 +3,9 @@
 
 #include "ui_temp_graph.h"
 
-#include "ui_theme.h"
 #include "ui_utils.h"
+
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -34,7 +35,7 @@ static lv_color_t mute_color(lv_color_t color, lv_opa_t opa) {
     // Blend toward chart background based on opacity
     // opa=255 = full color, opa=0 = full background
     // Use theme token for chart background (dark mode typically used for graphs)
-    lv_color_t bg = ui_theme_get_color("graph_bg");
+    lv_color_t bg = theme_manager_get_color("graph_bg");
     uint8_t r = (color.red * opa + bg.red * (255 - opa)) / 255;
     uint8_t g = (color.green * opa + bg.green * (255 - opa)) / 255;
     uint8_t b = (color.blue * opa + bg.blue * (255 - opa)) / 255;
@@ -332,9 +333,10 @@ static void draw_x_axis_labels_cb(lv_event_t* e) {
     // Label positioning: Y is aligned with bottom Y-axis label (0° baseline)
     // The Y-axis labels use space_between layout, with 0° at the chart content bottom
     int32_t pad_bottom = lv_obj_get_style_pad_bottom(chart, LV_PART_MAIN);
-    int32_t label_height = ui_theme_get_font_height(graph->axis_font); // Configurable axis font
+    int32_t label_height =
+        theme_manager_get_font_height(graph->axis_font); // Configurable axis font
     // Add small gap between chart content and X-axis labels
-    int32_t space_xs = ui_theme_get_spacing("space_xs"); // 4/5/6px gap
+    int32_t space_xs = theme_manager_get_spacing("space_xs"); // 4/5/6px gap
     // Position below chart content with responsive gap
     int32_t label_y = coords.y2 - pad_bottom + space_xs;
 
@@ -466,7 +468,7 @@ static void draw_grid_lines_cb(lv_event_t* e) {
     // Setup line style - use explicit theme token for consistent grid appearance
     lv_draw_line_dsc_t line_dsc;
     lv_draw_line_dsc_init(&line_dsc);
-    line_dsc.color = ui_theme_get_color("theme_grey"); // Match bed mesh grid
+    line_dsc.color = theme_manager_get_color("theme_grey"); // Match bed mesh grid
     line_dsc.width = 1;
     line_dsc.opa = LV_OPA_30;
 
@@ -511,9 +513,10 @@ static void draw_y_axis_labels_cb(lv_event_t* e) {
 
     // Chart content area (where data is drawn)
     // Account for extra X-axis label space in bottom padding (matches create() formula)
-    int32_t x_axis_label_height = ui_theme_get_font_height(ui_theme_get_font("font_small"));
-    int32_t space_sm = ui_theme_get_spacing("space_sm");
-    int32_t space_md = ui_theme_get_spacing("space_md");
+    int32_t x_axis_label_height =
+        theme_manager_get_font_height(theme_manager_get_font("font_small"));
+    int32_t space_sm = theme_manager_get_spacing("space_sm");
+    int32_t space_md = theme_manager_get_spacing("space_md");
     int32_t content_top = coords.y1 + pad_top;
     int32_t content_bottom = coords.y2 - (space_sm + x_axis_label_height + space_md);
     int32_t content_height = content_bottom - content_top;
@@ -527,7 +530,7 @@ static void draw_y_axis_labels_cb(lv_event_t* e) {
     label_dsc.opa = lv_obj_get_style_text_opa(chart, LV_PART_MAIN);
 
     // Y-axis label dimensions (for positioning)
-    int32_t label_height = ui_theme_get_font_height(graph->axis_font);
+    int32_t label_height = theme_manager_get_font_height(graph->axis_font);
     int32_t label_width = graph->y_axis_width; // Use configured width
 
     // Temperature range
@@ -591,9 +594,9 @@ ui_temp_graph_t* ui_temp_graph_create(lv_obj_t* parent) {
     graph->next_series_id = 0;
     graph->y_axis_increment = 0; // Disabled by default (caller must enable)
     graph->show_y_axis = false;
-    graph->max_visible_temp = graph->min_temp + 1.0f;   // Initialize to avoid zero gradient span
-    graph->axis_font = ui_theme_get_font("font_small"); // Default axis label font
-    graph->y_axis_width = 40;                           // Default Y-axis label width
+    graph->max_visible_temp = graph->min_temp + 1.0f; // Initialize to avoid zero gradient span
+    graph->axis_font = theme_manager_get_font("font_small"); // Default axis label font
+    graph->y_axis_width = 40;                                // Default Y-axis label width
 
     // Create LVGL chart
     graph->chart = lv_chart_create(parent);
@@ -614,12 +617,12 @@ ui_temp_graph_t* ui_temp_graph_create(lv_obj_t* parent) {
 
     // Style chart background (theme handles colors)
     lv_obj_set_style_bg_opa(graph->chart, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(graph->chart, ui_theme_get_color("graph_bg"), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(graph->chart, theme_manager_get_color("graph_bg"), LV_PART_MAIN);
     lv_obj_set_style_border_width(graph->chart, 0, LV_PART_MAIN);
     // Use responsive spacing from theme constants
-    int32_t space_md = ui_theme_get_spacing("space_md"); // 8/10/12px
-    int32_t space_xs = ui_theme_get_spacing("space_xs"); // 4/5/6px for axis label gaps
-    int32_t label_height = ui_theme_get_font_height(ui_theme_get_font("font_small"));
+    int32_t space_md = theme_manager_get_spacing("space_md"); // 8/10/12px
+    int32_t space_xs = theme_manager_get_spacing("space_xs"); // 4/5/6px for axis label gaps
+    int32_t label_height = theme_manager_get_font_height(theme_manager_get_font("font_small"));
     int32_t y_axis_label_width = 40; // Width for Y-axis labels (fits "320°")
 
     lv_obj_set_style_pad_top(graph->chart, space_md, LV_PART_MAIN);
@@ -628,7 +631,7 @@ ui_temp_graph_t* ui_temp_graph_create(lv_obj_t* parent) {
     lv_obj_set_style_pad_left(graph->chart, y_axis_label_width + space_xs, LV_PART_MAIN);
     // Extra bottom padding for X-axis time labels: gap + label height
     // Use space_md for larger gap to accommodate 12-hour AM/PM format labels
-    int32_t space_sm = ui_theme_get_spacing("space_sm"); // 6/8/10px
+    int32_t space_sm = theme_manager_get_spacing("space_sm"); // 6/8/10px
     lv_obj_set_style_pad_bottom(graph->chart, space_sm + label_height + space_md, LV_PART_MAIN);
 
     // Style division lines (theme handles colors)
@@ -1071,7 +1074,7 @@ void ui_temp_graph_set_axis_size(ui_temp_graph_t* graph, const char* size) {
     }
 
     // Map size name to font token using shared helper
-    const char* font_token = ui_theme_size_to_font_token(size, "sm");
+    const char* font_token = theme_manager_size_to_font_token(size, "sm");
 
     // Y-axis width varies by size (smaller fonts need less space)
     int32_t y_axis_width = 40; // default for "sm"
@@ -1085,14 +1088,14 @@ void ui_temp_graph_set_axis_size(ui_temp_graph_t* graph, const char* size) {
         }
     }
 
-    graph->axis_font = ui_theme_get_font(font_token);
+    graph->axis_font = theme_manager_get_font(font_token);
     graph->y_axis_width = y_axis_width;
 
     // Recalculate padding to match new font size
-    int32_t space_xs = ui_theme_get_spacing("space_xs");
-    int32_t space_sm = ui_theme_get_spacing("space_sm");
-    int32_t space_md = ui_theme_get_spacing("space_md");
-    int32_t label_height = ui_theme_get_font_height(graph->axis_font);
+    int32_t space_xs = theme_manager_get_spacing("space_xs");
+    int32_t space_sm = theme_manager_get_spacing("space_sm");
+    int32_t space_md = theme_manager_get_spacing("space_md");
+    int32_t label_height = theme_manager_get_font_height(graph->axis_font);
 
     // Update padding (tighter for smaller sizes)
     bool is_xs = size && strcmp(size, "xs") == 0;

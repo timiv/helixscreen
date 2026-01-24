@@ -45,4 +45,16 @@ std::string describe_color(uint32_t rgb);
  */
 void rgb_to_hsl(uint32_t rgb, float& h, float& s, float& l);
 
+/**
+ * @brief Parse hex color string into RGB value
+ *
+ * Accepts: #RRGGBB, RRGGBB, #RGB, RGB, 0xRRGGBB
+ * Case-insensitive, trims leading/trailing whitespace.
+ *
+ * @param input Input string (null-terminated)
+ * @param out_rgb Output: parsed RGB value (0x00RRGGBB format)
+ * @return true if valid, false otherwise
+ */
+bool parse_hex_color(const char* input, uint32_t& out_rgb);
+
 } // namespace helix

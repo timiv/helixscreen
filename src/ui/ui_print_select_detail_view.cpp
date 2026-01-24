@@ -9,8 +9,9 @@
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
 #include "ui_print_preparation_manager.h"
-#include "ui_theme.h"
 #include "ui_utils.h"
+
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -432,7 +433,7 @@ void PrintSelectDetailView::update_color_swatches(const std::vector<std::string>
 
         // Parse and set background color
         if (!hex_color.empty()) {
-            lv_color_t color = ui_theme_parse_hex_color(hex_color.c_str());
+            lv_color_t color = theme_manager_parse_hex_color(hex_color.c_str());
             lv_obj_set_style_bg_color(swatch, color, 0);
             lv_obj_set_style_bg_opa(swatch, LV_OPA_COVER, 0);
         } else {
@@ -447,7 +448,7 @@ void PrintSelectDetailView::update_color_swatches(const std::vector<std::string>
         snprintf(tool_str, sizeof(tool_str), "T%zu", i);
         lv_label_set_text(label, tool_str);
         lv_obj_center(label);
-        lv_obj_set_style_text_font(label, ui_theme_get_font("font_small"), 0);
+        lv_obj_set_style_text_font(label, theme_manager_get_font("font_small"), 0);
 
         // Use contrasting text color based on background brightness
         auto parsed_color = ui_parse_hex_color(hex_color);

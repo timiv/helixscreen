@@ -3,7 +3,6 @@
 
 #include "ui_spool_canvas.h"
 
-#include "ui_theme.h"
 #include "ui_utils.h"
 
 #include "lvgl/lvgl.h"
@@ -11,6 +10,7 @@
 #include "lvgl/src/xml/lv_xml_parser.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -199,8 +199,8 @@ static void redraw_spool(SpoolCanvasData* data) {
     int32_t filament_rx = (int32_t)(filament_ry * ELLIPSE_RATIO);
 
     // Colors (from theme tokens)
-    lv_color_t back_color = ui_theme_get_color("spool_body_shade");
-    lv_color_t front_color = ui_theme_get_color("spool_body");
+    lv_color_t back_color = theme_manager_get_color("spool_body_shade");
+    lv_color_t front_color = theme_manager_get_color("spool_body");
     lv_color_t filament_color = data->color;
     lv_color_t filament_side = darken_color(filament_color, 30);
 
@@ -270,9 +270,9 @@ static void redraw_spool(SpoolCanvasData* data) {
     // Stronger gradient: dark at top (deep shadow), lighter at bottom (illuminated)
     // ========================================
     lv_color_t hub_top =
-        ui_theme_get_color("spool_hub_top"); // Nearly black at top (deep in shadow)
+        theme_manager_get_color("spool_hub_top"); // Nearly black at top (deep in shadow)
     lv_color_t hub_bottom =
-        ui_theme_get_color("spool_hub_bottom"); // Noticeably lighter at bottom (light hits it)
+        theme_manager_get_color("spool_hub_bottom"); // Noticeably lighter at bottom (light hits it)
     draw_gradient_ellipse(&layer, right_x, cy, hub_rx, hub_ry, hub_top, hub_bottom);
 
     lv_canvas_finish_layer(data->canvas, &layer);

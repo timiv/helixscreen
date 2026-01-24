@@ -3,7 +3,7 @@
 
 #include "gcode_renderer.h"
 
-#include "ui_theme.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -24,11 +24,11 @@ void GCodeRenderer::ensure_colors_initialized() {
     colors_initialized_ = true;
 
     // Load colors from theme (theme is guaranteed to be loaded by first render)
-    color_extrusion_ = ui_theme_get_color("primary_color");
-    color_travel_ = ui_theme_get_color("text_secondary");
-    color_object_boundary_ = ui_theme_get_color("secondary_color");
-    color_highlighted_ = ui_theme_get_color("secondary_color");
-    color_excluded_ = ui_theme_get_color("error_color");
+    color_extrusion_ = theme_manager_get_color("primary_color");
+    color_travel_ = theme_manager_get_color("text_secondary");
+    color_object_boundary_ = theme_manager_get_color("secondary_color");
+    color_highlighted_ = theme_manager_get_color("secondary_color");
+    color_excluded_ = theme_manager_get_color("error_color");
 
     // Save theme defaults for reset
     theme_color_extrusion_ = color_extrusion_;

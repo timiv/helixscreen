@@ -5,10 +5,10 @@
 
 #include "ui_component_header_bar.h"
 #include "ui_nav.h"
-#include "ui_theme.h"
 #include "ui_utils.h"
 
 #include "display_manager.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -52,11 +52,11 @@ lv_obj_t* ui_panel_setup_content_padding(lv_obj_t* panel, lv_obj_t* parent_scree
         // Set vertical padding (top/bottom) responsively, keep horizontal at space_md
         lv_obj_set_style_pad_top(content, vertical_padding, 0);
         lv_obj_set_style_pad_bottom(content, vertical_padding, 0);
-        lv_obj_set_style_pad_left(content, ui_theme_get_spacing("space_md"), 0);
-        lv_obj_set_style_pad_right(content, ui_theme_get_spacing("space_md"), 0);
+        lv_obj_set_style_pad_left(content, theme_manager_get_spacing("space_md"), 0);
+        lv_obj_set_style_pad_right(content, theme_manager_get_spacing("space_md"), 0);
 
         spdlog::debug("[PanelCommon] Content '{}' padding: top/bottom={}px, left/right={}px",
-                      content_name, vertical_padding, ui_theme_get_spacing("space_md"));
+                      content_name, vertical_padding, theme_manager_get_spacing("space_md"));
     } else {
         spdlog::warn("[PanelCommon] Content '{}' not found in panel", content_name);
     }
@@ -82,8 +82,8 @@ static void panel_resize_callback_wrapper(ui_panel_resize_context_t* context) {
         // Update vertical padding (top/bottom) responsively, keep horizontal at space_md
         lv_obj_set_style_pad_top(content, vertical_padding, 0);
         lv_obj_set_style_pad_bottom(content, vertical_padding, 0);
-        lv_obj_set_style_pad_left(content, ui_theme_get_spacing("space_md"), 0);
-        lv_obj_set_style_pad_right(content, ui_theme_get_spacing("space_md"), 0);
+        lv_obj_set_style_pad_left(content, theme_manager_get_spacing("space_md"), 0);
+        lv_obj_set_style_pad_right(content, theme_manager_get_spacing("space_md"), 0);
     }
 }
 

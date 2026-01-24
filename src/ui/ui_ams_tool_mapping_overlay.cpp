@@ -10,11 +10,11 @@
 
 #include "ui_event_safety.h"
 #include "ui_nav_manager.h"
-#include "ui_theme.h"
 
 #include "ams_backend.h"
 #include "ams_state.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -218,12 +218,12 @@ lv_obj_t* AmsToolMappingOverlay::create_tool_row(int tool_index, int current_slo
     lv_obj_t* row = lv_obj_create(rows_container_);
     lv_obj_set_width(row, LV_PCT(100));
     lv_obj_set_height(row, LV_SIZE_CONTENT);
-    lv_obj_set_style_bg_color(row, ui_theme_get_color("card_bg"), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(row, theme_manager_get_color("card_bg"), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(row, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_border_width(row, 0, LV_PART_MAIN);
-    lv_obj_set_style_radius(row, ui_theme_get_spacing("border_radius"), LV_PART_MAIN);
-    lv_obj_set_style_pad_all(row, ui_theme_get_spacing("space_md"), LV_PART_MAIN);
-    lv_obj_set_style_pad_gap(row, ui_theme_get_spacing("space_sm"), LV_PART_MAIN);
+    lv_obj_set_style_radius(row, theme_manager_get_spacing("border_radius"), LV_PART_MAIN);
+    lv_obj_set_style_pad_all(row, theme_manager_get_spacing("space_md"), LV_PART_MAIN);
+    lv_obj_set_style_pad_gap(row, theme_manager_get_spacing("space_sm"), LV_PART_MAIN);
     lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
@@ -236,16 +236,17 @@ lv_obj_t* AmsToolMappingOverlay::create_tool_row(int tool_index, int current_slo
     char label_text[8];
     snprintf(label_text, sizeof(label_text), "T%d", tool_index);
     lv_label_set_text(label, label_text);
-    lv_obj_set_style_text_color(label, ui_theme_get_color("text_primary"), LV_PART_MAIN);
-    lv_obj_set_style_text_font(label, ui_theme_get_font("font_body"), LV_PART_MAIN);
+    lv_obj_set_style_text_color(label, theme_manager_get_color("text_primary"), LV_PART_MAIN);
+    lv_obj_set_style_text_font(label, theme_manager_get_font("font_body"), LV_PART_MAIN);
     lv_obj_set_width(label, 40);
 
     // Color swatch (shows current mapped slot's color)
     lv_obj_t* swatch = lv_obj_create(row);
-    lv_obj_set_size(swatch, ui_theme_get_spacing("space_lg"), ui_theme_get_spacing("space_lg"));
+    lv_obj_set_size(swatch, theme_manager_get_spacing("space_lg"),
+                    theme_manager_get_spacing("space_lg"));
     lv_obj_set_style_border_width(swatch, 1, LV_PART_MAIN);
-    lv_obj_set_style_border_color(swatch, ui_theme_get_color("theme_grey"), LV_PART_MAIN);
-    lv_obj_set_style_radius(swatch, ui_theme_get_spacing("space_xs"), LV_PART_MAIN);
+    lv_obj_set_style_border_color(swatch, theme_manager_get_color("theme_grey"), LV_PART_MAIN);
+    lv_obj_set_style_radius(swatch, theme_manager_get_spacing("space_xs"), LV_PART_MAIN);
     lv_obj_remove_flag(swatch, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(swatch, LV_OBJ_FLAG_EVENT_BUBBLE);
     // Set swatch name for later lookup
@@ -293,7 +294,7 @@ lv_obj_t* AmsToolMappingOverlay::create_tool_row(int tool_index, int current_slo
 
     // Style the dropdown - flex_grow=2 takes 2/3 of flexible space (spacer has 1)
     lv_obj_set_flex_grow(dropdown, 2);
-    lv_obj_set_style_text_font(dropdown, ui_theme_get_font("font_body"), LV_PART_MAIN);
+    lv_obj_set_style_text_font(dropdown, theme_manager_get_font("font_body"), LV_PART_MAIN);
 
     // Register change callback - use lv_obj_add_event_cb for dynamic widgets
     // (This is acceptable per CLAUDE.md exceptions for dynamic UI)
@@ -322,7 +323,7 @@ void AmsToolMappingOverlay::update_row_color_swatch(lv_obj_t* row, int slot_inde
         lv_obj_set_style_bg_opa(swatch, LV_OPA_COVER, LV_PART_MAIN);
     } else {
         // No valid slot - show gray
-        lv_obj_set_style_bg_color(swatch, ui_theme_get_color("text_secondary"), LV_PART_MAIN);
+        lv_obj_set_style_bg_color(swatch, theme_manager_get_color("text_secondary"), LV_PART_MAIN);
         lv_obj_set_style_bg_opa(swatch, LV_OPA_50, LV_PART_MAIN);
     }
 }

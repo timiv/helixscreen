@@ -3,10 +3,9 @@
 
 #include "ui_panel_base.h"
 
-#include "ui_theme.h"
-
 #include "moonraker_api.h"
 #include "printer_state.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 

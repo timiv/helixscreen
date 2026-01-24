@@ -116,7 +116,7 @@ XMLTestFixture::XMLTestFixture() : LVGLTestFixture() {
         lv_xml_register_component_from_file("A:ui_xml/globals.xml");
 
         // 3. Initialize theme (uses globals constants, registers responsive values)
-        ui_theme_init(lv_display_get_default(), false); // light mode for tests
+        theme_manager_init(lv_display_get_default(), false); // light mode for tests
 
         // 4. Register custom widgets (must be done before loading components that use them)
         ui_icon_register_widget(); // icon component

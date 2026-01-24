@@ -5,7 +5,6 @@
 
 #include "ui_fonts.h"
 #include "ui_temperature_utils.h"
-#include "ui_theme.h"
 
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
@@ -13,6 +12,7 @@
 #include "lvgl/src/xml/lv_xml_utils.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -81,8 +81,8 @@ static TempDisplayData* get_data(lv_obj_t* obj) {
 
 /** Get font based on size string using shared helper */
 static const lv_font_t* get_font_for_size(const char* size) {
-    const char* font_token = ui_theme_size_to_font_token(size, "md");
-    const lv_font_t* font = ui_theme_get_font(font_token);
+    const char* font_token = theme_manager_size_to_font_token(size, "md");
+    const lv_font_t* font = theme_manager_get_font(font_token);
     return font ? font : &noto_sans_18;
 }
 
@@ -105,7 +105,7 @@ static void update_heating_color(TempDisplayData* data) {
     // Sensor-only mode: no target binding, so no heating state to show
     // Keep text_primary for readability (e.g., chamber temp sensor)
     if (!data->has_target_binding) {
-        lv_obj_set_style_text_color(data->current_label, ui_theme_get_color("text_primary"),
+        lv_obj_set_style_text_color(data->current_label, theme_manager_get_color("text_primary"),
                                     LV_PART_MAIN);
         return;
     }
@@ -271,7 +271,7 @@ static void* ui_temp_display_create_cb(lv_xml_parser_state_t* state, const char*
     // Parse size attribute for font selection
     const char* size = lv_xml_get_value_of(attrs, "size");
     const lv_font_t* font = get_font_for_size(size);
-    lv_color_t text_color = ui_theme_get_color("text_primary");
+    lv_color_t text_color = theme_manager_get_color("text_primary");
 
     // Parse show_target attribute (default is false, opt-in to show)
     const char* show_target_str = lv_xml_get_value_of(attrs, "show_target");
@@ -288,8 +288,8 @@ static void* ui_temp_display_create_cb(lv_xml_parser_state_t* state, const char*
     data_ptr->separator_label = lv_label_create(container);
     lv_label_set_text(data_ptr->separator_label, " / ");
     lv_obj_set_style_text_font(data_ptr->separator_label, font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(data_ptr->separator_label, ui_theme_get_color("text_secondary"),
-                                LV_PART_MAIN);
+    lv_obj_set_style_text_color(data_ptr->separator_label,
+                                theme_manager_get_color("text_secondary"), LV_PART_MAIN);
     if (!data_ptr->show_target) {
         lv_obj_add_flag(data_ptr->separator_label, LV_OBJ_FLAG_HIDDEN);
     }
@@ -306,7 +306,7 @@ static void* ui_temp_display_create_cb(lv_xml_parser_state_t* state, const char*
     data_ptr->unit_label = lv_label_create(container);
     lv_label_set_text(data_ptr->unit_label, "°C");
     lv_obj_set_style_text_font(data_ptr->unit_label, font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(data_ptr->unit_label, ui_theme_get_color("text_secondary"),
+    lv_obj_set_style_text_color(data_ptr->unit_label, theme_manager_get_color("text_secondary"),
                                 LV_PART_MAIN);
 
     // Initialize string subjects for text binding

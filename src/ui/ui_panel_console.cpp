@@ -10,12 +10,12 @@
 #include "ui_nav.h"
 #include "ui_panel_common.h"
 #include "ui_subject_registry.h"
-#include "ui_theme.h"
 #include "ui_update_queue.h"
 #include "ui_utils.h"
 
 #include "app_globals.h"
 #include "moonraker_client.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -356,7 +356,7 @@ void ConsolePanel::create_entry_widget(const GcodeEntry& entry) {
         return;
     }
 
-    const lv_font_t* font = ui_theme_get_font("font_small");
+    const lv_font_t* font = theme_manager_get_font("font_small");
 
     if (contains_html_spans(entry.message)) {
         // Create spangroup for rich text with colored segments
@@ -372,19 +372,19 @@ void ConsolePanel::create_entry_widget(const GcodeEntry& entry) {
             // Determine color based on segment's color class
             lv_color_t color;
             if (seg.color_class == "success") {
-                color = ui_theme_get_color("success_color");
+                color = theme_manager_get_color("success_color");
             } else if (seg.color_class == "info") {
-                color = ui_theme_get_color("info_color");
+                color = theme_manager_get_color("info_color");
             } else if (seg.color_class == "warning") {
-                color = ui_theme_get_color("warning_color");
+                color = theme_manager_get_color("warning_color");
             } else if (seg.color_class == "error") {
-                color = ui_theme_get_color("error_color");
+                color = theme_manager_get_color("error_color");
             } else {
                 // Default color based on entry type
-                color = entry.is_error ? ui_theme_get_color("error_color")
+                color = entry.is_error ? theme_manager_get_color("error_color")
                         : entry.type == GcodeEntry::Type::RESPONSE
-                            ? ui_theme_get_color("success_color")
-                            : ui_theme_get_color("text_primary");
+                            ? theme_manager_get_color("success_color")
+                            : theme_manager_get_color("text_primary");
             }
             lv_style_set_text_color(lv_span_get_style(span), color);
         }
@@ -398,12 +398,12 @@ void ConsolePanel::create_entry_widget(const GcodeEntry& entry) {
         // Apply color based on entry type
         lv_color_t color;
         if (entry.is_error) {
-            color = ui_theme_get_color("error_color");
+            color = theme_manager_get_color("error_color");
         } else if (entry.type == GcodeEntry::Type::RESPONSE) {
-            color = ui_theme_get_color("success_color");
+            color = theme_manager_get_color("success_color");
         } else {
             // Commands use primary text color
-            color = ui_theme_get_color("text_primary");
+            color = theme_manager_get_color("text_primary");
         }
         lv_obj_set_style_text_color(label, color, 0);
         lv_obj_set_style_text_font(label, font, 0);

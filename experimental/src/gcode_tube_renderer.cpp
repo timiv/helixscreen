@@ -5,8 +5,9 @@
 
 #include "gcode_tube_renderer.h"
 
-#include "ui_theme.h"
 #include "ui_utils.h"
+
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -143,7 +144,7 @@ void GCodeTubeRenderer::set_tube_radius(float radius_mm) {
 }
 
 void GCodeTubeRenderer::set_filament_color(const std::string& hex_color) {
-    lv_color_t lv_col = ui_theme_parse_hex_color(hex_color.c_str());
+    lv_color_t lv_col = theme_manager_parse_hex_color(hex_color.c_str());
     filament_color_ = glm::vec3(lv_col.red / 255.0f, lv_col.green / 255.0f, lv_col.blue / 255.0f);
 }
 

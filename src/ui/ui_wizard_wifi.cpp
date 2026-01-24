@@ -8,7 +8,6 @@
 #include "ui_keyboard.h"
 #include "ui_modal.h"
 #include "ui_subject_registry.h"
-#include "ui_theme.h"
 #include "ui_update_queue.h"
 #include "ui_utils.h"
 
@@ -16,6 +15,7 @@
 #include "ethernet_manager.h"
 #include "lvgl/lvgl.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 #include "wifi_manager.h"
 
 #include <spdlog/spdlog.h>

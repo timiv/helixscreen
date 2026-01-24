@@ -4,7 +4,6 @@
 #include "ui_filament_path_canvas.h"
 
 #include "ui_fonts.h"
-#include "ui_theme.h"
 #include "ui_update_queue.h"
 #include "ui_widget_memory.h"
 
@@ -17,6 +16,7 @@
 #include "nozzle_renderer_bambu.h"
 #include "nozzle_renderer_faceted.h"
 #include "settings_manager.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -140,22 +140,23 @@ struct FilamentPathData {
 
 // Load theme-aware colors, fonts, and sizes
 static void load_theme_colors(FilamentPathData* data) {
-    bool dark_mode = ui_theme_is_dark_mode();
+    bool dark_mode = theme_manager_is_dark_mode();
 
     // Use theme tokens with dark/light mode awareness
-    data->color_idle = ui_theme_get_color(dark_mode ? "filament_idle_dark" : "filament_idle_light");
-    data->color_error = ui_theme_get_color("filament_error");
+    data->color_idle =
+        theme_manager_get_color(dark_mode ? "filament_idle_dark" : "filament_idle_light");
+    data->color_error = theme_manager_get_color("filament_error");
     data->color_hub_bg =
-        ui_theme_get_color(dark_mode ? "filament_hub_bg_dark" : "filament_hub_bg_light");
-    data->color_hub_border =
-        ui_theme_get_color(dark_mode ? "filament_hub_border_dark" : "filament_hub_border_light");
+        theme_manager_get_color(dark_mode ? "filament_hub_bg_dark" : "filament_hub_bg_light");
+    data->color_hub_border = theme_manager_get_color(dark_mode ? "filament_hub_border_dark"
+                                                               : "filament_hub_border_light");
     data->color_nozzle =
-        ui_theme_get_color(dark_mode ? "filament_nozzle_dark" : "filament_nozzle_light");
-    data->color_text = ui_theme_get_color("text_primary");
+        theme_manager_get_color(dark_mode ? "filament_nozzle_dark" : "filament_nozzle_light");
+    data->color_text = theme_manager_get_color("text_primary");
 
     // Get responsive sizing from theme
-    int32_t space_xs = ui_theme_get_spacing("space_xs");
-    int32_t space_md = ui_theme_get_spacing("space_md");
+    int32_t space_xs = theme_manager_get_spacing("space_xs");
+    int32_t space_md = theme_manager_get_spacing("space_md");
 
     // Scale line widths based on spacing (responsive)
     data->line_width_idle = LV_MAX(2, space_xs / 2);

@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /**
- * @file ui_theme.h
+ * @file theme_manager.h
  * @brief Responsive design token system with breakpoints, spacing, and theme colors
  *
  * @pattern Singleton with breakpoint suffixes (_small/_medium/_large) and light/dark variants
  * @threading Main thread only
- * @gotchas ui_theme_get_color() looks up tokens; ui_theme_parse_color() parses hex literals only
+ * @gotchas theme_manager_get_color() looks up tokens; theme_manager_parse_color() parses hex literals only
  */
 
 #pragma once
@@ -21,7 +21,7 @@ namespace helix {
 struct ThemeData;
 }
 
-// Theme colors: Use ui_theme_get_color() to retrieve from globals.xml
+// Theme colors: Use theme_manager_get_color() to retrieve from globals.xml
 // Available tokens: primary_color, text_primary, text_secondary, success_color, etc.
 
 // Layout constants
@@ -49,7 +49,7 @@ struct ThemeData;
 #define UI_SCREEN_TINY_W 480
 #define UI_SCREEN_TINY_H 320
 
-// Spacing tokens available (use ui_theme_get_spacing() to read values):
+// Spacing tokens available (use theme_manager_get_spacing() to read values):
 //   space_xxs: 2/3/4px  (small/medium/large breakpoints)
 //   space_xs:  4/5/6px
 //   space_sm:  6/7/8px
@@ -66,7 +66,7 @@ struct ThemeData;
 #define UI_NAV_WIDTH_MEDIUM 94 // Medium screens: 70px button + 12px padding each side
 #define UI_NAV_WIDTH_LARGE 102 // Large screens: 70px button + 16px padding each side
 
-// Semantic fonts: Use ui_theme_get_font() to retrieve responsive fonts from globals.xml
+// Semantic fonts: Use theme_manager_get_font() to retrieve responsive fonts from globals.xml
 // Available tokens: font_heading, font_body, font_small
 
 /**
@@ -78,7 +78,7 @@ struct ThemeData;
  * @param display LVGL display instance
  * @param use_dark_mode true for dark theme, false for light theme
  */
-void ui_theme_init(lv_display_t* display, bool use_dark_mode);
+void theme_manager_init(lv_display_t* display, bool use_dark_mode);
 
 /**
  * @brief Get breakpoint suffix for a given resolution
@@ -89,7 +89,7 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode);
  * @param max_resolution Maximum of horizontal and vertical resolution
  * @return "_small" (≤480), "_medium" (481-800), or "_large" (>800)
  */
-const char* ui_theme_get_breakpoint_suffix(int32_t max_resolution);
+const char* theme_manager_get_breakpoint_suffix(int32_t max_resolution);
 
 /**
  * @brief Register responsive spacing tokens (space_* system)
@@ -98,21 +98,21 @@ const char* ui_theme_get_breakpoint_suffix(int32_t max_resolution);
  * current display resolution. This is the preferred system - use space_*
  * tokens instead of the deprecated padding_* and gap_* tokens.
  *
- * Called automatically by ui_theme_init().
+ * Called automatically by theme_manager_init().
  *
  * @param display LVGL display instance
  */
-void ui_theme_register_responsive_spacing(lv_display_t* display);
+void theme_manager_register_responsive_spacing(lv_display_t* display);
 
 /**
  * @brief Register responsive font constants
  *
  * Selects font sizes based on screen size breakpoints.
- * Called automatically by ui_theme_init().
+ * Called automatically by theme_manager_init().
  *
  * @param display LVGL display instance
  */
-void ui_theme_register_responsive_fonts(lv_display_t* display);
+void theme_manager_register_responsive_fonts(lv_display_t* display);
 
 /**
  * @brief Toggle between light and dark themes
@@ -121,46 +121,46 @@ void ui_theme_register_responsive_fonts(lv_display_t* display);
  * styles in-place, and forces a widget tree refresh. All existing widgets
  * will update to the new color scheme without recreation.
  */
-void ui_theme_toggle_dark_mode();
+void theme_manager_toggle_dark_mode();
 
 /**
  * @brief Force style refresh on widget tree
  *
  * Walks the widget tree starting from root and forces style recalculation
- * on each widget. This is called automatically by ui_theme_toggle_dark_mode()
+ * on each widget. This is called automatically by theme_manager_toggle_dark_mode()
  * but can be used independently for custom refresh scenarios.
  *
  * @param root Root widget to start refresh from (typically lv_screen_active())
  */
-void ui_theme_refresh_widget_tree(lv_obj_t* root);
+void theme_manager_refresh_widget_tree(lv_obj_t* root);
 
 /**
  * @brief Check if dark mode is currently active
  *
  * @return true if dark mode enabled, false if light mode
  */
-bool ui_theme_is_dark_mode();
+bool theme_manager_is_dark_mode();
 
 /**
  * @brief Get currently active theme data
- * @return Reference to active theme (valid after ui_theme_init)
+ * @return Reference to active theme (valid after theme_manager_init)
  */
-const helix::ThemeData& ui_theme_get_active_theme();
+const helix::ThemeData& theme_manager_get_active_theme();
 
 /**
  * @brief Preview theme colors without restart
  *
- * Applies theme colors for live preview. Call ui_theme_revert_preview()
+ * Applies theme colors for live preview. Call theme_manager_revert_preview()
  * to restore original colors, or restart to apply permanently.
  *
  * @param theme Theme data to preview
  */
-void ui_theme_preview(const helix::ThemeData& theme);
+void theme_manager_preview(const helix::ThemeData& theme);
 
 /**
  * @brief Revert to active theme (cancel preview)
  */
-void ui_theme_revert_preview();
+void theme_manager_revert_preview();
 
 /**
  * @brief Parse hex color string to lv_color_t
@@ -170,7 +170,7 @@ void ui_theme_revert_preview();
  * @param hex_str Hex color string (e.g., "#FF0000" or "FF0000")
  * @return LVGL color object
  */
-lv_color_t ui_theme_parse_hex_color(const char* hex_str);
+lv_color_t theme_manager_parse_hex_color(const char* hex_str);
 
 /**
  * @brief Get themed color by base name
@@ -183,7 +183,7 @@ lv_color_t ui_theme_parse_hex_color(const char* hex_str);
  * @param base_name Base color name (without _light/_dark suffix)
  * @return Themed color for current mode
  */
-lv_color_t ui_theme_get_color(const char* base_name);
+lv_color_t theme_manager_get_color(const char* base_name);
 
 /**
  * @brief Apply themed background color to widget
@@ -195,7 +195,7 @@ lv_color_t ui_theme_get_color(const char* base_name);
  * @param base_name Base color name (without _light/_dark suffix)
  * @param part Widget part to style (default: LV_PART_MAIN)
  */
-void ui_theme_apply_bg_color(lv_obj_t* obj, const char* base_name, lv_part_t part = LV_PART_MAIN);
+void theme_manager_apply_bg_color(lv_obj_t* obj, const char* base_name, lv_part_t part = LV_PART_MAIN);
 
 /**
  * @brief Get font height in pixels
@@ -205,7 +205,7 @@ void ui_theme_apply_bg_color(lv_obj_t* obj, const char* base_name, lv_part_t par
  * @param font LVGL font pointer
  * @return Font height in pixels
  */
-int32_t ui_theme_get_font_height(const lv_font_t* font);
+int32_t theme_manager_get_font_height(const lv_font_t* font);
 
 /**
  * @brief Set overlay widget width to fill space after nav bar
@@ -239,7 +239,7 @@ void ui_set_overlay_width(lv_obj_t* obj, lv_obj_t* screen);
  * @param token Spacing token name (e.g., "space_lg", "space_md", "space_xs")
  * @return Spacing value in pixels, or 0 if token not found
  */
-int32_t ui_theme_get_spacing(const char* token);
+int32_t theme_manager_get_spacing(const char* token);
 
 /**
  * @brief Get responsive font by token name
@@ -256,7 +256,7 @@ int32_t ui_theme_get_spacing(const char* token);
  * @param token Font token name (e.g., "font_small", "font_body", "font_heading")
  * @return Font pointer, or nullptr if token not found
  */
-const lv_font_t* ui_theme_get_font(const char* token);
+const lv_font_t* theme_manager_get_font(const char* token);
 
 /**
  * @brief Convert semantic size name to font token
@@ -274,7 +274,7 @@ const lv_font_t* ui_theme_get_font(const char* token);
  * @param default_size Default size to use if size is NULL (defaults to "sm")
  * @return Font token string (e.g., "font_small"). Never returns NULL.
  */
-const char* ui_theme_size_to_font_token(const char* size, const char* default_size = "sm");
+const char* theme_manager_size_to_font_token(const char* size, const char* default_size = "sm");
 
 // ============================================================================
 // Multi-File Responsive Constants API
@@ -302,7 +302,7 @@ const char* ui_theme_size_to_font_token(const char* size, const char* default_si
  * @param suffix Suffix to match ("_small", "_medium", "_large", "_light", "_dark")
  * @param token_values Output map: base_name → value (last-wins if duplicate)
  */
-void ui_theme_parse_xml_file_for_suffix(const char* filepath, const char* element_type,
+void theme_manager_parse_xml_file_for_suffix(const char* filepath, const char* element_type,
                                         const char* suffix,
                                         std::unordered_map<std::string, std::string>& token_values);
 
@@ -318,7 +318,7 @@ void ui_theme_parse_xml_file_for_suffix(const char* filepath, const char* elemen
  * @param directory Directory path to search
  * @return Sorted vector of full file paths, empty if directory doesn't exist
  */
-std::vector<std::string> ui_theme_find_xml_files(const char* directory);
+std::vector<std::string> theme_manager_find_xml_files(const char* directory);
 
 /**
  * @brief Parse all XML files in a directory for constants with a specific suffix
@@ -333,7 +333,7 @@ std::vector<std::string> ui_theme_find_xml_files(const char* directory);
  * @return Map of base_name → value for all matching constants
  */
 std::unordered_map<std::string, std::string>
-ui_theme_parse_all_xml_for_suffix(const char* directory, const char* element_type,
+theme_manager_parse_all_xml_for_suffix(const char* directory, const char* element_type,
                                   const char* suffix);
 
 /**
@@ -341,7 +341,7 @@ ui_theme_parse_all_xml_for_suffix(const char* directory, const char* element_typ
  *
  * Aggregates constants from all XML files in the directory. Files are processed
  * in alphabetical order, so later files (by name) override earlier ones.
- * Unlike ui_theme_parse_all_xml_for_suffix(), this returns ALL elements regardless
+ * Unlike theme_manager_parse_all_xml_for_suffix(), this returns ALL elements regardless
  * of suffix, with the full name as the key.
  *
  * @param directory Directory containing XML files
@@ -349,7 +349,7 @@ ui_theme_parse_all_xml_for_suffix(const char* directory, const char* element_typ
  * @return Map of name → value for all matching constants
  */
 std::unordered_map<std::string, std::string>
-ui_theme_parse_all_xml_for_element(const char* directory, const char* element_type);
+theme_manager_parse_all_xml_for_element(const char* directory, const char* element_type);
 
 /**
  * @brief Validate that responsive/themed constant sets are complete
@@ -365,4 +365,4 @@ ui_theme_parse_all_xml_for_element(const char* directory, const char* element_ty
  * @param directory Directory containing XML files to validate
  * @return Vector of warning messages (empty if all valid)
  */
-std::vector<std::string> ui_theme_validate_constant_sets(const char* directory);
+std::vector<std::string> theme_manager_validate_constant_sets(const char* directory);

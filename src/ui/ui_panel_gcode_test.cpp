@@ -6,12 +6,12 @@
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_gcode_viewer.h"
-#include "ui_theme.h"
 
 #include "printer_state.h"
 #include "runtime_config.h"
 #include "settings_manager.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 

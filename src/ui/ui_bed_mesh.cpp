@@ -4,7 +4,6 @@
 #include "ui_bed_mesh.h"
 
 #include "ui_fonts.h"
-#include "ui_theme.h"
 #include "ui_utils.h"
 
 #include "bed_mesh_renderer.h"
@@ -13,6 +12,7 @@
 #include "lvgl/src/xml/lv_xml_parser.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 

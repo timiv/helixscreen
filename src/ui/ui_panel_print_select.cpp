@@ -24,7 +24,6 @@
 #include "ui_print_select_history.h"
 #include "ui_print_select_path_navigator.h"
 #include "ui_subject_registry.h"
-#include "ui_theme.h"
 #include "ui_update_queue.h"
 #include "ui_utils.h"
 
@@ -41,6 +40,7 @@
 #include "runtime_config.h"
 #include "settings_manager.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 #include "thumbnail_cache.h"
 #include "usb_manager.h"
 

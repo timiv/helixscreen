@@ -5,7 +5,6 @@
 
 #include "ui_nav.h"
 #include "ui_panel_notification_history.h"
-#include "ui_theme.h"
 #include "ui_utils.h"
 
 #include "app_globals.h"
@@ -13,6 +12,7 @@
 #include "observer_factory.h"
 #include "printer_state.h"
 #include "settings_manager.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 

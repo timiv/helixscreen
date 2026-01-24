@@ -3,7 +3,6 @@
 
 #include "ui_gcode_viewer.h"
 
-#include "ui_theme.h"
 #include "ui_update_queue.h"
 #include "ui_utils.h"
 
@@ -13,6 +12,7 @@
 #include "gcode_streaming_config.h"
 #include "gcode_streaming_controller.h"
 #include "memory_utils.h"
+#include "theme_manager.h"
 
 #include <filesystem>
 
@@ -422,9 +422,10 @@ static void gcode_viewer_draw_cb(lv_event_t* e) {
                 if (!state->ghost_progress_label_) {
                     state->ghost_progress_label_ = lv_label_create(u->viewer);
                     lv_obj_set_style_text_color(state->ghost_progress_label_,
-                                                ui_theme_get_color("text_secondary"), LV_PART_MAIN);
+                                                theme_manager_get_color("text_secondary"),
+                                                LV_PART_MAIN);
                     lv_obj_set_style_text_font(state->ghost_progress_label_,
-                                               ui_theme_get_font("font_small"), LV_PART_MAIN);
+                                               theme_manager_get_font("font_small"), LV_PART_MAIN);
                     lv_obj_align(state->ghost_progress_label_, LV_ALIGN_BOTTOM_LEFT, 8, -8);
                 }
                 static char text[32];
@@ -916,7 +917,7 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
         lv_obj_set_flex_flow(st->loading_container, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(st->loading_container, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
                               LV_FLEX_ALIGN_CENTER);
-        lv_obj_set_style_bg_color(st->loading_container, ui_theme_get_color("card_bg"),
+        lv_obj_set_style_bg_color(st->loading_container, theme_manager_get_color("card_bg"),
                                   LV_PART_MAIN);
         lv_obj_set_style_bg_opa(st->loading_container, 220, LV_PART_MAIN);
         lv_obj_set_style_border_width(st->loading_container, 0, LV_PART_MAIN);
@@ -926,14 +927,14 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
 
         st->loading_spinner = lv_spinner_create(st->loading_container);
         lv_obj_set_size(st->loading_spinner, 48, 48);
-        lv_color_t primary = ui_theme_get_color("primary_color");
+        lv_color_t primary = theme_manager_get_color("primary_color");
         lv_obj_set_style_arc_color(st->loading_spinner, primary, LV_PART_INDICATOR);
         lv_obj_set_style_arc_width(st->loading_spinner, 4, LV_PART_INDICATOR);
         lv_obj_set_style_arc_opa(st->loading_spinner, LV_OPA_0, LV_PART_MAIN);
 
         st->loading_label = lv_label_create(st->loading_container);
         lv_label_set_text(st->loading_label, "Indexing G-code...");
-        lv_obj_set_style_text_color(st->loading_label, ui_theme_get_color("text_primary"),
+        lv_obj_set_style_text_color(st->loading_label, theme_manager_get_color("text_primary"),
                                     LV_PART_MAIN);
 
         // Create streaming controller
@@ -1042,8 +1043,10 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
                           LV_FLEX_ALIGN_CENTER);
 
     // Style container: semi-transparent dark background, no border, padding for content
-    // Use ui_theme_get_color() for token lookup (not ui_theme_parse_hex_color which expects hex)
-    lv_obj_set_style_bg_color(st->loading_container, ui_theme_get_color("card_bg"), LV_PART_MAIN);
+    // Use theme_manager_get_color() for token lookup (not theme_manager_parse_hex_color which
+    // expects hex)
+    lv_obj_set_style_bg_color(st->loading_container, theme_manager_get_color("card_bg"),
+                              LV_PART_MAIN);
     lv_obj_set_style_bg_opa(st->loading_container, 220, LV_PART_MAIN);
     lv_obj_set_style_border_width(st->loading_container, 0, LV_PART_MAIN);
     lv_obj_set_style_radius(st->loading_container, 8, LV_PART_MAIN);
@@ -1054,7 +1057,7 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
     lv_obj_set_size(st->loading_spinner, 48, 48); // ~lg size for small screens
 
     // Apply consistent spinner styling (matching ui_spinner component)
-    lv_color_t primary = ui_theme_get_color("primary_color");
+    lv_color_t primary = theme_manager_get_color("primary_color");
     lv_obj_set_style_arc_color(st->loading_spinner, primary, LV_PART_INDICATOR);
     lv_obj_set_style_arc_width(st->loading_spinner, 4, LV_PART_INDICATOR);
     lv_obj_set_style_arc_opa(st->loading_spinner, LV_OPA_0, LV_PART_MAIN);
@@ -1062,7 +1065,7 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
     st->loading_label = lv_label_create(st->loading_container);
     lv_label_set_text(st->loading_label, "Loading G-code...");
     // Set text color for visibility on dark background
-    lv_obj_set_style_text_color(st->loading_label, ui_theme_get_color("text_primary"),
+    lv_obj_set_style_text_color(st->loading_label, theme_manager_get_color("text_primary"),
                                 LV_PART_MAIN);
 
     // Launch worker thread via RAII-managed start_build()

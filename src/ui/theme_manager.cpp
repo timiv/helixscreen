@@ -1,13 +1,13 @@
 // Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "ui_theme.h"
+#include "theme_manager.h"
 
 #include "ui_error_reporting.h"
 #include "ui_fonts.h"
 
 #include "config.h"
-#include "helix_theme.h"
+#include "theme_core.h"
 #include "lvgl/lvgl.h"
 #include "lvgl/src/libs/expat/expat.h"
 #include "lvgl/src/xml/lv_xml.h"
@@ -38,7 +38,7 @@ static helix::ThemeData active_theme;
 // Theme preset overrides removed - colors now come from theme JSON files via ThemeData
 
 // Parse hex color string "#FF4444" -> lv_color_hex(0xFF4444)
-lv_color_t ui_theme_parse_hex_color(const char* hex_str) {
+lv_color_t theme_manager_parse_hex_color(const char* hex_str) {
     if (!hex_str || hex_str[0] != '#') {
         spdlog::error("[Theme] Invalid hex color string: {}", hex_str ? hex_str : "NULL");
         return lv_color_hex(0x000000);
@@ -75,10 +75,10 @@ static const char* darken_hex_color(const char* hex_str, float percent) {
  * the base name (xxx) as a runtime constant with the appropriate value
  * based on current theme mode.
  */
-static void ui_theme_register_color_pairs(lv_xml_component_scope_t* scope, bool dark_mode) {
+static void theme_manager_register_color_pairs(lv_xml_component_scope_t* scope, bool dark_mode) {
     // Find all color tokens with _light and _dark suffixes from all XML files
-    auto light_tokens = ui_theme_parse_all_xml_for_suffix("ui_xml", "color", "_light");
-    auto dark_tokens = ui_theme_parse_all_xml_for_suffix("ui_xml", "color", "_dark");
+    auto light_tokens = theme_manager_parse_all_xml_for_suffix("ui_xml", "color", "_light");
+    auto dark_tokens = theme_manager_parse_all_xml_for_suffix("ui_xml", "color", "_dark");
 
     // For each _light color, check if _dark exists and register base name
     int registered = 0;
@@ -103,7 +103,7 @@ static void ui_theme_register_color_pairs(lv_xml_component_scope_t* scope, bool 
  * any that do NOT have dynamic suffixes (_light, _dark, _small, _medium, _large).
  * These static constants are registered first so dynamic variants can override them.
  */
-static void ui_theme_register_static_constants(lv_xml_component_scope_t* scope) {
+static void theme_manager_register_static_constants(lv_xml_component_scope_t* scope) {
     const std::vector<std::string> skip_suffixes = {"_light", "_dark", "_small", "_medium",
                                                     "_large"};
 
@@ -119,7 +119,7 @@ static void ui_theme_register_static_constants(lv_xml_component_scope_t* scope) 
 
     int color_count = 0, px_count = 0, string_count = 0;
 
-    auto color_tokens = ui_theme_parse_all_xml_for_element("ui_xml", "color");
+    auto color_tokens = theme_manager_parse_all_xml_for_element("ui_xml", "color");
 
     // Merge palette colors from active theme JSON - these override any XML definitions
     auto& names = helix::ThemePalette::color_names();
@@ -134,14 +134,14 @@ static void ui_theme_register_static_constants(lv_xml_component_scope_t* scope) 
         }
     }
 
-    for (const auto& [name, value] : ui_theme_parse_all_xml_for_element("ui_xml", "px")) {
+    for (const auto& [name, value] : theme_manager_parse_all_xml_for_element("ui_xml", "px")) {
         if (!has_dynamic_suffix(name)) {
             lv_xml_register_const(scope, name.c_str(), value.c_str());
             px_count++;
         }
     }
 
-    for (const auto& [name, value] : ui_theme_parse_all_xml_for_element("ui_xml", "string")) {
+    for (const auto& [name, value] : theme_manager_parse_all_xml_for_element("ui_xml", "string")) {
         if (!has_dynamic_suffix(name)) {
             lv_xml_register_const(scope, name.c_str(), value.c_str());
             string_count++;
@@ -158,7 +158,7 @@ static void ui_theme_register_static_constants(lv_xml_component_scope_t* scope) 
  * @param max_resolution The maximum of horizontal and vertical resolution
  * @return Suffix string: "_small" (≤480), "_medium" (481-800), or "_large" (>800)
  */
-const char* ui_theme_get_breakpoint_suffix(int32_t max_resolution) {
+const char* theme_manager_get_breakpoint_suffix(int32_t max_resolution) {
     if (max_resolution <= UI_BREAKPOINT_SMALL_MAX) {
         return "_small";
     } else if (max_resolution <= UI_BREAKPOINT_MEDIUM_MAX) {
@@ -180,12 +180,12 @@ const char* ui_theme_get_breakpoint_suffix(int32_t max_resolution) {
  *
  * @param display The LVGL display to get resolution from
  */
-void ui_theme_register_responsive_spacing(lv_display_t* display) {
+void theme_manager_register_responsive_spacing(lv_display_t* display) {
     int32_t hor_res = lv_display_get_horizontal_resolution(display);
     int32_t ver_res = lv_display_get_vertical_resolution(display);
     int32_t greater_res = LV_MAX(hor_res, ver_res);
 
-    const char* size_suffix = ui_theme_get_breakpoint_suffix(greater_res);
+    const char* size_suffix = theme_manager_get_breakpoint_suffix(greater_res);
     const char* size_label = (greater_res <= UI_BREAKPOINT_SMALL_MAX)    ? "SMALL"
                              : (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) ? "MEDIUM"
                                                                          : "LARGE";
@@ -197,9 +197,9 @@ void ui_theme_register_responsive_spacing(lv_display_t* display) {
     }
 
     // Auto-discover all px tokens from all XML files
-    auto small_tokens = ui_theme_parse_all_xml_for_suffix("ui_xml", "px", "_small");
-    auto medium_tokens = ui_theme_parse_all_xml_for_suffix("ui_xml", "px", "_medium");
-    auto large_tokens = ui_theme_parse_all_xml_for_suffix("ui_xml", "px", "_large");
+    auto small_tokens = theme_manager_parse_all_xml_for_suffix("ui_xml", "px", "_small");
+    auto medium_tokens = theme_manager_parse_all_xml_for_suffix("ui_xml", "px", "_medium");
+    auto large_tokens = theme_manager_parse_all_xml_for_suffix("ui_xml", "px", "_large");
 
     int registered = 0;
     for (const auto& [base_name, small_val] : small_tokens) {
@@ -276,12 +276,12 @@ void ui_theme_register_responsive_spacing(lv_display_t* display) {
  *
  * @param display The LVGL display to get resolution from
  */
-void ui_theme_register_responsive_fonts(lv_display_t* display) {
+void theme_manager_register_responsive_fonts(lv_display_t* display) {
     int32_t hor_res = lv_display_get_horizontal_resolution(display);
     int32_t ver_res = lv_display_get_vertical_resolution(display);
     int32_t greater_res = LV_MAX(hor_res, ver_res);
 
-    const char* size_suffix = ui_theme_get_breakpoint_suffix(greater_res);
+    const char* size_suffix = theme_manager_get_breakpoint_suffix(greater_res);
     const char* size_label = (greater_res <= UI_BREAKPOINT_SMALL_MAX)    ? "SMALL"
                              : (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) ? "MEDIUM"
                                                                          : "LARGE";
@@ -293,9 +293,9 @@ void ui_theme_register_responsive_fonts(lv_display_t* display) {
     }
 
     // Auto-discover all string tokens from all XML files
-    auto small_tokens = ui_theme_parse_all_xml_for_suffix("ui_xml", "string", "_small");
-    auto medium_tokens = ui_theme_parse_all_xml_for_suffix("ui_xml", "string", "_medium");
-    auto large_tokens = ui_theme_parse_all_xml_for_suffix("ui_xml", "string", "_large");
+    auto small_tokens = theme_manager_parse_all_xml_for_suffix("ui_xml", "string", "_small");
+    auto medium_tokens = theme_manager_parse_all_xml_for_suffix("ui_xml", "string", "_medium");
+    auto large_tokens = theme_manager_parse_all_xml_for_suffix("ui_xml", "string", "_large");
 
     int registered = 0;
     for (const auto& [base_name, small_val] : small_tokens) {
@@ -327,10 +327,10 @@ void ui_theme_register_responsive_fonts(lv_display_t* display) {
  * @brief Register theme palette colors as LVGL constants
  *
  * Registers all 16 palette colors from the active theme.
- * Must be called BEFORE ui_theme_register_static_constants() so
+ * Must be called BEFORE theme_manager_register_static_constants() so
  * palette colors are available for semantic mapping.
  */
-static void ui_theme_register_palette_colors(lv_xml_component_scope_t* scope,
+static void theme_manager_register_palette_colors(lv_xml_component_scope_t* scope,
                                              const helix::ThemeData& theme) {
     auto& names = helix::ThemePalette::color_names();
     for (size_t i = 0; i < 16; ++i) {
@@ -350,7 +350,7 @@ static void ui_theme_register_palette_colors(lv_xml_component_scope_t* scope,
  * @param theme Theme data with palette colors
  * @param dark_mode Whether to use dark mode values for base names
  */
-static void ui_theme_register_semantic_colors(lv_xml_component_scope_t* scope,
+static void theme_manager_register_semantic_colors(lv_xml_component_scope_t* scope,
                                               const helix::ThemeData& theme, bool dark_mode) {
     const auto& c = theme.colors;
 
@@ -427,7 +427,7 @@ static void ui_theme_register_semantic_colors(lv_xml_component_scope_t* scope,
  * Reads /display/theme from config, loads corresponding JSON file.
  * Falls back to Nord if not found.
  */
-static helix::ThemeData ui_theme_load_active_theme() {
+static helix::ThemeData theme_manager_load_active_theme() {
     std::string themes_dir = helix::get_themes_directory();
 
     // Ensure themes directory exists with default theme
@@ -450,7 +450,7 @@ static helix::ThemeData ui_theme_load_active_theme() {
     return theme;
 }
 
-void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
+void theme_manager_init(lv_display_t* display, bool use_dark_mode_param) {
     theme_display = display;
     use_dark_mode = use_dark_mode_param;
 
@@ -463,24 +463,24 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
     }
 
     // Load active theme from config/themes directory
-    active_theme = ui_theme_load_active_theme();
+    active_theme = theme_manager_load_active_theme();
 
     // Register palette colors FIRST (before static constants)
-    ui_theme_register_palette_colors(scope, active_theme);
+    theme_manager_register_palette_colors(scope, active_theme);
 
     // Register semantic colors derived from palette (includes _light/_dark variants and base names)
-    ui_theme_register_semantic_colors(scope, active_theme, use_dark_mode);
+    theme_manager_register_semantic_colors(scope, active_theme, use_dark_mode);
 
     // Register static constants first (colors, px, strings without dynamic suffixes)
-    ui_theme_register_static_constants(scope);
+    theme_manager_register_static_constants(scope);
 
     // Auto-register all color pairs from globals.xml (xxx_light/xxx_dark -> xxx)
     // This handles app_bg_color, text_primary, header_text, theme_grey, card_bg, etc.
-    ui_theme_register_color_pairs(scope, use_dark_mode);
+    theme_manager_register_color_pairs(scope, use_dark_mode);
 
-    // Register responsive constants (must be before helix_theme_init so fonts are available)
-    ui_theme_register_responsive_spacing(display);
-    ui_theme_register_responsive_fonts(display);
+    // Register responsive constants (must be before theme_core_init so fonts are available)
+    theme_manager_register_responsive_spacing(display);
+    theme_manager_register_responsive_fonts(display);
 
     // Validate critical color pairs were registered (fail-fast if missing)
     static const char* required_colors[] = {"app_bg_color", "text_primary", "header_text", nullptr};
@@ -504,8 +504,8 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
         return;
     }
 
-    lv_color_t primary_color = ui_theme_parse_hex_color(primary_str);
-    lv_color_t secondary_color = ui_theme_parse_hex_color(secondary_str);
+    lv_color_t primary_color = theme_manager_parse_hex_color(primary_str);
+    lv_color_t secondary_color = theme_manager_parse_hex_color(secondary_str);
 
     // Read responsive font based on current breakpoint
     // NOTE: We read the variant directly because base constants are removed to enable
@@ -513,7 +513,7 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
     int32_t hor_res = lv_display_get_horizontal_resolution(display);
     int32_t ver_res = lv_display_get_vertical_resolution(display);
     int32_t greater_res = LV_MAX(hor_res, ver_res);
-    const char* size_suffix = ui_theme_get_breakpoint_suffix(greater_res);
+    const char* size_suffix = theme_manager_get_breakpoint_suffix(greater_res);
 
     char font_variant_name[64];
     snprintf(font_variant_name, sizeof(font_variant_name), "font_body%s", size_suffix);
@@ -535,10 +535,10 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
         return;
     }
 
-    lv_color_t screen_bg = ui_theme_parse_hex_color(screen_bg_str);
-    lv_color_t card_bg = ui_theme_parse_hex_color(card_bg_str);
-    lv_color_t theme_grey = ui_theme_parse_hex_color(theme_grey_str);
-    lv_color_t text_primary_color = ui_theme_parse_hex_color(text_primary_str);
+    lv_color_t screen_bg = theme_manager_parse_hex_color(screen_bg_str);
+    lv_color_t card_bg = theme_manager_parse_hex_color(card_bg_str);
+    lv_color_t theme_grey = theme_manager_parse_hex_color(theme_grey_str);
+    lv_color_t text_primary_color = theme_manager_parse_hex_color(text_primary_str);
 
     // Read border radius from globals.xml
     const char* border_radius_str = lv_xml_get_const(nullptr, "border_radius");
@@ -550,7 +550,7 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
 
     // Initialize custom HelixScreen theme (wraps LVGL default theme)
     current_theme =
-        helix_theme_init(display, primary_color, secondary_color, text_primary_color, use_dark_mode,
+        theme_core_init(display, primary_color, secondary_color, text_primary_color, use_dark_mode,
                          base_font, screen_bg, card_bg, theme_grey, border_radius);
 
     if (current_theme) {
@@ -578,7 +578,7 @@ static lv_obj_tree_walk_res_t refresh_style_cb(lv_obj_t* obj, void* user_data) {
     return LV_OBJ_TREE_WALK_NEXT;
 }
 
-void ui_theme_refresh_widget_tree(lv_obj_t* root) {
+void theme_manager_refresh_widget_tree(lv_obj_t* root) {
     if (!root)
         return;
 
@@ -586,7 +586,7 @@ void ui_theme_refresh_widget_tree(lv_obj_t* root) {
     lv_obj_tree_walk(root, refresh_style_cb, nullptr);
 }
 
-void ui_theme_toggle_dark_mode() {
+void theme_manager_toggle_dark_mode() {
     if (!theme_display) {
         spdlog::error("[Theme] Cannot toggle: theme not initialized");
         return;
@@ -618,20 +618,20 @@ void ui_theme_toggle_dark_mode() {
         return;
     }
 
-    lv_color_t screen_bg = ui_theme_parse_hex_color(screen_bg_str);
-    lv_color_t card_bg = ui_theme_parse_hex_color(card_bg_str);
-    lv_color_t theme_grey = ui_theme_parse_hex_color(theme_grey_str);
-    lv_color_t text_primary_color = ui_theme_parse_hex_color(text_primary_str);
+    lv_color_t screen_bg = theme_manager_parse_hex_color(screen_bg_str);
+    lv_color_t card_bg = theme_manager_parse_hex_color(card_bg_str);
+    lv_color_t theme_grey = theme_manager_parse_hex_color(theme_grey_str);
+    lv_color_t text_primary_color = theme_manager_parse_hex_color(text_primary_str);
 
     spdlog::debug("[Theme] New colors: screen={}, card={}, grey={}, text={}", screen_bg_str,
                   card_bg_str, theme_grey_str, text_primary_str);
 
     // Update helix theme styles in-place (triggers lv_obj_report_style_change)
-    helix_theme_update_colors(new_use_dark_mode, screen_bg, card_bg, theme_grey,
+    theme_core_update_colors(new_use_dark_mode, screen_bg, card_bg, theme_grey,
                               text_primary_color);
 
     // Force style refresh on entire widget tree for local/inline styles
-    ui_theme_refresh_widget_tree(lv_screen_active());
+    theme_manager_refresh_widget_tree(lv_screen_active());
 
     // Invalidate screen to trigger redraw
     lv_obj_invalidate(lv_screen_active());
@@ -639,28 +639,28 @@ void ui_theme_toggle_dark_mode() {
     spdlog::info("[Theme] Theme toggle complete");
 }
 
-bool ui_theme_is_dark_mode() {
+bool theme_manager_is_dark_mode() {
     return use_dark_mode;
 }
 
-const helix::ThemeData& ui_theme_get_active_theme() {
+const helix::ThemeData& theme_manager_get_active_theme() {
     return active_theme;
 }
 
-void ui_theme_preview(const helix::ThemeData& theme) {
+void theme_manager_preview(const helix::ThemeData& theme) {
     const char* colors[16];
     for (size_t i = 0; i < 16; ++i) {
         colors[i] = theme.colors.at(i).c_str();
     }
 
-    helix_theme_preview_colors(use_dark_mode, colors, theme.properties.border_radius);
-    ui_theme_refresh_widget_tree(lv_screen_active());
+    theme_core_preview_colors(use_dark_mode, colors, theme.properties.border_radius);
+    theme_manager_refresh_widget_tree(lv_screen_active());
 
     spdlog::debug("[Theme] Previewing theme: {}", theme.name);
 }
 
-void ui_theme_revert_preview() {
-    ui_theme_preview(active_theme);
+void theme_manager_revert_preview() {
+    theme_manager_preview(active_theme);
     spdlog::debug("[Theme] Reverted to active theme: {}", active_theme.name);
 }
 
@@ -676,15 +676,15 @@ void ui_theme_revert_preview() {
  * @return Parsed color, or black (0x000000) if not found
  *
  * Example:
- *   lv_color_t bg = ui_theme_get_color("app_bg_color");
+ *   lv_color_t bg = theme_manager_get_color("app_bg_color");
  *   // Returns app_bg_color_light in light mode, app_bg_color_dark in dark mode
  *
- *   lv_color_t warn = ui_theme_get_color("warning_color");
+ *   lv_color_t warn = theme_manager_get_color("warning_color");
  *   // Returns warning_color directly (static, no theme variants)
  */
-lv_color_t ui_theme_get_color(const char* base_name) {
+lv_color_t theme_manager_get_color(const char* base_name) {
     if (!base_name) {
-        spdlog::error("[Theme] ui_theme_get_color: NULL base_name");
+        spdlog::error("[Theme] theme_manager_get_color: NULL base_name");
         return lv_color_hex(0x000000);
     }
 
@@ -701,13 +701,13 @@ lv_color_t ui_theme_get_color(const char* base_name) {
 
     if (light_str && dark_str) {
         // Both variants exist - use theme-appropriate one
-        return ui_theme_parse_hex_color(use_dark_mode ? dark_str : light_str);
+        return theme_manager_parse_hex_color(use_dark_mode ? dark_str : light_str);
     }
 
     // Pattern 2: Static color with just base name (no variants)
     const char* base_str = lv_xml_get_const_silent(nullptr, base_name);
     if (base_str) {
-        return ui_theme_parse_hex_color(base_str);
+        return theme_manager_parse_hex_color(base_str);
     }
 
     // Pattern 3: Partial variants (error case)
@@ -732,16 +732,16 @@ lv_color_t ui_theme_get_color(const char* base_name) {
  * @param part Style part to apply to (default: LV_PART_MAIN)
  *
  * Example:
- *   ui_theme_apply_bg_color(screen, "app_bg_color", LV_PART_MAIN);
+ *   theme_manager_apply_bg_color(screen, "app_bg_color", LV_PART_MAIN);
  *   // Applies app_bg_color_light/dark depending on theme mode
  */
-void ui_theme_apply_bg_color(lv_obj_t* obj, const char* base_name, lv_part_t part) {
+void theme_manager_apply_bg_color(lv_obj_t* obj, const char* base_name, lv_part_t part) {
     if (!obj) {
-        spdlog::error("[Theme] ui_theme_apply_bg_color: NULL object");
+        spdlog::error("[Theme] theme_manager_apply_bg_color: NULL object");
         return;
     }
 
-    lv_color_t color = ui_theme_get_color(base_name);
+    lv_color_t color = theme_manager_get_color(base_name);
     lv_obj_set_style_bg_color(obj, color, part);
 }
 
@@ -752,22 +752,22 @@ void ui_theme_apply_bg_color(lv_obj_t* obj, const char* base_name, lv_part_t par
  * This includes ascender, descender, and line gap. Useful for calculating layout
  * heights before widgets are created.
  *
- * @param font Font to query (e.g., ui_theme_get_font("font_heading"), &noto_sans_16)
+ * @param font Font to query (e.g., theme_manager_get_font("font_heading"), &noto_sans_16)
  * @return Line height in pixels, or 0 if font is NULL
  *
  * Examples:
- *   int32_t heading_h = ui_theme_get_font_height(ui_theme_get_font("font_heading"));
- *   int32_t body_h = ui_theme_get_font_height(ui_theme_get_font("font_body"));
- *   int32_t small_h = ui_theme_get_font_height(ui_theme_get_font("font_small"));
+ *   int32_t heading_h = theme_manager_get_font_height(theme_manager_get_font("font_heading"));
+ *   int32_t body_h = theme_manager_get_font_height(theme_manager_get_font("font_body"));
+ *   int32_t small_h = theme_manager_get_font_height(theme_manager_get_font("font_small"));
  *
  *   // Calculate total height for multi-line layout
- *   int32_t total = ui_theme_get_font_height(ui_theme_get_font("font_heading")) +
- *                   (ui_theme_get_font_height(ui_theme_get_font("font_body")) * 3) +
+ *   int32_t total = theme_manager_get_font_height(theme_manager_get_font("font_heading")) +
+ *                   (theme_manager_get_font_height(theme_manager_get_font("font_body")) * 3) +
  *                   (4 * 8);  // 4 gaps of 8px padding
  */
-int32_t ui_theme_get_font_height(const lv_font_t* font) {
+int32_t theme_manager_get_font_height(const lv_font_t* font) {
     if (!font) {
-        spdlog::warn("[Theme] ui_theme_get_font_height: NULL font pointer");
+        spdlog::warn("[Theme] theme_manager_get_font_height: NULL font pointer");
         return 0;
     }
 
@@ -817,11 +817,11 @@ void ui_set_overlay_width(lv_obj_t* obj, lv_obj_t* screen) {
  * @return Spacing value in pixels, or 0 if token not found
  *
  * Example:
- *   lv_obj_set_style_pad_all(obj, ui_theme_get_spacing("space_lg"), 0);
+ *   lv_obj_set_style_pad_all(obj, theme_manager_get_spacing("space_lg"), 0);
  */
-int32_t ui_theme_get_spacing(const char* token) {
+int32_t theme_manager_get_spacing(const char* token) {
     if (!token) {
-        spdlog::warn("[Theme] ui_theme_get_spacing: NULL token");
+        spdlog::warn("[Theme] theme_manager_get_spacing: NULL token");
         return 0;
     }
 
@@ -844,9 +844,9 @@ int32_t ui_theme_get_spacing(const char* token) {
  * @param token Font token name (e.g., "font_small", "font_body", "font_heading")
  * @return Font pointer, or nullptr if not found
  */
-const lv_font_t* ui_theme_get_font(const char* token) {
+const lv_font_t* theme_manager_get_font(const char* token) {
     if (!token) {
-        spdlog::warn("[Theme] ui_theme_get_font: NULL token");
+        spdlog::warn("[Theme] theme_manager_get_font: NULL token");
         return nullptr;
     }
 
@@ -867,7 +867,7 @@ const lv_font_t* ui_theme_get_font(const char* token) {
     return font;
 }
 
-const char* ui_theme_size_to_font_token(const char* size, const char* default_size) {
+const char* theme_manager_size_to_font_token(const char* size, const char* default_size) {
     const char* effective_size = size ? size : default_size;
     if (!effective_size) {
         effective_size = "sm"; // Fallback if both are null
@@ -885,7 +885,7 @@ const char* ui_theme_size_to_font_token(const char* size, const char* default_si
 
     // Unknown size - warn and return default
     spdlog::warn("[Theme] Unknown size '{}', using default '{}'", effective_size, default_size);
-    return ui_theme_size_to_font_token(default_size, "sm");
+    return theme_manager_size_to_font_token(default_size, "sm");
 }
 
 // ============================================================================
@@ -968,7 +968,7 @@ static void XMLCALL suffix_value_element_start(void* user_data, const XML_Char* 
     }
 }
 
-void ui_theme_parse_xml_file_for_all(const char* filepath, const char* element_type,
+void theme_manager_parse_xml_file_for_all(const char* filepath, const char* element_type,
                                      std::unordered_map<std::string, std::string>& token_values) {
     if (!filepath)
         return;
@@ -995,7 +995,7 @@ void ui_theme_parse_xml_file_for_all(const char* filepath, const char* element_t
     XML_ParserFree(parser);
 }
 
-void ui_theme_parse_xml_file_for_suffix(
+void theme_manager_parse_xml_file_for_suffix(
     const char* filepath, const char* element_type, const char* suffix,
     std::unordered_map<std::string, std::string>& token_values) {
     // Handle NULL filepath gracefully
@@ -1038,7 +1038,7 @@ void ui_theme_parse_xml_file_for_suffix(
     XML_ParserFree(parser);
 }
 
-std::vector<std::string> ui_theme_find_xml_files(const char* directory) {
+std::vector<std::string> theme_manager_find_xml_files(const char* directory) {
     std::vector<std::string> result;
 
     // Handle NULL directory gracefully
@@ -1081,26 +1081,26 @@ std::vector<std::string> ui_theme_find_xml_files(const char* directory) {
 }
 
 std::unordered_map<std::string, std::string>
-ui_theme_parse_all_xml_for_element(const char* directory, const char* element_type) {
+theme_manager_parse_all_xml_for_element(const char* directory, const char* element_type) {
     std::unordered_map<std::string, std::string> token_values;
-    std::vector<std::string> files = ui_theme_find_xml_files(directory);
+    std::vector<std::string> files = theme_manager_find_xml_files(directory);
     for (const auto& filepath : files) {
-        ui_theme_parse_xml_file_for_all(filepath.c_str(), element_type, token_values);
+        theme_manager_parse_xml_file_for_all(filepath.c_str(), element_type, token_values);
     }
     return token_values;
 }
 
 std::unordered_map<std::string, std::string>
-ui_theme_parse_all_xml_for_suffix(const char* directory, const char* element_type,
+theme_manager_parse_all_xml_for_suffix(const char* directory, const char* element_type,
                                   const char* suffix) {
     std::unordered_map<std::string, std::string> token_values;
 
     // Get sorted list of all XML files
-    std::vector<std::string> files = ui_theme_find_xml_files(directory);
+    std::vector<std::string> files = theme_manager_find_xml_files(directory);
 
     // Parse each file in alphabetical order (last-wins via map overwrite)
     for (const auto& filepath : files) {
-        ui_theme_parse_xml_file_for_suffix(filepath.c_str(), element_type, suffix, token_values);
+        theme_manager_parse_xml_file_for_suffix(filepath.c_str(), element_type, suffix, token_values);
     }
 
     return token_values;
@@ -1157,7 +1157,7 @@ static void XMLCALL constant_ref_element_start(void* user_data, const XML_Char* 
 }
 
 // Parse XML file for constant references in attribute values
-static void ui_theme_parse_xml_file_for_refs(
+static void theme_manager_parse_xml_file_for_refs(
     const char* filepath, std::vector<std::tuple<std::string, std::string, std::string>>& refs) {
     if (!filepath)
         return;
@@ -1194,7 +1194,7 @@ static void ui_theme_parse_xml_file_for_refs(
     XML_ParserFree(parser);
 }
 
-std::vector<std::string> ui_theme_validate_constant_sets(const char* directory) {
+std::vector<std::string> theme_manager_validate_constant_sets(const char* directory) {
     std::vector<std::string> warnings;
 
     if (!directory) {
@@ -1203,9 +1203,9 @@ std::vector<std::string> ui_theme_validate_constant_sets(const char* directory) 
 
     // Validate responsive px sets (_small/_medium/_large)
     {
-        auto small_tokens = ui_theme_parse_all_xml_for_suffix(directory, "px", "_small");
-        auto medium_tokens = ui_theme_parse_all_xml_for_suffix(directory, "px", "_medium");
-        auto large_tokens = ui_theme_parse_all_xml_for_suffix(directory, "px", "_large");
+        auto small_tokens = theme_manager_parse_all_xml_for_suffix(directory, "px", "_small");
+        auto medium_tokens = theme_manager_parse_all_xml_for_suffix(directory, "px", "_medium");
+        auto large_tokens = theme_manager_parse_all_xml_for_suffix(directory, "px", "_large");
 
         // Collect all base names that have at least one responsive suffix
         std::unordered_map<std::string, int> base_names;
@@ -1262,8 +1262,8 @@ std::vector<std::string> ui_theme_validate_constant_sets(const char* directory) 
 
     // Validate themed color pairs (_light/_dark)
     {
-        auto light_tokens = ui_theme_parse_all_xml_for_suffix(directory, "color", "_light");
-        auto dark_tokens = ui_theme_parse_all_xml_for_suffix(directory, "color", "_dark");
+        auto light_tokens = theme_manager_parse_all_xml_for_suffix(directory, "color", "_light");
+        auto dark_tokens = theme_manager_parse_all_xml_for_suffix(directory, "color", "_dark");
 
         // Collect all base names that have at least one theme suffix
         std::unordered_map<std::string, int> base_names;
@@ -1294,7 +1294,7 @@ std::vector<std::string> ui_theme_validate_constant_sets(const char* directory) 
     {
         // Whitelist of constants registered in C++ (not XML) or work-in-progress
         static const std::unordered_set<std::string> cpp_registered_constants = {
-            // Registered dynamically in ui_theme_register_responsive_spacing()
+            // Registered dynamically in theme_manager_register_responsive_spacing()
             "nav_width",
             "overlay_panel_width",
             "overlay_panel_width_full",
@@ -1307,39 +1307,39 @@ std::vector<std::string> ui_theme_validate_constant_sets(const char* directory) 
         std::unordered_set<std::string> defined_constants;
 
         // Direct definitions (px, color, string, str, percentage)
-        for (const auto& [name, _] : ui_theme_parse_all_xml_for_element(directory, "px")) {
+        for (const auto& [name, _] : theme_manager_parse_all_xml_for_element(directory, "px")) {
             defined_constants.insert(name);
         }
-        for (const auto& [name, _] : ui_theme_parse_all_xml_for_element(directory, "color")) {
+        for (const auto& [name, _] : theme_manager_parse_all_xml_for_element(directory, "color")) {
             defined_constants.insert(name);
         }
-        for (const auto& [name, _] : ui_theme_parse_all_xml_for_element(directory, "string")) {
+        for (const auto& [name, _] : theme_manager_parse_all_xml_for_element(directory, "string")) {
             defined_constants.insert(name);
         }
-        for (const auto& [name, _] : ui_theme_parse_all_xml_for_element(directory, "str")) {
+        for (const auto& [name, _] : theme_manager_parse_all_xml_for_element(directory, "str")) {
             defined_constants.insert(name);
         }
-        for (const auto& [name, _] : ui_theme_parse_all_xml_for_element(directory, "percentage")) {
+        for (const auto& [name, _] : theme_manager_parse_all_xml_for_element(directory, "percentage")) {
             defined_constants.insert(name);
         }
-        for (const auto& [name, _] : ui_theme_parse_all_xml_for_element(directory, "int")) {
+        for (const auto& [name, _] : theme_manager_parse_all_xml_for_element(directory, "int")) {
             defined_constants.insert(name);
         }
 
         // Step 2: Add base names for responsive constants (_small/_medium/_large -> base)
         // These get registered at runtime as the base name
-        auto small_px = ui_theme_parse_all_xml_for_suffix(directory, "px", "_small");
-        auto medium_px = ui_theme_parse_all_xml_for_suffix(directory, "px", "_medium");
-        auto large_px = ui_theme_parse_all_xml_for_suffix(directory, "px", "_large");
+        auto small_px = theme_manager_parse_all_xml_for_suffix(directory, "px", "_small");
+        auto medium_px = theme_manager_parse_all_xml_for_suffix(directory, "px", "_medium");
+        auto large_px = theme_manager_parse_all_xml_for_suffix(directory, "px", "_large");
         for (const auto& [base_name, _] : small_px) {
             if (medium_px.count(base_name) && large_px.count(base_name)) {
                 defined_constants.insert(base_name);
             }
         }
 
-        auto small_str = ui_theme_parse_all_xml_for_suffix(directory, "string", "_small");
-        auto medium_str = ui_theme_parse_all_xml_for_suffix(directory, "string", "_medium");
-        auto large_str = ui_theme_parse_all_xml_for_suffix(directory, "string", "_large");
+        auto small_str = theme_manager_parse_all_xml_for_suffix(directory, "string", "_small");
+        auto medium_str = theme_manager_parse_all_xml_for_suffix(directory, "string", "_medium");
+        auto large_str = theme_manager_parse_all_xml_for_suffix(directory, "string", "_large");
         for (const auto& [base_name, _] : small_str) {
             if (medium_str.count(base_name) && large_str.count(base_name)) {
                 defined_constants.insert(base_name);
@@ -1347,8 +1347,8 @@ std::vector<std::string> ui_theme_validate_constant_sets(const char* directory) 
         }
 
         // Step 3: Add base names for themed colors (_light/_dark -> base)
-        auto light_colors = ui_theme_parse_all_xml_for_suffix(directory, "color", "_light");
-        auto dark_colors = ui_theme_parse_all_xml_for_suffix(directory, "color", "_dark");
+        auto light_colors = theme_manager_parse_all_xml_for_suffix(directory, "color", "_light");
+        auto dark_colors = theme_manager_parse_all_xml_for_suffix(directory, "color", "_dark");
         for (const auto& [base_name, _] : light_colors) {
             if (dark_colors.count(base_name)) {
                 defined_constants.insert(base_name);
@@ -1357,9 +1357,9 @@ std::vector<std::string> ui_theme_validate_constant_sets(const char* directory) 
 
         // Step 4: Scan all XML files for constant references
         std::vector<std::tuple<std::string, std::string, std::string>> refs;
-        auto files = ui_theme_find_xml_files(directory);
+        auto files = theme_manager_find_xml_files(directory);
         for (const auto& filepath : files) {
-            ui_theme_parse_xml_file_for_refs(filepath.c_str(), refs);
+            theme_manager_parse_xml_file_for_refs(filepath.c_str(), refs);
         }
 
         // Step 5: Check each reference against defined constants

@@ -10,7 +10,6 @@
 #include "ui_subject_registry.h"
 #include "ui_temp_graph_scaling.h"
 #include "ui_temperature_utils.h"
-#include "ui_theme.h"
 #include "ui_utils.h"
 
 #include "app_constants.h"
@@ -20,6 +19,7 @@
 #include "observer_factory.h"
 #include "printer_state.h"
 #include "temperature_history_manager.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -55,7 +55,7 @@ TempControlPanel::TempControlPanel(PrinterState& printer_state, MoonrakerAPI* ap
     nozzle_config_ = {.type = HEATER_NOZZLE,
                       .name = "Nozzle",
                       .title = "Nozzle Temperature",
-                      .color = ui_theme_get_color("heating_color"),
+                      .color = theme_manager_get_color("heating_color"),
                       .temp_range_max = 320.0f,
                       .y_axis_increment = 80,
                       .presets = {0, nozzle_pla, nozzle_petg, nozzle_abs},
@@ -64,7 +64,7 @@ TempControlPanel::TempControlPanel(PrinterState& printer_state, MoonrakerAPI* ap
     bed_config_ = {.type = HEATER_BED,
                    .name = "Bed",
                    .title = "Heatbed Temperature",
-                   .color = ui_theme_get_color("cooling_color"),
+                   .color = theme_manager_get_color("cooling_color"),
                    .temp_range_max = 140.0f,
                    .y_axis_increment = 35,
                    .presets = {0, bed_pla, bed_petg, bed_abs},
@@ -835,11 +835,11 @@ void TempControlPanel::setup_nozzle_panel(lv_obj_t* panel, lv_obj_t* parent_scre
     // Load theme-aware graph color
     lv_xml_component_scope_t* scope = lv_xml_component_get_scope("nozzle_temp_panel");
     if (scope) {
-        bool use_dark_mode = ui_theme_is_dark_mode();
+        bool use_dark_mode = theme_manager_is_dark_mode();
         const char* color_str = lv_xml_get_const(scope, use_dark_mode ? "temp_graph_nozzle_dark"
                                                                       : "temp_graph_nozzle_light");
         if (color_str) {
-            nozzle_config_.color = ui_theme_parse_hex_color(color_str);
+            nozzle_config_.color = theme_manager_parse_hex_color(color_str);
             spdlog::debug("[TempPanel] Nozzle graph color: {} ({})", color_str,
                           use_dark_mode ? "dark" : "light");
         }
@@ -930,11 +930,11 @@ void TempControlPanel::setup_bed_panel(lv_obj_t* panel, lv_obj_t* parent_screen)
     // Load theme-aware graph color
     lv_xml_component_scope_t* scope = lv_xml_component_get_scope("bed_temp_panel");
     if (scope) {
-        bool use_dark_mode = ui_theme_is_dark_mode();
+        bool use_dark_mode = theme_manager_is_dark_mode();
         const char* color_str =
             lv_xml_get_const(scope, use_dark_mode ? "temp_graph_bed_dark" : "temp_graph_bed_light");
         if (color_str) {
-            bed_config_.color = ui_theme_parse_hex_color(color_str);
+            bed_config_.color = theme_manager_parse_hex_color(color_str);
             spdlog::debug("[TempPanel] Bed graph color: {} ({})", color_str,
                           use_dark_mode ? "dark" : "light");
         }

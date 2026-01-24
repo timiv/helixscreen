@@ -3,10 +3,10 @@
 
 #include "splash_screen.h"
 
-#include "ui_theme.h"
 #include "ui_utils.h"
 
 #include "helix_timing.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -66,8 +66,8 @@ void show_splash_screen(int screen_width, int screen_height) {
     // Get the active screen
     lv_obj_t* screen = lv_screen_active();
 
-    // Apply theme background color (app_bg_color runtime constant set by ui_theme_init)
-    ui_theme_apply_bg_color(screen, "app_bg_color", LV_PART_MAIN);
+    // Apply theme background color (app_bg_color runtime constant set by theme_manager_init)
+    theme_manager_apply_bg_color(screen, "app_bg_color", LV_PART_MAIN);
 
     // Disable scrollbars on screen
     lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);

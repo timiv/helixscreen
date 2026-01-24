@@ -4,7 +4,6 @@
 #include "bed_mesh_renderer.h"
 
 #include "ui_fonts.h"
-#include "ui_theme.h"
 
 #include "bed_mesh_coordinate_transform.h"
 #include "bed_mesh_geometry.h"
@@ -14,6 +13,7 @@
 #include "bed_mesh_projection.h"
 #include "bed_mesh_rasterizer.h"
 #include "memory_monitor.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -494,7 +494,7 @@ bool bed_mesh_renderer_render(bed_mesh_renderer_t* renderer, lv_layer_t* layer, 
     // LVGL will clip this to the dirty region during partial redraws
     lv_draw_rect_dsc_t bg_dsc;
     lv_draw_rect_dsc_init(&bg_dsc);
-    bg_dsc.bg_color = ui_theme_get_color("graph_bg");
+    bg_dsc.bg_color = theme_manager_get_color("graph_bg");
     bg_dsc.bg_opa = LV_OPA_COVER;
     lv_draw_rect(layer, &bg_dsc, clip_area);
 
@@ -1433,7 +1433,7 @@ static void render_2d_heatmap(lv_layer_t* layer, bed_mesh_renderer_t* renderer, 
     lv_draw_rect_dsc_t border_dsc;
     lv_draw_rect_dsc_init(&border_dsc);
     border_dsc.bg_opa = LV_OPA_TRANSP;
-    border_dsc.border_color = ui_theme_get_color("theme_grey");
+    border_dsc.border_color = theme_manager_get_color("theme_grey");
     border_dsc.border_width = 1;
     border_dsc.border_opa = LV_OPA_60;
     border_dsc.radius = 2;
@@ -1479,10 +1479,10 @@ static void render_2d_heatmap(lv_layer_t* layer, bed_mesh_renderer_t* renderer, 
         // Draw tooltip background with shadow effect
         lv_draw_rect_dsc_t tooltip_bg;
         lv_draw_rect_dsc_init(&tooltip_bg);
-        tooltip_bg.bg_color = ui_theme_get_color("card_bg");
+        tooltip_bg.bg_color = theme_manager_get_color("card_bg");
         tooltip_bg.bg_opa = LV_OPA_90;
         tooltip_bg.radius = 6;
-        tooltip_bg.border_color = ui_theme_get_color("theme_grey");
+        tooltip_bg.border_color = theme_manager_get_color("theme_grey");
         tooltip_bg.border_width = 1;
         tooltip_bg.border_opa = LV_OPA_60;
 

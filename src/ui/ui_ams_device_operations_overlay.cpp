@@ -10,12 +10,12 @@
 
 #include "ui_event_safety.h"
 #include "ui_nav_manager.h"
-#include "ui_theme.h"
 
 #include "ams_backend.h"
 #include "ams_state.h"
 #include "ams_types.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -293,7 +293,7 @@ void AmsDeviceOperationsOverlay::create_action_control(lv_obj_t* parent,
     lv_obj_t* row = lv_obj_create(parent);
     lv_obj_set_width(row, LV_PCT(100));
     lv_obj_set_height(row, LV_SIZE_CONTENT);
-    lv_obj_set_style_pad_all(row, ui_theme_get_spacing("space_xs"), 0);
+    lv_obj_set_style_pad_all(row, theme_manager_get_spacing("space_xs"), 0);
     lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(row, 0, 0);
     lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
@@ -306,8 +306,8 @@ void AmsDeviceOperationsOverlay::create_action_control(lv_obj_t* parent,
         // Create action button spanning full width
         lv_obj_t* btn = lv_button_create(row);
         lv_obj_set_flex_grow(btn, 1);
-        lv_obj_set_height(btn, ui_theme_get_spacing("button_height_sm"));
-        lv_obj_set_style_radius(btn, ui_theme_get_spacing("border_radius"), 0);
+        lv_obj_set_height(btn, theme_manager_get_spacing("button_height_sm"));
+        lv_obj_set_style_radius(btn, theme_manager_get_spacing("border_radius"), 0);
 
         // Button label
         lv_obj_t* btn_label = lv_label_create(btn);
@@ -336,7 +336,7 @@ void AmsDeviceOperationsOverlay::create_action_control(lv_obj_t* parent,
         // Label on left
         lv_obj_t* label = lv_label_create(row);
         lv_label_set_text(label, action.label.c_str());
-        lv_obj_set_style_text_color(label, ui_theme_get_color("text_primary"), 0);
+        lv_obj_set_style_text_color(label, theme_manager_get_color("text_primary"), 0);
 
         // Switch on right
         lv_obj_t* sw = lv_switch_create(row);
@@ -366,11 +366,11 @@ void AmsDeviceOperationsOverlay::create_action_control(lv_obj_t* parent,
         // Label on left
         lv_obj_t* label = lv_label_create(row);
         lv_label_set_text(label, action.label.c_str());
-        lv_obj_set_style_text_color(label, ui_theme_get_color("text_primary"), 0);
+        lv_obj_set_style_text_color(label, theme_manager_get_color("text_primary"), 0);
 
         // Value on right
         lv_obj_t* value_label = lv_label_create(row);
-        lv_obj_set_style_text_color(value_label, ui_theme_get_color("text_secondary"), 0);
+        lv_obj_set_style_text_color(value_label, theme_manager_get_color("text_secondary"), 0);
         try {
             if (action.current_value.has_value()) {
                 std::string val = std::any_cast<std::string>(action.current_value);
@@ -394,7 +394,7 @@ void AmsDeviceOperationsOverlay::create_action_control(lv_obj_t* parent,
             lv_obj_t* label = lv_label_create(row);
             std::string text = action.label + " (coming soon)";
             lv_label_set_text(label, text.c_str());
-            lv_obj_set_style_text_color(label, ui_theme_get_color("text_secondary"), 0);
+            lv_obj_set_style_text_color(label, theme_manager_get_color("text_secondary"), 0);
             spdlog::debug("[{}] {} control '{}' placeholder created", get_name(),
                           helix::printer::action_type_to_string(action.type), action.id);
         }

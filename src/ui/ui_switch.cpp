@@ -3,14 +3,13 @@
 
 #include "ui_switch.h"
 
-#include "ui_theme.h"
-
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "lvgl/src/xml/lv_xml_parser.h"
 #include "lvgl/src/xml/lv_xml_style.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -187,7 +186,7 @@ static void ui_switch_xml_apply(lv_xml_parser_state_t* state, const char** attrs
     //   - Always visible in both states
     const char* primary_str = lv_xml_get_const(NULL, "primary_color");
     if (primary_str) {
-        lv_color_t primary = ui_theme_parse_hex_color(primary_str);
+        lv_color_t primary = theme_manager_parse_hex_color(primary_str);
 
         // CHECKED state: primary color, 40% track / 100% knob opacity
         lv_obj_set_style_bg_color(obj, primary, LV_PART_INDICATOR | LV_STATE_CHECKED);
@@ -276,7 +275,7 @@ void ui_switch_register_responsive_constants() {
     // - Row height calculation CRITICAL:
     //   * XML uses style_pad_all="#space_lg" (responsive: 12/16/20px)
     //   * Total row height = switch_height + (2 * container_padding)
-    //   * Container padding varies by screen size via ui_theme_register_responsive_spacing()
+    //   * Container padding varies by screen size via theme_manager_register_responsive_spacing()
 
     const char* switch_width;
     const char* switch_height;

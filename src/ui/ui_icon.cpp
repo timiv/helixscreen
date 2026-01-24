@@ -5,7 +5,6 @@
 
 #include "ui_fonts.h"
 #include "ui_icon_codepoints.h"
-#include "ui_theme.h"
 
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
@@ -15,6 +14,7 @@
 #include "lvgl/src/xml/lv_xml_utils.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -126,37 +126,37 @@ static void apply_variant(lv_obj_t* obj, IconVariant variant) {
     switch (variant) {
     case IconVariant::PRIMARY:
         // Primary text color (white in dark mode)
-        color = ui_theme_get_color("text_primary");
+        color = theme_manager_get_color("text_primary");
         break;
     case IconVariant::SECONDARY:
         // Secondary text color (gray)
-        color = ui_theme_get_color("text_secondary");
+        color = theme_manager_get_color("text_secondary");
         break;
     case IconVariant::ACCENT:
         // Accent color (red)
-        color = ui_theme_get_color("primary_color");
+        color = theme_manager_get_color("primary_color");
         break;
     case IconVariant::DISABLED:
         // Primary text color at 50% opacity
-        color = ui_theme_get_color("text_primary");
+        color = theme_manager_get_color("text_primary");
         opa = LV_OPA_50;
         break;
     case IconVariant::SUCCESS:
         // Success color (green) from globals.xml
-        color = ui_theme_get_color("success_color");
+        color = theme_manager_get_color("success_color");
         break;
     case IconVariant::WARNING:
         // Warning color (orange) from globals.xml
-        color = ui_theme_get_color("warning_color");
+        color = theme_manager_get_color("warning_color");
         break;
     case IconVariant::ERROR:
         // Error color (red) from globals.xml
-        color = ui_theme_get_color("error_color");
+        color = theme_manager_get_color("error_color");
         break;
     case IconVariant::NONE:
     default:
         // Use default text color (inherit from theme)
-        color = ui_theme_get_color("text_primary");
+        color = theme_manager_get_color("text_primary");
         break;
     }
 

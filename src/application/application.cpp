@@ -69,7 +69,6 @@
 #include "ui_status_bar.h"
 #include "ui_switch.h"
 #include "ui_temp_display.h"
-#include "ui_theme.h"
 #include "ui_toast.h"
 #include "ui_utils.h"
 #include "ui_wizard.h"
@@ -78,6 +77,7 @@
 #include "ui_wizard_wifi.h"
 
 #include "settings_manager.h"
+#include "theme_manager.h"
 #include "wifi_manager.h"
 
 // Backend headers
@@ -660,10 +660,10 @@ bool Application::init_theme() {
     lv_xml_register_component_from_file("A:ui_xml/globals.xml");
 
     // Initialize theme
-    ui_theme_init(m_display->display(), dark_mode);
+    theme_manager_init(m_display->display(), dark_mode);
 
     // Apply background color to screen
-    ui_theme_apply_bg_color(m_screen, "app_bg_color", LV_PART_MAIN);
+    theme_manager_apply_bg_color(m_screen, "app_bg_color", LV_PART_MAIN);
 
     // Show splash screen if not skipped
     if (!get_runtime_config()->should_skip_splash()) {

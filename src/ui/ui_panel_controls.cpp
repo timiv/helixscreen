@@ -21,7 +21,6 @@
 #include "ui_position_utils.h"
 #include "ui_subject_registry.h"
 #include "ui_temperature_utils.h"
-#include "ui_theme.h"
 
 #include "app_globals.h"
 #include "moonraker_api.h"
@@ -30,6 +29,7 @@
 #include "standard_macros.h"
 #include "static_panel_registry.h"
 #include "subject_managed_panel.h"
+#include "theme_manager.h"
 
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>
@@ -663,8 +663,8 @@ void ControlsPanel::populate_secondary_fans() {
         lv_obj_t* name_label = lv_label_create(row);
         lv_label_set_text(name_label, fan.display_name.c_str());
         lv_obj_set_width(name_label, LV_PCT(60));
-        lv_obj_set_style_text_color(name_label, ui_theme_get_color("text_secondary"), 0);
-        lv_obj_set_style_text_font(name_label, ui_theme_get_font("font_small"), 0);
+        lv_obj_set_style_text_color(name_label, theme_manager_get_color("text_secondary"), 0);
+        lv_obj_set_style_text_font(name_label, theme_manager_get_font("font_small"), 0);
         lv_label_set_long_mode(name_label, LV_LABEL_LONG_DOT);
 
         // Speed percentage label - right-aligned
@@ -676,8 +676,8 @@ void ControlsPanel::populate_secondary_fans() {
         }
         lv_obj_t* speed_label = lv_label_create(row);
         lv_label_set_text(speed_label, speed_buf);
-        lv_obj_set_style_text_color(speed_label, ui_theme_get_color("text_primary"), 0);
-        lv_obj_set_style_text_font(speed_label, ui_theme_get_font("font_small"), 0);
+        lv_obj_set_style_text_color(speed_label, theme_manager_get_color("text_primary"), 0);
+        lv_obj_set_style_text_font(speed_label, theme_manager_get_font("font_small"), 0);
 
         // Track this row for reactive speed updates
         secondary_fan_rows_.push_back({fan.object_name, speed_label});
@@ -691,7 +691,7 @@ void ControlsPanel::populate_secondary_fans() {
             // "A" in circle indicates "auto-controlled by system"
             lv_label_set_text(indicator, ui_icon::lookup_codepoint("alpha_a_circle"));
         }
-        lv_obj_set_style_text_color(indicator, ui_theme_get_color("text_secondary"), 0);
+        lv_obj_set_style_text_color(indicator, theme_manager_get_color("text_secondary"), 0);
         lv_obj_set_style_text_font(indicator, &mdi_icons_16, 0);
 
         secondary_count++;

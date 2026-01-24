@@ -7,7 +7,6 @@
 #include "ui_icon_codepoints.h"
 #include "ui_observer_guard.h"
 #include "ui_spool_canvas.h"
-#include "ui_theme.h"
 
 #include "ams_state.h"
 #include "ams_types.h"
@@ -18,6 +17,7 @@
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
 #include "observer_factory.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -244,23 +244,23 @@ static void apply_slot_status(AmsSlotData* data, int status_int) {
         return;
     auto status = static_cast<SlotStatus>(status_int);
 
-    lv_color_t badge_bg = ui_theme_get_color("ams_badge_bg");
+    lv_color_t badge_bg = theme_manager_get_color("ams_badge_bg");
     bool show_badge = true;
     switch (status) {
     case SlotStatus::AVAILABLE:
     case SlotStatus::LOADED:
     case SlotStatus::FROM_BUFFER:
-        badge_bg = ui_theme_get_color("success_color");
+        badge_bg = theme_manager_get_color("success_color");
         break;
     case SlotStatus::BLOCKED:
-        badge_bg = ui_theme_get_color("error_color");
+        badge_bg = theme_manager_get_color("error_color");
         break;
     case SlotStatus::EMPTY:
         show_badge = false;
         break;
     case SlotStatus::UNKNOWN:
     default:
-        badge_bg = ui_theme_get_color("ams_badge_bg");
+        badge_bg = theme_manager_get_color("ams_badge_bg");
         break;
     }
     if (show_badge) {
@@ -302,7 +302,7 @@ static void apply_current_slot_highlight(AmsSlotData* data, int current_slot) {
 
     if (is_active) {
         // Active slot: glowing border effect
-        lv_color_t primary = ui_theme_parse_hex_color(lv_xml_get_const(NULL, "primary_color"));
+        lv_color_t primary = theme_manager_parse_hex_color(lv_xml_get_const(NULL, "primary_color"));
 
         // Border highlight on spool area only
         lv_obj_set_style_border_color(highlight_target, primary, LV_PART_MAIN);
@@ -387,12 +387,12 @@ static void ams_slot_event_cb(lv_event_t* e) {
  */
 static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
     // Get responsive spacing values
-    int32_t space_xs = ui_theme_get_spacing("space_xs");
+    int32_t space_xs = theme_manager_get_spacing("space_xs");
 
     // Fixed slot width to support overlapping layout for many slots
     // When there are more than 4 slots, they overlap like in Bambu UI
     // The parent slot_grid applies negative column padding to create overlap
-    int32_t space_lg = ui_theme_get_spacing("space_lg");
+    int32_t space_lg = theme_manager_get_spacing("space_lg");
     int32_t slot_width = (space_lg * 5) + 10; // ~90px - fits spool + padding
     lv_obj_set_width(container, slot_width);
     lv_obj_set_height(container, LV_SIZE_CONTENT);
@@ -420,7 +420,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
     const lv_font_t* font_small =
         font_small_name ? lv_xml_get_font(NULL, font_small_name) : &noto_sans_16;
     lv_obj_set_style_text_font(material, font_small, LV_PART_MAIN);
-    lv_obj_set_style_text_color(material, ui_theme_get_color("text_primary"), LV_PART_MAIN);
+    lv_obj_set_style_text_color(material, theme_manager_get_color("text_primary"), LV_PART_MAIN);
     lv_obj_set_style_text_letter_space(material, 1, LV_PART_MAIN);
     lv_obj_add_flag(material, LV_OBJ_FLAG_CLICKABLE);    // Make label tappable
     lv_obj_add_flag(material, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
@@ -508,7 +508,8 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
         lv_obj_set_style_bg_color(outer_ring, default_darker, LV_PART_MAIN);
         lv_obj_set_style_bg_opa(outer_ring, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_border_width(outer_ring, 2, LV_PART_MAIN);
-        lv_obj_set_style_border_color(outer_ring, ui_theme_get_color("ams_hub_dark"), LV_PART_MAIN);
+        lv_obj_set_style_border_color(outer_ring, theme_manager_get_color("ams_hub_dark"),
+                                      LV_PART_MAIN);
         lv_obj_set_style_border_opa(outer_ring, LV_OPA_50, LV_PART_MAIN);
         lv_obj_remove_flag(outer_ring, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_flag(outer_ring, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
@@ -532,10 +533,10 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
         lv_obj_set_size(hub, hub_size, hub_size);
         lv_obj_align(hub, LV_ALIGN_CENTER, 0, 0);
         lv_obj_set_style_radius(hub, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-        lv_obj_set_style_bg_color(hub, ui_theme_get_color("ams_hub_dark"), LV_PART_MAIN);
+        lv_obj_set_style_bg_color(hub, theme_manager_get_color("ams_hub_dark"), LV_PART_MAIN);
         lv_obj_set_style_bg_opa(hub, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_border_width(hub, 1, LV_PART_MAIN);
-        lv_obj_set_style_border_color(hub, ui_theme_get_color("ams_hub_border"), LV_PART_MAIN);
+        lv_obj_set_style_border_color(hub, theme_manager_get_color("ams_hub_border"), LV_PART_MAIN);
         lv_obj_remove_flag(hub, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_flag(hub, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
         data->spool_hub = hub;
@@ -556,10 +557,10 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
     // Position badge at bottom-right of the canvas area
     lv_obj_align(status_badge, LV_ALIGN_BOTTOM_RIGHT, -2, -2);
     lv_obj_set_style_radius(status_badge, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(status_badge, ui_theme_get_color("ams_badge_bg"), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(status_badge, theme_manager_get_color("ams_badge_bg"), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(status_badge, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_border_width(status_badge, 2, LV_PART_MAIN);
-    lv_obj_set_style_border_color(status_badge, ui_theme_get_color("card_bg"), LV_PART_MAIN);
+    lv_obj_set_style_border_color(status_badge, theme_manager_get_color("card_bg"), LV_PART_MAIN);
     lv_obj_remove_flag(status_badge, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_pad_all(status_badge, 0, LV_PART_MAIN);
     lv_obj_add_flag(status_badge, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
@@ -590,7 +591,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
     // Position badge at top-left of the canvas area
     lv_obj_align(tool_badge, LV_ALIGN_TOP_LEFT, 2, 2);
     lv_obj_set_style_radius(tool_badge, 4, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(tool_badge, ui_theme_get_color("text_secondary"), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(tool_badge, theme_manager_get_color("text_secondary"), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(tool_badge, LV_OPA_80, LV_PART_MAIN);
     lv_obj_set_style_border_width(tool_badge, 0, LV_PART_MAIN);
     lv_obj_remove_flag(tool_badge, LV_OBJ_FLAG_SCROLLABLE);
@@ -998,8 +999,8 @@ void ui_ams_slot_set_layout_info(lv_obj_t* obj, int slot_index, int total_count)
             lv_obj_add_flag(data->leader_line, LV_OBJ_FLAG_EVENT_BUBBLE);
 
             // Style: dashed line using theme color
-            lv_obj_set_style_line_color(data->leader_line, ui_theme_get_color("text_secondary"),
-                                        LV_PART_MAIN);
+            lv_obj_set_style_line_color(data->leader_line,
+                                        theme_manager_get_color("text_secondary"), LV_PART_MAIN);
             lv_obj_set_style_line_width(data->leader_line, 1, LV_PART_MAIN);
             lv_obj_set_style_line_dash_width(data->leader_line, 4, LV_PART_MAIN);
             lv_obj_set_style_line_dash_gap(data->leader_line, 3, LV_PART_MAIN);
@@ -1109,7 +1110,7 @@ void ui_ams_slot_move_label_to_layer(lv_obj_t* obj, lv_obj_t* labels_layer, int3
         lv_obj_set_pos(data->leader_line, slot_center_x, line_start_y);
 
         // Restore normal line styling (dashed, subtle)
-        lv_obj_set_style_line_color(data->leader_line, ui_theme_get_color("text_secondary"),
+        lv_obj_set_style_line_color(data->leader_line, theme_manager_get_color("text_secondary"),
                                     LV_PART_MAIN);
         lv_obj_set_style_line_width(data->leader_line, 1, LV_PART_MAIN);
         lv_obj_set_style_line_opa(data->leader_line, LV_OPA_70, LV_PART_MAIN);

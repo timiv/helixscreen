@@ -37,16 +37,16 @@ extern "C" {
  *
  * Example usage:
  * @code
- *   lv_color_t primary = ui_theme_parse_hex_color("#FF4444");
- *   lv_color_t screen_bg = ui_theme_get_color("app_bg_color");
+ *   lv_color_t primary = theme_manager_parse_hex_color("#FF4444");
+ *   lv_color_t screen_bg = theme_manager_get_color("app_bg_color");
  *   int32_t border_radius = atoi(lv_xml_get_const(NULL, "border_radius"));
- *   lv_theme_t* theme = helix_theme_init(
+ *   lv_theme_t* theme = theme_core_init(
  *       display, primary, secondary, true, font, screen_bg, card_bg, grey, border_radius
  *   );
  *   lv_display_set_theme(display, theme);
  * @endcode
  */
-lv_theme_t* helix_theme_init(lv_display_t* display, lv_color_t primary_color,
+lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
                              lv_color_t secondary_color, lv_color_t text_primary_color,
                              bool is_dark, const lv_font_t* base_font, lv_color_t screen_bg,
                              lv_color_t card_bg, lv_color_t theme_grey, int32_t border_radius);
@@ -58,7 +58,7 @@ lv_theme_t* helix_theme_init(lv_display_t* display, lv_color_t primary_color,
  * switching. This modifies existing styles and calls lv_obj_report_style_change()
  * to trigger LVGL's style refresh cascade.
  *
- * Unlike helix_theme_init(), this function preserves widget state and avoids
+ * Unlike theme_core_init(), this function preserves widget state and avoids
  * the overhead of theme recreation.
  *
  * @param is_dark true for dark mode colors, false for light mode
@@ -67,7 +67,7 @@ lv_theme_t* helix_theme_init(lv_display_t* display, lv_color_t primary_color,
  * @param theme_grey Grey color for buttons
  * @param text_primary_color Primary text color
  */
-void helix_theme_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t card_bg,
+void theme_core_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t card_bg,
                                lv_color_t theme_grey, lv_color_t text_primary_color);
 
 /**
@@ -80,7 +80,7 @@ void helix_theme_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t ca
  * @param colors Array of 16 hex color strings (palette order)
  * @param border_radius Corner radius in pixels
  */
-void helix_theme_preview_colors(bool is_dark, const char* colors[16], int32_t border_radius);
+void theme_core_preview_colors(bool is_dark, const char* colors[16], int32_t border_radius);
 
 #ifdef __cplusplus
 }

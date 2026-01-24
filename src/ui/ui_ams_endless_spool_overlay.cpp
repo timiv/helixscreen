@@ -11,12 +11,12 @@
 #include "ui_event_safety.h"
 #include "ui_icon_codepoints.h"
 #include "ui_nav_manager.h"
-#include "ui_theme.h"
 
 #include "ams_backend.h"
 #include "ams_error.h"
 #include "ams_state.h"
 #include "static_panel_registry.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -276,10 +276,10 @@ lv_obj_t* AmsEndlessSpoolOverlay::create_slot_row(lv_obj_t* parent, int slot_ind
     lv_obj_t* card = lv_obj_create(parent);
     lv_obj_set_width(card, LV_PCT(100));
     lv_obj_set_height(card, LV_SIZE_CONTENT);
-    lv_obj_set_style_bg_color(card, ui_theme_get_color("card_bg"), 0);
+    lv_obj_set_style_bg_color(card, theme_manager_get_color("card_bg"), 0);
     lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(card, ui_theme_get_spacing("border_radius"), 0);
-    lv_obj_set_style_pad_all(card, ui_theme_get_spacing("space_md"), 0);
+    lv_obj_set_style_radius(card, theme_manager_get_spacing("border_radius"), 0);
+    lv_obj_set_style_pad_all(card, theme_manager_get_spacing("space_md"), 0);
     lv_obj_set_style_border_width(card, 0, 0);
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER,
@@ -296,7 +296,7 @@ lv_obj_t* AmsEndlessSpoolOverlay::create_slot_row(lv_obj_t* parent, int slot_ind
     lv_obj_set_flex_flow(left_container, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(left_container, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_gap(left_container, ui_theme_get_spacing("space_sm"), 0);
+    lv_obj_set_style_pad_gap(left_container, theme_manager_get_spacing("space_sm"), 0);
     lv_obj_remove_flag(left_container, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_flex_grow(left_container, 1);
 
@@ -305,7 +305,7 @@ lv_obj_t* AmsEndlessSpoolOverlay::create_slot_row(lv_obj_t* parent, int slot_ind
     char slot_text[32];
     snprintf(slot_text, sizeof(slot_text), "Slot %d", slot_index);
     lv_label_set_text(slot_label, slot_text);
-    lv_obj_set_style_text_color(slot_label, ui_theme_get_color("text_primary"), 0);
+    lv_obj_set_style_text_color(slot_label, theme_manager_get_color("text_primary"), 0);
 
     // Arrow indicator (use responsive icon font)
     lv_obj_t* arrow_label = lv_label_create(left_container);
@@ -314,7 +314,7 @@ lv_obj_t* AmsEndlessSpoolOverlay::create_slot_row(lv_obj_t* parent, int slot_ind
     if (icon_font_name) {
         lv_obj_set_style_text_font(arrow_label, lv_xml_get_font(nullptr, icon_font_name), 0);
     }
-    lv_obj_set_style_text_color(arrow_label, ui_theme_get_color("text_secondary"), 0);
+    lv_obj_set_style_text_color(arrow_label, theme_manager_get_color("text_secondary"), 0);
 
     // Right side: Backup indicator or dropdown
     if (editable) {
@@ -322,8 +322,8 @@ lv_obj_t* AmsEndlessSpoolOverlay::create_slot_row(lv_obj_t* parent, int slot_ind
         lv_obj_t* dropdown = lv_dropdown_create(card);
         lv_obj_set_width(dropdown, 100);
         lv_obj_set_height(dropdown, 36);
-        lv_obj_set_style_pad_left(dropdown, ui_theme_get_spacing("space_sm"), 0);
-        lv_obj_set_style_pad_right(dropdown, ui_theme_get_spacing("space_sm"), 0);
+        lv_obj_set_style_pad_left(dropdown, theme_manager_get_spacing("space_sm"), 0);
+        lv_obj_set_style_pad_right(dropdown, theme_manager_get_spacing("space_sm"), 0);
 
         // Build options (None, Slot 0, Slot 1, etc. - excluding current slot)
         std::string options = build_dropdown_options(slot_index, total_slots);
@@ -352,7 +352,7 @@ lv_obj_t* AmsEndlessSpoolOverlay::create_slot_row(lv_obj_t* parent, int slot_ind
         lv_obj_set_flex_flow(right_container, LV_FLEX_FLOW_ROW);
         lv_obj_set_flex_align(right_container, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER,
                               LV_FLEX_ALIGN_CENTER);
-        lv_obj_set_style_pad_gap(right_container, ui_theme_get_spacing("space_xs"), 0);
+        lv_obj_set_style_pad_gap(right_container, theme_manager_get_spacing("space_xs"), 0);
         lv_obj_remove_flag(right_container, LV_OBJ_FLAG_SCROLLABLE);
 
         // Backup slot label
@@ -364,12 +364,12 @@ lv_obj_t* AmsEndlessSpoolOverlay::create_slot_row(lv_obj_t* parent, int slot_ind
             snprintf(backup_text, sizeof(backup_text), "Slot %d", backup_slot);
         }
         lv_label_set_text(backup_label, backup_text);
-        lv_obj_set_style_text_color(backup_label, ui_theme_get_color("text_secondary"), 0);
+        lv_obj_set_style_text_color(backup_label, theme_manager_get_color("text_secondary"), 0);
 
         // Lock icon to indicate read-only
         lv_obj_t* lock_label = lv_label_create(right_container);
         lv_label_set_text(lock_label, ui_icon::lookup_codepoint("lock"));
-        lv_obj_set_style_text_color(lock_label, ui_theme_get_color("text_tertiary"), 0);
+        lv_obj_set_style_text_color(lock_label, theme_manager_get_color("text_tertiary"), 0);
     }
 
     return card;
