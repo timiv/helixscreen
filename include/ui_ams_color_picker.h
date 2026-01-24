@@ -112,17 +112,23 @@ class AmsColorPicker : public Modal {
     bool subjects_initialized_ = false;
 
     // === Observer tracking for cleanup ===
-    lv_observer_t* hex_label_observer_ = nullptr;
     lv_observer_t* name_label_observer_ = nullptr;
+
+    // === Hex input field ===
+    lv_obj_t* hex_input_ = nullptr;
+    bool hex_input_updating_ = false; // Prevent feedback loop
 
     // === Internal Methods ===
     void init_subjects();
     void deinit_subjects();
-    void update_preview(uint32_t color_rgb, bool from_hsv_picker = false);
+    void update_preview(uint32_t color_rgb, bool from_hsv_picker = false,
+                        bool from_hex_input = false);
 
     // === Event Handlers (called by static callbacks) ===
     void handle_swatch_clicked(lv_obj_t* swatch);
     void handle_select();
+    void handle_hex_input_changed();
+    void handle_hex_input_defocused();
 
     // === Static Callback Registration ===
     static void register_callbacks();
@@ -133,6 +139,8 @@ class AmsColorPicker : public Modal {
     static void on_swatch_cb(lv_event_t* e);
     static void on_cancel_cb(lv_event_t* e);
     static void on_select_cb(lv_event_t* e);
+    static void on_hex_input_changed_cb(lv_event_t* e);
+    static void on_hex_input_defocused_cb(lv_event_t* e);
 
     /**
      * @brief Find AmsColorPicker instance from event target

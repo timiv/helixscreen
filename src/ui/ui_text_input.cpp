@@ -119,6 +119,15 @@ static void* ui_text_input_create(lv_xml_parser_state_t* state, const char** att
         lv_obj_set_style_pad_ver(textarea, padding, 0);
     }
 
+    // Apply theme styling defaults for borders
+    lv_obj_set_style_border_width(textarea, 1, 0);
+    const char* radius = lv_xml_get_const(nullptr, "border_radius_small");
+    if (radius) {
+        lv_obj_set_style_radius(textarea, std::atoi(radius), 0);
+    }
+    // Background: transparent (theme_core applies input_bg_style via apply_cb)
+    lv_obj_set_style_bg_opa(textarea, LV_OPA_TRANSP, 0);
+
     // One-line mode by default for form inputs
     lv_textarea_set_one_line(textarea, true);
 

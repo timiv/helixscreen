@@ -3,9 +3,9 @@
 
 #include "ui_ams_color_picker.h"
 
-#include "ui_hsv_picker.h"
-
 #include "color_utils.h"
+#include "theme_manager.h"
+#include "ui_hsv_picker.h"
 
 #include <spdlog/spdlog.h>
 
@@ -56,6 +56,7 @@ AmsColorPicker::~AmsColorPicker() {
 AmsColorPicker::AmsColorPicker(AmsColorPicker&& other) noexcept
     : Modal(std::move(other)), selected_color_(other.selected_color_),
       color_callback_(std::move(other.color_callback_)),
+      dismiss_callback_(std::move(other.dismiss_callback_)),
       subjects_initialized_(other.subjects_initialized_) {
     // Copy buffers
     std::memcpy(hex_buf_, other.hex_buf_, sizeof(hex_buf_));
@@ -70,6 +71,7 @@ AmsColorPicker& AmsColorPicker::operator=(AmsColorPicker&& other) noexcept {
         Modal::operator=(std::move(other));
         selected_color_ = other.selected_color_;
         color_callback_ = std::move(other.color_callback_);
+        dismiss_callback_ = std::move(other.dismiss_callback_);
         subjects_initialized_ = other.subjects_initialized_;
         std::memcpy(hex_buf_, other.hex_buf_, sizeof(hex_buf_));
         std::memcpy(name_buf_, other.name_buf_, sizeof(name_buf_));
@@ -117,12 +119,10 @@ bool AmsColorPicker::show_with_color(lv_obj_t* parent, uint32_t initial_color) {
 // ============================================================================
 
 void AmsColorPicker::on_show() {
-    // Bind hex and name labels to subjects (save observers for cleanup)
-    lv_obj_t* hex_label = find_widget("selected_hex_label");
-    if (hex_label) {
-        hex_label_observer_ = lv_label_bind_text(hex_label, &hex_subject_, nullptr);
-    }
+    // Get hex input field
+    hex_input_ = find_widget("hex_input");
 
+    // Bind name label to subject (save observer for cleanup)
     lv_obj_t* name_label = find_widget("selected_name_label");
     if (name_label) {
         name_label_observer_ = lv_label_bind_text(name_label, &name_subject_, nullptr);
@@ -202,7 +202,8 @@ void AmsColorPicker::deinit_subjects() {
 // Internal Methods
 // ============================================================================
 
-void AmsColorPicker::update_preview(uint32_t color_rgb, bool from_hsv_picker) {
+void AmsColorPicker::update_preview(uint32_t color_rgb, bool from_hsv_picker,
+                                    bool from_hex_input) {
     if (!dialog_) {
         return;
     }
@@ -215,9 +216,15 @@ void AmsColorPicker::update_preview(uint32_t color_rgb, bool from_hsv_picker) {
         lv_obj_set_style_bg_color(preview, lv_color_hex(color_rgb), 0);
     }
 
-    // Update the hex label via subject
-    snprintf(hex_buf_, sizeof(hex_buf_), "#%06X", color_rgb);
-    lv_subject_copy_string(&hex_subject_, hex_buf_);
+    // Update the hex input (unless change came from hex input itself)
+    if (!from_hex_input && hex_input_) {
+        hex_input_updating_ = true;
+        snprintf(hex_buf_, sizeof(hex_buf_), "#%06X", color_rgb);
+        lv_textarea_set_text(hex_input_, hex_buf_);
+        lv_obj_set_style_text_color(hex_input_, theme_manager_get_color("text_primary"),
+                                    LV_PART_MAIN);
+        hex_input_updating_ = false;
+    }
 
     // Update the color name label via subject
     std::string name = helix::get_color_name_from_hex(color_rgb);
@@ -258,6 +265,45 @@ void AmsColorPicker::handle_select() {
     hide();
 }
 
+void AmsColorPicker::handle_hex_input_changed() {
+    if (hex_input_updating_ || !hex_input_) {
+        return;
+    }
+
+    const char* text = lv_textarea_get_text(hex_input_);
+    uint32_t parsed_color;
+
+    if (helix::parse_hex_color(text, parsed_color)) {
+        // Valid - normal text color, update preview
+        lv_obj_set_style_text_color(hex_input_, theme_manager_get_color("text_primary"),
+                                    LV_PART_MAIN);
+        update_preview(parsed_color, false, true); // from_hex_input=true
+    } else {
+        // Invalid - show error color
+        lv_obj_set_style_text_color(hex_input_, theme_manager_get_color("error_color"),
+                                    LV_PART_MAIN);
+    }
+}
+
+void AmsColorPicker::handle_hex_input_defocused() {
+    if (!hex_input_) {
+        return;
+    }
+
+    const char* text = lv_textarea_get_text(hex_input_);
+    uint32_t parsed_color;
+
+    if (!helix::parse_hex_color(text, parsed_color)) {
+        // Invalid on defocus - revert to current selected color
+        hex_input_updating_ = true;
+        snprintf(hex_buf_, sizeof(hex_buf_), "#%06X", selected_color_);
+        lv_textarea_set_text(hex_input_, hex_buf_);
+        lv_obj_set_style_text_color(hex_input_, theme_manager_get_color("text_primary"),
+                                    LV_PART_MAIN);
+        hex_input_updating_ = false;
+    }
+}
+
 // ============================================================================
 // Static Callback Registration
 // ============================================================================
@@ -271,6 +317,8 @@ void AmsColorPicker::register_callbacks() {
     lv_xml_register_event_cb(nullptr, "color_swatch_clicked_cb", on_swatch_cb);
     lv_xml_register_event_cb(nullptr, "color_picker_cancel_cb", on_cancel_cb);
     lv_xml_register_event_cb(nullptr, "color_picker_select_cb", on_select_cb);
+    lv_xml_register_event_cb(nullptr, "hex_input_changed_cb", on_hex_input_changed_cb);
+    lv_xml_register_event_cb(nullptr, "hex_input_defocused_cb", on_hex_input_defocused_cb);
 
     callbacks_registered_ = true;
     spdlog::debug("[AmsColorPicker] Callbacks registered");
@@ -323,6 +371,20 @@ void AmsColorPicker::on_select_cb(lv_event_t* e) {
     auto* self = get_instance_from_event(e);
     if (self) {
         self->handle_select();
+    }
+}
+
+void AmsColorPicker::on_hex_input_changed_cb(lv_event_t* e) {
+    auto* self = get_instance_from_event(e);
+    if (self) {
+        self->handle_hex_input_changed();
+    }
+}
+
+void AmsColorPicker::on_hex_input_defocused_cb(lv_event_t* e) {
+    auto* self = get_instance_from_event(e);
+    if (self) {
+        self->handle_hex_input_defocused();
     }
 }
 

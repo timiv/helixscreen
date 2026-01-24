@@ -4,7 +4,9 @@
 #include "color_utils.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
+#include <cstring>
 
 namespace helix {
 
@@ -148,6 +150,75 @@ std::string describe_color(uint32_t rgb) {
     color_name += hue_name;
 
     return color_name;
+}
+
+bool parse_hex_color(const char* input, uint32_t& out_rgb) {
+    if (input == nullptr) {
+        return false;
+    }
+
+    // Skip leading whitespace
+    while (*input && std::isspace(static_cast<unsigned char>(*input))) {
+        ++input;
+    }
+
+    // Handle 0x/0X prefix
+    if (input[0] == '0' && (input[1] == 'x' || input[1] == 'X')) {
+        input += 2;
+    }
+    // Handle # prefix
+    else if (*input == '#') {
+        ++input;
+    }
+
+    // Count hex digits
+    size_t hex_len = 0;
+    const char* hex_start = input;
+    while (std::isxdigit(static_cast<unsigned char>(input[hex_len]))) {
+        ++hex_len;
+    }
+
+    // Must be exactly 3 or 6 hex digits
+    if (hex_len != 3 && hex_len != 6) {
+        return false;
+    }
+
+    // Skip trailing whitespace
+    const char* after_hex = input + hex_len;
+    while (*after_hex && std::isspace(static_cast<unsigned char>(*after_hex))) {
+        ++after_hex;
+    }
+
+    // Must be end of string
+    if (*after_hex != '\0') {
+        return false;
+    }
+
+    // Parse the hex value
+    uint32_t value = 0;
+    for (size_t i = 0; i < hex_len; ++i) {
+        char c = hex_start[i];
+        uint32_t digit;
+        if (c >= '0' && c <= '9') {
+            digit = c - '0';
+        } else if (c >= 'a' && c <= 'f') {
+            digit = 10 + (c - 'a');
+        } else {
+            digit = 10 + (c - 'A');
+        }
+        value = (value << 4) | digit;
+    }
+
+    // Expand 3-digit shorthand (RGB → RRGGBB)
+    if (hex_len == 3) {
+        uint32_t r = (value >> 8) & 0xF;
+        uint32_t g = (value >> 4) & 0xF;
+        uint32_t b = value & 0xF;
+        value = (r << 20) | (r << 16) | (g << 12) | (g << 8) | (b << 4) | b;
+    }
+
+    out_rgb = value;
+    return true;
 }
 
 } // namespace helix
