@@ -806,19 +806,19 @@ void MoonrakerClientMock::disconnect() {
 }
 
 int MoonrakerClientMock::send_jsonrpc(const std::string& method) {
-    spdlog::debug("[MoonrakerClientMock] Mock send_jsonrpc: {}", method);
+    spdlog::trace("[MoonrakerClientMock] Mock send_jsonrpc: {}", method);
     return 0; // Success
 }
 
 int MoonrakerClientMock::send_jsonrpc(const std::string& method,
                                       [[maybe_unused]] const json& params) {
-    spdlog::debug("[MoonrakerClientMock] Mock send_jsonrpc: {} (with params)", method);
+    spdlog::trace("[MoonrakerClientMock] Mock send_jsonrpc: {} (with params)", method);
     return 0; // Success
 }
 
 RequestId MoonrakerClientMock::send_jsonrpc(const std::string& method, const json& params,
                                             std::function<void(json)> cb) {
-    spdlog::debug("[MoonrakerClientMock] Mock send_jsonrpc: {} (with callback)", method);
+    spdlog::trace("[MoonrakerClientMock] Mock send_jsonrpc: {} (with callback)", method);
 
     // Dispatch to handler registry (wrap callback to match error_cb signature)
     auto noop_error_cb = [](const MoonrakerError&) {};
@@ -830,7 +830,7 @@ RequestId MoonrakerClientMock::send_jsonrpc(const std::string& method, const jso
                                             std::function<void(const MoonrakerError&)> error_cb,
                                             [[maybe_unused]] uint32_t timeout_ms,
                                             [[maybe_unused]] bool silent) {
-    spdlog::debug("[MoonrakerClientMock] Mock send_jsonrpc: {} (with success/error callbacks)",
+    spdlog::trace("[MoonrakerClientMock] Mock send_jsonrpc: {} (with success/error callbacks)",
                   method);
 
     // Dispatch to method handler registry

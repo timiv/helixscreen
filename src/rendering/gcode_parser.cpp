@@ -1140,7 +1140,7 @@ std::string get_cached_thumbnail(const std::string& gcode_path, const std::strin
     struct stat gcode_stat, cache_stat;
     if (stat(gcode_path.c_str(), &gcode_stat) == 0 && stat(cache_path.c_str(), &cache_stat) == 0) {
         if (cache_stat.st_mtime >= gcode_stat.st_mtime) {
-            spdlog::debug("[GCode Parser] Using cached thumbnail: {}", cache_path);
+            spdlog::trace("[GCode Parser] Using cached thumbnail: {}", cache_path);
             return cache_path;
         }
     }

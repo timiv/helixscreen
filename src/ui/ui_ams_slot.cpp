@@ -190,7 +190,7 @@ static void update_filament_ring_size(AmsSlotData* data) {
     if (data->use_3d_style && data->spool_canvas) {
         // 3D style: Use spool_canvas fill level
         ui_spool_canvas_set_fill_level(data->spool_canvas, fill);
-        spdlog::debug("[AmsSlot] Slot {} 3D fill={:.0f}%", data->slot_index, fill * 100.0f);
+        spdlog::trace("[AmsSlot] Slot {} 3D fill={:.0f}%", data->slot_index, fill * 100.0f);
     } else if (data->color_swatch && data->spool_container && data->spool_hub) {
         // Flat style: Resize the concentric ring
         lv_obj_update_layout(data->spool_container);
@@ -206,7 +206,7 @@ static void update_filament_ring_size(AmsSlotData* data) {
         lv_obj_set_size(data->color_swatch, ring_size, ring_size);
         lv_obj_align(data->color_swatch, LV_ALIGN_CENTER, 0, 0);
 
-        spdlog::debug("[AmsSlot] Slot {} flat fill={:.0f}% → ring_size={}px", data->slot_index,
+        spdlog::trace("[AmsSlot] Slot {} flat fill={:.0f}% → ring_size={}px", data->slot_index,
                       fill * 100.0f, ring_size);
     }
 }
@@ -784,7 +784,7 @@ static void ams_slot_xml_apply(lv_xml_parser_state_t* state, const char** attrs)
                 fill = 1.0f;
             data->fill_level = fill;
             update_filament_ring_size(data);
-            spdlog::debug("[AmsSlot] Set fill_level={:.2f}", data->fill_level);
+            spdlog::trace("[AmsSlot] Set fill_level={:.2f}", data->fill_level);
         }
     }
 }
@@ -880,7 +880,7 @@ void ui_ams_slot_refresh(lv_obj_t* obj) {
         apply_tool_badge(data, slot.mapped_tool);
     }
 
-    spdlog::debug("[AmsSlot] Refreshed slot {}", data->slot_index);
+    spdlog::trace("[AmsSlot] Refreshed slot {}", data->slot_index);
 }
 
 void ui_ams_slot_set_fill_level(lv_obj_t* obj, float fill_level) {
@@ -902,7 +902,7 @@ void ui_ams_slot_set_fill_level(lv_obj_t* obj, float fill_level) {
     data->fill_level = fill_level;
     update_filament_ring_size(data);
 
-    spdlog::debug("[AmsSlot] Slot {} fill_level set to {:.2f}", data->slot_index, fill_level);
+    spdlog::trace("[AmsSlot] Slot {} fill_level set to {:.2f}", data->slot_index, fill_level);
 }
 
 float ui_ams_slot_get_fill_level(lv_obj_t* obj) {

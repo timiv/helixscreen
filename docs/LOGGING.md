@@ -34,7 +34,11 @@ Use INFO sparingly for **milestones the user cares about**:
 - Panel setup completion: "[Home Panel] Setup complete!"
 - Major operations: "File list updated: 126 G-code files"
 
-**NOT INFO**: Internal initialization, backend selection, per-item processing
+**NOT INFO** (use DEBUG or TRACE instead):
+- Navigation events: "Switched to panel 2" → DEBUG
+- Mock backend operations: "Returning mock file list" → DEBUG
+- Per-item updates: "Updated slot 0 info" → DEBUG
+- Internal wiring: "Queuing switch to panel" → DEBUG
 
 ### DEBUG
 Use DEBUG for **troubleshooting information**:
@@ -44,7 +48,14 @@ Use DEBUG for **troubleshooting information**:
 - Batch operation summaries: "Auto-registered 21 theme-aware color pairs"
 - Discovery details: "Detected probe: probe"
 
-**NOT DEBUG**: Per-item details in loops, wire protocol, observer plumbing
+**NOT DEBUG** (use TRACE instead):
+- Per-widget XML apply: "Applied size preset: 64x32" → TRACE
+- Per-file metadata: "Using cached thumbnail: X.png" → TRACE
+- RPC method calls: "Mock send_jsonrpc: method" → TRACE
+- File listing results: "Found 11 files", "Directory has X items" → TRACE
+- UI state toggles: "Overlay backdrop visibility set to: true" → TRACE
+- Spoolman lookups: "get_spoolman_spool(1) -> Polymaker PLA" → TRACE
+- Theme file parsing: "Parsing X.json in legacy format" → TRACE
 
 ### TRACE
 Use TRACE for **deep debugging only**:

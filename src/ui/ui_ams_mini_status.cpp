@@ -81,10 +81,10 @@ struct AmsMiniStatusData {
     // Per-slot data
     SlotBarData slots[AMS_MINI_STATUS_MAX_VISIBLE];
 
-    // Auto-binding observers (observe AmsState subjects)
+    // Auto-binding observer (observe AmsState slots_version subject)
     // Uses ObserverGuard for RAII lifecycle management
-    ObserverGuard slot_count_observer;    // Triggers when number of slots changes
-    ObserverGuard slots_version_observer; // Triggers when slot status/color changes
+    // Note: slots_version is always bumped after slot_count changes, so one observer suffices
+    ObserverGuard slots_version_observer;
 };
 
 // Static registry for safe cleanup
@@ -291,9 +291,8 @@ static void on_delete(lv_event_t* e) {
     if (it != s_registry.end()) {
         std::unique_ptr<AmsMiniStatusData> data(it->second);
         if (data) {
-            // Release observers before delete to prevent destructor from calling
+            // Release observer before delete to prevent destructor from calling
             // lv_observer_remove() on potentially destroyed subjects during shutdown
-            data->slot_count_observer.release();
             data->slots_version_observer.release();
         }
         // data automatically freed when unique_ptr goes out of scope
@@ -385,31 +384,22 @@ lv_obj_t* ui_ams_mini_status_create(lv_obj_t* parent, int32_t height) {
     // Initially hidden (no slots)
     lv_obj_add_flag(container, LV_OBJ_FLAG_HIDDEN);
 
-    // Auto-bind to AmsState: observe slot_count and slots_version changes
+    // Auto-bind to AmsState: observe slots_version changes
+    // slots_version is always bumped after slot_count changes, so one observer suffices
     // This makes the widget self-updating - no external wiring needed
-    // Using observer factory for type-safe lambda observers
     using helix::ui::observe_int_sync;
 
-    lv_subject_t* slot_count_subject = AmsState::instance().get_slot_count_subject();
-    if (slot_count_subject) {
-        data->slot_count_observer = observe_int_sync<AmsMiniStatusData>(
-            slot_count_subject, data,
-            [](AmsMiniStatusData* d, int /* count */) { sync_from_ams_state(d); });
-        spdlog::debug("[AmsMiniStatus] Auto-bound to AmsState slot_count subject");
-
-        // Sync initial state if AMS already has data
-        int current_slot_count = lv_subject_get_int(slot_count_subject);
-        if (current_slot_count > 0) {
-            sync_from_ams_state(data);
-        }
-    }
-
-    // Also observe slots_version for status/color changes (not just count changes)
     lv_subject_t* slots_version_subject = AmsState::instance().get_slots_version_subject();
     if (slots_version_subject) {
         data->slots_version_observer = observe_int_sync<AmsMiniStatusData>(
             slots_version_subject, data,
             [](AmsMiniStatusData* d, int /* version */) { sync_from_ams_state(d); });
+
+        // Sync initial state if AMS already has data
+        lv_subject_t* slot_count_subject = AmsState::instance().get_slot_count_subject();
+        if (slot_count_subject && lv_subject_get_int(slot_count_subject) > 0) {
+            sync_from_ams_state(data);
+        }
         spdlog::debug("[AmsMiniStatus] Auto-bound to AmsState slots_version subject");
     }
 
@@ -550,7 +540,7 @@ static void sync_from_ams_state(AmsMiniStatusData* data) {
     }
 
     rebuild_bars(data);
-    spdlog::debug("[AmsMiniStatus] Synced from AmsState: {} slots", slot_count);
+    spdlog::trace("[AmsMiniStatus] Synced from AmsState: {} slots", slot_count);
 }
 
 // Observer callbacks migrated to lambda observers in ui_ams_mini_status_create()
@@ -625,26 +615,21 @@ static void* ui_ams_mini_status_xml_create(lv_xml_parser_state_t* state, const c
     // Initially hidden (no slots)
     lv_obj_add_flag(container, LV_OBJ_FLAG_HIDDEN);
 
-    // Auto-bind to AmsState
+    // Auto-bind to AmsState: observe slots_version changes
+    // slots_version is always bumped after slot_count changes, so one observer suffices
     using helix::ui::observe_int_sync;
-
-    lv_subject_t* slot_count_subject = AmsState::instance().get_slot_count_subject();
-    if (slot_count_subject) {
-        data->slot_count_observer = observe_int_sync<AmsMiniStatusData>(
-            slot_count_subject, data,
-            [](AmsMiniStatusData* d, int /* count */) { sync_from_ams_state(d); });
-
-        int current_slot_count = lv_subject_get_int(slot_count_subject);
-        if (current_slot_count > 0) {
-            sync_from_ams_state(data);
-        }
-    }
 
     lv_subject_t* slots_version_subject = AmsState::instance().get_slots_version_subject();
     if (slots_version_subject) {
         data->slots_version_observer = observe_int_sync<AmsMiniStatusData>(
             slots_version_subject, data,
             [](AmsMiniStatusData* d, int /* version */) { sync_from_ams_state(d); });
+
+        // Sync initial state if AMS already has data
+        lv_subject_t* slot_count_subject = AmsState::instance().get_slot_count_subject();
+        if (slot_count_subject && lv_subject_get_int(slot_count_subject) > 0) {
+            sync_from_ams_state(data);
+        }
     }
 
     spdlog::debug("[AmsMiniStatus] Created via XML (responsive height)");

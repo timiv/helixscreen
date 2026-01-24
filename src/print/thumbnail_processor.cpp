@@ -238,7 +238,7 @@ ThumbnailTarget ThumbnailProcessor::get_target_for_display() {
 
     ThumbnailTarget target = get_target_for_resolution(hor_res, ver_res, use_rgb565);
 
-    spdlog::debug("[ThumbnailProcessor] Display {}x{} → target {}x{} ({})", hor_res, ver_res,
+    spdlog::trace("[ThumbnailProcessor] Display {}x{} → target {}x{} ({})", hor_res, ver_res,
                   target.width, target.height, use_rgb565 ? "RGB565" : "ARGB8888");
 
     return target;

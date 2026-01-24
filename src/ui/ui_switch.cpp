@@ -107,7 +107,7 @@ static void apply_size_preset(lv_obj_t* obj, const SwitchSizePreset& preset) {
     //       We need to CLEAR this flag to allow overflow
     lv_obj_remove_flag(obj, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
 
-    spdlog::debug("[Switch] Applied size preset: {}x{}, knob_pad={}, vert_margin={}", preset.width,
+    spdlog::trace("[Switch] Applied size preset: {}x{}, knob_pad={}, vert_margin={}", preset.width,
                   preset.height, preset.knob_pad, preset.vert_margin);
 }
 
@@ -307,7 +307,7 @@ static void ui_switch_xml_apply(lv_xml_parser_state_t* state, const char** attrs
     int32_t actual_w = lv_obj_get_width(obj);
     int32_t actual_h = lv_obj_get_height(obj);
     int32_t actual_knob_pad = lv_obj_get_style_pad_left(obj, LV_PART_KNOB);
-    spdlog::debug("[Switch] Final size: {}x{}, knob_pad={}px", actual_w, actual_h, actual_knob_pad);
+    spdlog::trace("[Switch] Final size: {}x{}, knob_pad={}px", actual_w, actual_h, actual_knob_pad);
 }
 
 /**

@@ -31,6 +31,7 @@ git worktree add -b feature-name ../helixscreen-feature main
 | `docs/ENVIRONMENT_VARIABLES.md` | Runtime env, mock config |
 | `docs/BUILD_SYSTEM.md` | Build, Makefile |
 | `docs/MOONRAKER_SECURITY_REVIEW.md` | Moonraker/security |
+| `docs/LOGGING.md` | Adding spdlog calls, choosing info vs debug vs trace |
 
 ---
 

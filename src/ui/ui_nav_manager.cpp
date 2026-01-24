@@ -399,9 +399,9 @@ void NavigationManager::nav_button_clicked_cb(lv_event_t* event) {
     lv_event_code_t code = lv_event_get_code(event);
     int panel_id = (int)(uintptr_t)lv_event_get_user_data(event);
 
-    spdlog::info("[NavigationManager] nav_button_clicked_cb fired: code={}, panel_id={}, "
-                 "active_panel={}",
-                 static_cast<int>(code), panel_id, static_cast<int>(mgr.active_panel_));
+    spdlog::debug("[NavigationManager] nav_button_clicked_cb fired: code={}, panel_id={}, "
+                  "active_panel={}",
+                  static_cast<int>(code), panel_id, static_cast<int>(mgr.active_panel_));
 
     if (code == LV_EVENT_CLICKED) {
         // Skip if already on this panel
@@ -426,7 +426,7 @@ void NavigationManager::nav_button_clicked_cb(lv_event_t* event) {
         }
 
         // Queue for REFR_START - guarantees we never modify widgets during render phase
-        spdlog::info("[NavigationManager] Queuing switch to panel {}", panel_id);
+        spdlog::debug("[NavigationManager] Queuing switch to panel {}", panel_id);
         ui_queue_update(
             [panel_id]() { NavigationManager::instance().switch_to_panel_impl(panel_id); });
     }
@@ -515,7 +515,7 @@ void NavigationManager::switch_to_panel_impl(int panel_id) {
                       panel_stack_.size());
     }
 
-    spdlog::info("[NavigationManager] Switched to panel {}", panel_id);
+    spdlog::debug("[NavigationManager] Switched to panel {}", panel_id);
     set_active((ui_panel_id_t)panel_id);
 }
 

@@ -51,7 +51,7 @@ void MoonrakerAPI::list_files(const std::string& root, const std::string& path, 
         [this, on_success](json response) {
             try {
                 std::vector<FileInfo> files = parse_file_list(response);
-                spdlog::debug("[Moonraker API] Found {} files", files.size());
+                spdlog::trace("[Moonraker API] Found {} files", files.size());
                 on_success(files);
             } catch (const std::exception& e) {
                 LOG_ERROR_INTERNAL("Failed to parse file list: {}", e.what());
@@ -86,7 +86,7 @@ void MoonrakerAPI::get_directory(const std::string& root, const std::string& pat
         [this, on_success](json response) {
             try {
                 std::vector<FileInfo> files = parse_file_list(response);
-                spdlog::debug("[Moonraker API] Directory has {} items", files.size());
+                spdlog::trace("[Moonraker API] Directory has {} items", files.size());
                 on_success(files);
             } catch (const std::exception& e) {
                 LOG_ERROR_INTERNAL("Failed to parse directory: {}", e.what());

@@ -625,7 +625,7 @@ AmsError AmsBackendMock::set_slot_info(int slot_index, const SlotInfo& info) {
         slot->nozzle_temp_max = info.nozzle_temp_max;
         slot->bed_temp = info.bed_temp;
 
-        spdlog::info("[AmsBackendMock] Updated slot {} info", slot_index);
+        spdlog::debug("[AmsBackendMock] Updated slot {} info", slot_index);
     }
 
     // Emit event OUTSIDE the lock to avoid deadlock

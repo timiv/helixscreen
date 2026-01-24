@@ -209,8 +209,8 @@ void register_file_handlers(std::unordered_map<std::string, MethodHandler>& regi
             path = params["path"].get<std::string>();
         }
         json response = build_mock_file_list_response(path);
-        spdlog::info("[MoonrakerClientMock] Returning mock file list for path: '{}'",
-                     path.empty() ? "/" : path);
+        spdlog::debug("[MoonrakerClientMock] Returning mock file list for path: '{}'",
+                      path.empty() ? "/" : path);
         success_cb(response);
         return true;
     };
@@ -230,8 +230,8 @@ void register_file_handlers(std::unordered_map<std::string, MethodHandler>& regi
             path = params["path"].get<std::string>();
         }
         json response = build_mock_file_list_response(path);
-        spdlog::info("[MoonrakerClientMock] Returning mock directory listing for path: '{}'",
-                     path.empty() ? "/" : path);
+        spdlog::debug("[MoonrakerClientMock] Returning mock directory listing for path: '{}'",
+                      path.empty() ? "/" : path);
         success_cb(response);
         return true;
     };
@@ -248,7 +248,7 @@ void register_file_handlers(std::unordered_map<std::string, MethodHandler>& regi
         if (!filename.empty()) {
             if (success_cb) {
                 json response = build_mock_file_metadata_response(filename);
-                spdlog::info("[MoonrakerClientMock] Returning mock metadata for: {}", filename);
+                spdlog::debug("[MoonrakerClientMock] Returning mock metadata for: {}", filename);
                 success_cb(response);
             }
         } else if (error_cb) {
@@ -274,7 +274,7 @@ void register_file_handlers(std::unordered_map<std::string, MethodHandler>& regi
         if (!filename.empty()) {
             if (success_cb) {
                 json response = build_mock_file_metadata_response(filename);
-                spdlog::info("[MoonrakerClientMock] Returning mock metascan for: {}", filename);
+                spdlog::debug("[MoonrakerClientMock] Returning mock metascan for: {}", filename);
                 success_cb(response);
             }
         } else if (error_cb) {

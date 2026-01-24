@@ -206,7 +206,7 @@ void StatusBarManager::set_backdrop_visible(bool visible) {
     }
 
     lv_subject_set_int(&overlay_backdrop_visible_subject_, visible ? 1 : 0);
-    spdlog::debug("[StatusBarManager] Overlay backdrop visibility set to: {}", visible);
+    spdlog::trace("[StatusBarManager] Overlay backdrop visibility set to: {}", visible);
 }
 
 void StatusBarManager::update_network(NetworkStatus status) {

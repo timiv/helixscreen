@@ -1010,7 +1010,7 @@ void MoonrakerAPIMock::get_spoolman_spool(int spool_id, SpoolCallback on_success
     // Search mock spools for the requested ID
     for (const auto& spool : mock_spools_) {
         if (spool.id == spool_id) {
-            spdlog::debug("[MoonrakerAPIMock] get_spoolman_spool({}) -> {} {}", spool_id,
+            spdlog::trace("[MoonrakerAPIMock] get_spoolman_spool({}) -> {} {}", spool_id,
                           spool.vendor, spool.material);
             if (on_success) {
                 on_success(spool);
@@ -1020,7 +1020,7 @@ void MoonrakerAPIMock::get_spoolman_spool(int spool_id, SpoolCallback on_success
     }
 
     // Spool not found - return empty optional
-    spdlog::debug("[MoonrakerAPIMock] get_spoolman_spool({}) -> not found", spool_id);
+    spdlog::trace("[MoonrakerAPIMock] get_spoolman_spool({}) -> not found", spool_id);
     if (on_success) {
         on_success(std::nullopt);
     }
