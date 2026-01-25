@@ -15,6 +15,7 @@ Solutions to common problems with HelixScreen.
 - [Calibration Issues](#calibration-issues)
 - [Performance Issues](#performance-issues)
 - [Configuration Issues](#configuration-issues)
+- [Adventurer 5M Issues](#adventurer-5m-issues)
 - [Gathering Diagnostic Information](#gathering-diagnostic-information)
 - [Getting Help](#getting-help)
 
@@ -695,6 +696,120 @@ Edit helixconfig.json to set correct printer type and features.
 
 ---
 
+## Adventurer 5M Issues
+
+The AD5M has unique characteristics due to its embedded Linux environment and ForgeX/Klipper Mod firmware.
+
+### Screen dims after a few seconds
+
+**Symptoms:**
+- Screen dims to ~10% brightness shortly after boot
+- Happens about 3 seconds after Klipper starts
+
+**Cause:**
+ForgeX's `headless.cfg` has a `reset_screen` delayed_gcode that sets backlight to eco mode.
+
+**Solution:**
+The HelixScreen installer automatically patches `/opt/config/mod/.shell/screen.sh` to skip backlight commands when HelixScreen is running. If you installed manually or the patch didn't apply:
+
+```bash
+# Check if patch is present
+grep helixscreen_active /opt/config/mod/.shell/screen.sh
+
+# If not present, re-run installer or manually add after "backlight)" line:
+#     if [ -f /tmp/helixscreen_active ]; then
+#         exit 0
+#     fi
+```
+
+### Black screen after boot
+
+**Symptoms:**
+- Display stays black
+- SSH works, printer responds
+
+**Causes:**
+1. ForgeX not in GUPPY mode
+2. GuppyScreen still running
+3. Backlight not enabled
+
+**Solutions:**
+
+**Check ForgeX display mode:**
+```bash
+grep display /opt/config/mod_data/variables.cfg
+# Should show: display = 'GUPPY'
+```
+
+**Verify GuppyScreen is disabled:**
+```bash
+ls -la /opt/config/mod/.root/S80guppyscreen
+# Should NOT have execute permission (no 'x')
+```
+
+**Check HelixScreen is running:**
+```bash
+/etc/init.d/S90helixscreen status
+cat /tmp/helixscreen.log
+```
+
+### Service commands (SysV init)
+
+AD5M uses SysV init, not systemd. Commands are different:
+
+```bash
+# Forge-X
+/etc/init.d/S90helixscreen start|stop|restart|status
+cat /tmp/helixscreen.log
+
+# Klipper Mod
+/etc/init.d/S80helixscreen start|stop|restart|status
+cat /tmp/helixscreen.log
+```
+
+### SSH/SCP notes
+
+AD5M's BusyBox has limitations:
+
+```bash
+# Use legacy SCP protocol (no sftp-server)
+scp -O localfile root@<printer-ip>:/path/
+
+# Use IP address, not hostname (mDNS may not resolve)
+ssh root@192.168.1.67
+
+# BusyBox tar doesn't support -z flag
+gunzip -c archive.tar.gz | tar xf -
+```
+
+### ForgeX not installed
+
+**Symptoms:**
+- Installer fails or skips ForgeX configuration
+- HelixScreen runs but backlight doesn't work
+
+**Solution:**
+HelixScreen requires ForgeX to be installed first. Install ForgeX following [their instructions](https://github.com/DrA1ex/ff5m), verify GuppyScreen works, then run the HelixScreen installer.
+
+### Restoring GuppyScreen
+
+To go back to GuppyScreen:
+
+```bash
+# Automated (recommended)
+curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | bash -s -- --uninstall
+
+# Manual
+/etc/init.d/S90helixscreen stop
+rm /etc/init.d/S90helixscreen
+rm -rf /opt/helixscreen
+chmod +x /opt/config/mod/.root/S80guppyscreen
+chmod +x /opt/config/mod/.root/S35tslib
+reboot
+```
+
+---
+
 ## Gathering Diagnostic Information
 
 When reporting issues, gather this information:
@@ -715,6 +830,7 @@ free -h
 
 ### Recent Logs
 
+**MainsailOS (systemd):**
 ```bash
 # HelixScreen logs (last 100 lines)
 sudo journalctl -u helixscreen -n 100 --no-pager
@@ -724,6 +840,18 @@ sudo journalctl -u helixscreen -n 100 --no-pager -o short-iso
 
 # Errors only
 sudo journalctl -u helixscreen -p err --no-pager
+```
+
+**Adventurer 5M (SysV init):**
+```bash
+# HelixScreen logs
+cat /tmp/helixscreen.log
+
+# Last 100 lines
+tail -100 /tmp/helixscreen.log
+
+# Follow live
+tail -f /tmp/helixscreen.log
 ```
 
 ### Configuration
