@@ -1,5 +1,14 @@
 # Sensor Framework Implementation Plan
 
+## Setup (run first)
+
+```bash
+# On a fresh machine, set up worktree:
+git fetch origin
+git worktree add ../helixscreen-sensor-framework origin/sensor-framework
+cd ../helixscreen-sensor-framework
+```
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 > Use superpowers:subagent-driven-development for parallel task execution where tasks are independent.
 
