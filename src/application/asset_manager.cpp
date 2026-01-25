@@ -111,6 +111,11 @@ void AssetManager::register_images() {
                           "A:assets/images/gradient-panel-medium.bin");
     lv_xml_register_image(NULL, "A:assets/images/gradient-panel-large.bin",
                           "A:assets/images/gradient-panel-large.bin");
+    // Pre-rendered placeholder thumbnails (for file cards without embedded thumbnails)
+    lv_xml_register_image(NULL, "A:assets/images/prerendered/thumbnail-placeholder-160.bin",
+                          "A:assets/images/prerendered/thumbnail-placeholder-160.bin");
+    lv_xml_register_image(NULL, "A:assets/images/prerendered/benchy_thumbnail_white.bin",
+                          "A:assets/images/prerendered/benchy_thumbnail_white.bin");
 
     s_images_registered = true;
     spdlog::debug("[AssetManager] Images registered successfully");
