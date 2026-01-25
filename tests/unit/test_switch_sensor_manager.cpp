@@ -15,6 +15,7 @@
  * - Missing sensor handling
  */
 
+#include "../ui_test_utils.h"
 #include "filament_sensor_manager.h"
 #include "filament_sensor_types.h"
 
@@ -23,7 +24,6 @@
 #include <vector>
 
 #include "../catch_amalgamated.hpp"
-#include "../ui_test_utils.h"
 
 using namespace helix;
 using json = nlohmann::json;
@@ -708,7 +708,8 @@ TEST_CASE("SwitchSensorTypes - role string conversion", "[sensors][switch][types
     SECTION("switch_role_from_string") {
         REQUIRE(switch_role_from_string("none") == SwitchSensorRole::NONE);
         REQUIRE(switch_role_from_string("filament_runout") == SwitchSensorRole::FILAMENT_RUNOUT);
-        REQUIRE(switch_role_from_string("filament_toolhead") == SwitchSensorRole::FILAMENT_TOOLHEAD);
+        REQUIRE(switch_role_from_string("filament_toolhead") ==
+                SwitchSensorRole::FILAMENT_TOOLHEAD);
         REQUIRE(switch_role_from_string("filament_entry") == SwitchSensorRole::FILAMENT_ENTRY);
         REQUIRE(switch_role_from_string("z_probe") == SwitchSensorRole::Z_PROBE);
         REQUIRE(switch_role_from_string("dock_detect") == SwitchSensorRole::DOCK_DETECT);
