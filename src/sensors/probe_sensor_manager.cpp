@@ -227,7 +227,7 @@ void ProbeSensorManager::init_subjects() {
     UI_MANAGED_SUBJECT_INT(probe_triggered_, -1, "probe_triggered", subjects_);
     UI_MANAGED_SUBJECT_INT(probe_last_z_, -1, "probe_last_z", subjects_);
     UI_MANAGED_SUBJECT_INT(probe_z_offset_, -1, "probe_z_offset", subjects_);
-    UI_MANAGED_SUBJECT_INT(sensor_count_, 0, "probe_sensor_count", subjects_);
+    UI_MANAGED_SUBJECT_INT(sensor_count_, 0, "probe_count", subjects_);
 
     subjects_initialized_ = true;
     spdlog::info("[ProbeSensorManager] Subjects initialized");
