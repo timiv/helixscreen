@@ -299,6 +299,13 @@ void SettingsManager::on_theme_changed() {
 }
 
 std::string SettingsManager::get_theme_name() const {
+    // Use the actual active theme (which respects HELIX_THEME env override)
+    const auto& active = theme_manager_get_active_theme();
+    if (!active.filename.empty()) {
+        // Return the filename to match dropdown option matching
+        return active.filename;
+    }
+    // Fallback to config if theme_manager not initialized yet
     Config* config = Config::get_instance();
     return config ? config->get<std::string>("/display/theme", "nord") : "nord";
 }

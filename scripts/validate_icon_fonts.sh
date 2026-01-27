@@ -68,15 +68,13 @@ echo ""
 REQUIRED=$(extract_required_codepoints)
 IN_FONT=$(extract_font_codepoints)
 
-# Find missing codepoints
-MISSING=""
-MISSING_COUNT=0
-while IFS= read -r codepoint; do
-    if ! echo "$IN_FONT" | grep -q "^${codepoint}$"; then
-        MISSING="${MISSING}${codepoint}\n"
-        MISSING_COUNT=$((MISSING_COUNT + 1))
-    fi
-done <<< "$REQUIRED"
+# Find missing codepoints using comm (much faster than loop + grep)
+MISSING=$(comm -23 <(echo "$REQUIRED") <(echo "$IN_FONT"))
+if [[ -z "$MISSING" ]]; then
+    MISSING_COUNT=0
+else
+    MISSING_COUNT=$(echo "$MISSING" | wc -l | tr -d ' ')
+fi
 
 # Report results
 REQUIRED_COUNT=$(echo "$REQUIRED" | wc -l | tr -d ' ')
@@ -89,7 +87,7 @@ echo ""
 if [[ $MISSING_COUNT -gt 0 ]]; then
     echo "❌ MISSING FROM FONTS ($MISSING_COUNT):"
     echo ""
-    echo -e "$MISSING" | while IFS= read -r cp; do
+    echo "$MISSING" | while IFS= read -r cp; do
         if [[ -n "$cp" ]]; then
             # Find the icon name for this codepoint
             NAME=$(grep -E "//\s*$cp" "$CODEPOINTS_FILE" | head -1 | sed -E 's/.*\{"([^"]+)".*/\1/')
@@ -143,16 +141,13 @@ extract_defined_icons() {
 XML_ICONS=$(extract_xml_icons)
 DEFINED_ICONS=$(extract_defined_icons)
 
-# Find icons used in XML but not defined in codepoints.h
-UNDEFINED=""
-UNDEFINED_COUNT=0
-while IFS= read -r icon; do
-    [[ -z "$icon" ]] && continue
-    if ! echo "$DEFINED_ICONS" | grep -qx "$icon"; then
-        UNDEFINED="${UNDEFINED}${icon}\n"
-        UNDEFINED_COUNT=$((UNDEFINED_COUNT + 1))
-    fi
-done <<< "$XML_ICONS"
+# Find icons used in XML but not defined in codepoints.h (using comm, much faster)
+UNDEFINED=$(comm -23 <(echo "$XML_ICONS") <(echo "$DEFINED_ICONS"))
+if [[ -z "$UNDEFINED" ]]; then
+    UNDEFINED_COUNT=0
+else
+    UNDEFINED_COUNT=$(echo "$UNDEFINED" | wc -l | tr -d ' ')
+fi
 
 XML_COUNT=$(echo "$XML_ICONS" | grep -c . || echo 0)
 DEFINED_COUNT=$(echo "$DEFINED_ICONS" | grep -c . || echo 0)
@@ -165,7 +160,7 @@ if [[ $UNDEFINED_COUNT -gt 0 ]]; then
     echo "❌ UNDEFINED ICONS ($UNDEFINED_COUNT):"
     echo "   These icons are used in XML but not defined in $CODEPOINTS_FILE"
     echo ""
-    echo -e "$UNDEFINED" | while IFS= read -r icon; do
+    echo "$UNDEFINED" | while IFS= read -r icon; do
         if [[ -n "$icon" ]]; then
             # Find which XML file uses this icon
             FILES=$(grep -rl "icon=\"$icon\"" "$XML_DIR" 2>/dev/null | sed 's|.*/||' | tr '\n' ', ' | sed 's/, $//')

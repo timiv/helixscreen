@@ -26,6 +26,17 @@ REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT"
 
 EXIT_CODE=0
+SCRIPT_START=$(date +%s)
+
+# Timing helper - prints elapsed time for a section (seconds)
+section_time() {
+  local start=$1
+  local end=$(date +%s)
+  local elapsed=$((end - start))
+  if [ $elapsed -gt 0 ]; then
+    printf " (%ds)" "$elapsed"
+  fi
+}
 
 echo "🔍 Running quality checks..."
 if [ "$STAGED_ONLY" = true ]; then
@@ -38,7 +49,8 @@ echo ""
 # ====================================================================
 # Copyright (C) 2025-2026 356C LLC
 # ====================================================================
-echo "📝 Checking copyright headers..."
+SECTION_START=$(date +%s)
+echo -n "📝 Checking copyright headers..."
 
 if [ "$STAGED_ONLY" = true ]; then
   # Pre-commit mode: check only staged files (git-ignored files can't be staged)
@@ -70,15 +82,22 @@ if [ -n "$FILES" ]; then
   done
 
   if [ -n "$MISSING_HEADERS" ]; then
+    section_time $SECTION_START
     echo ""
     echo "See docs/COPYRIGHT_HEADERS.md for the required header format"
   else
+    section_time $SECTION_START
+    echo ""
     echo "✅ All source files have proper copyright headers"
   fi
 else
   if [ "$STAGED_ONLY" = true ]; then
+    section_time $SECTION_START
+    echo ""
     echo "ℹ️  No source files staged for commit"
   else
+    section_time $SECTION_START
+    echo ""
     echo "ℹ️  No source files found"
   fi
 fi
@@ -298,13 +317,28 @@ echo ""
 
 # Build Verification
 if [ "$STAGED_ONLY" = true ]; then
-  echo "🔨 Verifying incremental build..."
-  if make -j >/dev/null 2>&1; then
-    echo "✅ Build successful"
+  SECTION_START=$(date +%s)
+  echo -n "🔨 Verifying incremental build..."
+  # Use make -q (query mode) first - instant check if rebuild is needed
+  # Exit 0 = up to date, Exit 1 = needs rebuild, Exit 2 = error
+  if make -q >/dev/null 2>&1; then
+    section_time $SECTION_START
+    echo ""
+    echo "✅ Build up to date"
   else
-    echo "❌ Build failed - fix compilation errors before committing"
-    echo "   Run 'make' to see full error output"
-    EXIT_CODE=1
+    # Something needs building - run actual build
+    # Use SKIP_COMPILE_COMMANDS=1 to avoid slow LSP re-indexing
+    if make SKIP_COMPILE_COMMANDS=1 -j >/dev/null 2>&1; then
+      section_time $SECTION_START
+      echo ""
+      echo "✅ Build successful"
+    else
+      section_time $SECTION_START
+      echo ""
+      echo "❌ Build failed - fix compilation errors before committing"
+      echo "   Run 'make' to see full error output"
+      EXIT_CODE=1
+    fi
   fi
   echo ""
 fi
@@ -312,14 +346,19 @@ fi
 # ====================================================================
 # Icon Font Validation
 # ====================================================================
-echo "🔤 Validating icon font codepoints..."
+SECTION_START=$(date +%s)
+echo -n "🔤 Validating icon font codepoints..."
 
 # Check if all icons in ui_icon_codepoints.h are present in compiled fonts
 # This prevents the bug where icons are added to code but fonts aren't regenerated
 if [ -f "scripts/validate_icon_fonts.sh" ]; then
   if ./scripts/validate_icon_fonts.sh 2>/dev/null; then
+    section_time $SECTION_START
+    echo ""
     echo "✅ All icon codepoints present in fonts"
   else
+    section_time $SECTION_START
+    echo ""
     echo "❌ Missing icon codepoints in fonts!"
     echo ""
     echo "   Some icons in include/ui_icon_codepoints.h are not in the compiled fonts."
@@ -329,6 +368,8 @@ if [ -f "scripts/validate_icon_fonts.sh" ]; then
     EXIT_CODE=1
   fi
 else
+  section_time $SECTION_START
+  echo ""
   echo "⚠️  validate_icon_fonts.sh not found - skipping icon validation"
 fi
 
@@ -337,11 +378,14 @@ echo ""
 # ====================================================================
 # MDI Codepoint Label Verification
 # ====================================================================
-echo "🔤 Verifying MDI codepoint labels..."
+SECTION_START=$(date +%s)
+echo -n "🔤 Verifying MDI codepoint labels..."
 
 if [ -f "scripts/verify_mdi_codepoints.py" ]; then
   python3 scripts/verify_mdi_codepoints.py 2>/dev/null
   RESULT=$?
+  section_time $SECTION_START
+  echo ""
   if [ $RESULT -eq 0 ]; then
     echo "✅ All MDI codepoint labels verified"
   elif [ $RESULT -eq 1 ]; then
@@ -354,6 +398,8 @@ if [ -f "scripts/verify_mdi_codepoints.py" ]; then
     echo "   Run: make update-mdi-cache"
   fi
 else
+  section_time $SECTION_START
+  echo ""
   echo "⚠️  verify_mdi_codepoints.py not found - skipping"
 fi
 
@@ -407,10 +453,13 @@ fi
 # ====================================================================
 # Final Result
 # ====================================================================
+SCRIPT_END=$(date +%s)
+TOTAL_SEC=$((SCRIPT_END - SCRIPT_START))
+
 if [ $EXIT_CODE -eq 0 ]; then
-  echo "✅ Quality checks passed!"
+  echo "✅ Quality checks passed! (${TOTAL_SEC}s total)"
   exit 0
 else
-  echo "❌ Quality checks failed!"
+  echo "❌ Quality checks failed! (${TOTAL_SEC}s total)"
   exit 1
 fi

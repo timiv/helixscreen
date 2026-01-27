@@ -94,7 +94,9 @@ else
 all: apply-patches generate-fonts splash watchdog $(TARGET)
 	$(ECHO) "$(GREEN)$(BOLD)✓ Build complete!$(RESET)"
 	$(ECHO) "$(CYAN)Run with: $(YELLOW)./$(TARGET)$(RESET)"
+ifndef SKIP_COMPILE_COMMANDS
 	@# Auto-generate compile_commands.json from fragments (fast, ~1-2s)
+	@# Skip with SKIP_COMPILE_COMMANDS=1 (used by pre-commit to avoid LSP churn)
 	@if [ -d "$(BUILD_DIR)" ]; then \
 		CCJ_COUNT=$$(find $(BUILD_DIR) -name '*.ccj' 2>/dev/null | wc -l | tr -d ' '); \
 		if [ "$$CCJ_COUNT" -gt 0 ]; then \
@@ -105,6 +107,7 @@ all: apply-patches generate-fonts splash watchdog $(TARGET)
 			echo "$(CYAN)→ compile_commands.json updated ($$CCJ_COUNT entries)$(RESET)"; \
 		fi; \
 	fi
+endif
 endif
 
 # Build libhv if not present (dependency rule)
