@@ -174,6 +174,12 @@ class WidthSensorManager : public ISensorManager {
     [[nodiscard]] lv_subject_t* get_sensor_count_subject();
 
     /**
+     * @brief Get subject for filament diameter text (formatted as "1.75mm")
+     * @return Subject (string: formatted diameter or "--" if no sensor)
+     */
+    [[nodiscard]] lv_subject_t* get_diameter_text_subject();
+
+    /**
      * @brief Reset all state for testing.
      *
      * Clears all sensors, states, and resets flags.
@@ -244,6 +250,8 @@ class WidthSensorManager : public ISensorManager {
     SubjectManager subjects_;
     lv_subject_t diameter_;
     lv_subject_t sensor_count_;
+    lv_subject_t diameter_text_;
+    char diameter_text_buf_[16]; ///< "1.75mm" or "--"
 };
 
 } // namespace helix::sensors

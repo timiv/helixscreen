@@ -237,6 +237,9 @@ void HumiditySensorManager::init_subjects() {
     // -1 = no sensor assigned, 0+ = humidity x 10
     UI_MANAGED_SUBJECT_INT(dryer_humidity_, -1, "dryer_humidity", subjects_);
     UI_MANAGED_SUBJECT_INT(sensor_count_, 0, "humidity_sensor_count", subjects_);
+    // Text subject for display (formatted as "45%" or "--")
+    UI_MANAGED_SUBJECT_STRING(chamber_humidity_text_, chamber_humidity_text_buf_, "--",
+                              "chamber_humidity_text", subjects_);
 
     subjects_initialized_ = true;
     spdlog::info("[HumiditySensorManager] Subjects initialized");
@@ -373,6 +376,10 @@ lv_subject_t* HumiditySensorManager::get_sensor_count_subject() {
     return &sensor_count_;
 }
 
+lv_subject_t* HumiditySensorManager::get_chamber_humidity_text_subject() {
+    return &chamber_humidity_text_;
+}
+
 // ============================================================================
 // Testing Support
 // ============================================================================
@@ -389,6 +396,8 @@ void HumiditySensorManager::reset_for_testing() {
         lv_subject_set_int(&chamber_pressure_, -1);
         lv_subject_set_int(&dryer_humidity_, -1);
         lv_subject_set_int(&sensor_count_, 0);
+        snprintf(chamber_humidity_text_buf_, sizeof(chamber_humidity_text_buf_), "--");
+        lv_subject_copy_string(&chamber_humidity_text_, chamber_humidity_text_buf_);
     }
 
     spdlog::debug("[HumiditySensorManager] Reset for testing");
@@ -512,14 +521,25 @@ void HumiditySensorManager::update_subjects() {
         return static_cast<int>(it->second.humidity * 10.0f);
     };
 
-    lv_subject_set_int(&chamber_humidity_, get_chamber_humidity_value());
+    int chamber_humidity = get_chamber_humidity_value();
+    lv_subject_set_int(&chamber_humidity_, chamber_humidity);
     lv_subject_set_int(&chamber_pressure_, get_chamber_pressure_value());
     lv_subject_set_int(&dryer_humidity_, get_dryer_humidity_value());
 
+    // Update text subject: format as "45%" or "--" if unavailable
+    if (chamber_humidity >= 0) {
+        // Humidity is stored as % x 10, so divide by 10 to get whole percentage
+        snprintf(chamber_humidity_text_buf_, sizeof(chamber_humidity_text_buf_), "%d%%",
+                 chamber_humidity / 10);
+    } else {
+        snprintf(chamber_humidity_text_buf_, sizeof(chamber_humidity_text_buf_), "--");
+    }
+    lv_subject_copy_string(&chamber_humidity_text_, chamber_humidity_text_buf_);
+
     spdlog::trace("[HumiditySensorManager] Subjects updated: chamber_humidity={}, "
-                  "chamber_pressure={}, dryer_humidity={}",
+                  "chamber_pressure={}, dryer_humidity={}, text={}",
                   lv_subject_get_int(&chamber_humidity_), lv_subject_get_int(&chamber_pressure_),
-                  lv_subject_get_int(&dryer_humidity_));
+                  lv_subject_get_int(&dryer_humidity_), chamber_humidity_text_buf_);
 }
 
 } // namespace helix::sensors

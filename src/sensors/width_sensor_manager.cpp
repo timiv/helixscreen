@@ -224,6 +224,9 @@ void WidthSensorManager::init_subjects() {
     // -1 = no sensor assigned, 0+ = diameter in mm * 1000
     UI_MANAGED_SUBJECT_INT(diameter_, -1, "filament_width_diameter", subjects_);
     UI_MANAGED_SUBJECT_INT(sensor_count_, 0, "width_sensor_count", subjects_);
+    // Text subject for display (formatted as "1.75mm" or "--")
+    UI_MANAGED_SUBJECT_STRING(diameter_text_, diameter_text_buf_, "--", "filament_diameter_text",
+                              subjects_);
 
     subjects_initialized_ = true;
     spdlog::info("[WidthSensorManager] Subjects initialized");
@@ -365,6 +368,10 @@ lv_subject_t* WidthSensorManager::get_sensor_count_subject() {
     return &sensor_count_;
 }
 
+lv_subject_t* WidthSensorManager::get_diameter_text_subject() {
+    return &diameter_text_;
+}
+
 // ============================================================================
 // Testing Support
 // ============================================================================
@@ -379,6 +386,8 @@ void WidthSensorManager::reset_for_testing() {
     if (subjects_initialized_) {
         lv_subject_set_int(&diameter_, -1);
         lv_subject_set_int(&sensor_count_, 0);
+        snprintf(diameter_text_buf_, sizeof(diameter_text_buf_), "--");
+        lv_subject_copy_string(&diameter_text_, diameter_text_buf_);
     }
 
     spdlog::debug("[WidthSensorManager] Reset for testing");
@@ -465,10 +474,21 @@ void WidthSensorManager::update_subjects() {
         return static_cast<int>(it->second.diameter * 1000.0f);
     };
 
-    lv_subject_set_int(&diameter_, get_diameter_value());
+    int diameter = get_diameter_value();
+    lv_subject_set_int(&diameter_, diameter);
 
-    spdlog::trace("[WidthSensorManager] Subjects updated: diameter={}",
-                  lv_subject_get_int(&diameter_));
+    // Update text subject: format as "1.75mm" or "--" if unavailable
+    if (diameter >= 0) {
+        // Diameter is stored as mm * 1000, so divide to get mm with 2 decimal places
+        float diameter_mm = diameter / 1000.0f;
+        snprintf(diameter_text_buf_, sizeof(diameter_text_buf_), "%.2fmm", diameter_mm);
+    } else {
+        snprintf(diameter_text_buf_, sizeof(diameter_text_buf_), "--");
+    }
+    lv_subject_copy_string(&diameter_text_, diameter_text_buf_);
+
+    spdlog::trace("[WidthSensorManager] Subjects updated: diameter={}, text={}",
+                  lv_subject_get_int(&diameter_), diameter_text_buf_);
 }
 
 } // namespace helix::sensors

@@ -185,6 +185,12 @@ class HumiditySensorManager : public ISensorManager {
     [[nodiscard]] lv_subject_t* get_sensor_count_subject();
 
     /**
+     * @brief Get subject for chamber humidity text (formatted as "45%")
+     * @return Subject (string: formatted humidity or "--" if no sensor)
+     */
+    [[nodiscard]] lv_subject_t* get_chamber_humidity_text_subject();
+
+    /**
      * @brief Reset all state for testing.
      *
      * Clears all sensors, states, and resets flags.
@@ -257,6 +263,8 @@ class HumiditySensorManager : public ISensorManager {
     lv_subject_t chamber_pressure_;
     lv_subject_t dryer_humidity_;
     lv_subject_t sensor_count_;
+    lv_subject_t chamber_humidity_text_;
+    char chamber_humidity_text_buf_[8]; ///< "45%" or "--"
 };
 
 } // namespace helix::sensors
