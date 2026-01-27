@@ -780,7 +780,9 @@ void modal_init_subjects() {
                                "dialog_cancel_text", g_subjects);
 
     // Register event callbacks for modals using static Modal::show() API
-    // These modals need unique callback names to avoid conflicts
+    // Generic close callback - closes topmost modal (use for OK/Cancel that just dismiss)
+    lv_xml_register_event_cb(nullptr, "on_modal_close", static_modal_close_cb);
+    // Legacy alias for print complete dialog
     lv_xml_register_event_cb(nullptr, "on_print_complete_ok", static_modal_close_cb);
 
     g_subjects_initialized = true;
@@ -887,23 +889,17 @@ lv_obj_t* ui_modal_show_confirmation(const char* title, const char* message, Mod
     }
 
     // Wire up cancel button (btn_secondary in modal_dialog)
-    if (on_cancel) {
-        lv_obj_t* cancel_btn = lv_obj_find_by_name(dialog, "btn_secondary");
-        if (cancel_btn) {
-            lv_obj_add_event_cb(cancel_btn, on_cancel, LV_EVENT_CLICKED, user_data);
-        } else {
-            spdlog::warn("[Modal] btn_secondary not found - cancel callback not wired");
-        }
+    lv_obj_t* cancel_btn = lv_obj_find_by_name(dialog, "btn_secondary");
+    if (cancel_btn) {
+        lv_obj_add_event_cb(cancel_btn, on_cancel ? on_cancel : static_modal_close_cb,
+                            LV_EVENT_CLICKED, on_cancel ? user_data : nullptr);
     }
 
     // Wire up confirm button (btn_primary in modal_dialog)
-    if (on_confirm) {
-        lv_obj_t* confirm_btn = lv_obj_find_by_name(dialog, "btn_primary");
-        if (confirm_btn) {
-            lv_obj_add_event_cb(confirm_btn, on_confirm, LV_EVENT_CLICKED, user_data);
-        } else {
-            spdlog::warn("[Modal] btn_primary not found - confirm callback not wired");
-        }
+    lv_obj_t* confirm_btn = lv_obj_find_by_name(dialog, "btn_primary");
+    if (confirm_btn) {
+        lv_obj_add_event_cb(confirm_btn, on_confirm ? on_confirm : static_modal_close_cb,
+                            LV_EVENT_CLICKED, on_confirm ? user_data : nullptr);
     }
 
     spdlog::debug("[Modal] Confirmation dialog shown: '{}'", title);
@@ -933,14 +929,8 @@ lv_obj_t* ui_modal_show_alert(const char* title, const char* message, ModalSever
     // Wire up OK button - use provided callback or default close behavior
     lv_obj_t* ok_btn = lv_obj_find_by_name(dialog, "btn_primary");
     if (ok_btn) {
-        if (on_ok) {
-            lv_obj_add_event_cb(ok_btn, on_ok, LV_EVENT_CLICKED, user_data);
-        } else {
-            // Default behavior: close the modal when OK is clicked
-            lv_obj_add_event_cb(ok_btn, static_modal_close_cb, LV_EVENT_CLICKED, nullptr);
-        }
-    } else {
-        spdlog::warn("[Modal] btn_primary not found - OK callback not wired");
+        lv_obj_add_event_cb(ok_btn, on_ok ? on_ok : static_modal_close_cb, LV_EVENT_CLICKED,
+                            on_ok ? user_data : nullptr);
     }
 
     spdlog::debug("[Modal] Alert dialog shown: '{}'", title);
