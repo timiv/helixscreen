@@ -10,6 +10,8 @@
 
 #include "settings_manager.h"
 
+#include "lvgl/src/xml/lv_xml.h"
+
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -17,8 +19,20 @@
 // ============================================================================
 // MODAL STYLE CONSTANTS
 // ============================================================================
-// Backdrop opacity: 180 = ~70% opacity (dark overlay behind modal)
-static constexpr uint8_t MODAL_BACKDROP_OPACITY = 180;
+// Default backdrop opacity if globals.xml constant not found
+static constexpr uint8_t DEFAULT_MODAL_BACKDROP_OPACITY = 100;
+
+// Helper to get backdrop opacity from globals.xml
+static uint8_t get_modal_backdrop_opacity() {
+    const char* opacity_str = lv_xml_get_const(nullptr, "modal_backdrop_opacity");
+    if (opacity_str) {
+        int val = atoi(opacity_str);
+        if (val >= 0 && val <= 255) {
+            return static_cast<uint8_t>(val);
+        }
+    }
+    return DEFAULT_MODAL_BACKDROP_OPACITY;
+}
 
 // ============================================================================
 // ANIMATION CONSTANTS
@@ -362,7 +376,7 @@ lv_obj_t* Modal::show(const char* component_name, const char** attrs) {
     lv_obj_t* parent = lv_screen_active();
 
     // Create backdrop using shared utility
-    lv_obj_t* backdrop = ui_create_fullscreen_backdrop(parent, MODAL_BACKDROP_OPACITY);
+    lv_obj_t* backdrop = ui_create_fullscreen_backdrop(parent, get_modal_backdrop_opacity());
     if (!backdrop) {
         spdlog::error("[Modal] Failed to create backdrop");
         return nullptr;
@@ -599,7 +613,7 @@ void Modal::wire_senary_button(const char* name) {
 
 bool Modal::create_and_show(lv_obj_t* parent, const char* comp_name, const char** attrs) {
     // Create backdrop using shared utility
-    backdrop_ = ui_create_fullscreen_backdrop(parent, MODAL_BACKDROP_OPACITY);
+    backdrop_ = ui_create_fullscreen_backdrop(parent, get_modal_backdrop_opacity());
     if (!backdrop_) {
         spdlog::error("[{}] Failed to create backdrop", get_name());
         return false;

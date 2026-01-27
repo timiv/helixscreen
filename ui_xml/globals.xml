@@ -244,6 +244,9 @@
     <!-- anim_release: Button release with overshoot -->
     <px name="anim_release" value="120"/>
 
+    <!-- Modal backdrop opacity (0-255, where 255 is fully opaque) -->
+    <px name="modal_backdrop_opacity" value="100"/>
+
     <!-- Graph/Visualization colors -->
     <color name="graph_line_primary" value="#bf616a"/>
     <!-- nord11 - Aurora red -->
