@@ -272,12 +272,12 @@ class FilamentSensorManager {
     [[nodiscard]] lv_subject_t* get_sensor_count_subject();
 
     /**
-     * @brief Check if still within startup grace period
+     * @brief Check if still within sensor stabilization grace period
      *
-     * Used to suppress notifications and modals during initial startup
-     * when sensor states are being synchronized.
+     * Used to suppress notifications and modals while sensor states
+     * are being synchronized after Moonraker connection.
      *
-     * @return true if within grace period (first 10 seconds after init)
+     * @return true if within grace period (first 2 seconds after sensor discovery)
      */
     [[nodiscard]] bool is_in_startup_grace_period() const;
 
@@ -360,8 +360,8 @@ class FilamentSensorManager {
     // instead of using lv_async_call(). This avoids LVGL timer dependencies in unit tests.
     bool sync_mode_ = false;
 
-    // Startup time for suppressing initial state notifications
-    // Similar to USB manager, we suppress toasts for 3 seconds after initialization
+    // Discovery time for suppressing initial state notifications
+    // Reset when sensors are discovered (after Moonraker connects), not at app startup
     std::chrono::steady_clock::time_point startup_time_;
 
     // LVGL subjects

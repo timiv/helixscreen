@@ -77,7 +77,12 @@ constexpr int DEFAULT_LOAD_PREHEAT_TEMP = 220;
  * On embedded devices, Moonraker connection may take 10+ seconds.
  */
 namespace Startup {
-/// Grace period for suppressing initial state notifications (filament, Klipper ready)
+/// Grace period for suppressing initial state notifications (Klipper ready toast)
+/// Used from app startup - accounts for slow Moonraker connection on embedded devices
 constexpr std::chrono::seconds NOTIFICATION_GRACE_PERIOD{10};
+
+/// Grace period for filament sensor state stabilization after Moonraker connects
+/// Allows time for initial sensor state to arrive after discovery
+constexpr std::chrono::seconds SENSOR_STABILIZATION_PERIOD{5};
 } // namespace Startup
 } // namespace AppConstants

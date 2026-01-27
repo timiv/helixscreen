@@ -86,6 +86,10 @@ void FilamentSensorManager::deinit_subjects() {
 void FilamentSensorManager::discover_sensors(const std::vector<std::string>& klipper_sensor_names) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
+    // Reset grace period timer - now anchored to Moonraker connection, not app startup
+    // This ensures we wait for sensor state to stabilize AFTER connection is established
+    startup_time_ = std::chrono::steady_clock::now();
+
     spdlog::info("[FilamentSensorManager] Discovering {} sensors", klipper_sensor_names.size());
 
     // Clear existing sensors but preserve state for reconnection
@@ -451,7 +455,7 @@ void FilamentSensorManager::update_from_status(const json& status) {
     // (similar to USB manager - users don't need to be told filament is present)
     auto now = std::chrono::steady_clock::now();
     bool within_grace_period =
-        (now - startup_time_) < AppConstants::Startup::NOTIFICATION_GRACE_PERIOD;
+        (now - startup_time_) < AppConstants::Startup::SENSOR_STABILIZATION_PERIOD;
 
     // Collect notifications to send after releasing lock (avoid deadlock)
     struct Notification {
@@ -613,7 +617,7 @@ lv_subject_t* FilamentSensorManager::get_sensor_count_subject() {
 
 bool FilamentSensorManager::is_in_startup_grace_period() const {
     auto now = std::chrono::steady_clock::now();
-    return (now - startup_time_) < AppConstants::Startup::NOTIFICATION_GRACE_PERIOD;
+    return (now - startup_time_) < AppConstants::Startup::SENSOR_STABILIZATION_PERIOD;
 }
 
 // ============================================================================
