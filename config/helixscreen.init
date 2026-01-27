@@ -177,12 +177,15 @@ start() {
     cd "$DAEMON_DIR"
 
     # Start splash screen early (before launcher) so it's visible during load
+    # Set HELIX_NO_SPLASH=1 to disable splash (for debugging backlight issues)
     EARLY_SPLASH_PID=""
-    if [ -x "$SPLASH" ]; then
+    if [ -x "$SPLASH" ] && [ "${HELIX_NO_SPLASH:-0}" != "1" ]; then
         echo "Starting splash screen..."
         "$SPLASH" -w "$SCREEN_WIDTH" -h "$SCREEN_HEIGHT" >/dev/null 2>&1 &
         EARLY_SPLASH_PID=$!
         echo "$EARLY_SPLASH_PID" > /var/run/helix-splash.pid
+    elif [ "${HELIX_NO_SPLASH:-0}" = "1" ]; then
+        echo "Splash screen disabled (HELIX_NO_SPLASH=1)"
     fi
 
     # Use launcher script if available (handles watchdog)

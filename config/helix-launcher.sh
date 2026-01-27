@@ -109,8 +109,11 @@ fi
 
 # Check if splash is already running (started by init script for earlier visibility)
 # If so, pass the PID to helix-screen for cleanup, and don't start another
+# HELIX_NO_SPLASH=1 disables splash entirely (for debugging)
 SPLASH_ARGS=""
-if [ -n "${HELIX_SPLASH_PID}" ]; then
+if [ "${HELIX_NO_SPLASH:-0}" = "1" ]; then
+    log "Splash disabled (HELIX_NO_SPLASH=1)"
+elif [ -n "${HELIX_SPLASH_PID}" ]; then
     # Splash was pre-started by init script, pass PID to helix-screen for cleanup
     PASSTHROUGH_ARGS="${PASSTHROUGH_ARGS} --splash-pid=${HELIX_SPLASH_PID}"
     log "Using pre-started splash (PID ${HELIX_SPLASH_PID})"
