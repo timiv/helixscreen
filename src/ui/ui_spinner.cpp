@@ -9,7 +9,7 @@
 #include "lvgl/src/xml/lv_xml_utils.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
-#include "theme_manager.h"
+#include "theme_core.h"
 
 #include <spdlog/spdlog.h>
 
@@ -220,9 +220,11 @@ static void* ui_spinner_create(lv_xml_parser_state_t* state, const char** attrs)
     // Hide knob (arc widgets have a draggable knob by default)
     lv_obj_set_style_opa(arc, LV_OPA_0, LV_PART_KNOB);
 
-    // Apply consistent styling - primary color indicator
-    lv_color_t primary = theme_manager_get_color("primary");
-    lv_obj_set_style_arc_color(arc, primary, LV_PART_INDICATOR);
+    // Apply consistent styling - primary color indicator via shared reactive style
+    lv_style_t* spinner_style = theme_core_get_spinner_style();
+    if (spinner_style) {
+        lv_obj_add_style(arc, spinner_style, LV_PART_INDICATOR);
+    }
     lv_obj_set_style_arc_width(arc, arc_width, LV_PART_INDICATOR);
     lv_obj_set_style_arc_rounded(arc, true, LV_PART_INDICATOR);
 
