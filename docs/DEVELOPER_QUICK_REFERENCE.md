@@ -13,7 +13,7 @@ HelixScreen uses class-based patterns for all new code. For architectural ration
 **Canonical example:** `include/ui_panel_motion.h` + `src/ui_panel_motion.cpp`
 
 ```cpp
-class ExamplePanel : public PanelBase {
+class ExamplePanel : public SubjectManagedPanel {  // Auto observer cleanup
 public:
     explicit ExamplePanel(lv_obj_t* parent);
     ~ExamplePanel() override;
@@ -24,13 +24,15 @@ public:
 
 private:
     void init_subjects();  // Call BEFORE lv_xml_create()
-    void setup_events();   // Wire UI callbacks
+    void setup_observers();  // Wire reactive bindings
 
     lv_obj_t* root_ = nullptr;
     lv_subject_t my_subject_{};
     char buf_[128]{};  // Static storage for string subjects
 };
 ```
+
+**Note:** Use `SubjectManagedPanel` base class for automatic observer cleanup on destruction.
 
 ### Manager Pattern (Backend)
 
@@ -102,6 +104,128 @@ StaticSubjectRegistry::instance().register_deinit(
 
 ---
 
+## Observer Factory (CRITICAL)
+
+Use `observer_factory.h` for type-safe, auto-cleaned observers. **Never use raw `lv_subject_add_observer_*` in panels.**
+
+```cpp
+#include "observer_factory.h"
+
+// In setup_observers():
+// Integer observer with async UI update
+add_observer(observe_int_async<MyPanel>(
+    &PrinterState::instance().temp_nozzle_subject(),
+    this,
+    [](MyPanel* self, int32_t temp) {
+        self->update_temp_display(temp);
+    }
+));
+
+// String observer
+add_observer(observe_string<MyPanel>(
+    &PrinterState::instance().filename_subject(),
+    this,
+    [](MyPanel* self, const char* name) {
+        lv_label_set_text(self->filename_label_, name);
+    }
+));
+
+// Connection state observer (special case)
+add_observer(observe_connection_state<MyPanel>(
+    this,
+    [](MyPanel* self, bool connected) {
+        self->set_controls_enabled(connected);
+    }
+));
+```
+
+**Key patterns:**
+- `observe_int_sync<Panel>()` - Direct callback (same thread)
+- `observe_int_async<Panel>()` - Queued to LVGL thread (safe from WebSocket)
+- `observe_string<Panel>()` - String subjects
+- `observe_connection_state<Panel>()` - Connection status
+
+---
+
+## RAII Guards
+
+### ObserverGuard
+
+Auto-removes LVGL observer on destruction. Safe during shutdown (checks `lv_is_initialized()`).
+
+```cpp
+class MyPanel {
+    std::vector<ObserverGuard> observers_;
+
+    void add_observer(lv_observer_t* obs) {
+        observers_.emplace_back(obs);
+    }
+    // Observers auto-cleaned when panel destroyed
+};
+```
+
+### SubscriptionGuard
+
+Auto-unsubscribes from MoonrakerClient notifications:
+
+```cpp
+SubscriptionGuard sub_;
+
+void setup() {
+    sub_.reset(MoonrakerClient::instance().subscribe_notify(
+        "notify_gcode_response",
+        [this](const json& data) { handle_response(data); }
+    ));
+}
+// Auto-unsubscribes on destruction
+```
+
+### LvglTimerGuard
+
+Auto-deletes LVGL timers:
+
+```cpp
+helix::ui::LvglTimerGuard timer_;
+
+void start_polling() {
+    timer_.reset(lv_timer_create(poll_cb, 1000, this));
+}
+// Timer auto-deleted on destruction
+```
+
+---
+
+## Threading Model
+
+**WebSocket callbacks run on background thread.** Never call `lv_subject_set_*()` directly!
+
+```cpp
+// ❌ WRONG - called from WebSocket thread
+void on_ws_message(const json& data) {
+    lv_subject_set_int(&temp_subject_, data["temp"]);  // CRASH!
+}
+
+// ✅ CORRECT - queue to LVGL thread
+void on_ws_message(const json& data) {
+    int temp = data["temp"];
+    ui_async_call([this, temp]() {
+        lv_subject_set_int(&temp_subject_, temp);
+    });
+}
+
+// ✅ BETTER - use ui_queue_update for batching
+void on_ws_message(const json& data) {
+    ui_queue_update([this, data]() {
+        lv_subject_set_int(&temp_subject_, data["temp"]);
+        lv_subject_set_int(&bed_subject_, data["bed"]);
+    });
+}
+```
+
+**Pattern:** See `printer_state.cpp` `set_*_internal()` methods.
+
+---
+
 ## Component Names (CRITICAL)
 
 **Always add explicit `name` on component tags** - internal view names don't propagate:
@@ -170,6 +294,28 @@ ui_step_t steps[] = {
 lv_obj_t* progress = ui_step_progress_create(parent, steps, 3, false);  // false=vertical
 ui_step_progress_set_current(progress, 2);  // Advance to step 3
 ```
+
+---
+
+## Sensor Framework
+
+Extensible sensor system via `ISensorManager` interface. See `include/sensors/`.
+
+**Available managers:**
+- `AccelSensorManager` - ADXL345, LIS2DW, LIS3DH, MPU9250, ICM20948
+- `FilamentSensorManager` - Runout detection
+- `ProbePositionZOffsetSensor` - Z-probe tracking
+- `ColorSensorManager` - Filament color
+- `WidthSensorManager` - Filament diameter
+- `HumiditySensorManager` - Chamber humidity
+
+**Registration:**
+```cpp
+auto& registry = SensorRegistry::instance();
+registry.register_manager("accel", std::make_unique<AccelSensorManager>());
+```
+
+**Accessing state:** Sensors expose LVGL subjects for reactive binding.
 
 ---
 
@@ -331,12 +477,16 @@ style_flex_cross_place="center"
 | `lv_obj_add_event_cb()` in C++ | XML `<event_cb trigger="clicked" callback="name"/>` | [ARCHITECTURE.md - Reactive-First](ARCHITECTURE.md#critical-reactive-first-principle---the-helixscreen-way) |
 | `lv_label_set_text()` for reactive data | `bind_text` subject binding | [ARCHITECTURE.md - Reactive Patterns](ARCHITECTURE.md#reactive-patterns-for-common-ui-tasks) |
 | Hardcoded colors in C++ | `ui_theme_get_color("card_bg")` | [Responsive Design Tokens](#responsive-design-tokens) |
+| `lv_subject_set_*()` from WebSocket | `ui_async_call()` or `ui_queue_update()` | [Threading Model](#threading-model) |
+| Raw `lv_subject_add_observer_*()` | `observe_int_async<Panel>()` from factory | [Observer Factory](#observer-factory-critical) |
 
 ---
 
 ## See Also
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design, patterns, architectural decisions, "why" explanations
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design, patterns, architectural decisions
 - **[LVGL9_XML_GUIDE.md](LVGL9_XML_GUIDE.md)** - Complete XML syntax reference
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Build system and daily workflow
-- **[DEVELOPMENT.md#contributing](DEVELOPMENT.md#contributing)** - Code standards and git workflow
+- **[MOONRAKER_ARCHITECTURE.md](MOONRAKER_ARCHITECTURE.md)** - WebSocket API integration
+- **[TESTING.md](TESTING.md)** - Test infrastructure and Catch2 usage
+- **[plans/](plans/)** - Active implementation plans and technical debt tracker

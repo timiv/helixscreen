@@ -15,6 +15,7 @@ Welcome to the HelixScreen documentation. Choose your path:
 | [**Configuration**](user/CONFIGURATION.md) | All settings explained |
 | [**Troubleshooting**](user/TROUBLESHOOTING.md) | Solutions to common problems |
 | [**FAQ**](user/FAQ.md) | Quick answers to common questions |
+| [**Plugin Development**](user/PLUGIN_DEVELOPMENT.md) | Create custom plugins |
 
 ---
 
@@ -54,6 +55,7 @@ Welcome to the HelixScreen documentation. Choose your path:
 | Document | Description |
 |----------|-------------|
 | [**Roadmap**](ROADMAP.md) | Feature timeline and milestones |
+| [**Active Plans**](plans/) | Current implementation plans and tech debt |
 | [**Archive**](archive/) | Historical implementation plans |
 
 ---
@@ -77,12 +79,12 @@ docs/
 ├── README.md                 # This file - documentation index
 │
 ├── user/                     # END-USER DOCUMENTATION
-│   ├── README.md             # User docs index
 │   ├── INSTALL.md            # Installation guide
 │   ├── USER_GUIDE.md         # How to use HelixScreen
 │   ├── CONFIGURATION.md      # Settings reference
 │   ├── TROUBLESHOOTING.md    # Common problems
-│   └── FAQ.md                # Frequently asked questions
+│   ├── FAQ.md                # Frequently asked questions
+│   └── PLUGIN_DEVELOPMENT.md # Plugin creation guide
 │
 ├── DEVELOPMENT.md            # Developer setup, workflow, contributing
 ├── ARCHITECTURE.md           # System design
@@ -90,13 +92,14 @@ docs/
 ├── TESTING.md                # Test infrastructure
 │
 ├── LVGL9_XML_GUIDE.md        # XML reference
-├── DEVELOPER_QUICK_REFERENCE.md        # Code patterns
+├── DEVELOPER_QUICK_REFERENCE.md  # Code patterns
 ├── ENVIRONMENT_VARIABLES.md  # Env var reference
 ├── MOONRAKER_ARCHITECTURE.md # Moonraker integration
 ├── LOGGING.md                # Logging standards
 │
 ├── ROADMAP.md                # Feature timeline
 │
+├── plans/                    # Active implementation plans
 ├── audits/                   # Security & quality
 ├── archive/                  # Historical implementation plans
 └── images/                   # Screenshots
