@@ -89,10 +89,11 @@
 - [x] **REVIEW**: Code review of ui_spinner changes
 - [x] **COMMIT**: `adeda572 feat(spinner): use shared theme_core style for reactive theme updates`
 
-### Section 2.5: ui_severity_card Shared Styles
-- [ ] **TEST**: Write failing test that severity card border updates when theme changes
-- [ ] **IMPLEMENT**: Use shared severity styles
-- [ ] **REVIEW**: Code review of ui_severity_card changes
+### Section 2.5: ui_severity_card Shared Styles ✅ COMPLETE
+- [x] **TEST**: Write failing test that severity card border updates when theme changes
+- [x] **IMPLEMENT**: Use shared severity styles
+- [x] **REVIEW**: Code review of ui_severity_card changes
+- [x] **COMMIT**: `611a0034 feat(severity-card): use shared theme_core styles for reactive theme updates`
 
 ### Section 2.6: ui_button Semantic Widget (NEW)
 - [ ] **TEST**: Write tests for ui_button with variant/text/icon attrs, auto-contrast
