@@ -11,11 +11,14 @@
  * utility functions used by the split moonraker_api_*.cpp implementation files.
  */
 
+#include "hv/HttpMessage.h"
 #include "moonraker_api.h"
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
 #include <cctype>
+#include <initializer_list>
+#include <memory>
 #include <string>
 #include <string_view>
 
@@ -359,6 +362,102 @@ inline void report_connection_error(const MoonrakerAPI::ErrorCallback& on_error,
 inline void report_parse_error(const MoonrakerAPI::ErrorCallback& on_error, std::string_view method,
                                std::string_view message) {
     report_error(on_error, MoonrakerErrorType::PARSE_ERROR, method, message);
+}
+
+// ============================================================================
+// HTTP RESPONSE HANDLING
+// ============================================================================
+// Consolidates the repeated HTTP response validation pattern:
+// 1. Check for null response (connection lost)
+// 2. Map HTTP status codes to error types
+// 3. Return success/failure
+//
+// Usage:
+//   if (!handle_http_response(resp, "download_file", on_error)) return;
+//   if (!handle_http_response(resp, "upload_file", on_error, 201)) return;
+//   if (!handle_http_response(resp, "download_partial", on_error, {200, 206})) return;
+
+/**
+ * @brief Map HTTP status code to MoonrakerErrorType
+ *
+ * @param status_code HTTP status code
+ * @return Appropriate MoonrakerErrorType
+ */
+inline MoonrakerErrorType http_status_to_error_type(int status_code) {
+    switch (status_code) {
+    case 404:
+        return MoonrakerErrorType::FILE_NOT_FOUND;
+    case 401:
+    case 403:
+        return MoonrakerErrorType::PERMISSION_DENIED;
+    default:
+        return MoonrakerErrorType::UNKNOWN;
+    }
+}
+
+/**
+ * @brief Handle HTTP response with single expected status code
+ *
+ * Consolidates the common HTTP error handling pattern:
+ * - Null response -> CONNECTION_LOST error
+ * - Non-matching status code -> appropriate error type
+ * - Matching status code -> success (true)
+ *
+ * @param resp HTTP response (may be nullptr)
+ * @param method Method name for error context
+ * @param on_error Error callback (may be nullptr)
+ * @param expected Expected HTTP status code (default: 200)
+ * @return true if response is valid and has expected status, false otherwise
+ */
+inline bool handle_http_response(const std::shared_ptr<HttpResponse>& resp, std::string_view method,
+                                 const MoonrakerAPI::ErrorCallback& on_error, int expected = 200) {
+    if (!resp) {
+        report_error(on_error, MoonrakerErrorType::CONNECTION_LOST, method, "No response received");
+        return false;
+    }
+
+    if (resp->status_code != expected) {
+        MoonrakerErrorType type = http_status_to_error_type(resp->status_code);
+        std::string message =
+            "HTTP " + std::to_string(resp->status_code) + ": " + resp->status_message();
+        report_error(on_error, type, method, message, resp->status_code);
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * @brief Handle HTTP response with multiple acceptable status codes
+ *
+ * Useful for operations that accept multiple success codes (e.g., 200 or 206 for downloads).
+ *
+ * @param resp HTTP response (may be nullptr)
+ * @param method Method name for error context
+ * @param on_error Error callback (may be nullptr)
+ * @param expected_codes List of acceptable HTTP status codes
+ * @return true if response is valid and has one of the expected codes, false otherwise
+ */
+inline bool handle_http_response(const std::shared_ptr<HttpResponse>& resp, std::string_view method,
+                                 const MoonrakerAPI::ErrorCallback& on_error,
+                                 std::initializer_list<int> expected_codes) {
+    if (!resp) {
+        report_error(on_error, MoonrakerErrorType::CONNECTION_LOST, method, "No response received");
+        return false;
+    }
+
+    for (int code : expected_codes) {
+        if (resp->status_code == code) {
+            return true;
+        }
+    }
+
+    // Status code not in expected list
+    MoonrakerErrorType type = http_status_to_error_type(resp->status_code);
+    std::string message =
+        "HTTP " + std::to_string(resp->status_code) + ": " + resp->status_message();
+    report_error(on_error, type, method, message, resp->status_code);
+    return false;
 }
 
 } // namespace moonraker_internal

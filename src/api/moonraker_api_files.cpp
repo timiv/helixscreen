@@ -288,23 +288,7 @@ void MoonrakerAPI::download_file(const std::string& root, const std::string& pat
     launch_http_thread([url, path, on_success, on_error]() {
         auto resp = requests::get(url.c_str());
 
-        if (!resp) {
-            spdlog::error("[Moonraker API] HTTP request failed for: {}", url);
-            report_connection_error(on_error, "download_file", "HTTP request failed");
-            return;
-        }
-
-        if (resp->status_code == 404) {
-            spdlog::debug("[Moonraker API] File not found: {}", path);
-            report_error(on_error, MoonrakerErrorType::FILE_NOT_FOUND, "download_file",
-                         "File not found: " + path, 404);
-            return;
-        }
-
-        if (resp->status_code != 200) {
-            spdlog::error("[Moonraker API] HTTP {} downloading {}: {}",
-                          static_cast<int>(resp->status_code), path, resp->status_message());
-            report_http_error(on_error, resp->status_code, "download_file", resp->status_message());
+        if (!handle_http_response(resp, "download_file", on_error)) {
             return;
         }
 
@@ -352,25 +336,8 @@ void MoonrakerAPI::download_file_partial(const std::string& root, const std::str
 
         auto resp = requests::request(req);
 
-        if (!resp) {
-            spdlog::error("[Moonraker API] HTTP request failed for: {}", url);
-            report_connection_error(on_error, "download_file_partial", "HTTP request failed");
-            return;
-        }
-
-        if (resp->status_code == 404) {
-            spdlog::debug("[Moonraker API] File not found: {}", path);
-            report_error(on_error, MoonrakerErrorType::FILE_NOT_FOUND, "download_file_partial",
-                         "File not found: " + path, 404);
-            return;
-        }
-
         // Accept both 200 (full file) and 206 (partial content)
-        if (resp->status_code != 200 && resp->status_code != 206) {
-            spdlog::error("[Moonraker API] HTTP {} downloading {}: {}",
-                          static_cast<int>(resp->status_code), path, resp->status_message());
-            report_http_error(on_error, resp->status_code, "download_file_partial",
-                              resp->status_message());
+        if (!handle_http_response(resp, "download_file_partial", on_error, {200, 206})) {
             return;
         }
 
@@ -450,25 +417,7 @@ void MoonrakerAPI::download_thumbnail(const std::string& thumbnail_path,
     launch_http_thread([url, thumbnail_path, cache_path, on_success, on_error]() {
         auto resp = requests::get(url.c_str());
 
-        if (!resp) {
-            spdlog::error("[Moonraker API] HTTP request failed for thumbnail: {}", url);
-            report_connection_error(on_error, "download_thumbnail", "HTTP request failed");
-            return;
-        }
-
-        if (resp->status_code == 404) {
-            spdlog::warn("[Moonraker API] Thumbnail not found: {}", thumbnail_path);
-            report_error(on_error, MoonrakerErrorType::FILE_NOT_FOUND, "download_thumbnail",
-                         "Thumbnail not found: " + thumbnail_path, 404);
-            return;
-        }
-
-        if (resp->status_code != 200) {
-            spdlog::error("[Moonraker API] HTTP {} downloading thumbnail {}: {}",
-                          static_cast<int>(resp->status_code), thumbnail_path,
-                          resp->status_message());
-            report_http_error(on_error, resp->status_code, "download_thumbnail",
-                              resp->status_message());
+        if (!handle_http_response(resp, "download_thumbnail", on_error)) {
             return;
         }
 
@@ -510,13 +459,7 @@ void MoonrakerAPI::upload_file_with_name(const std::string& root, const std::str
     if (http_base_url_.empty()) {
         spdlog::error(
             "[Moonraker API] HTTP base URL not configured - call set_http_base_url first");
-        if (on_error) {
-            MoonrakerError err;
-            err.type = MoonrakerErrorType::CONNECTION_LOST;
-            err.message = "HTTP base URL not configured";
-            err.method = "upload_file";
-            on_error(err);
-        }
+        report_connection_error(on_error, "upload_file", "HTTP base URL not configured");
         return;
     }
 
@@ -558,31 +501,8 @@ void MoonrakerAPI::upload_file_with_name(const std::string& root, const std::str
         // Send request
         auto resp = requests::request(req);
 
-        if (!resp) {
-            spdlog::error("[Moonraker API] HTTP upload request failed to: {}", url);
-            if (on_error) {
-                MoonrakerError err;
-                err.type = MoonrakerErrorType::CONNECTION_LOST;
-                err.message = "HTTP upload request failed";
-                err.method = "upload_file";
-                on_error(err);
-            }
-            return;
-        }
-
-        if (resp->status_code != 201 && resp->status_code != 200) {
-            spdlog::error("[Moonraker API] HTTP {} uploading {}: {} - {}",
-                          static_cast<int>(resp->status_code), path, resp->status_message(),
-                          resp->body);
-            if (on_error) {
-                MoonrakerError err;
-                err.type = MoonrakerErrorType::UNKNOWN;
-                err.code = static_cast<int>(resp->status_code);
-                err.message = "HTTP " + std::to_string(static_cast<int>(resp->status_code)) + ": " +
-                              resp->status_message();
-                err.method = "upload_file";
-                on_error(err);
-            }
+        // Upload accepts 200 or 201
+        if (!handle_http_response(resp, "upload_file", on_error, {200, 201})) {
             return;
         }
 
@@ -604,13 +524,7 @@ void MoonrakerAPI::upload_file_from_path(const std::string& root, const std::str
     if (http_base_url_.empty()) {
         spdlog::error(
             "[Moonraker API] HTTP base URL not configured - call set_http_base_url first");
-        if (on_error) {
-            MoonrakerError err;
-            err.type = MoonrakerErrorType::CONNECTION_LOST;
-            err.message = "HTTP base URL not configured";
-            err.method = "upload_file_from_path";
-            on_error(err);
-        }
+        report_connection_error(on_error, "upload_file_from_path", "HTTP base URL not configured");
         return;
     }
 
@@ -620,13 +534,8 @@ void MoonrakerAPI::upload_file_from_path(const std::string& root, const std::str
     if (ec) {
         spdlog::error("[Moonraker API] Failed to get file size for {}: {}", local_path,
                       ec.message());
-        if (on_error) {
-            MoonrakerError err;
-            err.type = MoonrakerErrorType::FILE_NOT_FOUND;
-            err.message = "Failed to get file size: " + local_path;
-            err.method = "upload_file_from_path";
-            on_error(err);
-        }
+        report_error(on_error, MoonrakerErrorType::FILE_NOT_FOUND, "upload_file_from_path",
+                     "Failed to get file size: " + local_path);
         return;
     }
 
@@ -680,30 +589,8 @@ void MoonrakerAPI::upload_file_from_path(const std::string& root, const std::str
             auto resp = requests::uploadLargeFormFile(url.c_str(), "file", local_path.c_str(),
                                                       filename.c_str(), params_copy, progress_cb);
 
-            if (!resp) {
-                spdlog::error("[Moonraker API] Streaming upload failed: {}", local_path);
-                if (on_error) {
-                    MoonrakerError err;
-                    err.type = MoonrakerErrorType::CONNECTION_LOST;
-                    err.message = "Streaming upload failed";
-                    err.method = "upload_file_from_path";
-                    on_error(err);
-                }
-                return;
-            }
-
-            if (resp->status_code != 201 && resp->status_code != 200) {
-                spdlog::error("[Moonraker API] HTTP {} uploading {}: {}",
-                              static_cast<int>(resp->status_code), filename, resp->body);
-                if (on_error) {
-                    MoonrakerError err;
-                    err.type = MoonrakerErrorType::UNKNOWN;
-                    err.code = static_cast<int>(resp->status_code);
-                    err.message = "HTTP " + std::to_string(static_cast<int>(resp->status_code)) +
-                                  ": " + resp->status_message();
-                    err.method = "upload_file_from_path";
-                    on_error(err);
-                }
+            // Upload accepts 200 or 201
+            if (!handle_http_response(resp, "upload_file_from_path", on_error, {200, 201})) {
                 return;
             }
 
