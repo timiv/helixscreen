@@ -14,11 +14,8 @@
                  overlay_panel_width = screen - nav - space_lg gap -->
     <!-- UI dimensions -->
     <px name="nav_padding" value="16"/>
-    <px name="nav_button_size" value="70"/>
     <!-- border_radius is responsive: _small/_medium/_large registered as border_radius based on screen size -->
     <px name="border_radius_small" value="4"/>
-    <px name="border_radius_medium" value="9"/>
-    <px name="border_radius_large" value="12"/>
     <!-- Static small radius for elements that always want 4px regardless of screen size -->
     <px name="border_radius_sm" value="4"/>
 
@@ -118,7 +115,7 @@
 
     <!-- printer_img_size moved to home_panel.xml -->
     <!-- accent_bar_width moved to home_panel.xml -->
-    <px name="accent_bar_height" value="28"/>
+    <!-- accent_bar_height moved to home_panel.xml -->
     <!-- accent_bar_gap moved to home_panel.xml -->
     <percentage name="card_width" value="45%"/>
     <percentage name="card_height" value="80%"/>
@@ -127,11 +124,6 @@
     <!-- Shifts content up to prevent overlap with bottom metadata areas -->
     <percentage name="preview_offset_y" value="-20%"/>
 
-    <!-- Regular button dimensions -->
-    <px name="button_height" value="50"/>
-    <px name="button_height_small" value="48"/>
-    <px name="button_height_medium" value="52"/>
-    <px name="button_height_large" value="72"/>
     <px name="button_padding" value="12"/>
 
     <!-- Icon buttons, back buttons -->
@@ -149,8 +141,6 @@
     <!-- Other component dimensions -->
     <px name="header_height" value="60"/>
 
-    <!-- Primary action buttons -->
-    <px name="button_row_height" value="64"/>
     <!-- Row height for button containers -->
     <px name="input_height" value="48"/>
     <!-- Standard height for all input fields (textareas, dropdowns, etc.) -->
@@ -158,18 +148,6 @@
     <!-- Standard slider track height -->
     <px name="icon_button_size" value="32"/>
     <!-- Icon-only buttons (close, edit, etc.) -->
-    <!-- Color picker preview swatch (responsive) -->
-    <px name="color_preview_size_small" value="40"/>
-    <px name="color_preview_size_medium" value="48"/>
-    <px name="color_preview_size_large" value="56"/>
-    <!-- Theme editor swatch size (smaller to fit more on screen) -->
-    <px name="theme_swatch_size_small" value="24"/>
-    <px name="theme_swatch_size_medium" value="28"/>
-    <px name="theme_swatch_size_large" value="32"/>
-    <!-- Color picker text area height (hex + 2-line name, responsive) -->
-    <px name="color_text_height_small" value="52"/>
-    <px name="color_text_height_medium" value="60"/>
-    <px name="color_text_height_large" value="68"/>
 
     <!-- Input field dimensions (text inputs, dropdowns, rollers) -->
     <px name="input_border_width" value="1"/>
@@ -225,47 +203,6 @@
     <string name="icon_font_xl_large" value="mdi_icons_64"/>
     <!-- NO BASE icon_font_xl - registered at runtime -->
 
-    <!-- ===================================================================== -->
-    <!-- Animation Timing Constants                                            -->
-    <!-- ===================================================================== -->
-    <!-- Standardized animation durations for consistent motion design.
-         Use these tokens in XML timelines and C++ animations.
-         Values optimized for 60 FPS on embedded hardware. -->
-    <!-- anim_fast: Micro-interactions (button press, quick feedback) -->
-    <px name="anim_fast" value="150"/>
-    <!-- anim_normal: Standard transitions (toast, modal entrance) -->
-    <px name="anim_normal" value="250"/>
-    <!-- anim_slow: Emphasis animations (celebrations, complex sequences) -->
-    <px name="anim_slow" value="400"/>
-    <!-- anim_stagger: Delay between staggered list items -->
-    <px name="anim_stagger" value="40"/>
-    <!-- anim_press: Button press duration (slightly shorter for responsiveness) -->
-    <px name="anim_press" value="80"/>
-    <!-- anim_release: Button release with overshoot -->
-    <px name="anim_release" value="120"/>
-
-    <!-- Modal backdrop opacity (0-255, where 255 is fully opaque) -->
-    <px name="modal_backdrop_opacity" value="100"/>
-
-    <!-- Graph/Visualization colors -->
-    <color name="graph_line_primary" value="#bf616a"/>
-    <!-- nord11 - Aurora red -->
-    <color name="graph_line_secondary" value="#ebcb8b"/>
-    <!-- nord13 - Aurora yellow -->
-    <color name="graph_line_target" value="#88c0d0"/>
-    <!-- nord8 - Frost cyan -->
-    <color name="graph_bg_dark" value="#2e3440"/>
-    <!-- nord0 - Polar Night -->
-    <color name="graph_bg_light" value="#eceff4"/>
-    <!-- nord6 - Snow Storm -->
-
-    <!-- Mesh visualization gradient -->
-    <color name="mesh_low" value="#88c0d0"/>
-    <!-- nord8 - cold -->
-    <color name="mesh_mid" value="#a3be8c"/>
-    <!-- nord14 - neutral -->
-    <color name="mesh_high" value="#bf616a"/>
-    <!-- nord11 - hot -->
     <!-- Step progress colors (wizard steps) -->
     <color name="step_pending" value="#4c566a"/>
     <!-- nord3 -->
@@ -319,16 +256,6 @@
     <!-- nord13 - warming -->
     <color name="temp_gradient_hot" value="#bf616a"/>
     <!-- nord11 - hot -->
-    <!-- Heater-specific colors (theme-aware) -->
-    <color name="heating_color_light" value="#bf616a"/>
-    <!-- nord11 -->
-    <color name="heating_color_dark" value="#bf616a"/>
-    <!-- nord11 -->
-    <color name="cooling_color_light" value="#88c0d0"/>
-    <!-- nord8 -->
-    <color name="cooling_color_dark" value="#88c0d0"/>
-    <!-- nord8 -->
-
     <!-- ===================================================================== -->
     <!-- Nord Theme Color Reference (https://www.nordtheme.com)                -->
     <!-- ===================================================================== -->
@@ -361,8 +288,6 @@
     <!-- Static colors not derived from palette -->
     <color name="section_bg_color" value="#434c5e"/>
     <!-- nord2 -->
-    <color name="image_caption_bg" value="#000000"/>
-    <!-- Image caption overlay (static) -->
 
     <!-- ===================================================================== -->
     <!-- Material Design Icon constants - MDI codepoints (U+F0000 range)       -->

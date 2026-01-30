@@ -52,7 +52,7 @@
         </lv_obj>
         <!-- Measure Noise Button (secondary) -->
         <ui_button name="btn_measure_noise"
-                   width="100%" height="#button_height_normal" variant="secondary" icon="vibrate" text="Measure Noise">
+                   width="100%" variant="secondary" icon="vibrate" text="Measure Noise">
           <event_cb trigger="clicked" callback="input_shaper_measure_noise_cb"/>
         </ui_button>
       </lv_obj>
@@ -76,7 +76,7 @@
         </lv_obj>
         <!-- Cancel button -->
         <ui_button name="btn_cancel"
-                   width="100%" height="#button_height_normal" variant="secondary" icon="close" text="Cancel">
+                   width="100%" variant="secondary" icon="close" text="Cancel">
           <event_cb trigger="clicked" callback="input_shaper_cancel_cb"/>
         </ui_button>
       </lv_obj>
@@ -174,12 +174,12 @@
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
                 style_pad_gap="#space_md" scrollable="false">
           <!-- Close button (secondary) -->
-          <ui_button name="btn_close" height="#button_height_normal" flex_grow="1" variant="secondary" text="Close">
+          <ui_button name="btn_close" flex_grow="1" variant="secondary" text="Close">
             <event_cb trigger="clicked" callback="input_shaper_close_cb"/>
           </ui_button>
           <!-- Apply button (primary) -->
           <ui_button name="btn_apply"
-                     height="#button_height_normal" flex_grow="1" variant="success" icon="check" text="Apply">
+                     flex_grow="1" variant="success" icon="check" text="Apply">
             <event_cb trigger="clicked" callback="input_shaper_apply_cb"/>
           </ui_button>
         </lv_obj>
@@ -196,7 +196,7 @@
         </lv_obj>
         <!-- Test Print button (enables tuning tower for visual comparison) -->
         <ui_button name="btn_test_print"
-                   width="100%" height="#button_height_normal" variant="secondary" icon="printer_3d" text="Test Print">
+                   width="100%" variant="secondary" icon="printer_3d" text="Test Print">
           <event_cb trigger="clicked" callback="input_shaper_print_test_cb"/>
         </ui_button>
       </lv_obj>
@@ -232,11 +232,11 @@
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
                 style_pad_gap="#space_md" scrollable="false">
           <!-- Back button -->
-          <ui_button name="btn_error_back" height="#button_height_normal" flex_grow="1" variant="secondary" text="Back">
+          <ui_button name="btn_error_back" flex_grow="1" variant="secondary" text="Back">
             <event_cb trigger="clicked" callback="input_shaper_close_cb"/>
           </ui_button>
           <!-- Retry button -->
-          <ui_button name="btn_retry" height="#button_height_normal" flex_grow="1" icon="refresh" text="Retry">
+          <ui_button name="btn_retry" flex_grow="1" icon="refresh" text="Retry">
             <event_cb trigger="clicked" callback="input_shaper_retry_cb"/>
           </ui_button>
         </lv_obj>

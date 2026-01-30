@@ -171,7 +171,7 @@ void* ui_button_create(lv_xml_parser_state_t* state, const char** attrs) {
 
     // Create button with default height from theme system
     lv_obj_t* btn = lv_button_create(parent);
-    lv_obj_set_height(btn, theme_manager_get_spacing("button_height"));
+    lv_obj_set_height(btn, theme_manager_get_spacing("button_height_normal"));
 
     // Parse variant attribute (default: primary)
     const char* variant_str = lv_xml_get_value_of(attrs, "variant");

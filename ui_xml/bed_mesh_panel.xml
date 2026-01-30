@@ -5,6 +5,16 @@
 <!-- Left: 3D mesh visualization with touch drag rotation -->
 <!-- Right: "Current Mesh" stats card + "Profiles" list card -->
 <component>
+  <!-- Component-local constants for mesh visualization colors -->
+  <consts>
+    <!-- Mesh visualization gradient -->
+    <color name="mesh_low" value="#88c0d0"/>
+    <!-- nord8 - cold -->
+    <color name="mesh_mid" value="#a3be8c"/>
+    <!-- nord14 - neutral -->
+    <color name="mesh_high" value="#bf616a"/>
+    <!-- nord11 - hot -->
+  </consts>
   <view name="bed_mesh_panel"
         extends="lv_obj" width="#overlay_panel_width" height="100%" align="right_mid" style_bg_opa="255"
         style_bg_color="#card_bg" style_pad_all="0" style_border_width="0" scrollable="false" flex_flow="column">

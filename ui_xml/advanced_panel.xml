@@ -17,7 +17,7 @@
             height="content" style_bg_opa="0" style_border_width="0" style_pad_left="#space_lg"
             style_pad_right="#space_lg" style_pad_top="#space_sm" style_pad_bottom="#space_md" scrollable="false">
       <ui_button name="advanced_estop_btn"
-                 width="100%" height="#button_height_normal" icon="alert_octagon" text="Emergency Stop (M112)"
+                 width="100%" icon="alert_octagon" text="Emergency Stop (M112)"
                  variant="danger">
         <event_cb trigger="clicked" callback="advanced_estop_clicked"/>
       </ui_button>

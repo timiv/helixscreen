@@ -131,7 +131,7 @@
       </lv_obj>
       <!-- View Full History Button (at bottom) -->
       <ui_button name="btn_view_history"
-                 width="100%" height="#button_height_normal" icon="list" text="View Full History">
+                 width="100%" icon="list" text="View Full History">
         <event_cb trigger="clicked" callback="history_view_full_clicked"/>
       </ui_button>
     </lv_obj>
