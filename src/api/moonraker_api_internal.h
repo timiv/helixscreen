@@ -22,6 +22,8 @@
 #include <string>
 #include <string_view>
 
+#include "hv/json.hpp"
+
 namespace moonraker_internal {
 
 /**
@@ -458,6 +460,37 @@ inline bool handle_http_response(const std::shared_ptr<HttpResponse>& resp, std:
         "HTTP " + std::to_string(resp->status_code) + ": " + resp->status_message();
     report_error(on_error, type, method, message, resp->status_code);
     return false;
+}
+
+// ============================================================================
+// JSON EXTRACTION HELPERS
+// ============================================================================
+// Null-safe JSON field extraction. Unlike json::value(), handles fields that
+// exist but are null, returning the default value in both cases.
+
+/**
+ * @brief Null-safe numeric value extraction from JSON
+ *
+ * Unlike json::value(), this handles fields that exist but are null.
+ * Returns default_val if key is missing OR if value is null/non-numeric.
+ *
+ * @tparam T Numeric type (double, int, uint64_t, size_t, etc.)
+ * @param j JSON object to extract from
+ * @param key Field name to extract
+ * @param default_val Value to return if missing, null, or non-numeric
+ * @return Extracted value or default
+ *
+ * Example usage:
+ *   double temp = json_number_or(obj, "temperature", 0.0);
+ *   int count = json_number_or(obj, "layer_count", 0);
+ *   size_t size = json_number_or(obj, "size", static_cast<size_t>(0));
+ */
+template <typename T>
+inline T json_number_or(const nlohmann::json& j, const char* key, T default_val) {
+    if (j.contains(key) && j[key].is_number()) {
+        return j[key].get<T>();
+    }
+    return default_val;
 }
 
 } // namespace moonraker_internal

@@ -16,7 +16,10 @@
 #include "../../include/print_history_data.h"
 #include "../../include/printer_state.h"
 #include "../../lvgl/lvgl.h"
+#include "../../src/api/moonraker_api_internal.h"
 #include "../ui_test_utils.h"
+
+using moonraker_internal::json_number_or;
 
 #include <spdlog/fmt/fmt.h>
 
@@ -382,15 +385,6 @@ TEST_CASE("json::value() handles null values", "[history][parsing]") {
 // ============================================================================
 // PrintHistoryJob Parsing Tests
 // ============================================================================
-
-// Null-safe numeric extraction - mirrors production json_number_or()
-template <typename T>
-static T json_number_or(const nlohmann::json& j, const char* key, T default_val) {
-    if (j.contains(key) && j[key].is_number()) {
-        return j[key].get<T>();
-    }
-    return default_val;
-}
 
 // Helper function to parse a job JSON into PrintHistoryJob (mirrors MoonrakerAPI logic)
 static PrintHistoryJob parse_history_job(const nlohmann::json& job_json) {

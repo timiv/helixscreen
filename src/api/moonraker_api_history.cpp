@@ -21,25 +21,6 @@ using namespace moonraker_internal;
 namespace {
 
 /**
- * @brief Null-safe numeric value extraction from JSON
- *
- * Unlike json::value(), this handles fields that exist but are null.
- * Returns default_val if key is missing OR if value is null.
- *
- * @tparam T Numeric type (double, int, uint64_t, etc.)
- * @param j JSON object to extract from
- * @param key Field name to extract
- * @param default_val Value to return if missing or null
- * @return Extracted value or default
- */
-template <typename T> T json_number_or(const json& j, const char* key, T default_val) {
-    if (j.contains(key) && j[key].is_number()) {
-        return j[key].get<T>();
-    }
-    return default_val;
-}
-
-/**
  * @brief Format duration in seconds to human-readable string
  * @param seconds Duration in seconds
  * @return Formatted string like "2h 15m" or "45m" or "30s"
