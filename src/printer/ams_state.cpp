@@ -144,11 +144,11 @@ void AmsState::init_subjects(bool register_xml) {
     INIT_SUBJECT_INT(ams_type, static_cast<int>(AmsType::NONE), subjects_, register_xml);
     INIT_SUBJECT_INT(ams_action, static_cast<int>(AmsAction::IDLE), subjects_, register_xml);
     INIT_SUBJECT_INT(current_slot, -1, subjects_, register_xml);
-    INIT_SUBJECT_INT(current_tool, -1, subjects_, register_xml);
+    INIT_SUBJECT_INT(ams_current_tool, -1, subjects_, register_xml);
     INIT_SUBJECT_INT(filament_loaded, 0, subjects_, register_xml);
     INIT_SUBJECT_INT(bypass_active, 0, subjects_, register_xml);
     INIT_SUBJECT_INT(supports_bypass, 0, subjects_, register_xml);
-    INIT_SUBJECT_INT(slot_count, 0, subjects_, register_xml);
+    INIT_SUBJECT_INT(ams_slot_count, 0, subjects_, register_xml);
     INIT_SUBJECT_INT(slots_version, 0, subjects_, register_xml);
 
     // String subjects (buffer names don't match macro convention)
@@ -164,7 +164,7 @@ void AmsState::init_subjects(bool register_xml) {
     if (register_xml)
         lv_xml_register_subject(NULL, "ams_system_name", &ams_system_name_);
 
-    INIT_SUBJECT_STRING(current_tool_text, "---", subjects_, register_xml);
+    INIT_SUBJECT_STRING(ams_current_tool_text, "---", subjects_, register_xml);
 
     // Filament path visualization subjects
     INIT_SUBJECT_INT(path_topology, static_cast<int>(PathTopology::HUB), subjects_, register_xml);
@@ -225,7 +225,7 @@ void AmsState::init_subjects(bool register_xml) {
             set_backend(std::move(backend));
             sync_from_backend();
             spdlog::info("[AMS State] Backend initialized via factory ({} slots)",
-                         lv_subject_get_int(&slot_count_));
+                         lv_subject_get_int(&ams_slot_count_));
         }
     }
 
@@ -319,7 +319,7 @@ void AmsState::init_backend_from_hardware(const helix::PrinterDiscovery& hardwar
         int slot_count = 0;
         {
             std::lock_guard<std::recursive_mutex> lock(mutex_);
-            slot_count = lv_subject_get_int(&slot_count_);
+            slot_count = lv_subject_get_int(&ams_slot_count_);
         }
         spdlog::info("[AMS State] {} backend initialized ({} slots)",
                      ams_type_to_string(detected_type), slot_count);
@@ -399,20 +399,21 @@ void AmsState::sync_from_backend() {
         lv_subject_copy_string(&ams_system_name_, ams_type_to_string(info.type));
     }
     lv_subject_set_int(&current_slot_, info.current_slot);
-    lv_subject_set_int(&current_tool_, info.current_tool);
+    lv_subject_set_int(&ams_current_tool_, info.current_tool);
 
     // Update formatted tool text (e.g., "T0", "T1", or "---" when no tool active)
     if (info.current_tool >= 0) {
-        snprintf(current_tool_text_buf_, sizeof(current_tool_text_buf_), "T%d", info.current_tool);
-        lv_subject_copy_string(&current_tool_text_, current_tool_text_buf_);
+        snprintf(ams_current_tool_text_buf_, sizeof(ams_current_tool_text_buf_), "T%d",
+                 info.current_tool);
+        lv_subject_copy_string(&ams_current_tool_text_, ams_current_tool_text_buf_);
     } else {
-        lv_subject_copy_string(&current_tool_text_, "---");
+        lv_subject_copy_string(&ams_current_tool_text_, "---");
     }
 
     lv_subject_set_int(&filament_loaded_, info.filament_loaded ? 1 : 0);
     lv_subject_set_int(&bypass_active_, info.current_slot == -2 ? 1 : 0);
     lv_subject_set_int(&supports_bypass_, info.supports_bypass ? 1 : 0);
-    lv_subject_set_int(&slot_count_, info.total_slots);
+    lv_subject_set_int(&ams_slot_count_, info.total_slots);
 
     // Update action detail string
     if (!info.operation_detail.empty()) {

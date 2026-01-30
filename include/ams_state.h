@@ -203,7 +203,7 @@ class AmsState {
      * @return Subject holding current tool index (-1 if none)
      */
     lv_subject_t* get_current_tool_subject() {
-        return &current_tool_;
+        return &ams_current_tool_;
     }
 
     /**
@@ -211,7 +211,7 @@ class AmsState {
      * @return Subject holding formatted tool string (e.g., "T0", "T1", or "---")
      */
     lv_subject_t* get_current_tool_text_subject() {
-        return &current_tool_text_;
+        return &ams_current_tool_text_;
     }
 
     /**
@@ -247,7 +247,7 @@ class AmsState {
      * @return Subject holding total number of slots
      */
     lv_subject_t* get_slot_count_subject() {
-        return &slot_count_;
+        return &ams_slot_count_;
     }
 
     /**
@@ -639,11 +639,11 @@ class AmsState {
     lv_subject_t ams_type_;
     lv_subject_t ams_action_;
     lv_subject_t current_slot_;
-    lv_subject_t current_tool_;
+    lv_subject_t ams_current_tool_;
     lv_subject_t filament_loaded_;
     lv_subject_t bypass_active_;
     lv_subject_t supports_bypass_;
-    lv_subject_t slot_count_;
+    lv_subject_t ams_slot_count_;
     lv_subject_t slots_version_;
 
     // String subjects (need buffers)
@@ -651,8 +651,8 @@ class AmsState {
     char action_detail_buf_[64];
     lv_subject_t ams_system_name_;
     char system_name_buf_[32];
-    lv_subject_t current_tool_text_;
-    char current_tool_text_buf_[16]; // "T0" to "T15" or "---"
+    lv_subject_t ams_current_tool_text_;
+    char ams_current_tool_text_buf_[16]; // "T0" to "T15" or "---"
 
     // Filament path visualization subjects
     lv_subject_t path_topology_;
