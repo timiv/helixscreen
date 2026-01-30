@@ -328,6 +328,28 @@ class ControlsPanel : public PanelBase {
     void handle_macro_3();
     void handle_macro_4();
 
+    /**
+     * @brief Execute a macro by slot index (0-3)
+     *
+     * Consolidates duplicate logic from handle_macro_1/2/3/4.
+     * @param index Macro button index (0=macro_1, 1=macro_2, etc.)
+     */
+    void execute_macro(size_t index);
+
+    /**
+     * @brief Update a single macro button's visibility and label
+     *
+     * Used by refresh_macro_buttons() to update each button.
+     * @param macros Reference to StandardMacros instance
+     * @param slot Optional slot for this button (nullopt = hide)
+     * @param visible_subject Subject controlling visibility binding
+     * @param name_subject Subject controlling label text binding
+     * @param button_num Button number for debug logging (1-4)
+     */
+    void update_macro_button(StandardMacros& macros, const std::optional<StandardMacroSlot>& slot,
+                             lv_subject_t& visible_subject, lv_subject_t& name_subject,
+                             int button_num);
+
     //
     // === Speed/Flow Override Handlers ===
     //

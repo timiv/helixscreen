@@ -494,75 +494,42 @@ void ControlsPanel::update_fan_display() {
     lv_subject_set_int(&fan_pct_subject_, fan_pct);
 }
 
+void ControlsPanel::update_macro_button(StandardMacros& macros,
+                                        const std::optional<StandardMacroSlot>& slot,
+                                        lv_subject_t& visible_subject, lv_subject_t& name_subject,
+                                        int button_num) {
+    if (!slot) {
+        lv_subject_set_int(&visible_subject, 0);
+        return;
+    }
+
+    const auto& info = macros.get(*slot);
+    if (info.is_empty()) {
+        lv_subject_set_int(&visible_subject, 0);
+        spdlog::debug("[{}] Macro {} slot '{}' is empty, hiding button", get_name(), button_num,
+                      info.slot_name);
+    } else {
+        lv_subject_set_int(&visible_subject, 1);
+        lv_subject_copy_string(&name_subject, info.display_name.c_str());
+        spdlog::debug("[{}] Macro {}: '{}' → {}", get_name(), button_num, info.display_name,
+                      info.get_macro());
+    }
+}
+
 void ControlsPanel::refresh_macro_buttons() {
     auto& macros = StandardMacros::instance();
 
-    // Update macro button 1 via subjects (declarative binding handles visibility/text)
-    if (macro_1_slot_) {
-        const auto& info = macros.get(*macro_1_slot_);
-        if (info.is_empty()) {
-            lv_subject_set_int(&macro_1_visible_, 0);
-            spdlog::debug("[{}] Macro 1 slot '{}' is empty, hiding button", get_name(),
-                          info.slot_name);
-        } else {
-            lv_subject_set_int(&macro_1_visible_, 1);
-            lv_subject_copy_string(&macro_1_name_, info.display_name.c_str());
-            spdlog::debug("[{}] Macro 1: '{}' → {}", get_name(), info.display_name,
-                          info.get_macro());
-        }
-    } else {
-        lv_subject_set_int(&macro_1_visible_, 0);
-    }
+    // Arrays for iteration - slots, visible subjects, name subjects, button numbers
+    const std::optional<StandardMacroSlot>* slots[] = {&macro_1_slot_, &macro_2_slot_,
+                                                       &macro_3_slot_, &macro_4_slot_};
+    lv_subject_t* visible_subjects[] = {&macro_1_visible_, &macro_2_visible_, &macro_3_visible_,
+                                        &macro_4_visible_};
+    lv_subject_t* name_subjects[] = {&macro_1_name_, &macro_2_name_, &macro_3_name_,
+                                     &macro_4_name_};
 
-    // Update macro button 2 via subjects (declarative binding handles visibility/text)
-    if (macro_2_slot_) {
-        const auto& info = macros.get(*macro_2_slot_);
-        if (info.is_empty()) {
-            lv_subject_set_int(&macro_2_visible_, 0);
-            spdlog::debug("[{}] Macro 2 slot '{}' is empty, hiding button", get_name(),
-                          info.slot_name);
-        } else {
-            lv_subject_set_int(&macro_2_visible_, 1);
-            lv_subject_copy_string(&macro_2_name_, info.display_name.c_str());
-            spdlog::debug("[{}] Macro 2: '{}' → {}", get_name(), info.display_name,
-                          info.get_macro());
-        }
-    } else {
-        lv_subject_set_int(&macro_2_visible_, 0);
-    }
-
-    // Update macro button 3 via subjects
-    if (macro_3_slot_) {
-        const auto& info = macros.get(*macro_3_slot_);
-        if (info.is_empty()) {
-            lv_subject_set_int(&macro_3_visible_, 0);
-            spdlog::debug("[{}] Macro 3 slot '{}' is empty, hiding button", get_name(),
-                          info.slot_name);
-        } else {
-            lv_subject_set_int(&macro_3_visible_, 1);
-            lv_subject_copy_string(&macro_3_name_, info.display_name.c_str());
-            spdlog::debug("[{}] Macro 3: '{}' → {}", get_name(), info.display_name,
-                          info.get_macro());
-        }
-    } else {
-        lv_subject_set_int(&macro_3_visible_, 0);
-    }
-
-    // Update macro button 4 via subjects
-    if (macro_4_slot_) {
-        const auto& info = macros.get(*macro_4_slot_);
-        if (info.is_empty()) {
-            lv_subject_set_int(&macro_4_visible_, 0);
-            spdlog::debug("[{}] Macro 4 slot '{}' is empty, hiding button", get_name(),
-                          info.slot_name);
-        } else {
-            lv_subject_set_int(&macro_4_visible_, 1);
-            lv_subject_copy_string(&macro_4_name_, info.display_name.c_str());
-            spdlog::debug("[{}] Macro 4: '{}' → {}", get_name(), info.display_name,
-                          info.get_macro());
-        }
-    } else {
-        lv_subject_set_int(&macro_4_visible_, 0);
+    for (size_t i = 0; i < 4; ++i) {
+        update_macro_button(macros, *slots[i], *visible_subjects[i], *name_subjects[i],
+                            static_cast<int>(i + 1));
     }
 }
 
@@ -963,80 +930,47 @@ void ControlsPanel::handle_z_tilt() {
     }
 }
 
+void ControlsPanel::execute_macro(size_t index) {
+    // Array of slots for lookup by index
+    const std::optional<StandardMacroSlot>* slots[] = {&macro_1_slot_, &macro_2_slot_,
+                                                       &macro_3_slot_, &macro_4_slot_};
+    if (index >= 4) {
+        spdlog::warn("[{}] Invalid macro index: {}", get_name(), index);
+        return;
+    }
+
+    const auto& slot = *slots[index];
+    int button_num = static_cast<int>(index + 1);
+
+    if (!slot) {
+        spdlog::debug("[{}] Macro {} clicked but no slot configured", get_name(), button_num);
+        return;
+    }
+
+    const auto& info = StandardMacros::instance().get(*slot);
+    spdlog::debug("[{}] Macro {} clicked, executing slot '{}' → {}", get_name(), button_num,
+                  info.slot_name, info.get_macro());
+
+    if (!StandardMacros::instance().execute(
+            *slot, api_, []() { NOTIFY_SUCCESS("Macro started"); },
+            [](const MoonrakerError& err) {
+                NOTIFY_ERROR("Macro failed: {}", err.user_message());
+            })) {
+        NOTIFY_WARNING("{} macro not configured", info.display_name);
+    }
+}
+
 void ControlsPanel::handle_macro_1() {
-    if (!macro_1_slot_) {
-        spdlog::debug("[{}] Macro 1 clicked but no slot configured", get_name());
-        return;
-    }
-
-    const auto& info = StandardMacros::instance().get(*macro_1_slot_);
-    spdlog::debug("[{}] Macro 1 clicked, executing slot '{}' → {}", get_name(), info.slot_name,
-                  info.get_macro());
-
-    if (!StandardMacros::instance().execute(
-            *macro_1_slot_, api_, []() { NOTIFY_SUCCESS("Macro started"); },
-            [](const MoonrakerError& err) {
-                NOTIFY_ERROR("Macro failed: {}", err.user_message());
-            })) {
-        NOTIFY_WARNING("{} macro not configured", info.display_name);
-    }
+    execute_macro(0);
 }
-
 void ControlsPanel::handle_macro_2() {
-    if (!macro_2_slot_) {
-        spdlog::debug("[{}] Macro 2 clicked but no slot configured", get_name());
-        return;
-    }
-
-    const auto& info = StandardMacros::instance().get(*macro_2_slot_);
-    spdlog::debug("[{}] Macro 2 clicked, executing slot '{}' → {}", get_name(), info.slot_name,
-                  info.get_macro());
-
-    if (!StandardMacros::instance().execute(
-            *macro_2_slot_, api_, []() { NOTIFY_SUCCESS("Macro started"); },
-            [](const MoonrakerError& err) {
-                NOTIFY_ERROR("Macro failed: {}", err.user_message());
-            })) {
-        NOTIFY_WARNING("{} macro not configured", info.display_name);
-    }
+    execute_macro(1);
 }
-
 void ControlsPanel::handle_macro_3() {
-    if (!macro_3_slot_) {
-        spdlog::debug("[{}] Macro 3 clicked but no slot configured", get_name());
-        return;
-    }
-
-    const auto& info = StandardMacros::instance().get(*macro_3_slot_);
-    spdlog::debug("[{}] Macro 3 clicked, executing slot '{}' → {}", get_name(), info.slot_name,
-                  info.get_macro());
-
-    if (!StandardMacros::instance().execute(
-            *macro_3_slot_, api_, []() { NOTIFY_SUCCESS("Macro started"); },
-            [](const MoonrakerError& err) {
-                NOTIFY_ERROR("Macro failed: {}", err.user_message());
-            })) {
-        NOTIFY_WARNING("{} macro not configured", info.display_name);
-    }
+    execute_macro(2);
 }
-
 void ControlsPanel::handle_macro_4() {
-    if (!macro_4_slot_) {
-        spdlog::debug("[{}] Macro 4 clicked but no slot configured", get_name());
-        return;
-    }
-
-    const auto& info = StandardMacros::instance().get(*macro_4_slot_);
-    spdlog::debug("[{}] Macro 4 clicked, executing slot '{}' → {}", get_name(), info.slot_name,
-                  info.get_macro());
-
-    if (!StandardMacros::instance().execute(
-            *macro_4_slot_, api_, []() { NOTIFY_SUCCESS("Macro started"); },
-            [](const MoonrakerError& err) {
-                NOTIFY_ERROR("Macro failed: {}", err.user_message());
-            })) {
-        NOTIFY_WARNING("{} macro not configured", info.display_name);
-    }
+    execute_macro(3);
 }
 
 // ============================================================================
