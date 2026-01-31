@@ -20,6 +20,90 @@
 // Include theme_loader for ModePalette and ThemeData definitions
 #include "theme_loader.h"
 
+// ============================================================================
+// Table-Driven Style System Types (ThemeManager refactor Phase 1)
+// ============================================================================
+
+/// Style roles - each represents a semantic style in the theme system.
+/// Used to index into the style table for O(1) lookups.
+enum class StyleRole {
+    Card,
+    Dialog,
+    ObjBase,
+    InputBg,
+    Disabled,
+    Pressed,
+    Focused,
+    TextPrimary,
+    TextMuted,
+    TextSubtle,
+    IconText,
+    IconPrimary,
+    IconSecondary,
+    IconTertiary,
+    IconInfo,
+    IconSuccess,
+    IconWarning,
+    IconDanger,
+    Button,
+    ButtonPrimary,
+    ButtonSecondary,
+    ButtonTertiary,
+    ButtonDanger,
+    ButtonGhost,
+    ButtonDisabled,
+    ButtonPressed,
+    SeverityInfo,
+    SeveritySuccess,
+    SeverityWarning,
+    SeverityDanger,
+    Dropdown,
+    Checkbox,
+    Switch,
+    Slider,
+    Spinner,
+    Arc,
+    COUNT
+};
+
+/// Theme palette - holds all semantic colors for a theme mode.
+/// Used by style configure functions to read colors without string lookups.
+struct ThemePalette {
+    lv_color_t screen_bg{};
+    lv_color_t overlay_bg{};
+    lv_color_t card_bg{};
+    lv_color_t elevated_bg{};
+    lv_color_t border{};
+    lv_color_t text{};
+    lv_color_t text_muted{};
+    lv_color_t text_subtle{};
+    lv_color_t primary{};
+    lv_color_t secondary{};
+    lv_color_t tertiary{};
+    lv_color_t info{};
+    lv_color_t success{};
+    lv_color_t warning{};
+    lv_color_t danger{};
+    lv_color_t focus{};
+    int border_radius = 8;
+    int border_width = 1;
+    int border_opacity = 40;
+};
+
+/// Style configure function type - applies palette colors to a style.
+using StyleConfigureFn = void (*)(lv_style_t* style, const ThemePalette& palette);
+
+/// Style entry - binds a role to its style and configure function.
+struct StyleEntry {
+    StyleRole role;
+    lv_style_t style{};
+    StyleConfigureFn configure = nullptr;
+};
+
+// ============================================================================
+// End Table-Driven Style System Types
+// ============================================================================
+
 // Theme colors: Use theme_manager_get_color() to retrieve from globals.xml
 // Available tokens: primary_color, text_primary, text_secondary, success_color, etc.
 
