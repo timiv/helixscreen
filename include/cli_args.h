@@ -38,6 +38,7 @@ struct OverlayFlags {
     bool screws_tilt = false;
     bool input_shaper = false;
     bool file_detail = false;
+    bool print_select_list = false; // Start print-select in list view
     bool keypad = false;
     bool keyboard = false;
     bool step_test = false;

@@ -153,7 +153,8 @@ static void print_help(const char* program_name) {
     printf("  --render-2d          Force 2D layer renderer (fast, no 3D)\n");
     printf("  --render-3d          Force 3D TinyGL renderer\n");
     printf("\nAvailable panels:\n");
-    printf("  Base: home, controls, filament, settings, advanced, print-select\n");
+    printf("  Base: home, controls, filament, settings, advanced\n");
+    printf("  Print: print-select (cards), print-select-list, print-detail\n");
     printf("  Controls: motion, nozzle-temp, bed-temp, extrusion, fan, bed-mesh, pid\n");
     printf("  Settings: display, sensors, touch-cal, hardware-health, network, theme\n");
     printf("  Advanced: zoffset, screws, input-shaper, spoolman, history-dashboard, macros\n");
@@ -201,8 +202,15 @@ static bool parse_panel_arg(const char* panel_arg, CliArgs& args) {
         args.overlays.fan = true;
     } else if (strcmp(panel_arg, "print-status") == 0 || strcmp(panel_arg, "printing") == 0) {
         args.overlays.print_status = true;
-    } else if (strcmp(panel_arg, "file-detail") == 0 ||
+    } else if (strcmp(panel_arg, "print-select-list") == 0 ||
+               strcmp(panel_arg, "print_select_list") == 0) {
+        // Print select panel in LIST view
+        args.initial_panel = UI_PANEL_PRINT_SELECT;
+        args.overlays.print_select_list = true;
+        get_runtime_config()->print_select_list_mode = true;
+    } else if (strcmp(panel_arg, "print-detail") == 0 || strcmp(panel_arg, "file-detail") == 0 ||
                strcmp(panel_arg, "print-file-detail") == 0) {
+        // Print file detail overlay
         args.initial_panel = UI_PANEL_PRINT_SELECT;
         args.overlays.file_detail = true;
     } else if (strcmp(panel_arg, "step-test") == 0 || strcmp(panel_arg, "step_test") == 0) {

@@ -35,7 +35,7 @@ struct RuntimeConfig {
     bool use_real_moonraker =
         false;                   ///< Use real Moonraker client (--real-moonraker, requires --test)
     bool use_real_files = false; ///< Use real file listing (--real-files, requires --test)
-    bool use_real_ams = false;     ///< Use real AMS backend (--real-ams, requires --test)
+    bool use_real_ams = false;   ///< Use real AMS backend (--real-ams, requires --test)
     bool disable_mock_ams = false; ///< Don't create mock AMS (--no-ams, requires --test)
     bool use_real_sensors = false; ///< Use real sensor data (--real-sensors, requires --test)
 
@@ -48,6 +48,7 @@ struct RuntimeConfig {
     // Print select panel options
     const char* select_file =
         nullptr; ///< File to auto-select in print select panel (--select-file)
+    bool print_select_list_mode = false; ///< Start print-select in list view (--print-select-list)
 
     // Mock auto-print options (for panel testing without command-line args)
     bool mock_auto_start_print = false; ///< Auto-start a print in mock mode (set internally)

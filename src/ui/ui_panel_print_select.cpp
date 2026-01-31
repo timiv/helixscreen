@@ -560,6 +560,15 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Mark panel as fully initialized (enables resize callbacks)
     panel_initialized_ = true;
 
+    // Check CLI flag for initial list view mode (--print-select-list)
+    if (get_runtime_config()->print_select_list_mode) {
+        // Start in list mode instead of default card mode
+        current_view_mode_ = PrintSelectViewMode::LIST;
+        lv_subject_set_int(&view_mode_subject_, 1);
+        ui_icon_set_source(view_toggle_icon_, "grid_view");
+        spdlog::debug("[{}] Starting in list view mode (CLI flag)", get_name());
+    }
+
     // Refresh from Moonraker when API becomes available (via set_api)
     // Don't populate anything here - wait for API connection
     if (api_) {

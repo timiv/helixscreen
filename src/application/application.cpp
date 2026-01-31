@@ -501,9 +501,10 @@ void Application::auto_configure_mock_state() {
             spdlog::info("[Auto] Mock will simulate active print for print-status panel");
         }
 
-        if (m_args.initial_panel == UI_PANEL_PRINT_SELECT && !config->select_file) {
+        // Auto-select a file only when explicitly requesting detail view (print-detail)
+        if (m_args.overlays.file_detail && !config->select_file) {
             config->select_file = RuntimeConfig::DEFAULT_TEST_FILE;
-            spdlog::info("[Auto] Auto-selecting '{}' for print-select panel",
+            spdlog::info("[Auto] Auto-selecting '{}' for print-detail panel",
                          RuntimeConfig::DEFAULT_TEST_FILE);
         }
 
