@@ -70,6 +70,18 @@ git submodule deinit lib/sdl2 2>/dev/null || true
 rm -rf lib/sdl2 2>/dev/null || true
 mkdir -p lib/sdl2
 
+# Step 2c: Configure git to ignore symlinked submodules
+# Without this, git status/diff fail with "expected submodule path not to be a symbolic link"
+echo "→ Configuring git to ignore symlinked submodules..."
+git config --local diff.ignoreSubmodules all
+git config --local status.submodulesummary false
+git config --local submodule.active ""
+# Tell git to ignore typechange for symlinked submodules
+for sub in $SUBMODULES; do
+    git update-index --assume-unchanged "$sub" 2>/dev/null || true
+done
+echo "  ✓ Submodules will be ignored by git status/diff"
+
 # Note: Patches are already applied in main repo, no need to re-apply
 
 # Step 3: libhv headers are now available via symlink (no copy needed)
