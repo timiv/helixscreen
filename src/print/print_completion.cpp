@@ -3,6 +3,7 @@
 
 #include "print_completion.h"
 
+#include "ui_confetti.h"
 #include "ui_modal.h"
 #include "ui_nav_manager.h"
 #include "ui_panel_print_status.h"
@@ -149,6 +150,15 @@ static void show_rich_completion_modal(PrintJobState state, const char* filename
 
     // Note: OK button dismissal is wired via XML event_cb="on_print_complete_ok"
     // Backdrop click-to-close and ESC handling are automatic via Modal system
+
+    // Celebrate successful prints with confetti!
+    if (state == PrintJobState::COMPLETE) {
+        lv_obj_t* confetti = ui_confetti_create(lv_screen_active());
+        if (confetti) {
+            ui_confetti_burst(confetti, 100);
+            spdlog::debug("[PrintComplete] 🎉 Confetti burst for successful print!");
+        }
+    }
 
     spdlog::info("[PrintComplete] Showing rich completion modal: {} ({})", title, filename);
 }

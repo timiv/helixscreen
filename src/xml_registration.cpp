@@ -6,6 +6,7 @@
 #include "ui_ams_current_tool.h"
 #include "ui_ams_device_operations_overlay.h"
 #include "ui_button.h"
+#include "ui_confetti.h"
 #include "ui_fan_dial.h"
 #include "ui_fonts.h"
 #include "ui_gcode_viewer.h"
@@ -97,6 +98,7 @@ void register_xml_components() {
     ui_spinner_init();            // <spinner> with responsive sizing
     ui_button_init();             // <ui_button> with variant styles and auto-contrast
     ui_notification_badge_init(); // <notification_badge> with auto-contrast text
+    ui_confetti_init();           // <ui_confetti> celebration animation canvas
 
     // Register no-op callback and subject for optional handlers in XML components
     // This silences warnings when components use callback/subject props with default=""
