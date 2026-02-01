@@ -21,9 +21,8 @@
     <!-- Header Bar with CALIBRATE action button -->
     <header_bar name="overlay_header"
                 title="Bed Mesh" action_button_text="Probe" action_button_height="#button_height"
-                action_button_pad="#space_md" hide_action_button="false">
-      <event_cb trigger="clicked" callback="on_bed_mesh_calibrate_clicked"/>
-    </header_bar>
+                action_button_pad="#space_md" hide_action_button="false"
+                action_button_callback="on_bed_mesh_calibrate_clicked"/>
     <!-- Content Area: Horizontal split (Left=Canvas, Right=Cards) -->
     <lv_obj name="overlay_content"
             width="100%" flex_grow="1" style_pad_all="#space_md" scrollable="false" flex_flow="row"

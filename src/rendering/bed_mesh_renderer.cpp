@@ -63,7 +63,8 @@ static void compute_initial_centering(bed_mesh_renderer_t* renderer, int canvas_
 static void render_quad(lv_layer_t* layer, const bed_mesh_quad_3d_t& quad, bool use_gradient);
 static void prepare_render_frame(bed_mesh_renderer_t* renderer, int canvas_width, int canvas_height,
                                  int layer_offset_x, int layer_offset_y);
-static void render_mesh_surface(lv_layer_t* layer, bed_mesh_renderer_t* renderer);
+static void render_mesh_surface(lv_layer_t* layer, bed_mesh_renderer_t* renderer, int canvas_width,
+                                int canvas_height);
 static void render_decorations(lv_layer_t* layer, bed_mesh_renderer_t* renderer, int canvas_width,
                                int canvas_height);
 
@@ -531,7 +532,7 @@ bool bed_mesh_renderer_render(bed_mesh_renderer_t* renderer, lv_layer_t* layer, 
 
         // Phase 3: Render mesh surface (quads with gradient/solid colors)
         // Mesh is drawn on top, naturally occluding parts of the reference grids
-        render_mesh_surface(layer, renderer);
+        render_mesh_surface(layer, renderer, canvas_width, canvas_height);
         auto t_surface = std::chrono::high_resolution_clock::now();
 
         // Phase 4: Render overlay decorations (on top of mesh)
@@ -1069,15 +1070,17 @@ static void prepare_render_frame(bed_mesh_renderer_t* renderer, int canvas_width
  *
  * @param layer LVGL draw layer
  * @param renderer Renderer with prepared view state
+ * @param canvas_width Actual canvas width (NOT clip_area width, to avoid partial render bugs)
+ * @param canvas_height Actual canvas height (NOT clip_area height)
  */
-static void render_mesh_surface(lv_layer_t* layer, bed_mesh_renderer_t* renderer) {
+static void render_mesh_surface(lv_layer_t* layer, bed_mesh_renderer_t* renderer, int canvas_width,
+                                int canvas_height) {
     // PERF: Track rendering pipeline timings
     auto t_start = std::chrono::high_resolution_clock::now();
 
-    // Get canvas dimensions from layer (already validated in main render function)
-    const lv_area_t* clip_area = &layer->_clip_area;
-    int canvas_width = lv_area_get_width(clip_area);
-    int canvas_height = lv_area_get_height(clip_area);
+    // Note: canvas_width/height are passed in from the main render function
+    // DO NOT use clip_area dimensions here - they can be smaller during partial redraws
+    // which corrupts the 3D projection math
 
     // Project all quad vertices once and cache screen coordinates + depths
     // This replaces 3 separate projection passes (depth calc, bounds tracking, rendering)

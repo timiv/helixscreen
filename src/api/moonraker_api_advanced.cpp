@@ -116,15 +116,7 @@ void MoonrakerAPI::update_bed_mesh(const json& bed_mesh) {
                 }
 
                 if (!profile.probed_matrix.empty()) {
-                    spdlog::debug("[MoonrakerAPI] Storing profile '{}' with {}x{} mesh",
-                                  profile_name, profile.probed_matrix.size(),
-                                  profile.probed_matrix.empty() ? 0
-                                                                : profile.probed_matrix[0].size());
                     stored_bed_mesh_profiles_[profile_name] = std::move(profile);
-                } else {
-                    spdlog::debug(
-                        "[MoonrakerAPI] Profile '{}' has empty probed_matrix, not storing",
-                        profile_name);
                 }
             }
         }
@@ -170,25 +162,17 @@ bool MoonrakerAPI::has_bed_mesh() const {
 const BedMeshProfile* MoonrakerAPI::get_bed_mesh_profile(const std::string& profile_name) const {
     std::lock_guard<std::mutex> lock(bed_mesh_mutex_);
 
-    spdlog::debug("[MoonrakerAPI] get_bed_mesh_profile('{}'), stored_count={}", profile_name,
-                  stored_bed_mesh_profiles_.size());
-
     // Check stored profiles first
     auto it = stored_bed_mesh_profiles_.find(profile_name);
     if (it != stored_bed_mesh_profiles_.end()) {
-        spdlog::debug("[MoonrakerAPI] Found stored profile '{}' with {}x{} mesh", profile_name,
-                      it->second.probed_matrix.size(),
-                      it->second.probed_matrix.empty() ? 0 : it->second.probed_matrix[0].size());
         return &it->second;
     }
 
     // Fall back to active mesh if name matches
     if (active_bed_mesh_.name == profile_name && !active_bed_mesh_.probed_matrix.empty()) {
-        spdlog::debug("[MoonrakerAPI] Returning active mesh for '{}'", profile_name);
         return &active_bed_mesh_;
     }
 
-    spdlog::debug("[MoonrakerAPI] Profile '{}' not found", profile_name);
     return nullptr;
 }
 
