@@ -12,7 +12,7 @@
 #include "lvgl/src/xml/lv_xml_utils.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
-#include "theme_core.h"
+#include "theme_compat.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -199,24 +199,25 @@ void* ui_button_create(lv_xml_parser_state_t* state, const char** attrs) {
     }
 
     // Apply shared style based on variant
+    auto& tm = ThemeManager::instance();
     lv_style_t* style = nullptr;
     if (strcmp(variant_str, "primary") == 0) {
-        style = theme_core_get_button_primary_style();
+        style = tm.get_style(StyleRole::ButtonPrimary);
     } else if (strcmp(variant_str, "secondary") == 0) {
-        style = theme_core_get_button_secondary_style();
+        style = tm.get_style(StyleRole::ButtonSecondary);
     } else if (strcmp(variant_str, "danger") == 0) {
-        style = theme_core_get_button_danger_style();
+        style = tm.get_style(StyleRole::ButtonDanger);
     } else if (strcmp(variant_str, "success") == 0) {
-        style = theme_core_get_button_success_style();
+        style = tm.get_style(StyleRole::ButtonSuccess);
     } else if (strcmp(variant_str, "tertiary") == 0) {
-        style = theme_core_get_button_tertiary_style();
+        style = tm.get_style(StyleRole::ButtonTertiary);
     } else if (strcmp(variant_str, "warning") == 0) {
-        style = theme_core_get_button_warning_style();
+        style = tm.get_style(StyleRole::ButtonWarning);
     } else if (strcmp(variant_str, "ghost") == 0) {
-        style = theme_core_get_button_ghost_style();
+        style = tm.get_style(StyleRole::ButtonGhost);
     } else {
         spdlog::warn("[ui_button] Unknown variant '{}', defaulting to primary", variant_str);
-        style = theme_core_get_button_primary_style();
+        style = tm.get_style(StyleRole::ButtonPrimary);
     }
 
     if (style) {

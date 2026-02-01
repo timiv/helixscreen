@@ -8,7 +8,6 @@
 #include "lvgl/src/xml/lv_xml_parser.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
-#include "theme_core.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -50,19 +49,20 @@ static const char* severity_to_icon(const char* severity) {
 
 /**
  * Get the shared severity style for a given severity string.
- * These styles are managed by theme_core and update automatically when theme changes.
+ * These styles are managed by ThemeManager and update automatically when theme changes.
  */
 static lv_style_t* get_severity_style(const char* severity) {
+    auto& tm = ThemeManager::instance();
     if (!severity || strcmp(severity, "info") == 0) {
-        return theme_core_get_severity_info_style();
+        return tm.get_style(StyleRole::SeverityInfo);
     } else if (strcmp(severity, "error") == 0) {
-        return theme_core_get_severity_danger_style();
+        return tm.get_style(StyleRole::SeverityDanger);
     } else if (strcmp(severity, "warning") == 0) {
-        return theme_core_get_severity_warning_style();
+        return tm.get_style(StyleRole::SeverityWarning);
     } else if (strcmp(severity, "success") == 0) {
-        return theme_core_get_severity_success_style();
+        return tm.get_style(StyleRole::SeveritySuccess);
     }
-    return theme_core_get_severity_info_style();
+    return tm.get_style(StyleRole::SeverityInfo);
 }
 
 /**

@@ -10,7 +10,7 @@
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_label_parser.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
-#include "theme_core.h"
+#include "theme_compat.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -85,10 +85,10 @@ static void apply_shared_text_style(lv_obj_t* label, TextStyleType style_type) {
 
     switch (style_type) {
     case TextStyleType::PRIMARY:
-        text_style = theme_core_get_text_style();
+        text_style = ThemeManager::instance().get_style(StyleRole::TextPrimary);
         break;
     case TextStyleType::MUTED:
-        text_style = theme_core_get_text_muted_style();
+        text_style = ThemeManager::instance().get_style(StyleRole::TextMuted);
         break;
     }
 

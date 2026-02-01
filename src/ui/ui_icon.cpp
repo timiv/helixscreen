@@ -14,7 +14,6 @@
 #include "lvgl/src/xml/lv_xml_utils.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
-#include "theme_core.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -163,13 +162,14 @@ static void apply_size(lv_obj_t* obj, IconSize size) {
  * We remove all known icon styles - only one will be present at a time.
  */
 static void remove_icon_styles(lv_obj_t* obj) {
+    auto& tm = ThemeManager::instance();
     // Remove all possible icon styles - only one should be attached
     lv_style_t* styles_to_remove[] = {
-        theme_core_get_icon_text_style(),     theme_core_get_icon_muted_style(),
-        theme_core_get_icon_primary_style(),  theme_core_get_icon_secondary_style(),
-        theme_core_get_icon_tertiary_style(), theme_core_get_icon_success_style(),
-        theme_core_get_icon_warning_style(),  theme_core_get_icon_danger_style(),
-        theme_core_get_icon_info_style(),
+        tm.get_style(StyleRole::IconText),     tm.get_style(StyleRole::TextMuted),
+        tm.get_style(StyleRole::IconPrimary),  tm.get_style(StyleRole::IconSecondary),
+        tm.get_style(StyleRole::IconTertiary), tm.get_style(StyleRole::IconSuccess),
+        tm.get_style(StyleRole::IconWarning),  tm.get_style(StyleRole::IconDanger),
+        tm.get_style(StyleRole::IconInfo),
     };
 
     for (lv_style_t* style : styles_to_remove) {
@@ -182,9 +182,9 @@ static void remove_icon_styles(lv_obj_t* obj) {
 /**
  * Apply variant color styling to icon widget
  *
- * Uses shared styles from theme_core instead of inline colors. This enables
- * reactive theming - when theme_core_update_colors() is called, icons
- * automatically update because they reference the shared style objects.
+ * Uses shared styles from ThemeManager instead of inline colors. This enables
+ * reactive theming - when theme changes, icons automatically update because
+ * they reference the shared style objects.
  *
  * Removes any previously applied icon style first to prevent accumulation.
  */
@@ -192,41 +192,42 @@ static void apply_variant(lv_obj_t* obj, IconVariant variant) {
     // Remove any existing icon style first to prevent accumulation
     remove_icon_styles(obj);
 
+    auto& tm = ThemeManager::instance();
     lv_style_t* style = nullptr;
     lv_opa_t opa = LV_OPA_COVER;
 
     switch (variant) {
     case IconVariant::TEXT:
     case IconVariant::NONE:
-        style = theme_core_get_icon_text_style();
+        style = tm.get_style(StyleRole::IconText);
         break;
     case IconVariant::MUTED:
-        style = theme_core_get_icon_muted_style();
+        style = tm.get_style(StyleRole::TextMuted);
         break;
     case IconVariant::PRIMARY:
-        style = theme_core_get_icon_primary_style();
+        style = tm.get_style(StyleRole::IconPrimary);
         break;
     case IconVariant::SECONDARY:
-        style = theme_core_get_icon_secondary_style();
+        style = tm.get_style(StyleRole::IconSecondary);
         break;
     case IconVariant::TERTIARY:
-        style = theme_core_get_icon_tertiary_style();
+        style = tm.get_style(StyleRole::IconTertiary);
         break;
     case IconVariant::DISABLED:
-        style = theme_core_get_icon_text_style();
+        style = tm.get_style(StyleRole::IconText);
         opa = LV_OPA_50;
         break;
     case IconVariant::SUCCESS:
-        style = theme_core_get_icon_success_style();
+        style = tm.get_style(StyleRole::IconSuccess);
         break;
     case IconVariant::WARNING:
-        style = theme_core_get_icon_warning_style();
+        style = tm.get_style(StyleRole::IconWarning);
         break;
     case IconVariant::DANGER:
-        style = theme_core_get_icon_danger_style();
+        style = tm.get_style(StyleRole::IconDanger);
         break;
     case IconVariant::INFO:
-        style = theme_core_get_icon_info_style();
+        style = tm.get_style(StyleRole::IconInfo);
         break;
     }
 

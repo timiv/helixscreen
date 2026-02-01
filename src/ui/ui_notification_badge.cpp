@@ -7,7 +7,7 @@
 #include "lvgl/src/xml/lv_xml_utils.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
-#include "theme_core.h"
+#include "theme_compat.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>

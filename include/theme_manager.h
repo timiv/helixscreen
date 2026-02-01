@@ -20,6 +20,166 @@
 // Include theme_loader for ModePalette and ThemeData definitions
 #include "theme_loader.h"
 
+// ============================================================================
+// Table-Driven Style System Types (ThemeManager refactor Phase 1)
+// ============================================================================
+
+/// Style roles - each represents a semantic style in the theme system.
+/// Used to index into the style table for O(1) lookups.
+enum class StyleRole {
+    Card,
+    Dialog,
+    ObjBase,
+    InputBg,
+    Disabled,
+    Pressed,
+    Focused,
+    TextPrimary,
+    TextMuted,
+    TextSubtle,
+    IconText,
+    IconPrimary,
+    IconSecondary,
+    IconTertiary,
+    IconInfo,
+    IconSuccess,
+    IconWarning,
+    IconDanger,
+    Button,
+    ButtonPrimary,
+    ButtonSecondary,
+    ButtonTertiary,
+    ButtonDanger,
+    ButtonGhost,
+    ButtonSuccess,
+    ButtonWarning,
+    ButtonDisabled,
+    ButtonPressed,
+    SeverityInfo,
+    SeveritySuccess,
+    SeverityWarning,
+    SeverityDanger,
+    Dropdown,
+    Checkbox,
+    Switch,
+    Slider,
+    Spinner,
+    Arc,
+    COUNT
+};
+
+/// Theme palette - holds all semantic colors for a theme mode.
+/// Used by style configure functions to read colors without string lookups.
+struct ThemePalette {
+    lv_color_t screen_bg{};
+    lv_color_t overlay_bg{};
+    lv_color_t card_bg{};
+    lv_color_t elevated_bg{};
+    lv_color_t border{};
+    lv_color_t text{};
+    lv_color_t text_muted{};
+    lv_color_t text_subtle{};
+    lv_color_t primary{};
+    lv_color_t secondary{};
+    lv_color_t tertiary{};
+    lv_color_t info{};
+    lv_color_t success{};
+    lv_color_t warning{};
+    lv_color_t danger{};
+    lv_color_t focus{};
+    int border_radius = 8;
+    int border_width = 1;
+    int border_opacity = 40;
+};
+
+/// Style configure function type - applies palette colors to a style.
+using StyleConfigureFn = void (*)(lv_style_t* style, const ThemePalette& palette);
+
+/// Style entry - binds a role to its style and configure function.
+struct StyleEntry {
+    StyleRole role;
+    lv_style_t style{};
+    StyleConfigureFn configure = nullptr;
+};
+
+#include <array>
+#include <string_view>
+
+/// Unified theme manager - singleton managing all styles and colors.
+/// Replaces theme_core.c + old theme_manager.cpp with table-driven approach.
+class ThemeManager {
+  public:
+    /// Get singleton instance
+    static ThemeManager& instance();
+
+    /// Initialize the theme system. Must be called once at startup.
+    void init();
+
+    /// Shutdown and cleanup
+    void shutdown();
+
+    /// Get style for a role. Returns pointer to internal style (never null after init).
+    lv_style_t* get_style(StyleRole role);
+
+    /// Get current palette
+    const ThemePalette& current_palette() const {
+        return current_palette_;
+    }
+
+    /// Check if dark mode is currently active
+    bool is_dark_mode() const {
+        return dark_mode_;
+    }
+
+    /// Set dark mode on/off and update all styles
+    void set_dark_mode(bool dark);
+
+    /// Toggle between dark and light mode
+    void toggle_dark_mode() {
+        set_dark_mode(!dark_mode_);
+    }
+
+    /// Set both light and dark palettes (for theme loading)
+    void set_palettes(const ThemePalette& light, const ThemePalette& dark);
+
+    /// Get color from current palette by name
+    /// Supports: "primary", "danger", "card_bg", "text", etc.
+    lv_color_t get_color(std::string_view name) const;
+
+    /// Preview a palette without permanently applying it
+    void preview_palette(const ThemePalette& palette);
+
+    /// Cancel preview and revert to current theme palette
+    void cancel_preview();
+
+    /// Check if currently previewing
+    bool is_previewing() const {
+        return previewing_;
+    }
+
+    // Delete copy/move
+    ThemeManager(const ThemeManager&) = delete;
+    ThemeManager& operator=(const ThemeManager&) = delete;
+
+  private:
+    ThemeManager() = default;
+
+    std::array<StyleEntry, static_cast<size_t>(StyleRole::COUNT)> styles_{};
+    ThemePalette current_palette_{};
+    ThemePalette light_palette_{};
+    ThemePalette dark_palette_{};
+    bool initialized_ = false;
+    bool dark_mode_ = true;
+    bool previewing_ = false;
+
+    void register_style_configs();
+    void apply_palette(const ThemePalette& palette);
+};
+
+// ============================================================================
+// End Table-Driven Style System Types
+// ============================================================================
+
 // Theme colors: Use theme_manager_get_color() to retrieve from globals.xml
 // Available tokens: primary_color, text_primary, text_secondary, success_color, etc.
 

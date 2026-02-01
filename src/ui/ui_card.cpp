@@ -7,7 +7,6 @@
 #include "lvgl/src/xml/lv_xml_parser.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
-#include "theme_core.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -30,15 +29,9 @@ static void* ui_card_xml_create(lv_xml_parser_state_t* state, const char** attrs
     }
 
     // Apply shared card style (bg_color, bg_opa, border, radius - all reactive to theme changes)
-    lv_style_t* card_style = theme_core_get_card_style();
-    if (card_style) {
-        // Remove any existing LV_PART_MAIN styles (from LVGL theme) so our shared style takes
-        // effect
-        lv_obj_remove_style(obj, nullptr, LV_PART_MAIN);
-        lv_obj_add_style(obj, card_style, LV_PART_MAIN);
-    } else {
-        spdlog::warn("[Card] card_style is NULL - theme not initialized?");
-    }
+    // Remove any existing LV_PART_MAIN styles (from LVGL theme) so our shared style takes effect
+    lv_obj_remove_style(obj, nullptr, LV_PART_MAIN);
+    lv_obj_add_style(obj, ThemeManager::instance().get_style(StyleRole::Card), LV_PART_MAIN);
 
     // Disabled state: 50% opacity for visual feedback
     lv_obj_set_style_opa(obj, LV_OPA_50, LV_PART_MAIN | LV_STATE_DISABLED);

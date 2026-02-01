@@ -14,7 +14,7 @@
  */
 
 #include "../lvgl_ui_test_fixture.h"
-#include "theme_core.h"
+#include "theme_compat.h"
 
 #include "../catch_amalgamated.hpp"
 

@@ -6,7 +6,7 @@
 #include "lvgl/src/xml/lv_xml_parser.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
-#include "theme_core.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -28,14 +28,14 @@ static void* ui_dialog_xml_create(lv_xml_parser_state_t* state, const char** att
     }
 
     // Apply shared dialog style (bg_color, bg_opa, radius - all reactive to theme changes)
-    lv_style_t* dialog_style = theme_core_get_dialog_style();
+    lv_style_t* dialog_style = ThemeManager::instance().get_style(StyleRole::Dialog);
     if (dialog_style) {
         // Remove any existing LV_PART_MAIN styles (from LVGL theme) so our shared style takes
         // effect
         lv_obj_remove_style(obj, nullptr, LV_PART_MAIN);
         lv_obj_add_style(obj, dialog_style, LV_PART_MAIN);
     } else {
-        spdlog::warn("[Dialog] dialog_style is NULL - theme not initialized?");
+        spdlog::warn("[Dialog] dialog_style is NULL - ThemeManager not initialized?");
     }
 
     // Disabled state: 50% opacity for visual feedback

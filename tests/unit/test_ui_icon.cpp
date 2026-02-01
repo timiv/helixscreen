@@ -188,7 +188,7 @@ TEST_CASE("strip_legacy_prefix handles empty string", "[ui_icon][legacy][error]"
 // ============================================================================
 
 #include "../lvgl_ui_test_fixture.h"
-#include "theme_core.h"
+#include "theme_compat.h"
 
 // Helper: Create a dark mode test palette with distinct colors
 static theme_palette_t make_dark_test_palette() {

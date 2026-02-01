@@ -24,13 +24,13 @@
  *
  * Attributes:
  * - variant: Button style variant (default: "primary")
- *   - primary: theme_core_get_button_primary_style() (primary/accent color bg)
- *   - secondary: theme_core_get_button_secondary_style() (surface color bg)
- *   - danger: theme_core_get_button_danger_style() (danger/red color bg)
- *   - success: theme_core_get_button_success_style() (success/green color bg)
- *   - tertiary: theme_core_get_button_tertiary_style() (tertiary color bg)
- *   - warning: theme_core_get_button_warning_style() (warning/amber color bg)
- *   - ghost: theme_core_get_button_ghost_style() (transparent bg)
+ *   - primary: ThemeManager::get_style(StyleRole::ButtonPrimary) (primary/accent color bg)
+ *   - secondary: ThemeManager::get_style(StyleRole::ButtonSecondary) (surface color bg)
+ *   - danger: ThemeManager::get_style(StyleRole::ButtonDanger) (danger/red color bg)
+ *   - success: ThemeManager::get_style(StyleRole::ButtonSuccess) (success/green color bg)
+ *   - tertiary: ThemeManager::get_style(StyleRole::ButtonTertiary) (tertiary color bg)
+ *   - warning: ThemeManager::get_style(StyleRole::ButtonWarning) (warning/amber color bg)
+ *   - ghost: ThemeManager::get_style(StyleRole::ButtonGhost) (transparent bg)
  *
  * - text: Button label text (optional, can be empty for icon-only buttons)
  *
@@ -48,8 +48,8 @@
  *
  * Auto-contrast is computed using luminance formula:
  *   L = (299*R + 587*G + 114*B) / 1000
- * If L < 128 (dark bg): light text/icon (theme_core_get_text_for_dark_bg)
- * If L >= 128 (light bg): dark text/icon (theme_core_get_text_for_light_bg)
+ * If L < 128 (dark bg): light text/icon (ThemeManager text contrast helpers)
+ * If L >= 128 (light bg): dark text/icon (ThemeManager text contrast helpers)
  */
 
 /**
