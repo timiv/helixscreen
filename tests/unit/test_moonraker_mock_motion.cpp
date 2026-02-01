@@ -15,6 +15,7 @@
  */
 
 #include "moonraker_client_mock.h"
+#include "moonraker_error.h"
 
 #include <atomic>
 #include <chrono>
@@ -820,6 +821,207 @@ TEST_CASE("MoonrakerClientMock position in status updates", "[api][position_repo
         }
         REQUIRE(found_toolhead);
 
+        mock.disconnect();
+    }
+}
+
+// ============================================================================
+// Out-of-Range Movement Error Tests
+// ============================================================================
+
+TEST_CASE("MoonrakerClientMock out-of-range move error handling", "[api][movement][errors]") {
+    SECTION("Move beyond X_MAX returns error") {
+        MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
+        mock.connect("ws://mock/websocket", []() {}, []() {});
+
+        // First clear any existing error
+        mock.gcode_script("G28"); // Home to reset position
+        REQUIRE(mock.get_last_gcode_error().empty());
+
+        // Try to move beyond X_MAX (350mm for Voron 2.4)
+        int result = mock.gcode_script("G0 X400");
+
+        // Should return non-zero error code
+        REQUIRE(result != 0);
+
+        // Should have error message
+        std::string error = mock.get_last_gcode_error();
+        REQUIRE(!error.empty());
+        REQUIRE(error.find("out of range") != std::string::npos);
+        REQUIRE(error.find("X=") != std::string::npos);
+
+        mock.stop_temperature_simulation();
+        mock.disconnect();
+    }
+
+    SECTION("Move beyond Y_MAX returns error") {
+        MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
+        mock.connect("ws://mock/websocket", []() {}, []() {});
+
+        mock.gcode_script("G28");
+        REQUIRE(mock.get_last_gcode_error().empty());
+
+        // Try to move beyond Y_MAX (350mm)
+        int result = mock.gcode_script("G0 Y500");
+
+        REQUIRE(result != 0);
+        std::string error = mock.get_last_gcode_error();
+        REQUIRE(!error.empty());
+        REQUIRE(error.find("out of range") != std::string::npos);
+        REQUIRE(error.find("Y=") != std::string::npos);
+
+        mock.stop_temperature_simulation();
+        mock.disconnect();
+    }
+
+    SECTION("Move beyond Z_MAX returns error") {
+        MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
+        mock.connect("ws://mock/websocket", []() {}, []() {});
+
+        mock.gcode_script("G28");
+        REQUIRE(mock.get_last_gcode_error().empty());
+
+        // Try to move beyond Z_MAX (340mm)
+        int result = mock.gcode_script("G0 Z400");
+
+        REQUIRE(result != 0);
+        std::string error = mock.get_last_gcode_error();
+        REQUIRE(!error.empty());
+        REQUIRE(error.find("out of range") != std::string::npos);
+        REQUIRE(error.find("Z=") != std::string::npos);
+
+        mock.stop_temperature_simulation();
+        mock.disconnect();
+    }
+
+    SECTION("Move below X_MIN (negative) returns error") {
+        MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
+        mock.connect("ws://mock/websocket", []() {}, []() {});
+
+        mock.gcode_script("G28");
+        REQUIRE(mock.get_last_gcode_error().empty());
+
+        // Try to move below X_MIN (0mm)
+        int result = mock.gcode_script("G0 X-10");
+
+        REQUIRE(result != 0);
+        std::string error = mock.get_last_gcode_error();
+        REQUIRE(!error.empty());
+        REQUIRE(error.find("out of range") != std::string::npos);
+
+        mock.stop_temperature_simulation();
+        mock.disconnect();
+    }
+
+    SECTION("Valid move within bounds succeeds") {
+        MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
+        mock.connect("ws://mock/websocket", []() {}, []() {});
+
+        mock.gcode_script("G28");
+
+        // Move within valid range
+        int result = mock.gcode_script("G0 X100 Y100 Z50");
+
+        REQUIRE(result == 0);
+        REQUIRE(mock.get_last_gcode_error().empty());
+
+        mock.stop_temperature_simulation();
+        mock.disconnect();
+    }
+
+    SECTION("Error is cleared on next successful command") {
+        MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
+        mock.connect("ws://mock/websocket", []() {}, []() {});
+
+        mock.gcode_script("G28");
+
+        // First, cause an error
+        int result1 = mock.gcode_script("G0 X400");
+        REQUIRE(result1 != 0);
+        REQUIRE(!mock.get_last_gcode_error().empty());
+
+        // Then do a valid command - error should be cleared
+        int result2 = mock.gcode_script("G0 X100");
+        REQUIRE(result2 == 0);
+        REQUIRE(mock.get_last_gcode_error().empty());
+
+        mock.stop_temperature_simulation();
+        mock.disconnect();
+    }
+
+    SECTION("Relative move beyond bounds returns error") {
+        MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
+        mock.connect("ws://mock/websocket", []() {}, []() {});
+
+        mock.gcode_script("G28");     // Start at 0,0,0
+        mock.gcode_script("G0 X300"); // Move to X=300
+
+        // Switch to relative mode
+        mock.gcode_script("G91");
+
+        // Try to move +100 from X=300, which would put us at X=400 (out of range)
+        int result = mock.gcode_script("G0 X100");
+
+        REQUIRE(result != 0);
+        std::string error = mock.get_last_gcode_error();
+        REQUIRE(!error.empty());
+        REQUIRE(error.find("out of range") != std::string::npos);
+
+        mock.stop_temperature_simulation();
+        mock.disconnect();
+    }
+
+    SECTION("RPC handler calls error callback for out-of-range move") {
+        MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
+        mock.connect("ws://mock/websocket", []() {}, []() {});
+
+        mock.gcode_script("G28"); // Reset position
+
+        // Track callback invocations
+        bool success_called = false;
+        bool error_called = false;
+        MoonrakerError captured_error;
+
+        // Use send_jsonrpc with callbacks (this goes through the RPC handler)
+        json params = {{"script", "G0 X400"}}; // Out of range
+        mock.send_jsonrpc(
+            "printer.gcode.script", params, [&success_called](json) { success_called = true; },
+            [&error_called, &captured_error](const MoonrakerError& err) {
+                error_called = true;
+                captured_error = err;
+            });
+
+        // Error callback should be called, not success
+        REQUIRE(!success_called);
+        REQUIRE(error_called);
+        REQUIRE(captured_error.has_error());
+        REQUIRE(captured_error.message.find("out of range") != std::string::npos);
+        REQUIRE(captured_error.method == "printer.gcode.script");
+
+        mock.stop_temperature_simulation();
+        mock.disconnect();
+    }
+
+    SECTION("RPC handler calls success callback for valid move") {
+        MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
+        mock.connect("ws://mock/websocket", []() {}, []() {});
+
+        mock.gcode_script("G28"); // Reset position
+
+        bool success_called = false;
+        bool error_called = false;
+
+        // Valid move within bounds
+        json params = {{"script", "G0 X100 Y100"}};
+        mock.send_jsonrpc(
+            "printer.gcode.script", params, [&success_called](json) { success_called = true; },
+            [&error_called](const MoonrakerError&) { error_called = true; });
+
+        // Success callback should be called
+        REQUIRE(success_called);
+        REQUIRE(!error_called);
+
+        mock.stop_temperature_simulation();
         mock.disconnect();
     }
 }

@@ -15,16 +15,26 @@ namespace mock_internal {
 
 void register_print_handlers(std::unordered_map<std::string, MethodHandler>& registry) {
     // printer.gcode.script - Execute G-code script
+    // Like real Moonraker, returns error for out-of-range moves and other gcode failures
     registry["printer.gcode.script"] =
         [](MoonrakerClientMock* self, const json& params, std::function<void(json)> success_cb,
            std::function<void(const MoonrakerError&)> error_cb) -> bool {
-        (void)error_cb;
         std::string script;
         if (params.contains("script")) {
             script = params["script"].get<std::string>();
         }
-        self->gcode_script(script); // Process G-code (updates LED state, etc.)
-        if (success_cb) {
+        int result = self->gcode_script(script); // Process G-code (updates LED state, etc.)
+        if (result != 0) {
+            // G-code execution failed (e.g., out-of-range move)
+            // Return error like real Moonraker does
+            if (error_cb) {
+                MoonrakerError err;
+                err.type = MoonrakerErrorType::JSON_RPC_ERROR;
+                err.message = self->get_last_gcode_error();
+                err.method = "printer.gcode.script";
+                error_cb(err);
+            }
+        } else if (success_cb) {
             success_cb(json::object()); // Return empty success response
         }
         return true;

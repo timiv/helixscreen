@@ -336,11 +336,22 @@ class MoonrakerClientMock : public MoonrakerClient {
      * @brief Simulate G-code script command
      *
      * Overrides base class to log and return success without network I/O.
+     * Now properly returns errors for out-of-range moves (like real Klipper).
      *
      * @param gcode G-code string
-     * @return Always returns 0 (success)
+     * @return 0 on success, non-zero on error (call get_last_gcode_error() for message)
      */
     int gcode_script(const std::string& gcode) override;
+
+    /**
+     * @brief Get the last G-code error message
+     *
+     * After gcode_script() returns non-zero, call this to get the error message.
+     * Used by the RPC handler to return proper error responses.
+     *
+     * @return Error message, or empty string if no error
+     */
+    [[nodiscard]] std::string get_last_gcode_error() const;
 
     /**
      * @brief Set printer type for mock data generation
@@ -860,6 +871,10 @@ class MoonrakerClientMock : public MoonrakerClient {
     // Homing state (needs mutex since std::string is not atomic)
     mutable std::mutex homed_axes_mutex_;
     std::string homed_axes_;
+
+    // G-code error tracking (for RPC handler to return proper errors)
+    mutable std::mutex gcode_error_mutex_;
+    std::string last_gcode_error_;
 
     // Print simulation state (legacy - kept for backward compatibility)
     std::atomic<int> print_state_{

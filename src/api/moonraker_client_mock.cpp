@@ -910,8 +910,19 @@ RequestId MoonrakerClientMock::send_jsonrpc(const std::string& method, const jso
 //   - server.history.* handlers (list, totals, delete_job)
 //
 
+std::string MoonrakerClientMock::get_last_gcode_error() const {
+    std::lock_guard<std::mutex> lock(gcode_error_mutex_);
+    return last_gcode_error_;
+}
+
 int MoonrakerClientMock::gcode_script(const std::string& gcode) {
     spdlog::debug("[MoonrakerClientMock] Mock gcode_script: {}", gcode);
+
+    // Clear previous error at start
+    {
+        std::lock_guard<std::mutex> lock(gcode_error_mutex_);
+        last_gcode_error_.clear();
+    }
 
     // Parse temperature commands to update simulation targets
     // M104 Sxxx - Set extruder temp (no wait)
@@ -1112,6 +1123,11 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
         if (out_of_range) {
             dispatch_gcode_response(error_msg);
             spdlog::warn("[MoonrakerClientMock] Move rejected - {}", error_msg);
+            // Store error for RPC handler to return proper error response (like real Moonraker)
+            {
+                std::lock_guard<std::mutex> lock(gcode_error_mutex_);
+                last_gcode_error_ = error_msg;
+            }
         } else {
             // Apply the move
             if (has_x)
@@ -1683,6 +1699,13 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
         spdlog::warn("[MoonrakerClientMock] STUB: PROBE command not fully implemented");
     }
 
+    // Return error code if any error occurred (like real Moonraker)
+    {
+        std::lock_guard<std::mutex> lock(gcode_error_mutex_);
+        if (!last_gcode_error_.empty()) {
+            return 1; // Error - call get_last_gcode_error() for message
+        }
+    }
     return 0; // Success
 }
 
