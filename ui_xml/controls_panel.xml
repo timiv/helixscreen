@@ -307,23 +307,23 @@
                   height="content" style_pad_all="0" scrollable="false" flex_flow="row" style_pad_gap="#space_xs">
             <!-- QGL button - visible only if printer has quad_gantry_level -->
             <ui_button name="btn_qgl"
-                       width="0" height="#button_height_sm" flex_grow="1" text="Quad Gantry Level"
-                       style_bg_color="#success" style_bg_opa="40" hidden="true">
+                       height="#button_height_sm" flex_grow="1" text="Quad Gantry Level"
+                       variant="secondary" hidden="true">
               <bind_flag_if_eq subject="printer_has_qgl" flag="hidden" ref_value="0"/>
               <bind_state_if_eq subject="print_active" state="disabled" ref_value="1"/>
               <event_cb trigger="clicked" callback="on_controls_qgl"/>
             </ui_button>
             <!-- Z-Tilt button - visible only if printer has z_tilt_adjust -->
             <ui_button name="btn_z_tilt"
-                       width="0" height="#button_height_sm" flex_grow="1" text="Z-Tilt Adjust" style_bg_color="#success"
-                       style_bg_opa="40" hidden="true">
+                       height="#button_height_sm" flex_grow="1" text="Z-Tilt Adjust"
+                       variant="secondary" hidden="true">
               <bind_flag_if_eq subject="printer_has_z_tilt" flag="hidden" ref_value="0"/>
               <bind_state_if_eq subject="print_active" state="disabled" ref_value="1"/>
               <event_cb trigger="clicked" callback="on_controls_z_tilt"/>
             </ui_button>
             <ui_button name="btn_macro_1"
-                       width="0" height="#button_height_sm" flex_grow="1" bind_text="macro_1_name"
-                       style_bg_color="#success" style_bg_opa="40">
+                       height="#button_height_sm" flex_grow="1" bind_text="macro_1_name"
+                       variant="secondary">
               <bind_flag_if_eq subject="macro_1_visible" flag="hidden" ref_value="0"/>
               <bind_state_if_eq subject="print_active" state="disabled" ref_value="1"/>
               <event_cb trigger="clicked" callback="on_controls_macro_1"/>
@@ -333,22 +333,22 @@
           <lv_obj width="100%"
                   height="content" style_pad_all="0" scrollable="false" flex_flow="row" style_pad_gap="#space_xs">
             <ui_button name="btn_macro_2"
-                       width="0" height="#button_height_sm" flex_grow="1" bind_text="macro_2_name"
-                       style_bg_color="#success" style_bg_opa="40">
+                       height="#button_height_sm" flex_grow="1" bind_text="macro_2_name"
+                       variant="secondary">
               <bind_flag_if_eq subject="macro_2_visible" flag="hidden" ref_value="0"/>
               <bind_state_if_eq subject="print_active" state="disabled" ref_value="1"/>
               <event_cb trigger="clicked" callback="on_controls_macro_2"/>
             </ui_button>
             <ui_button name="btn_macro_3"
-                       width="0" height="#button_height_sm" flex_grow="1" bind_text="macro_3_name"
-                       style_bg_color="#success" style_bg_opa="40">
+                       height="#button_height_sm" flex_grow="1" bind_text="macro_3_name"
+                       variant="secondary">
               <bind_flag_if_eq subject="macro_3_visible" flag="hidden" ref_value="0"/>
               <bind_state_if_eq subject="print_active" state="disabled" ref_value="1"/>
               <event_cb trigger="clicked" callback="on_controls_macro_3"/>
             </ui_button>
             <ui_button name="btn_macro_4"
-                       width="0" height="#button_height_sm" flex_grow="1" bind_text="macro_4_name"
-                       style_bg_color="#success" style_bg_opa="40">
+                       height="#button_height_sm" flex_grow="1" bind_text="macro_4_name"
+                       variant="secondary">
               <bind_flag_if_eq subject="macro_4_visible" flag="hidden" ref_value="0"/>
               <bind_state_if_eq subject="print_active" state="disabled" ref_value="1"/>
               <event_cb trigger="clicked" callback="on_controls_macro_4"/>
