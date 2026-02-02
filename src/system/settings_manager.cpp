@@ -72,10 +72,11 @@ static int validate_timeout_option(int value, const int (&options)[N], int defau
 static const char* TIME_FORMAT_OPTIONS_TEXT = "12 Hour\n24 Hour";
 
 // Language options - codes and display names
-// Order: en, de, fr, es, ru (indices 0-4)
-static const char* LANGUAGE_CODES[] = {"en", "de", "fr", "es", "ru"};
+// Order: en, de, fr, es, ru, pt, it, zh, ja (indices 0-8)
+static const char* LANGUAGE_CODES[] = {"en", "de", "fr", "es", "ru", "pt", "it", "zh", "ja"};
 static const int LANGUAGE_COUNT = sizeof(LANGUAGE_CODES) / sizeof(LANGUAGE_CODES[0]);
-static const char* LANGUAGE_OPTIONS_TEXT = "English\nDeutsch\nFrançais\nEspañol\nРусский";
+static const char* LANGUAGE_OPTIONS_TEXT =
+    "English\nDeutsch\nFrançais\nEspañol\nРусский\nPortuguês\nItaliano\n中文\n日本語";
 
 SettingsManager& SettingsManager::instance() {
     static SettingsManager instance;

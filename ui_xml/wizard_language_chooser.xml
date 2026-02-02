@@ -77,6 +77,46 @@
           <event_cb trigger="clicked" callback="on_language_selected" user_data="4"/>
         </lv_obj>
 
+        <!-- Português -->
+        <lv_obj name="lang_item_pt" width="100%" height="content"
+                style_pad_all="#space_md" style_radius="#border_radius"
+                style_bg_color="#card_bg" style_bg_opa="255"
+                flex_flow="row" style_pad_gap="#space_md" style_flex_cross_place="center">
+          <lv_image src="A:assets/images/flags/flag_pt.png"/>
+          <text_body text="Português" flex_grow="1"/>
+          <event_cb trigger="clicked" callback="on_language_selected" user_data="5"/>
+        </lv_obj>
+
+        <!-- Italiano -->
+        <lv_obj name="lang_item_it" width="100%" height="content"
+                style_pad_all="#space_md" style_radius="#border_radius"
+                style_bg_color="#card_bg" style_bg_opa="255"
+                flex_flow="row" style_pad_gap="#space_md" style_flex_cross_place="center">
+          <lv_image src="A:assets/images/flags/flag_it.png"/>
+          <text_body text="Italiano" flex_grow="1"/>
+          <event_cb trigger="clicked" callback="on_language_selected" user_data="6"/>
+        </lv_obj>
+
+        <!-- 中文 -->
+        <lv_obj name="lang_item_zh" width="100%" height="content"
+                style_pad_all="#space_md" style_radius="#border_radius"
+                style_bg_color="#card_bg" style_bg_opa="255"
+                flex_flow="row" style_pad_gap="#space_md" style_flex_cross_place="center">
+          <lv_image src="A:assets/images/flags/flag_zh.png"/>
+          <text_body text="中文" flex_grow="1"/>
+          <event_cb trigger="clicked" callback="on_language_selected" user_data="7"/>
+        </lv_obj>
+
+        <!-- 日本語 -->
+        <lv_obj name="lang_item_ja" width="100%" height="content"
+                style_pad_all="#space_md" style_radius="#border_radius"
+                style_bg_color="#card_bg" style_bg_opa="255"
+                flex_flow="row" style_pad_gap="#space_md" style_flex_cross_place="center">
+          <lv_image src="A:assets/images/flags/flag_ja.png"/>
+          <text_body text="日本語" flex_grow="1"/>
+          <event_cb trigger="clicked" callback="on_language_selected" user_data="8"/>
+        </lv_obj>
+
       </lv_obj>
     </ui_card>
   </view>

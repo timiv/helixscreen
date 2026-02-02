@@ -5,14 +5,15 @@
 # Regenerate Noto Sans text fonts for LVGL
 #
 # This script generates LVGL font files for UI text rendering.
-# Includes extended Unicode ranges for internationalization:
-# - Basic Latin (0x20-0x7F): ASCII
-# - Latin-1 Supplement (0xA0-0xFF): Western European (é, ñ, ü, etc.)
-# - Latin Extended-A (0x100-0x17F): Central European
-# - Cyrillic (0x400-0x4FF): Russian, Ukrainian, etc.
-# - Common symbols and punctuation
+# Includes:
+# - Latin (ASCII, Western European, Central European)
+# - Cyrillic (Russian, Ukrainian, etc.)
+# - CJK subset (Chinese + Japanese from translation files)
 #
-# Source: Google Noto Sans (assets/fonts/NotoSans-*.ttf)
+# Source fonts:
+# - assets/fonts/NotoSans-*.ttf (Latin/Cyrillic)
+# - assets/fonts/NotoSansCJKsc-Regular.otf (Chinese)
+# - assets/fonts/NotoSansCJKjp-Regular.otf (Japanese)
 
 set -e
 cd "$(dirname "$0")/.."
@@ -24,8 +25,10 @@ export PATH="$PWD/node_modules/.bin:$PATH"
 FONT_REGULAR=assets/fonts/NotoSans-Regular.ttf
 FONT_LIGHT=assets/fonts/NotoSans-Light.ttf
 FONT_BOLD=assets/fonts/NotoSans-Bold.ttf
+FONT_CJK_SC=assets/fonts/NotoSansCJKsc-Regular.otf
+FONT_CJK_JP=assets/fonts/NotoSansCJKjp-Regular.otf
 
-# Check fonts exist
+# Check Latin fonts exist
 for FONT in "$FONT_REGULAR" "$FONT_LIGHT" "$FONT_BOLD"; do
     if [ ! -f "$FONT" ]; then
         echo "ERROR: Font not found: $FONT"
@@ -34,8 +37,17 @@ for FONT in "$FONT_REGULAR" "$FONT_LIGHT" "$FONT_BOLD"; do
     fi
 done
 
-# Unicode ranges for internationalization
-# Format: comma-separated ranges for lv_font_conv --range parameter
+# Check if CJK fonts exist
+CJK_AVAILABLE=false
+if [ -f "$FONT_CJK_SC" ] && [ -f "$FONT_CJK_JP" ]; then
+    CJK_AVAILABLE=true
+    echo "CJK fonts found - will include Chinese and Japanese support"
+else
+    echo "CJK fonts not found - generating Latin-only fonts"
+    echo "To add CJK support, download Noto Sans CJK from GitHub"
+fi
+
+# Unicode ranges for Latin/Cyrillic
 UNICODE_RANGES=""
 UNICODE_RANGES+="0x20-0x7F"      # Basic Latin (ASCII)
 UNICODE_RANGES+=",0xA0-0xFF"     # Latin-1 Supplement (Western European)
@@ -48,25 +60,77 @@ UNICODE_RANGES+=",0x2026"        # Ellipsis
 UNICODE_RANGES+=",0x20AC"        # Euro sign
 UNICODE_RANGES+=",0x2122"        # Trademark
 
+# Extract CJK characters from translations if fonts available
+CJKCHARS=""
+if [ "$CJK_AVAILABLE" = true ]; then
+    echo "Extracting CJK characters from translations..."
+    CJKCHARS=$(python3 << 'EOF'
+import re
+
+chars = set()
+
+# Chinese translations
+try:
+    with open('translations/zh.yml', 'r') as f:
+        content = f.read()
+        chars.update(re.findall(r'[\u4e00-\u9fff]', content))
+        chars.update(re.findall(r'[\u3400-\u4dbf]', content))
+        chars.update(re.findall(r'[\uff00-\uffef]', content))
+        chars.update(re.findall(r'[\u3000-\u303f]', content))
+except FileNotFoundError:
+    pass
+
+# Japanese translations
+try:
+    with open('translations/ja.yml', 'r') as f:
+        content = f.read()
+        chars.update(re.findall(r'[\u3040-\u309f]', content))
+        chars.update(re.findall(r'[\u30a0-\u30ff]', content))
+        chars.update(re.findall(r'[\u4e00-\u9fff]', content))
+        chars.update(re.findall(r'[\uff00-\uffef]', content))
+except FileNotFoundError:
+    pass
+
+if chars:
+    print(','.join(f'0x{ord(c):04x}' for c in sorted(chars)))
+EOF
+)
+    if [ -n "$CJKCHARS" ]; then
+        CJK_COUNT=$(echo "$CJKCHARS" | tr ',' '\n' | wc -l | tr -d ' ')
+        echo "Found $CJK_COUNT unique CJK characters"
+    fi
+fi
+
 # Font sizes
 SIZES_REGULAR="10 12 14 16 18 20 24 26 28"
 SIZES_LIGHT="10 12 14 16 18"
 SIZES_BOLD="14 16 18 20 24 28"
 
-echo "Regenerating Noto Sans text fonts for LVGL..."
-echo "  Unicode ranges: Basic Latin, Latin-1, Latin Extended-A, Cyrillic"
 echo ""
+echo "Regenerating Noto Sans text fonts for LVGL..."
 
 # Generate Regular weight
+echo ""
 echo "Regular weight:"
 for SIZE in $SIZES_REGULAR; do
     OUTPUT="assets/fonts/noto_sans_${SIZE}.c"
     echo "  Generating noto_sans_${SIZE} -> $OUTPUT"
-    lv_font_conv \
-        --font "$FONT_REGULAR" --size "$SIZE" --bpp 4 --format lvgl \
-        --range "$UNICODE_RANGES" \
-        --no-compress \
-        -o "$OUTPUT"
+
+    if [ "$CJK_AVAILABLE" = true ] && [ -n "$CJKCHARS" ]; then
+        lv_font_conv \
+            --font "$FONT_REGULAR" --size "$SIZE" --range "$UNICODE_RANGES" \
+            --font "$FONT_CJK_SC" --size "$SIZE" --symbols "$CJKCHARS" \
+            --font "$FONT_CJK_JP" --size "$SIZE" --symbols "$CJKCHARS" \
+            --bpp 4 --format lvgl \
+            --no-compress \
+            -o "$OUTPUT"
+    else
+        lv_font_conv \
+            --font "$FONT_REGULAR" --size "$SIZE" --bpp 4 --format lvgl \
+            --range "$UNICODE_RANGES" \
+            --no-compress \
+            -o "$OUTPUT"
+    fi
 done
 
 # Generate Light weight
@@ -75,11 +139,22 @@ echo "Light weight:"
 for SIZE in $SIZES_LIGHT; do
     OUTPUT="assets/fonts/noto_sans_light_${SIZE}.c"
     echo "  Generating noto_sans_light_${SIZE} -> $OUTPUT"
-    lv_font_conv \
-        --font "$FONT_LIGHT" --size "$SIZE" --bpp 4 --format lvgl \
-        --range "$UNICODE_RANGES" \
-        --no-compress \
-        -o "$OUTPUT"
+
+    if [ "$CJK_AVAILABLE" = true ] && [ -n "$CJKCHARS" ]; then
+        lv_font_conv \
+            --font "$FONT_LIGHT" --size "$SIZE" --range "$UNICODE_RANGES" \
+            --font "$FONT_CJK_SC" --size "$SIZE" --symbols "$CJKCHARS" \
+            --font "$FONT_CJK_JP" --size "$SIZE" --symbols "$CJKCHARS" \
+            --bpp 4 --format lvgl \
+            --no-compress \
+            -o "$OUTPUT"
+    else
+        lv_font_conv \
+            --font "$FONT_LIGHT" --size "$SIZE" --bpp 4 --format lvgl \
+            --range "$UNICODE_RANGES" \
+            --no-compress \
+            -o "$OUTPUT"
+    fi
 done
 
 # Generate Bold weight
@@ -88,11 +163,22 @@ echo "Bold weight:"
 for SIZE in $SIZES_BOLD; do
     OUTPUT="assets/fonts/noto_sans_bold_${SIZE}.c"
     echo "  Generating noto_sans_bold_${SIZE} -> $OUTPUT"
-    lv_font_conv \
-        --font "$FONT_BOLD" --size "$SIZE" --bpp 4 --format lvgl \
-        --range "$UNICODE_RANGES" \
-        --no-compress \
-        -o "$OUTPUT"
+
+    if [ "$CJK_AVAILABLE" = true ] && [ -n "$CJKCHARS" ]; then
+        lv_font_conv \
+            --font "$FONT_BOLD" --size "$SIZE" --range "$UNICODE_RANGES" \
+            --font "$FONT_CJK_SC" --size "$SIZE" --symbols "$CJKCHARS" \
+            --font "$FONT_CJK_JP" --size "$SIZE" --symbols "$CJKCHARS" \
+            --bpp 4 --format lvgl \
+            --no-compress \
+            -o "$OUTPUT"
+    else
+        lv_font_conv \
+            --font "$FONT_BOLD" --size "$SIZE" --bpp 4 --format lvgl \
+            --range "$UNICODE_RANGES" \
+            --no-compress \
+            -o "$OUTPUT"
+    fi
 done
 
 echo ""
@@ -103,5 +189,9 @@ echo "  - ASCII (0x20-0x7F)"
 echo "  - Western European: é, è, ê, ñ, ü, ö, ß, etc."
 echo "  - Central European: ą, ę, ł, ő, etc."
 echo "  - Cyrillic: А-Яа-я (Russian, Ukrainian, etc.)"
+if [ "$CJK_AVAILABLE" = true ]; then
+    echo "  - Chinese: Simplified Chinese characters (from translations)"
+    echo "  - Japanese: Hiragana, Katakana, Kanji (from translations)"
+fi
 echo ""
 echo "Rebuild the project: make -j"

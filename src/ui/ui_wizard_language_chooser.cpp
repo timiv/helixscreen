@@ -22,11 +22,15 @@ static const char* WELCOME_TRANSLATIONS[] = {
     "Bienvenue!",        // fr
     "¡Bienvenido!",      // es
     "Добро пожаловать!", // ru
+    "Bem-vindo!",        // pt
+    "Benvenuto!",        // it
+    "欢迎！",            // zh
+    "ようこそ！",        // ja
 };
-static constexpr int WELCOME_COUNT = 5;
+static constexpr int WELCOME_COUNT = 9;
 
 // Language codes for saving to config (matches button order in XML)
-static const char* LANGUAGE_CODES[] = {"en", "de", "fr", "es", "ru"};
+static const char* LANGUAGE_CODES[] = {"en", "de", "fr", "es", "ru", "pt", "it", "zh", "ja"};
 
 // Timer period for cycling welcome text
 static constexpr uint32_t WELCOME_CYCLE_MS = 2500;
