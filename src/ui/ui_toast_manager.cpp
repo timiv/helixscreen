@@ -173,6 +173,13 @@ void ToastManager::exit_animation_complete_cb(lv_anim_t* anim) {
 
     // Delete the toast widget now that animation is complete
     if (toast && mgr.active_toast_ == toast) {
+        // Remove from focus group BEFORE deleting to prevent LVGL from
+        // auto-focusing the next element (which triggers scroll-on-focus)
+        lv_group_t* group = lv_group_get_default();
+        if (group) {
+            lv_group_remove_obj(toast);
+        }
+
         lv_obj_safe_delete(mgr.active_toast_);
         mgr.animating_exit_ = false;
         spdlog::debug("[ToastManager] Exit animation complete, toast deleted");
