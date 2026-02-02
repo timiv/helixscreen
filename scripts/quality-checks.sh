@@ -206,6 +206,44 @@ fi
 echo ""
 
 # ====================================================================
+# XML Attribute Validation
+# ====================================================================
+echo "📄 Validating XML attributes..."
+
+if [ -x "build/bin/validate-xml-attributes" ]; then
+  if [ "$STAGED_ONLY" = true ]; then
+    # Check only staged XML files in pre-commit mode
+    STAGED_XML_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.xml$' || true)
+    if [ -n "$STAGED_XML_FILES" ]; then
+      # shellcheck disable=SC2086
+      if ./build/bin/validate-xml-attributes --warn-only $STAGED_XML_FILES 2>/dev/null; then
+        echo "✅ XML attribute validation passed"
+      else
+        echo "⚠️  Unknown XML attributes found (warnings only for now)"
+        echo "   Run './build/bin/validate-xml-attributes' for details"
+        # NOTE: Using --warn-only so this doesn't block commits during adoption
+        # Remove --warn-only once all false positives are resolved
+      fi
+    else
+      echo "ℹ️  No XML files staged for commit"
+    fi
+  else
+    # CI mode: check all XML files with --warn-only
+    if ./build/bin/validate-xml-attributes --warn-only 2>/dev/null; then
+      echo "✅ XML attribute validation passed"
+    else
+      echo "⚠️  Unknown XML attributes found (warnings only for now)"
+      echo "   Run './build/bin/validate-xml-attributes' for details"
+    fi
+  fi
+else
+  echo "⚠️  validate-xml-attributes not built - skipping"
+  echo "   Run 'make validate-xml-attrs' to build validation tool"
+fi
+
+echo ""
+
+# ====================================================================
 # Phase 2: Code Quality Checks
 # ====================================================================
 

@@ -142,10 +142,10 @@ endif
 	}
 
 # Phony targets
-.PHONY: tools moonraker-inspector validate-xml-constants
+.PHONY: tools moonraker-inspector validate-xml-constants validate-xml-attrs
 
 # Build all tools
-tools: moonraker-inspector validate-xml-constants
+tools: moonraker-inspector validate-xml-constants validate-xml-attrs
 
 # Individual tool targets
 moonraker-inspector: $(MOONRAKER_INSPECTOR)
@@ -156,3 +156,55 @@ moonraker-inspector: $(MOONRAKER_INSPECTOR)
 validate-xml-constants: $(VALIDATE_XML_BIN)
 	$(ECHO) "$(CYAN)Usage: $(YELLOW)./$(VALIDATE_XML_BIN)$(RESET)"
 	$(ECHO) "$(CYAN)Run from repo root to validate ui_xml/ constant sets$(RESET)"
+
+# ==============================================================================
+# XML Attribute Validator Tool
+# ==============================================================================
+# Pre-commit validation tool for catching unknown attributes in XML files
+# Usage: validate-xml-attributes [options] [files...]
+#
+# This is a standalone tool that only needs expat for XML parsing.
+
+VALIDATE_ATTRS_SRC := $(TOOLS_DIR)/validate_xml_attributes.cpp
+VALIDATE_ATTRS_LIB_SRC := src/tools/xml_attribute_validator.cpp
+VALIDATE_ATTRS_BIN := $(BIN_DIR)/validate-xml-attributes
+VALIDATE_ATTRS_OBJ := $(OBJ_DIR)/tools/validate_xml_attributes.o
+VALIDATE_ATTRS_LIB_OBJ := $(OBJ_DIR)/tools/xml_attribute_validator.o
+
+# Standalone linker flags - just needs expat
+VALIDATE_ATTRS_LDFLAGS := -lexpat
+
+# Build rule for attribute validator
+$(VALIDATE_ATTRS_BIN): $(VALIDATE_ATTRS_OBJ) $(VALIDATE_ATTRS_LIB_OBJ)
+	$(Q)mkdir -p $(BIN_DIR)
+	$(ECHO) "$(MAGENTA)$(BOLD)[LD]$(RESET) $@"
+	$(Q)$(CXX) $(CXXFLAGS) $^ -o $@ $(VALIDATE_ATTRS_LDFLAGS) || { \
+		echo "$(RED)$(BOLD)✗ Linking failed!$(RESET)"; \
+		exit 1; \
+	}
+	$(ECHO) "$(GREEN)✓ XML Attribute Validator built: $@$(RESET)"
+
+# Compile validator main source
+$(VALIDATE_ATTRS_OBJ): $(VALIDATE_ATTRS_SRC)
+	$(Q)mkdir -p $(dir $@)
+	$(ECHO) "$(BLUE)[CXX]$(RESET) $<"
+	$(Q)$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@ || { \
+		echo "$(RED)$(BOLD)✗ Compilation failed:$(RESET) $<"; \
+		exit 1; \
+	}
+
+# Compile validator library source
+$(VALIDATE_ATTRS_LIB_OBJ): $(VALIDATE_ATTRS_LIB_SRC)
+	$(Q)mkdir -p $(dir $@)
+	$(ECHO) "$(BLUE)[CXX]$(RESET) $<"
+	$(Q)$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@ || { \
+		echo "$(RED)$(BOLD)✗ Compilation failed:$(RESET) $<"; \
+		exit 1; \
+	}
+
+# Phony target
+.PHONY: validate-xml-attrs
+
+validate-xml-attrs: $(VALIDATE_ATTRS_BIN)
+	$(ECHO) "$(CYAN)Usage: $(YELLOW)./$(VALIDATE_ATTRS_BIN) [--warn-only] [--verbose] [files...]$(RESET)"
+	$(ECHO) "$(CYAN)Run from repo root to validate XML attributes$(RESET)"
