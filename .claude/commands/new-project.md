@@ -98,8 +98,8 @@ AskUserQuestion: "Create worktree for isolated development?"
 ### 8b. SETUP WORKTREE
 Check CLAUDE.md for conventions. Run:
 ```bash
-git worktree add -b [branch] ../helixscreen-[feature] main
-./scripts/init-worktree.sh ../helixscreen-[feature]
+./scripts/setup-worktree.sh feature/[feature-name]
+# Creates worktree at .worktrees/[feature-name] and builds automatically
 ```
 
 ### 9b. HANDOFF

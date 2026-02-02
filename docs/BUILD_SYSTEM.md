@@ -247,27 +247,41 @@ Git worktrees allow parallel development on multiple branches without switching 
 
 ### Creating a Worktree
 
+Use `setup-worktree.sh` to create and configure worktrees with fast builds:
+
 ```bash
-# Create a new worktree with a new branch
-git worktree add -b feature/my-feature ../helixscreen-my-feature main
+# Create worktree with new branch (one command does everything)
+./scripts/setup-worktree.sh feature/my-feature
 
-# Initialize the worktree (REQUIRED - submodules don't auto-clone!)
-./scripts/init-worktree.sh ../helixscreen-my-feature
-
-# Build and test
-cd ../helixscreen-my-feature
-make -j
+# Creates at .worktrees/my-feature, builds automatically
+cd .worktrees/my-feature
 ./build/bin/helix-screen --test -vv
 ```
 
-### Why init-worktree.sh is Required
+### Script Options
 
-Git worktrees share `.git/config` and `.gitmodules` but **NOT** submodule content. Each worktree needs its own clone of every submodule. The `init-worktree.sh` script handles:
+```bash
+# Create at custom path
+./scripts/setup-worktree.sh feature/foo /tmp/helixscreen-foo
 
-1. **Submodule initialization** - Clones all required submodules
-2. **libhv headers** - Copies generated headers (created during build, not in git)
-3. **SDL2 handling** - On macOS, uses system SDL2 via Homebrew
-4. **Pre-built libraries** - Optionally copies `libhv.a` to save build time
+# Set up existing worktree without creating
+./scripts/setup-worktree.sh --setup-only feature/i18n
+
+# Skip the initial build
+./scripts/setup-worktree.sh --no-build feature/quick-test
+```
+
+### What setup-worktree.sh Does
+
+The script optimizes for **fast builds** by sharing artifacts from the main tree:
+
+1. **Symlinks lib/** - All submodules symlinked (no clone/configure time)
+2. **Symlinks compiled libraries** - `libhv.a`, `libTinyGL.a` from main tree
+3. **Symlinks precompiled header** - `lvgl_pch.h.gch` (22MB saved)
+4. **Symlinks tools** - `node_modules/`, `.venv/`
+5. **Configures git** - Uses `--skip-worktree` for clean `git status`
+
+**Trade-off**: If you need to modify library code (`lib/`), un-symlink that specific directory first.
 
 ### Managing Worktrees
 
@@ -276,18 +290,18 @@ Git worktrees share `.git/config` and `.gitmodules` but **NOT** submodule conten
 git worktree list
 
 # Example output:
-# /Users/you/code/helixscreen        abc1234 [main]
-# /Users/you/code/helixscreen-myfeature  def5678 [feature/my-feature]
+# /Users/you/code/helixscreen                    abc1234 [main]
+# /Users/you/code/helixscreen/.worktrees/i18n    def5678 [feature/i18n]
 ```
 
 ### Cleanup
 
 ```bash
 # Remove a worktree
-git worktree remove ../helixscreen-my-feature
+git worktree remove .worktrees/my-feature
 
 # Or force remove if dirty
-git worktree remove --force ../helixscreen-my-feature
+git worktree remove --force .worktrees/my-feature
 ```
 
 ---
