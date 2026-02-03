@@ -6,6 +6,7 @@
 #include "ui_icon.h"
 #include "ui_temperature_utils.h"
 
+#include "lvgl/src/xml/lv_xml.h" // for lv_xml_get_subject
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -59,7 +60,15 @@ void HeatingIconAnimator::attach(lv_obj_t* icon) {
     current_color_ = get_secondary_color();
     current_opacity_ = LV_OPA_COVER;
     apply_color();
-    spdlog::debug("[HeatingIconAnimator] Attached to icon");
+
+    // Subscribe to theme changes for automatic color refresh
+    lv_subject_t* dark_mode_subject = lv_xml_get_subject(nullptr, "settings_dark_mode");
+    if (dark_mode_subject) {
+        theme_observer_ = lv_subject_add_observer(dark_mode_subject, theme_change_cb, this);
+        spdlog::debug("[HeatingIconAnimator] Attached to icon with theme observer");
+    } else {
+        spdlog::debug("[HeatingIconAnimator] Attached to icon (no theme subject found)");
+    }
 }
 
 void HeatingIconAnimator::detach() {
@@ -67,6 +76,13 @@ void HeatingIconAnimator::detach() {
         return;
     }
     stop_pulse();
+
+    // Unsubscribe from theme changes
+    if (theme_observer_) {
+        lv_observer_remove(theme_observer_);
+        theme_observer_ = nullptr;
+    }
+
     icon_ = nullptr;
     spdlog::debug("[HeatingIconAnimator] Detached");
 }
@@ -100,6 +116,7 @@ void HeatingIconAnimator::update(int current_temp, int target_temp) {
             stop_pulse();
             current_color_ = get_secondary_color();
             current_opacity_ = LV_OPA_COVER;
+            apply_color();
             spdlog::debug("[HeatingIconAnimator] State: OFF");
             break;
 
@@ -217,8 +234,36 @@ void HeatingIconAnimator::apply_color() {
 }
 
 lv_color_t HeatingIconAnimator::get_secondary_color() {
-    // Use theme's text_muted color for "off" state
-    return theme_manager_get_color("text_muted");
+    // Use theme's secondary color for "off" state (matches other icons)
+    return theme_manager_get_color("secondary");
+}
+
+void HeatingIconAnimator::refresh_theme() {
+    if (icon_ == nullptr) {
+        return;
+    }
+
+    // Re-fetch colors from theme and re-apply based on current state
+    switch (state_) {
+    case State::OFF:
+        current_color_ = get_secondary_color();
+        apply_color();
+        break;
+    case State::HEATING:
+        // Recalculate gradient color (gradient colors are theme tokens)
+        if (target_temp_ > ambient_temp_) {
+            float progress = static_cast<float>(current_temp_ - ambient_temp_) /
+                             static_cast<float>(target_temp_ - ambient_temp_);
+            progress = std::clamp(progress, 0.0f, 1.0f);
+            current_color_ = calculate_gradient_color(progress);
+        }
+        apply_color();
+        break;
+    case State::AT_TARGET:
+        current_color_ = theme_manager_get_color("temp_gradient_hot");
+        apply_color();
+        break;
+    }
 }
 
 void HeatingIconAnimator::pulse_anim_cb(void* var, int32_t value) {
@@ -226,5 +271,14 @@ void HeatingIconAnimator::pulse_anim_cb(void* var, int32_t value) {
     if (animator && animator->icon_) {
         animator->current_opacity_ = static_cast<lv_opa_t>(value);
         animator->apply_color();
+    }
+}
+
+void HeatingIconAnimator::theme_change_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    (void)subject;
+    auto* animator = static_cast<HeatingIconAnimator*>(lv_observer_get_user_data(observer));
+    if (animator) {
+        spdlog::debug("[HeatingIconAnimator] Theme changed, refreshing colors");
+        animator->refresh_theme();
     }
 }

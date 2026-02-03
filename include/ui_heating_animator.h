@@ -78,6 +78,14 @@ class HeatingIconAnimator {
     void update(int current_temp, int target_temp);
 
     /**
+     * @brief Refresh colors from theme (call after theme toggle)
+     *
+     * Re-fetches color values from the current theme and re-applies them.
+     * This ensures the icon color updates when switching between light/dark mode.
+     */
+    void refresh_theme();
+
+    /**
      * @brief Get current heating state
      */
     State get_state() const {
@@ -145,6 +153,16 @@ class HeatingIconAnimator {
      * @brief Get secondary (off) color from theme
      */
     lv_color_t get_secondary_color();
+
+    /**
+     * @brief Observer for theme/dark mode changes
+     */
+    lv_observer_t* theme_observer_ = nullptr;
+
+    /**
+     * @brief Static callback for theme change observer
+     */
+    static void theme_change_cb(lv_observer_t* observer, lv_subject_t* subject);
 
     /**
      * @brief Animation callback for pulse effect
