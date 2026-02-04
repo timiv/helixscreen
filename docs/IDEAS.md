@@ -1,16 +1,12 @@
 # Ideas & Future Improvements
 
-* ~~Clean up NULL vs nullptr usage~~ ✅ Done (d326ec77)
 * More test coverage
 * Have libhv use spdlog for logging if possible
-* ~~Easy calibration workflow~~ ✅ Done (PID, Z-offset, screws tilt, input shaper stub)
 * **Lazy panel initialization** - Defer `init_subjects()` and `setup()` until first navigation. Challenge: LVGL XML binding requires subjects to exist before parsing. Solution: register empty subjects at startup, populate on first use. Would reduce startup time and memory.
 * Belt tension visualization: controlled belt excitation + stroboscopic LED feedback to visualize resonance
-* ~~Time-lapse toggle in pre-print options~~ ✅ Done (timelapse settings overlay implemented)
-* ~~LVGL slider knob clipping~~ ✅ Fixed (proper padding added)
 * **LVGL lv_bar value=0 bug** (upstream issue) - Bar shows FULL instead of empty when created with cur_value=0 and XML sets value=0. `lv_bar_set_value()` returns early without invalidation. Workaround: set to 1 then 0.
 * Improve filament sensor widget on home screen
-* ~~Button label centering without flex~~ ✅ Fixed
+* **Smart plug control via MQTT** - Turn printer power on/off via controllable plug (Tasmota, etc.)
 
 ---
 
