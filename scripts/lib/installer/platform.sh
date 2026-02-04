@@ -71,9 +71,11 @@ detect_platform() {
         fi
     fi
 
-    # Default to pi for unknown ARM platforms
+    # Unknown ARM device - don't assume it's a Pi
+    # Require explicit platform indicators to avoid false positives
     if [ "$arch" = "aarch64" ] || [ "$arch" = "armv7l" ]; then
-        echo "pi"
+        log_warn "Unknown ARM platform. Cannot auto-detect."
+        echo "unsupported"
         return
     fi
 

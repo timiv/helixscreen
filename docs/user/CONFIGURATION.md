@@ -29,8 +29,10 @@ Complete reference for HelixScreen configuration options.
 
 | Platform | Location |
 |----------|----------|
-| MainsailOS | `/opt/helixscreen/config/helixconfig.json` |
-| Adventurer 5M | `/opt/helixscreen/config/helixconfig.json` |
+| MainsailOS (Pi) | `/opt/helixscreen/config/helixconfig.json` |
+| AD5M Forge-X | `/opt/helixscreen/config/helixconfig.json` |
+| AD5M Klipper Mod | `/root/printer_software/helixscreen/config/helixconfig.json` |
+| K1 Simple AF | `/usr/data/helixscreen/config/helixconfig.json` |
 | Development | `./config/helixconfig.json` (in config/ directory) |
 
 The configuration file is created automatically by the first-run wizard. You can also copy from the template:

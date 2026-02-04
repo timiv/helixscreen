@@ -100,8 +100,13 @@ check_disk_space() {
     # Get the parent directory of install location (the filesystem to check)
     local check_dir
     check_dir=$(dirname "${INSTALL_DIR:-/opt/helixscreen}")
-    # If parent doesn't exist yet, go up another level
-    [ -d "$check_dir" ] || check_dir=$(dirname "$check_dir")
+    # Walk up until we find an existing directory
+    while [ ! -d "$check_dir" ] && [ "$check_dir" != "/" ]; do
+        check_dir=$(dirname "$check_dir")
+    done
+    if [ "$check_dir" = "/" ]; then
+        check_dir="/"
+    fi
 
     # Get available space in MB
     local available_mb

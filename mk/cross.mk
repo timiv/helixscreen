@@ -830,7 +830,7 @@ VERSION := $(shell cat VERSION.txt 2>/dev/null || echo "dev")
 # Assets to include (exclude test_gcodes, gcode test files)
 RELEASE_ASSETS := assets/fonts assets/images
 
-.PHONY: release-pi release-ad5m release-all release-clean
+.PHONY: release-pi release-ad5m release-k1 release-all release-clean
 
 # Package Pi release
 release-pi: | build/pi/bin/helix-screen build/pi/bin/helix-splash
@@ -891,8 +891,34 @@ release-ad5m: | build/ad5m/bin/helix-screen build/ad5m/bin/helix-splash
 	@echo "$(GREEN)✓ Created $(RELEASE_DIR)/helixscreen-ad5m-$(VERSION).tar.gz$(RESET)"
 	@ls -lh $(RELEASE_DIR)/helixscreen-ad5m-$(VERSION).tar.gz
 
+# Package K1 release
+release-k1: | build/k1/bin/helix-screen build/k1/bin/helix-splash
+	@echo "$(CYAN)$(BOLD)Packaging K1 release v$(VERSION)...$(RESET)"
+	@mkdir -p $(RELEASE_DIR)/helixscreen
+	@cp build/k1/bin/helix-screen build/k1/bin/helix-splash $(RELEASE_DIR)/helixscreen/
+	@cp -r ui_xml config $(RELEASE_DIR)/helixscreen/
+	@mkdir -p $(RELEASE_DIR)/helixscreen/scripts
+	@cp scripts/uninstall.sh $(RELEASE_DIR)/helixscreen/scripts/
+	@mkdir -p $(RELEASE_DIR)/helixscreen/assets
+	@for asset in $(RELEASE_ASSETS); do \
+		if [ -d "$$asset" ]; then cp -r "$$asset" $(RELEASE_DIR)/helixscreen/assets/; fi; \
+	done
+	@if [ -d "build/assets/images/prerendered" ]; then \
+		mkdir -p $(RELEASE_DIR)/helixscreen/assets/images/prerendered; \
+		cp -r build/assets/images/prerendered/* $(RELEASE_DIR)/helixscreen/assets/images/prerendered/; \
+	fi
+	@if [ -d "build/assets/images/printers/prerendered" ]; then \
+		mkdir -p $(RELEASE_DIR)/helixscreen/assets/images/printers/prerendered; \
+		cp -r build/assets/images/printers/prerendered/* $(RELEASE_DIR)/helixscreen/assets/images/printers/prerendered/; \
+	fi
+	@find $(RELEASE_DIR)/helixscreen -name '.DS_Store' -delete 2>/dev/null || true
+	@cd $(RELEASE_DIR) && COPYFILE_DISABLE=1 tar -czvf helixscreen-k1-$(VERSION).tar.gz helixscreen
+	@rm -rf $(RELEASE_DIR)/helixscreen
+	@echo "$(GREEN)✓ Created $(RELEASE_DIR)/helixscreen-k1-$(VERSION).tar.gz$(RESET)"
+	@ls -lh $(RELEASE_DIR)/helixscreen-k1-$(VERSION).tar.gz
+
 # Package all releases
-release-all: release-pi release-ad5m
+release-all: release-pi release-ad5m release-k1
 	@echo "$(GREEN)$(BOLD)✓ All releases packaged in $(RELEASE_DIR)/$(RESET)"
 	@ls -lh $(RELEASE_DIR)/*.tar.gz
 

@@ -96,9 +96,14 @@ error_handler() {
     # If we backed up config and install failed, try to restore state
     if [ -n "$BACKUP_CONFIG" ] && [ -f "$BACKUP_CONFIG" ]; then
         log_info "Restoring backed up configuration..."
-        if [ -d "$INSTALL_DIR" ]; then
-            $SUDO mkdir -p "${INSTALL_DIR}/config" 2>/dev/null || true
-            $SUDO cp "$BACKUP_CONFIG" "${INSTALL_DIR}/config/helixconfig.json" 2>/dev/null || true
+        if $SUDO mkdir -p "${INSTALL_DIR}/config" 2>/dev/null; then
+            if $SUDO cp "$BACKUP_CONFIG" "${INSTALL_DIR}/config/helixconfig.json" 2>/dev/null; then
+                log_success "Configuration restored"
+            else
+                log_warn "Could not restore config. Backup saved at: $BACKUP_CONFIG"
+            fi
+        else
+            log_warn "Could not create config directory. Backup saved at: $BACKUP_CONFIG"
         fi
     fi
 
@@ -188,9 +193,11 @@ detect_platform() {
         fi
     fi
 
-    # Default to pi for unknown ARM platforms
+    # Unknown ARM device - don't assume it's a Pi
+    # Require explicit platform indicators to avoid false positives
     if [ "$arch" = "aarch64" ] || [ "$arch" = "armv7l" ]; then
-        echo "pi"
+        log_warn "Unknown ARM platform. Cannot auto-detect."
+        echo "unsupported"
         return
     fi
 
@@ -417,8 +424,13 @@ check_disk_space() {
     # Get the parent directory of install location (the filesystem to check)
     local check_dir
     check_dir=$(dirname "${INSTALL_DIR:-/opt/helixscreen}")
-    # If parent doesn't exist yet, go up another level
-    [ -d "$check_dir" ] || check_dir=$(dirname "$check_dir")
+    # Walk up until we find an existing directory
+    while [ ! -d "$check_dir" ] && [ "$check_dir" != "/" ]; do
+        check_dir=$(dirname "$check_dir")
+    done
+    if [ "$check_dir" = "/" ]; then
+        check_dir="/"
+    fi
 
     # Get available space in MB
     local available_mb
@@ -857,6 +869,14 @@ download_release() {
         exit 1
     fi
 
+    # Verify download isn't truncated (releases should be >1MB)
+    local size_kb
+    size_kb=$(du -k "$dest" 2>/dev/null | cut -f1)
+    if [ "${size_kb:-0}" -lt 1024 ]; then
+        log_error "Downloaded file too small (${size_kb}KB). Download may be incomplete."
+        exit 1
+    fi
+
     local size
     size=$(ls -lh "$dest" | awk '{print $5}')
     log_success "Downloaded ${filename} (${size})"
@@ -1017,14 +1037,17 @@ start_service_systemd() {
         exit 1
     fi
 
-    # Wait a moment and check if it's running
-    sleep 2
-    if $SUDO systemctl is-active --quiet "$SERVICE_NAME"; then
-        log_success "HelixScreen is running!"
-    else
-        log_warn "Service may not have started correctly."
-        log_warn "Check status with: systemctl status $SERVICE_NAME"
-    fi
+    # Wait for service to start (may be slow on embedded hardware)
+    local i
+    for i in 1 2 3 4 5; do
+        sleep 1
+        if $SUDO systemctl is-active --quiet "$SERVICE_NAME"; then
+            log_success "HelixScreen is running!"
+            return
+        fi
+    done
+    log_warn "Service may still be starting..."
+    log_warn "Check status with: systemctl status $SERVICE_NAME"
 }
 
 # Start service (SysV init)
@@ -1042,14 +1065,17 @@ start_service_sysv() {
         exit 1
     fi
 
-    # Wait and verify
-    sleep 2
-    if $SUDO "$INIT_SCRIPT_DEST" status >/dev/null 2>&1; then
-        log_success "HelixScreen is running!"
-    else
-        log_warn "Service may not have started correctly."
-        log_warn "Check: $INIT_SCRIPT_DEST status"
-    fi
+    # Wait for service to start (may be slow on embedded hardware)
+    local i
+    for i in 1 2 3 4 5; do
+        sleep 1
+        if $SUDO "$INIT_SCRIPT_DEST" status >/dev/null 2>&1; then
+            log_success "HelixScreen is running!"
+            return
+        fi
+    done
+    log_warn "Service may still be starting..."
+    log_warn "Check: $INIT_SCRIPT_DEST status"
 }
 
 # Stop service for update
@@ -1065,8 +1091,8 @@ stop_service() {
             log_info "Stopping existing HelixScreen service (SysV)..."
             $SUDO "$INIT_SCRIPT_DEST" stop 2>/dev/null || true
         fi
-        # Also check both possible locations (for updates/uninstalls)
-        for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen; do
+        # Also check all possible locations (for updates/uninstalls)
+        for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen /etc/init.d/S99helixscreen; do
             if [ -x "$init_script" ]; then
                 log_info "Stopping HelixScreen at $init_script..."
                 $SUDO "$init_script" stop 2>/dev/null || true

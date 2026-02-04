@@ -80,6 +80,14 @@ download_release() {
         exit 1
     fi
 
+    # Verify download isn't truncated (releases should be >1MB)
+    local size_kb
+    size_kb=$(du -k "$dest" 2>/dev/null | cut -f1)
+    if [ "${size_kb:-0}" -lt 1024 ]; then
+        log_error "Downloaded file too small (${size_kb}KB). Download may be incomplete."
+        exit 1
+    fi
+
     local size
     size=$(ls -lh "$dest" | awk '{print $5}')
     log_success "Downloaded ${filename} (${size})"

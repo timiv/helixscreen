@@ -201,6 +201,9 @@ main() {
     # Cleanup on success
     cleanup_on_success
 
+    # Clear error trap - installation succeeded
+    trap - ERR
+
     echo ""
     echo "${GREEN}${BOLD}========================================${NC}"
     echo "${GREEN}${BOLD}    Installation Complete!${NC}"

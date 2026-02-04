@@ -34,6 +34,8 @@ The installer automatically detects your platform and downloads the correct rele
 
 > **Note:** Both `bash` and `sh` work. The installer is POSIX-compatible for BusyBox environments (like AD5M).
 
+> **Note:** `install-bundled.sh` and `install.sh` are functionally equivalent. The bundled version is auto-generated from the modular version for easier one-liner installation.
+
 **KIAUH users:** The one-liner works on KIAUH installations too! Alternatively, see [scripts/kiauh/](https://github.com/prestonbrown/helixscreen/tree/main/scripts/kiauh) to add HelixScreen to your KIAUH menu.
 
 **Manual installation** (if you prefer):

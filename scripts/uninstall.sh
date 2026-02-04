@@ -27,6 +27,7 @@ LIB_DIR="$SCRIPT_DIR/lib/installer"
 . "$LIB_DIR/requirements.sh"
 . "$LIB_DIR/forgex.sh"
 . "$LIB_DIR/service.sh"
+. "$LIB_DIR/moonraker.sh"
 . "$LIB_DIR/uninstall.sh"
 
 # Previous UIs we may need to re-enable (for scanning)
@@ -51,6 +52,21 @@ reenable_previous_ui() {
         fi
         restore_stock_firmware_ui || true
         unpatch_forgex_screen_sh || true
+    fi
+
+    # For K1/Simple AF, check for GuppyScreen
+    if [ "$platform" = "k1" ]; then
+        for k1_ui in /etc/init.d/S99guppyscreen /etc/init.d/S50guppyscreen; do
+            if [ -f "$k1_ui" ]; then
+                log_info "Re-enabling GuppyScreen for K1..."
+                $SUDO chmod +x "$k1_ui" 2>/dev/null || true
+                if "$k1_ui" start 2>/dev/null; then
+                    log_success "Re-enabled and started: $k1_ui"
+                    found_ui=true
+                    break
+                fi
+            fi
+        done
     fi
 
     # For Klipper Mod, re-enable Xorg first (required for KlipperScreen)
@@ -150,8 +166,8 @@ stop_helixscreen() {
         $SUDO "$INIT_SCRIPT_DEST" stop 2>/dev/null || true
     fi
 
-    # Also check both possible init script locations
-    for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen; do
+    # Also check all possible init script locations
+    for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen /etc/init.d/S99helixscreen; do
         if [ -x "$init_script" ]; then
             $SUDO "$init_script" stop 2>/dev/null || true
         fi
@@ -191,8 +207,8 @@ remove_service() {
         log_success "Removed SysV init script: $INIT_SCRIPT_DEST"
     fi
 
-    # Also check and remove from both possible locations
-    for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen; do
+    # Also check and remove from all possible locations
+    for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen /etc/init.d/S99helixscreen; do
         if [ -f "$init_script" ]; then
             $SUDO rm -f "$init_script"
             log_success "Removed SysV init script: $init_script"
@@ -213,8 +229,8 @@ remove_installation() {
         removed_any=true
     fi
 
-    # Also check and remove from both possible locations
-    for install_dir in /root/printer_software/helixscreen /opt/helixscreen; do
+    # Also check and remove from all possible locations
+    for install_dir in /root/printer_software/helixscreen /opt/helixscreen /usr/data/helixscreen; do
         if [ -d "$install_dir" ] && [ "$install_dir" != "$INSTALL_DIR" ]; then
             $SUDO rm -rf "$install_dir"
             log_success "Removed $install_dir"
@@ -226,10 +242,11 @@ remove_installation() {
         log_warn "No HelixScreen installation found (already removed?)"
     fi
 
-    # Clean up PID files and log file
+    # Clean up PID files, log file, and active flag
     $SUDO rm -f /var/run/helixscreen.pid 2>/dev/null || true
     $SUDO rm -f /var/run/helix-splash.pid 2>/dev/null || true
     $SUDO rm -f /tmp/helixscreen.log 2>/dev/null || true
+    $SUDO rm -f /tmp/helixscreen_active 2>/dev/null || true
 }
 
 # Main uninstall
@@ -309,6 +326,7 @@ main() {
     remove_service
     remove_installation
     reenable_previous_ui
+    remove_update_manager_section || true
 
     echo ""
     echo "${GREEN}========================================${NC}"

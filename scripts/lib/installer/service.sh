@@ -99,14 +99,17 @@ start_service_systemd() {
         exit 1
     fi
 
-    # Wait a moment and check if it's running
-    sleep 2
-    if $SUDO systemctl is-active --quiet "$SERVICE_NAME"; then
-        log_success "HelixScreen is running!"
-    else
-        log_warn "Service may not have started correctly."
-        log_warn "Check status with: systemctl status $SERVICE_NAME"
-    fi
+    # Wait for service to start (may be slow on embedded hardware)
+    local i
+    for i in 1 2 3 4 5; do
+        sleep 1
+        if $SUDO systemctl is-active --quiet "$SERVICE_NAME"; then
+            log_success "HelixScreen is running!"
+            return
+        fi
+    done
+    log_warn "Service may still be starting..."
+    log_warn "Check status with: systemctl status $SERVICE_NAME"
 }
 
 # Start service (SysV init)
@@ -124,14 +127,17 @@ start_service_sysv() {
         exit 1
     fi
 
-    # Wait and verify
-    sleep 2
-    if $SUDO "$INIT_SCRIPT_DEST" status >/dev/null 2>&1; then
-        log_success "HelixScreen is running!"
-    else
-        log_warn "Service may not have started correctly."
-        log_warn "Check: $INIT_SCRIPT_DEST status"
-    fi
+    # Wait for service to start (may be slow on embedded hardware)
+    local i
+    for i in 1 2 3 4 5; do
+        sleep 1
+        if $SUDO "$INIT_SCRIPT_DEST" status >/dev/null 2>&1; then
+            log_success "HelixScreen is running!"
+            return
+        fi
+    done
+    log_warn "Service may still be starting..."
+    log_warn "Check: $INIT_SCRIPT_DEST status"
 }
 
 # Stop service for update
@@ -147,8 +153,8 @@ stop_service() {
             log_info "Stopping existing HelixScreen service (SysV)..."
             $SUDO "$INIT_SCRIPT_DEST" stop 2>/dev/null || true
         fi
-        # Also check both possible locations (for updates/uninstalls)
-        for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen; do
+        # Also check all possible locations (for updates/uninstalls)
+        for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen /etc/init.d/S99helixscreen; do
             if [ -x "$init_script" ]; then
                 log_info "Stopping HelixScreen at $init_script..."
                 $SUDO "$init_script" stop 2>/dev/null || true
