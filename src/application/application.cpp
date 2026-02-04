@@ -378,86 +378,6 @@ void Application::ensure_project_root_cwd() {
     }
 }
 
-void Application::signal_splash_exit() {
-    if (m_splash_signaled) {
-        return; // Already signaled
-    }
-
-    RuntimeConfig* runtime_config = get_runtime_config();
-    if (runtime_config->splash_pid <= 0) {
-        m_splash_signaled = true; // No splash, mark as done
-        return;
-    }
-
-    // Wait for discovery completion OR timeout before dismissing splash
-    auto elapsed = std::chrono::steady_clock::now() - m_splash_start_time;
-    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
-
-    if (!m_discovery_complete && elapsed_ms < DISCOVERY_TIMEOUT_MS) {
-        return; // Keep splash showing, will retry on next main loop iteration
-    }
-
-    m_splash_signaled = true;
-
-    if (!m_discovery_complete) {
-        spdlog::warn("[Application] Discovery timeout ({}ms elapsed), exiting splash anyway",
-                     elapsed_ms);
-    } else {
-        spdlog::debug("[Application] Discovery complete after {}ms, dismissing splash", elapsed_ms);
-    }
-
-    spdlog::info("[Application] UI ready, signaling splash process (PID {}) to exit...",
-                 runtime_config->splash_pid);
-
-    if (kill(runtime_config->splash_pid, SIGUSR1) == 0) {
-        // Wait for splash to exit. Note: we check /proc/<pid>/status for zombie
-        // state because kill(pid, 0) returns 0 for zombies. The splash is reaped
-        // by watchdog, so we just need to know it's done (zombie = exited).
-        int wait_attempts = 50;
-        char proc_path[64];
-        snprintf(proc_path, sizeof(proc_path), "/proc/%d/status", runtime_config->splash_pid);
-
-        while (wait_attempts-- > 0) {
-            // First check if process exists at all
-            if (kill(runtime_config->splash_pid, 0) != 0) {
-                break; // Process gone
-            }
-
-            // Check if it's a zombie (exited but not reaped)
-            FILE* f = fopen(proc_path, "r");
-            if (f) {
-                char line[256];
-                bool is_zombie = false;
-                while (fgets(line, sizeof(line), f)) {
-                    if (strncmp(line, "State:", 6) == 0) {
-                        is_zombie = (strchr(line, 'Z') != nullptr);
-                        break;
-                    }
-                }
-                fclose(f);
-                if (is_zombie) {
-                    spdlog::debug("[Application] Splash process exited (zombie, waiting for reap)");
-                    break;
-                }
-            }
-
-            usleep(20000);
-        }
-        if (wait_attempts <= 0) {
-            spdlog::warn("[Application] Splash process did not exit in time");
-        } else {
-            spdlog::info("[Application] Splash process exited");
-        }
-    }
-    runtime_config->splash_pid = 0;
-
-    // Schedule full screen refresh after splash exits
-    // The splash clears the framebuffer, but LVGL's cached dirty state doesn't match
-    // We need at least one full invalidation cycle to repaint after handoff
-    spdlog::info("[Application] Splash exited, scheduling post-splash refresh");
-    m_post_splash_refresh_frames = 1;
-}
-
 bool Application::parse_args(int argc, char** argv) {
     // Parse CLI args first
     if (!helix::parse_cli_args(argc, argv, m_args, m_screen_width, m_screen_height)) {
@@ -625,8 +545,8 @@ bool Application::init_display() {
     spdlog::debug("[Application] Display initialized");
     helix::MemoryMonitor::log_now("after_display_init");
 
-    // Record splash start time for deferred exit timeout
-    m_splash_start_time = std::chrono::steady_clock::now();
+    // Initialize splash screen manager for deferred exit
+    m_splash_manager.start(get_runtime_config()->splash_pid);
 
     return true;
 }
@@ -1416,7 +1336,7 @@ bool Application::connect_moonraker() {
             }
 
             // Mark discovery complete so splash can exit
-            c->app->m_discovery_complete = true;
+            c->app->m_splash_manager.on_discovery_complete();
             spdlog::info("[Application] Moonraker discovery complete, splash can exit");
 
             get_printer_state().set_hardware(c->hardware);
@@ -1638,20 +1558,18 @@ int Application::main_loop() {
 
         // Signal splash to exit after first frame is rendered
         // This ensures our UI is visible before splash disappears
-        signal_splash_exit();
+        m_splash_manager.check_and_signal();
 
         // Post-splash full screen refresh after splash exits
         // The splash clears the framebuffer; we need to repaint our UI
-        if (m_post_splash_refresh_frames > 0) {
-            spdlog::debug("[Application] Post-splash refresh frame {} remaining",
-                          m_post_splash_refresh_frames);
+        if (m_splash_manager.needs_post_splash_refresh()) {
             lv_obj_t* screen = lv_screen_active();
             if (screen) {
                 lv_obj_update_layout(screen);
                 invalidate_all_recursive(screen);
                 lv_refr_now(nullptr);
             }
-            m_post_splash_refresh_frames--;
+            m_splash_manager.mark_refresh_done();
         }
 
         // Benchmark mode

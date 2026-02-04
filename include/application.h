@@ -7,8 +7,8 @@
 
 #include "cli_args.h"
 #include "lvgl/lvgl.h"
+#include "splash_screen_manager.h"
 
-#include <chrono>
 #include <memory>
 
 // Forward declarations
@@ -97,7 +97,6 @@ class Application {
     // Helper functions
     void ensure_project_root_cwd();
     void auto_configure_mock_state();
-    void signal_splash_exit();
     lv_obj_t* create_overlay_panel(lv_obj_t* screen, const char* component_name,
                                    const char* display_name);
     void init_action_prompt();
@@ -159,15 +158,7 @@ class Application {
     bool m_running = false;
     bool m_wizard_active = false;
     bool m_shutdown_complete = false;
-    bool m_splash_signaled = false;
 
-    // Deferred splash exit - wait for discovery before dismissing splash
-    // Splash stays visible until discovery completes OR timeout elapsed
-    bool m_discovery_complete = false;
-    std::chrono::steady_clock::time_point m_splash_start_time{std::chrono::steady_clock::now()};
-    static constexpr int64_t DISCOVERY_TIMEOUT_MS = 5000;
-
-    // Post-splash screen refresh - force multiple full redraws after splash exits
-    // to ensure framebuffer is fully repainted after handoff
-    int m_post_splash_refresh_frames = 0;
+    // Splash screen lifecycle manager
+    helix::application::SplashScreenManager m_splash_manager;
 };
