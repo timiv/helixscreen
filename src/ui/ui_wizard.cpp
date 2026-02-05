@@ -6,6 +6,7 @@
 #include "ui_error_reporting.h"
 #include "ui_panel_home.h"
 #include "ui_subject_registry.h"
+#include "ui_utils.h"
 #include "ui_wizard_ams_identify.h"
 #include "ui_wizard_connection.h"
 #include "ui_wizard_fan_select.h"
@@ -242,8 +243,7 @@ void ui_wizard_deinit_subjects() {
     // in lv_deinit() when those widgets are deleted.
     if (wizard_container && lv_is_initialized()) {
         spdlog::debug("[Wizard] Deleting wizard container during deinit");
-        lv_obj_del(wizard_container);
-        wizard_container = nullptr;
+        lv_obj_safe_delete(wizard_container);
         current_screen_step = -1;
     }
 
