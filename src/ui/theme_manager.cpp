@@ -35,6 +35,11 @@ static lv_display_t* theme_display = nullptr;
 
 static helix::ThemeData active_theme;
 
+// Theme change notification subject (monotonically increasing generation counter)
+static lv_subject_t theme_changed_subject;
+static int32_t theme_generation = 0;
+static bool theme_subject_initialized = false;
+
 // ============================================================================
 // LVGL Theme Infrastructure (formerly in theme_compat.cpp)
 // ============================================================================
@@ -518,22 +523,6 @@ static void theme_update_colors(bool is_dark, int32_t border_opacity) {
 }
 
 /**
- * @brief Preview theme colors (for theme editor)
- */
-static void theme_preview_colors(bool is_dark, const theme_palette_t* palette,
-                                 int32_t border_radius, int32_t border_opacity) {
-    auto& tm = ThemeManager::instance();
-    const auto& current = tm.current_palette();
-
-    ThemePalette preview_pal =
-        convert_to_theme_palette(palette, border_radius, current.border_width, border_opacity);
-    (void)is_dark; // Preview uses the palette directly
-
-    tm.preview_palette(preview_pal);
-    spdlog::debug("[Theme] Previewing colors");
-}
-
-/**
  * Auto-register theme-aware color constants from all XML files
  *
  * Parses all XML files in ui_xml/ to find color pairs (xxx_light, xxx_dark) and registers
@@ -963,6 +952,12 @@ void theme_manager_init(lv_display_t* display, bool use_dark_mode_param) {
     theme_display = display;
     use_dark_mode = use_dark_mode_param;
 
+    // Initialize theme change notification subject
+    if (!theme_subject_initialized) {
+        lv_subject_init_int(&theme_changed_subject, 0);
+        theme_subject_initialized = true;
+    }
+
     // Override runtime theme constants based on light/dark mode preference
     lv_xml_component_scope_t* scope = lv_xml_component_get_scope("globals");
     if (!scope) {
@@ -1071,44 +1066,132 @@ void theme_manager_refresh_widget_tree(lv_obj_t* root) {
     lv_obj_tree_walk(root, refresh_style_cb, nullptr);
 }
 
-void theme_manager_toggle_dark_mode() {
+/**
+ * @brief Tree walk callback to swap gradient image sources based on dark/light mode
+ *
+ * Checks each lv_image widget for gradient-related names and swaps the
+ * image source between -dark.bin and -light.bin variants.
+ */
+struct GradientSwapCtx {
+    bool dark_mode;
+};
+
+static lv_obj_tree_walk_res_t gradient_swap_cb(lv_obj_t* obj, void* user_data) {
+    if (!lv_obj_check_type(obj, &lv_image_class))
+        return LV_OBJ_TREE_WALK_NEXT;
+
+    // Check if this image widget has a gradient-related name
+    const char* obj_name = lv_obj_get_name(obj);
+    if (!obj_name)
+        return LV_OBJ_TREE_WALK_NEXT;
+
+    if (strcmp(obj_name, "gradient_bg") != 0 && strcmp(obj_name, "gradient_background") != 0)
+        return LV_OBJ_TREE_WALK_NEXT;
+
+    auto* ctx = static_cast<GradientSwapCtx*>(user_data);
+    const void* src = lv_image_get_src(obj);
+    if (!src)
+        return LV_OBJ_TREE_WALK_NEXT;
+
+    const char* path = static_cast<const char*>(src);
+    std::string path_str(path);
+
+    // Determine the target suffix
+    const char* target = ctx->dark_mode ? "-dark.bin" : "-light.bin";
+
+    // Already has the correct suffix? Skip
+    if (path_str.size() >= strlen(target) &&
+        path_str.compare(path_str.size() - strlen(target), strlen(target), target) == 0)
+        return LV_OBJ_TREE_WALK_NEXT;
+
+    // Try replacing opposite suffix
+    const char* opposite = ctx->dark_mode ? "-light.bin" : "-dark.bin";
+    size_t pos = path_str.rfind(opposite);
+    if (pos != std::string::npos) {
+        std::string new_path = path_str.substr(0, pos) + target;
+        lv_image_set_src(obj, new_path.c_str());
+        spdlog::trace("[Theme] Gradient swap: {} -> {}", path_str, new_path);
+        return LV_OBJ_TREE_WALK_NEXT;
+    }
+
+    // Unsuffixed .bin file: append mode suffix before .bin
+    pos = path_str.rfind(".bin");
+    if (pos != std::string::npos) {
+        std::string new_path =
+            path_str.substr(0, pos) + (ctx->dark_mode ? "-dark" : "-light") + ".bin";
+        lv_image_set_src(obj, new_path.c_str());
+        spdlog::trace("[Theme] Gradient swap: {} -> {}", path_str, new_path);
+    }
+
+    return LV_OBJ_TREE_WALK_NEXT;
+}
+
+/**
+ * @brief Swap gradient background images based on dark/light mode
+ *
+ * Walks the widget tree to find ALL gradient_bg and gradient_background
+ * lv_image widgets and swaps their source between -dark.bin and -light.bin.
+ */
+static void theme_swap_gradient_images(lv_obj_t* root, bool dark_mode) {
+    if (!root)
+        return;
+    GradientSwapCtx ctx{dark_mode};
+    lv_obj_tree_walk(root, gradient_swap_cb, &ctx);
+}
+
+void theme_manager_apply_theme(const helix::ThemeData& theme, bool dark_mode) {
     if (!theme_display) {
-        spdlog::error("[Theme] Cannot toggle: theme not initialized");
+        spdlog::error("[Theme] Cannot apply theme: theme not initialized");
         return;
     }
 
-    bool new_use_dark_mode = !use_dark_mode;
-    use_dark_mode = new_use_dark_mode;
-    spdlog::info("[Theme] Switching to {} mode", new_use_dark_mode ? "dark" : "light");
+    // Respect theme mode support constraints
+    bool effective_dark = dark_mode;
+    auto mode_support = theme.get_mode_support();
+    if (mode_support == helix::ThemeModeSupport::DARK_ONLY) {
+        effective_dark = true;
+    } else if (mode_support == helix::ThemeModeSupport::LIGHT_ONLY) {
+        effective_dark = false;
+    }
 
-    // Log new mode's palette for debugging
+    active_theme = theme;
+    use_dark_mode = effective_dark;
+    spdlog::info("[Theme] Applying theme '{}' in {} mode", theme.name,
+                 effective_dark ? "dark" : "light");
+
+    // Log palette for debugging
     const helix::ModePalette& mode_palette = get_current_mode_palette();
-    spdlog::debug("[Theme] New colors: screen={}, card={}, text={}", mode_palette.screen_bg,
+    spdlog::debug("[Theme] Colors: screen={}, card={}, text={}", mode_palette.screen_bg,
                   mode_palette.card_bg, mode_palette.text);
 
-    // Update helix theme styles in-place (triggers lv_obj_report_style_change)
-    theme_update_colors(new_use_dark_mode, active_theme.properties.border_opacity);
+    // Update ThemeManager stored palettes and apply current mode
+    theme_update_colors(effective_dark, active_theme.properties.border_opacity);
 
-    // Re-register XML color constants with new dark mode value
-    // This updates #screen_bg, #card_bg, etc. before the widget tree refresh
-    theme_manager_register_color_pairs(nullptr, new_use_dark_mode);
+    // Re-register XML constants: semantic colors, theme properties, and color pairs
+    theme_manager_register_semantic_colors(nullptr, active_theme, effective_dark);
+    theme_manager_register_theme_properties(nullptr, active_theme);
+    theme_manager_register_color_pairs(nullptr, effective_dark);
 
-    // Explicitly update screen background - XML inline styles are baked at parse time
-    // so we need to directly set the bg color on the active screen
+    // Update screen background directly (XML inline styles are baked at parse time)
     lv_color_t screen_bg = theme_manager_parse_hex_color(mode_palette.screen_bg.c_str());
     lv_obj_set_style_bg_color(lv_screen_active(), screen_bg, LV_PART_MAIN);
 
-    // Force style refresh on entire widget tree for local/inline styles
+    // Refresh widget tree: shared styles + local/inline styles + palette-styled widgets
     theme_manager_refresh_widget_tree(lv_screen_active());
-
-    // Apply palette colors to all widgets (labels, buttons, sliders, etc.)
-    // This updates C++-styled widgets that don't use shared LVGL styles
     theme_apply_current_palette_to_tree(lv_screen_active());
 
-    // Invalidate screen to trigger redraw
-    lv_obj_invalidate(lv_screen_active());
+    // Swap gradient background images between dark/light variants
+    theme_swap_gradient_images(lv_screen_active(), effective_dark);
 
-    spdlog::info("[Theme] Theme toggle complete");
+    // Invalidate and notify
+    lv_obj_invalidate(lv_screen_active());
+    theme_manager_notify_change();
+
+    spdlog::info("[Theme] Theme apply complete (generation={})", theme_generation);
+}
+
+void theme_manager_toggle_dark_mode() {
+    theme_manager_apply_theme(active_theme, !use_dark_mode);
 }
 
 bool theme_manager_is_dark_mode() {
@@ -1131,481 +1214,33 @@ bool theme_manager_supports_light_mode() {
     return active_theme.supports_light();
 }
 
+lv_subject_t* theme_manager_get_changed_subject() {
+    return &theme_changed_subject;
+}
+
+void theme_manager_notify_change() {
+    if (!theme_subject_initialized)
+        return;
+    theme_generation++;
+    lv_subject_set_int(&theme_changed_subject, theme_generation);
+    spdlog::debug("[Theme] Notified theme change (generation={})", theme_generation);
+}
+
 void theme_manager_preview(const helix::ThemeData& theme) {
-    // Use global dark mode setting
-    theme_manager_preview(theme, use_dark_mode);
+    theme_manager_apply_theme(theme, use_dark_mode);
 }
 
 void theme_manager_preview(const helix::ThemeData& theme, bool is_dark) {
-    // Select the appropriate mode palette for preview
-    const helix::ModePalette* mode_palette = nullptr;
-    if (is_dark && theme.supports_dark()) {
-        mode_palette = &theme.dark;
-    } else if (!is_dark && theme.supports_light()) {
-        mode_palette = &theme.light;
-    } else if (theme.supports_dark()) {
-        mode_palette = &theme.dark;
-    } else {
-        mode_palette = &theme.light;
-    }
-
-    theme_palette_t palette = build_palette_from_mode(*mode_palette);
-    theme_preview_colors(is_dark, &palette, theme.properties.border_radius,
-                         theme.properties.border_opacity);
-    theme_manager_refresh_widget_tree(lv_screen_active());
-
-    spdlog::debug("[Theme] Previewing theme: {} ({})", theme.name, is_dark ? "dark" : "light");
+    theme_manager_apply_theme(theme, is_dark);
 }
 
 void theme_manager_revert_preview() {
-    theme_manager_preview(active_theme, use_dark_mode);
-    spdlog::debug("[Theme] Reverted to active theme: {}", active_theme.name);
+    theme_manager_apply_theme(active_theme, use_dark_mode);
 }
 
-void theme_manager_refresh_preview_elements(lv_obj_t* root, const helix::ThemeData& theme) {
-    if (!root) {
-        return;
-    }
-
-    // Get mode-appropriate palette (all colors should come from the same palette)
-    const helix::ModePalette* palette = use_dark_mode
-                                            ? (theme.supports_dark() ? &theme.dark : nullptr)
-                                            : (theme.supports_light() ? &theme.light : nullptr);
-    if (!palette) {
-        palette = theme.supports_dark() ? &theme.dark : &theme.light;
-    }
-    if (!palette) {
-        spdlog::warn("[Theme] No palette available for preview refresh");
-        return;
-    }
-
-    // Background/surface colors
-    lv_color_t screen_bg = theme_manager_parse_hex_color(palette->screen_bg.c_str());
-    lv_color_t card_bg = theme_manager_parse_hex_color(palette->card_bg.c_str());
-    lv_color_t elevated_bg = theme_manager_parse_hex_color(palette->elevated_bg.c_str());
-    lv_color_t border = theme_manager_parse_hex_color(palette->border.c_str());
-
-    // Text colors
-    lv_color_t text_color = theme_manager_parse_hex_color(palette->text.c_str());
-    lv_color_t text_muted = theme_manager_parse_hex_color(palette->text_muted.c_str());
-
-    // Semantic/accent colors
-    lv_color_t primary = theme_manager_parse_hex_color(palette->primary.c_str());
-    lv_color_t secondary = theme_manager_parse_hex_color(palette->secondary.c_str());
-    lv_color_t tertiary = theme_manager_parse_hex_color(palette->tertiary.c_str());
-    lv_color_t success = theme_manager_parse_hex_color(palette->success.c_str());
-    lv_color_t warning = theme_manager_parse_hex_color(palette->warning.c_str());
-    lv_color_t danger = theme_manager_parse_hex_color(palette->danger.c_str());
-    lv_color_t info = theme_manager_parse_hex_color(palette->info.c_str());
-
-    // Knob color: brighter of primary vs tertiary (for switch/slider handles)
-    lv_color_t knob_color = theme_compute_more_saturated(primary, tertiary);
-
-    // Theme geometry properties
-    int32_t border_radius = theme.properties.border_radius;
-    int32_t border_width = theme.properties.border_width;
-    int32_t border_opacity = theme.properties.border_opacity;
-
-    // ========================================================================
-    // OVERLAY BACKGROUNDS - Update BOTH theme_preview_overlay AND theme_settings_overlay
-    // ========================================================================
-    // Both overlays extend overlay_panel which has bg_color on the root view.
-    // Strategy: Find unique child elements and walk up to find overlay roots.
-
-    lv_obj_t* preview_overlay = nullptr;
-    lv_obj_t* editor_overlay = nullptr;
-
-    // Try finding by name first
-    preview_overlay = lv_obj_find_by_name(root, "theme_preview_overlay");
-    editor_overlay = lv_obj_find_by_name(root, "theme_settings_overlay");
-
-    // Fallback: Find unique named elements and walk up to overlay roots
-    // Structure: overlay_root -> overlay_content -> ... -> named_element
-    if (!preview_overlay) {
-        // Find theme_preset_dropdown which is in overlay_content
-        lv_obj_t* dropdown = lv_obj_find_by_name(root, "theme_preset_dropdown");
-        if (dropdown) {
-            // Walk up: dropdown -> container -> theme_controls_row -> overlay_content ->
-            // overlay_root
-            lv_obj_t* p = dropdown;
-            for (int i = 0; i < 4 && p; i++) {
-                p = lv_obj_get_parent(p);
-            }
-            preview_overlay = p;
-        }
-    }
-    if (!editor_overlay) {
-        lv_obj_t* swatch_list = lv_obj_find_by_name(root, "theme_swatch_list");
-        if (swatch_list) {
-            // Walk up: swatch_list -> overlay_content -> overlay_root
-            lv_obj_t* parent1 = lv_obj_get_parent(swatch_list);
-            if (parent1) {
-                editor_overlay = lv_obj_get_parent(parent1);
-            }
-        }
-    }
-
-    // Update overlay backgrounds
-    // NOTE: When extending a component, the name goes on a wrapper object.
-    // The actual styled content (with style_bg_color) is the first child.
-    // So we update BOTH the found object and its first child to be safe.
-    auto update_overlay_bg = [&](lv_obj_t* overlay, const char* name) {
-        if (!overlay)
-            return;
-        // Update the wrapper
-        lv_obj_set_style_bg_color(overlay, screen_bg, LV_PART_MAIN);
-        lv_obj_set_style_bg_opa(overlay, LV_OPA_COVER, LV_PART_MAIN);
-        // Update the first child (actual content from component template)
-        lv_obj_t* first_child = lv_obj_get_child(overlay, 0);
-        if (first_child) {
-            lv_obj_set_style_bg_color(first_child, screen_bg, LV_PART_MAIN);
-            lv_obj_set_style_bg_opa(first_child, LV_OPA_COVER, LV_PART_MAIN);
-        }
-        lv_obj_invalidate(overlay);
-        spdlog::debug("[Theme] Updated {} bg to #{:06X} (first_child={})", name,
-                      lv_color_to_u32(screen_bg) & 0xFFFFFF, first_child ? "yes" : "no");
-    };
-
-    if (preview_overlay) {
-        update_overlay_bg(preview_overlay, "preview_overlay");
-    } else {
-        spdlog::warn("[Theme] Could not find preview overlay!");
-    }
-
-    if (editor_overlay) {
-        update_overlay_bg(editor_overlay, "editor_overlay");
-    }
-
-    // Update header bars - header_bar component has bg_opa="0" by default
-    // Also need to update first child since name is on component wrapper
-    auto update_header = [&](lv_obj_t* overlay) {
-        if (!overlay)
-            return;
-        lv_obj_t* header = lv_obj_find_by_name(overlay, "overlay_header");
-        if (header) {
-            // Header should match overlay background (screen_bg), not card_bg
-            lv_obj_set_style_bg_color(header, screen_bg, LV_PART_MAIN);
-            lv_obj_set_style_bg_opa(header, LV_OPA_COVER, LV_PART_MAIN);
-            // Also update first child (actual header_bar view)
-            lv_obj_t* inner = lv_obj_get_child(header, 0);
-            if (inner) {
-                lv_obj_set_style_bg_color(inner, screen_bg, LV_PART_MAIN);
-                lv_obj_set_style_bg_opa(inner, LV_OPA_COVER, LV_PART_MAIN);
-            }
-            // Back button should have no background (transparent icon)
-            lv_obj_t* back_btn = lv_obj_find_by_name(header, "back_button");
-            if (back_btn) {
-                lv_obj_set_style_bg_opa(back_btn, LV_OPA_TRANSP, LV_PART_MAIN);
-            }
-        }
-    };
-    update_header(preview_overlay);
-    update_header(editor_overlay);
-
-    // ========================================================================
-    // PREVIEW CARDS
-    // ========================================================================
-    lv_obj_t* card = lv_obj_find_by_name(root, "preview_typography_card");
-    if (card) {
-        lv_obj_set_style_bg_color(card, card_bg, LV_PART_MAIN);
-        lv_obj_set_style_border_color(card, border, LV_PART_MAIN);
-        lv_obj_set_style_border_width(card, border_width, LV_PART_MAIN);
-        lv_obj_set_style_border_opa(card, border_opacity, LV_PART_MAIN);
-        lv_obj_set_style_radius(card, border_radius, LV_PART_MAIN);
-    }
-    card = lv_obj_find_by_name(root, "preview_actions_card");
-    if (card) {
-        lv_obj_set_style_bg_color(card, card_bg, LV_PART_MAIN);
-        lv_obj_set_style_border_color(card, border, LV_PART_MAIN);
-        lv_obj_set_style_border_width(card, border_width, LV_PART_MAIN);
-        lv_obj_set_style_border_opa(card, border_opacity, LV_PART_MAIN);
-        lv_obj_set_style_radius(card, border_radius, LV_PART_MAIN);
-    }
-    card = lv_obj_find_by_name(root, "preview_background");
-    if (card) {
-        lv_obj_set_style_bg_color(card, screen_bg, LV_PART_MAIN);
-        lv_obj_set_style_border_color(card, border, LV_PART_MAIN);
-        lv_obj_set_style_border_width(card, border_width, LV_PART_MAIN);
-        lv_obj_set_style_border_opa(card, border_opacity, LV_PART_MAIN);
-        lv_obj_set_style_radius(card, border_radius, LV_PART_MAIN);
-    }
-
-    // ========================================================================
-    // TYPOGRAPHY - Update text colors for labeled elements
-    // ========================================================================
-    // Elements using primary text color (palette.text)
-    static const char* text_primary_elements[] = {
-        "preview_sample_body", // Sample body text demonstration
-        "preview_bg_title",    // "App Background" title
-        nullptr};
-
-    // Elements using muted text color (palette.text_muted)
-    static const char* text_muted_elements[] = {
-        // Card section headers
-        "preview_heading_typography", "preview_heading_actions",
-        // Sample typography demonstrations
-        "preview_sample_heading", "preview_sample_small",
-        // Form/control labels
-        "preview_label_preset", "preview_label_dark_mode", "preview_label_mode",
-        "preview_label_auto", "preview_label_input", "preview_label_intensity",
-        "preview_label_status_icons", "preview_label_status",
-        // Descriptive text
-        "preview_description", "preview_bg_description", nullptr};
-
-    // Apply primary text color
-    for (const char** name = text_primary_elements; *name != nullptr; ++name) {
-        lv_obj_t* elem = lv_obj_find_by_name(root, *name);
-        if (elem) {
-            lv_obj_set_style_text_color(elem, text_color, LV_PART_MAIN);
-        }
-    }
-
-    // Apply muted text color
-    for (const char** name = text_muted_elements; *name != nullptr; ++name) {
-        lv_obj_t* elem = lv_obj_find_by_name(root, *name);
-        if (elem) {
-            lv_obj_set_style_text_color(elem, text_muted, LV_PART_MAIN);
-        }
-    }
-
-    // ========================================================================
-    // ACTION BUTTONS
-    // ========================================================================
-    lv_obj_t* btn = lv_obj_find_by_name(root, "example_btn_primary");
-    if (btn) {
-        lv_obj_set_style_bg_color(btn, primary, LV_PART_MAIN);
-        lv_obj_set_style_radius(btn, border_radius, LV_PART_MAIN);
-    }
-    btn = lv_obj_find_by_name(root, "example_btn_secondary");
-    if (btn) {
-        lv_obj_set_style_bg_color(btn, secondary, LV_PART_MAIN);
-        lv_obj_set_style_radius(btn, border_radius, LV_PART_MAIN);
-    }
-    btn = lv_obj_find_by_name(root, "example_btn_tertiary");
-    if (btn) {
-        lv_obj_set_style_bg_color(btn, tertiary, LV_PART_MAIN);
-        lv_obj_set_style_radius(btn, border_radius, LV_PART_MAIN);
-    }
-    btn = lv_obj_find_by_name(root, "example_btn_warning");
-    if (btn) {
-        lv_obj_set_style_bg_color(btn, warning, LV_PART_MAIN);
-        lv_obj_set_style_radius(btn, border_radius, LV_PART_MAIN);
-    }
-    btn = lv_obj_find_by_name(root, "example_btn_danger");
-    if (btn) {
-        lv_obj_set_style_bg_color(btn, danger, LV_PART_MAIN);
-        lv_obj_set_style_radius(btn, border_radius, LV_PART_MAIN);
-    }
-    // Header action buttons - button_2 (Edit) uses secondary, button (Apply) uses primary
-    btn = lv_obj_find_by_name(root, "action_button_2");
-    if (btn) {
-        lv_obj_set_style_bg_color(btn, secondary, LV_PART_MAIN);
-        lv_obj_set_style_radius(btn, border_radius, LV_PART_MAIN);
-    }
-    btn = lv_obj_find_by_name(root, "action_button");
-    if (btn) {
-        lv_obj_set_style_bg_color(btn, primary, LV_PART_MAIN);
-        lv_obj_set_style_radius(btn, border_radius, LV_PART_MAIN);
-    }
-    // Preview "Open" button uses tertiary
-    btn = lv_obj_find_by_name(root, "preview_open_button");
-    if (btn) {
-        lv_obj_set_style_bg_color(btn, tertiary, LV_PART_MAIN);
-        lv_obj_set_style_radius(btn, border_radius, LV_PART_MAIN);
-    }
-
-    // ========================================================================
-    // STATUS DOTS (danger, warning, success, info)
-    // ========================================================================
-    lv_obj_t* aurora = lv_obj_find_by_name(root, "aurora_0");
-    if (aurora) {
-        lv_obj_set_style_bg_color(aurora, danger, LV_PART_MAIN);
-        lv_obj_set_style_border_color(aurora, border, LV_PART_MAIN);
-        lv_obj_set_style_radius(aurora, border_radius, LV_PART_MAIN);
-    }
-    aurora = lv_obj_find_by_name(root, "aurora_1");
-    if (aurora) {
-        lv_obj_set_style_bg_color(aurora, warning, LV_PART_MAIN);
-        lv_obj_set_style_border_color(aurora, border, LV_PART_MAIN);
-        lv_obj_set_style_radius(aurora, border_radius, LV_PART_MAIN);
-    }
-    aurora = lv_obj_find_by_name(root, "aurora_2");
-    if (aurora) {
-        lv_obj_set_style_bg_color(aurora, success, LV_PART_MAIN);
-        lv_obj_set_style_border_color(aurora, border, LV_PART_MAIN);
-        lv_obj_set_style_radius(aurora, border_radius, LV_PART_MAIN);
-    }
-    aurora = lv_obj_find_by_name(root, "aurora_3");
-    if (aurora) {
-        lv_obj_set_style_bg_color(aurora, info, LV_PART_MAIN);
-        lv_obj_set_style_border_color(aurora, border, LV_PART_MAIN);
-        lv_obj_set_style_radius(aurora, border_radius, LV_PART_MAIN);
-    }
-
-    // ========================================================================
-    // INPUT WIDGETS (dropdowns, textarea) - use elevated_bg for input backgrounds
-    // ========================================================================
-    lv_obj_t* dropdown = lv_obj_find_by_name(root, "theme_preset_dropdown");
-    if (dropdown) {
-        lv_obj_set_style_bg_color(dropdown, elevated_bg, LV_PART_MAIN);
-        lv_obj_set_style_border_color(dropdown, border, LV_PART_MAIN);
-        lv_obj_set_style_text_color(dropdown, text_color, LV_PART_MAIN);
-        lv_obj_set_style_radius(dropdown, border_radius, LV_PART_MAIN);
-    }
-    dropdown = lv_obj_find_by_name(root, "preview_dropdown");
-    if (dropdown) {
-        lv_obj_set_style_bg_color(dropdown, elevated_bg, LV_PART_MAIN);
-        lv_obj_set_style_text_color(dropdown, text_color, LV_PART_MAIN);
-        lv_obj_set_style_radius(dropdown, border_radius, LV_PART_MAIN);
-    }
-
-    lv_obj_t* textarea = lv_obj_find_by_name(root, "preview_text_input");
-    if (textarea) {
-        lv_obj_set_style_bg_color(textarea, elevated_bg, LV_PART_MAIN);
-        lv_obj_set_style_text_color(textarea, text_color, LV_PART_MAIN);
-        lv_obj_set_style_radius(textarea, border_radius, LV_PART_MAIN);
-    }
-
-    // ========================================================================
-    // ICONS - accent variant uses brighter of primary vs secondary
-    // ========================================================================
-    lv_color_t accent_color = theme_compute_more_saturated(primary, secondary);
-    lv_obj_t* icon = lv_obj_find_by_name(root, "preview_icon_typography");
-    if (icon) {
-        lv_obj_set_style_text_color(icon, accent_color, LV_PART_MAIN);
-    }
-    icon = lv_obj_find_by_name(root, "preview_icon_actions");
-    if (icon) {
-        lv_obj_set_style_text_color(icon, accent_color, LV_PART_MAIN);
-    }
-
-    // ========================================================================
-    // SLIDER - track (border), indicator (secondary), knob (brighter of primary/tertiary)
-    // ========================================================================
-    lv_obj_t* slider = lv_obj_find_by_name(root, "preview_intensity_slider");
-    if (slider) {
-        lv_obj_set_style_bg_color(slider, border, LV_PART_MAIN);
-        lv_obj_set_style_bg_color(slider, secondary, LV_PART_INDICATOR);
-        lv_obj_set_style_bg_color(slider, knob_color, LV_PART_KNOB);
-        lv_obj_set_style_shadow_color(slider, screen_bg, LV_PART_KNOB);
-    }
-
-    // ========================================================================
-    // SWITCH - track=border, indicator=secondary, knob=brighter of primary/tertiary
-    // ========================================================================
-    lv_obj_t* sw = lv_obj_find_by_name(root, "preview_switch");
-    if (sw) {
-        lv_obj_set_style_bg_color(sw, border, LV_PART_MAIN);
-        lv_obj_set_style_bg_color(sw, secondary, LV_PART_INDICATOR | LV_STATE_CHECKED);
-        lv_obj_set_style_bg_color(sw, knob_color, LV_PART_KNOB);
-        lv_obj_set_style_bg_color(sw, knob_color, LV_PART_KNOB | LV_STATE_CHECKED);
-    }
-    sw = lv_obj_find_by_name(root, "preview_dark_mode_toggle");
-    if (sw) {
-        // ui_switch creates lv_switch directly (no wrapper), so sw IS the switch
-        lv_obj_set_style_bg_color(sw, border, LV_PART_MAIN);
-        lv_obj_set_style_bg_color(sw, secondary, LV_PART_INDICATOR | LV_STATE_CHECKED);
-        lv_obj_set_style_bg_color(sw, knob_color, LV_PART_KNOB);
-        lv_obj_set_style_bg_color(sw, knob_color, LV_PART_KNOB | LV_STATE_CHECKED);
-    }
-
-    // ========================================================================
-    // THEME EDITOR (Edit Colors) PANEL - update swatch cards, buttons, sliders
-    // ========================================================================
-    if (editor_overlay) {
-        // Update swatch card backgrounds (they all use #card_bg)
-        // The swatch list container
-        lv_obj_t* swatch_list = lv_obj_find_by_name(editor_overlay, "theme_swatch_list");
-        if (swatch_list) {
-            // Walk through all children and update card backgrounds
-            uint32_t child_count = lv_obj_get_child_count(swatch_list);
-            for (uint32_t i = 0; i < child_count; i++) {
-                lv_obj_t* row = lv_obj_get_child(swatch_list, i);
-                if (!row)
-                    continue;
-                // Each row has 2 swatch containers
-                uint32_t container_count = lv_obj_get_child_count(row);
-                for (uint32_t j = 0; j < container_count; j++) {
-                    lv_obj_t* container = lv_obj_get_child(row, j);
-                    if (container) {
-                        // Container background uses card_bg, border uses border color
-                        lv_obj_set_style_bg_color(container, card_bg, LV_PART_MAIN);
-                        lv_obj_set_style_border_color(container, border, LV_PART_MAIN);
-                    }
-                }
-            }
-        }
-
-        // Update action buttons in editor - colors AND border properties
-        lv_obj_t* btn_reset = lv_obj_find_by_name(editor_overlay, "btn_reset");
-        if (btn_reset) {
-            lv_obj_set_style_bg_color(btn_reset, card_bg, LV_PART_MAIN);
-            lv_obj_set_style_border_color(btn_reset, border, LV_PART_MAIN);
-            lv_obj_set_style_radius(btn_reset, border_radius, LV_PART_MAIN);
-            lv_obj_set_style_border_width(btn_reset, border_width, LV_PART_MAIN);
-            lv_obj_set_style_border_opa(btn_reset, border_opacity, LV_PART_MAIN);
-        }
-        lv_obj_t* btn_save_as = lv_obj_find_by_name(editor_overlay, "btn_save_as");
-        if (btn_save_as) {
-            lv_obj_set_style_bg_color(btn_save_as, card_bg, LV_PART_MAIN);
-            lv_obj_set_style_border_color(btn_save_as, border, LV_PART_MAIN);
-            lv_obj_set_style_radius(btn_save_as, border_radius, LV_PART_MAIN);
-            lv_obj_set_style_border_width(btn_save_as, border_width, LV_PART_MAIN);
-            lv_obj_set_style_border_opa(btn_save_as, border_opacity, LV_PART_MAIN);
-        }
-        lv_obj_t* btn_save = lv_obj_find_by_name(editor_overlay, "btn_save");
-        if (btn_save) {
-            lv_obj_set_style_bg_color(btn_save, primary, LV_PART_MAIN);
-            lv_obj_set_style_border_color(btn_save, border, LV_PART_MAIN);
-            lv_obj_set_style_radius(btn_save, border_radius, LV_PART_MAIN);
-            lv_obj_set_style_border_width(btn_save, border_width, LV_PART_MAIN);
-            lv_obj_set_style_border_opa(btn_save, border_opacity, LV_PART_MAIN);
-        }
-
-        // Update sliders in editor (border_radius, border_width, etc.)
-        // Use knob_color (more saturated of primary/tertiary) for consistency with other sliders
-        const char* slider_names[] = {"row_border_radius", "row_border_width", "row_border_opacity",
-                                      "row_shadow_intensity"};
-        for (const char* row_name : slider_names) {
-            lv_obj_t* row = lv_obj_find_by_name(editor_overlay, row_name);
-            if (row) {
-                lv_obj_t* slider = lv_obj_find_by_name(row, "slider");
-                if (slider) {
-                    lv_obj_set_style_bg_color(slider, border, LV_PART_MAIN);
-                    lv_obj_set_style_bg_color(slider, secondary, LV_PART_INDICATOR);
-                    lv_obj_set_style_bg_color(slider, knob_color, LV_PART_KNOB);
-                }
-            }
-        }
-    }
-
-    // ========================================================================
-    // SAMPLE MODAL DIALOG - Update if visible (from preview "Open" button)
-    // ========================================================================
-    // The sample modal is created via modal_dialog component which uses ui_dialog.
-    // It gets border_radius from XML constants at creation, so we update it here.
-    lv_obj_t* modal_dialog = lv_obj_find_by_name(root, "modal_dialog");
-    if (modal_dialog) {
-        lv_obj_set_style_bg_color(modal_dialog, elevated_bg, LV_PART_MAIN);
-        lv_obj_set_style_radius(modal_dialog, border_radius, LV_PART_MAIN);
-
-        // Update icon colors in the sample modal
-        lv_obj_t* icon_info = lv_obj_find_by_name(modal_dialog, "icon_info");
-        if (icon_info) {
-            lv_obj_set_style_text_color(icon_info, accent_color, LV_PART_MAIN);
-        }
-        lv_obj_t* icon_warning = lv_obj_find_by_name(modal_dialog, "icon_warning");
-        if (icon_warning) {
-            lv_obj_set_style_text_color(icon_warning, warning, LV_PART_MAIN);
-        }
-        lv_obj_t* icon_error = lv_obj_find_by_name(modal_dialog, "icon_error");
-        if (icon_error) {
-            lv_obj_set_style_text_color(icon_error, danger, LV_PART_MAIN);
-        }
-    }
-
-    spdlog::trace("[Theme] Refreshed preview elements");
-}
+// theme_manager_refresh_preview_elements() removed — was ~450 lines of
+// widget-by-name updates. Replaced by theme_manager_apply_theme() which
+// uses theme_apply_current_palette_to_tree() for generic palette application.
 
 // ============================================================================
 // Palette Application Functions (for DRY preview styling)

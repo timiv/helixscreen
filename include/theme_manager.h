@@ -337,10 +337,41 @@ bool theme_manager_supports_dark_mode();
 bool theme_manager_supports_light_mode();
 
 /**
- * @brief Preview theme colors without restart
+ * @brief Apply theme with specified dark mode setting
  *
- * Applies theme colors for live preview. Call theme_manager_revert_preview()
- * to restore original colors, or restart to apply permanently.
+ * Unified function for ALL live theme changes. Replaces both toggle and preview.
+ * Sets active theme + dark mode, rebuilds palettes, re-registers XML constants,
+ * refreshes widget tree, and fires theme change notification.
+ *
+ * @param theme Theme data to apply
+ * @param dark_mode Whether to use dark mode
+ */
+void theme_manager_apply_theme(const helix::ThemeData& theme, bool dark_mode);
+
+/**
+ * @brief Get the theme change notification subject
+ *
+ * Returns an LVGL int subject that fires whenever the theme changes.
+ * The value is a monotonically increasing generation counter.
+ * Subscribe to this to react to ANY theme change (toggle, theme switch, etc.)
+ *
+ * @return Pointer to the theme change subject (valid after theme_manager_init)
+ */
+lv_subject_t* theme_manager_get_changed_subject();
+
+/**
+ * @brief Notify observers that theme has changed
+ *
+ * Increments the generation counter and fires the theme_changed subject.
+ * Called automatically by theme_manager_apply_theme().
+ */
+void theme_manager_notify_change();
+
+/**
+ * @brief Preview theme colors (delegates to theme_manager_apply_theme)
+ *
+ * @deprecated Use theme_manager_apply_theme() directly. This wrapper exists
+ * for backward compatibility with existing callers.
  *
  * @param theme Theme data to preview
  */
@@ -349,8 +380,7 @@ void theme_manager_preview(const helix::ThemeData& theme);
 /**
  * @brief Preview theme colors with explicit dark mode
  *
- * Like theme_manager_preview() but allows UI to control dark/light mode
- * independently from the global setting (for preview toggle).
+ * @deprecated Use theme_manager_apply_theme() directly.
  *
  * @param theme Theme data to preview
  * @param is_dark Whether to preview in dark mode
@@ -358,30 +388,12 @@ void theme_manager_preview(const helix::ThemeData& theme);
 void theme_manager_preview(const helix::ThemeData& theme, bool is_dark);
 
 /**
- * @brief Revert to active theme (cancel preview)
+ * @brief Revert to active theme
+ *
+ * @deprecated Callers should store the original theme and call
+ * theme_manager_apply_theme() with it directly.
  */
 void theme_manager_revert_preview();
-
-/**
- * @brief Refresh example preview elements after theme color change
- *
- * Updates named preview widgets (buttons, aurora dots, etc.) to reflect
- * current theme colors. This is needed because XML inline styles like
- * `style_bg_color="#primary"` are resolved at parse time and don't
- * automatically update when theme colors change.
- *
- * Called automatically by theme_manager_preview() to update any visible
- * preview overlays on the active screen.
- *
- * Named widgets updated:
- * - example_btn_primary, example_btn_success, example_btn_warning, example_btn_danger
- * - aurora_0, aurora_1 (danger), aurora_2 (warning), aurora_3 (success), aurora_4 (info)
- * - preview_typography_card, preview_actions_card, preview_background (card_bg, screen_bg)
- *
- * @param root Widget tree root to search (typically lv_screen_active())
- * @param theme Theme data with colors to apply
- */
-void theme_manager_refresh_preview_elements(lv_obj_t* root, const helix::ThemeData& theme);
 
 /**
  * @brief Parse hex color string to lv_color_t
