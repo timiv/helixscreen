@@ -29,6 +29,7 @@
 #include "moonraker_client.h" // For ConnectionState enum
 #include "probe_sensor_manager.h"
 #include "runtime_config.h"
+#include "temperature_sensor_manager.h"
 #include "unit_conversions.h"
 #include "width_sensor_manager.h"
 
@@ -400,6 +401,7 @@ void PrinterState::update_from_status(const json& state) {
     helix::sensors::ProbeSensorManager::instance().update_from_status(state);
     helix::sensors::AccelSensorManager::instance().update_from_status(state);
     helix::sensors::ColorSensorManager::instance().update_from_status(state);
+    helix::sensors::TemperatureSensorManager::instance().update_from_status(state);
 
     // Cache full state for complex queries
     json_state_.merge_patch(state);

@@ -51,6 +51,7 @@
 #include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "static_subject_registry.h"
+#include "temperature_sensor_manager.h"
 #include "usb_manager.h"
 #include "width_sensor_manager.h"
 #include "xml_registration.h"
@@ -166,6 +167,7 @@ void SubjectInitializer::init_ams_subjects() {
     REGISTER_SENSOR_MANAGER(helix::sensors::ProbeSensorManager);
     REGISTER_SENSOR_MANAGER(helix::sensors::AccelSensorManager);
     REGISTER_SENSOR_MANAGER(helix::sensors::ColorSensorManager);
+    REGISTER_SENSOR_MANAGER(helix::sensors::TemperatureSensorManager);
 
 #undef REGISTER_SENSOR_MANAGER
 }

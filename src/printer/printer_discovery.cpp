@@ -8,6 +8,7 @@
 #include "moonraker_client.h"
 #include "spdlog/spdlog.h"
 #include "standard_macros.h"
+#include "temperature_sensor_manager.h"
 
 #include <sstream>
 #include <vector>
@@ -95,6 +96,11 @@ void init_subsystems_from_hardware(const PrinterDiscovery& hardware, ::Moonraker
         spdlog::debug("[PrinterDiscovery] Discovered {} filament sensors",
                       hardware.filament_sensor_names().size());
     }
+
+    // Initialize temperature sensor manager
+    // hardware.sensors() returns temperature_sensor and temperature_fan objects
+    auto& tsm = helix::sensors::TemperatureSensorManager::instance();
+    tsm.discover(hardware.sensors());
 
     // Initialize standard macros
     StandardMacros::instance().init(hardware);
