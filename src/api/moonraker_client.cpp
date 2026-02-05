@@ -997,7 +997,10 @@ bool MoonrakerClient::cancel_request(RequestId id) {
 int MoonrakerClient::gcode_script(const std::string& gcode) {
     std::string annotated = annotate_gcode(gcode);
     json params = {{"script", annotated}};
-    return send_jsonrpc("printer.gcode.script", params);
+    int result = send_jsonrpc("printer.gcode.script", params);
+    // send() returns bytes sent (positive) on success, negative on error.
+    // Normalize to match API contract: 0 = success, negative = error.
+    return result < 0 ? result : 0;
 }
 
 void MoonrakerClient::get_gcode_store(

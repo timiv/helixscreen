@@ -3172,4 +3172,69 @@ TEST_CASE("MoonrakerClientMock idle_timeout simulation", "[mock][idle_timeout]")
     }
 }
 
+// ============================================================================
+// gcode_script return value contract: 0 = success, non-zero = error
+// ============================================================================
+
+TEST_CASE("MoonrakerClientMock gcode_script returns 0 on success", "[mock][gcode]") {
+    MockBehaviorTestFixture fixture;
+    auto mock = fixture.create_mock();
+    mock->connect("ws://localhost:7125/websocket", [] {}, [] {});
+
+    SECTION("G28 home all returns 0") {
+        int result = mock->gcode_script("G28");
+        REQUIRE(result == 0);
+    }
+
+    SECTION("G28 home single axis returns 0") {
+        int result = mock->gcode_script("G28 X");
+        REQUIRE(result == 0);
+    }
+
+    SECTION("temperature command returns 0") {
+        int result = mock->gcode_script("M104 S200");
+        REQUIRE(result == 0);
+    }
+
+    SECTION("movement within bounds returns 0") {
+        mock->gcode_script("G28"); // Home first
+        int result = mock->gcode_script("G0 X100 Y100 Z10");
+        REQUIRE(result == 0);
+    }
+
+    SECTION("PROBE_CALIBRATE returns 0") {
+        mock->gcode_script("G28"); // Home first
+        int result = mock->gcode_script("PROBE_CALIBRATE");
+        REQUIRE(result == 0);
+    }
+
+    SECTION("fan command returns 0") {
+        int result = mock->gcode_script("M106 S128");
+        REQUIRE(result == 0);
+    }
+
+    mock->disconnect();
+}
+
+TEST_CASE("MoonrakerClientMock gcode_script returns non-zero on error", "[mock][gcode]") {
+    MockBehaviorTestFixture fixture;
+    auto mock = fixture.create_mock();
+    mock->connect("ws://localhost:7125/websocket", [] {}, [] {});
+
+    SECTION("out-of-range move returns error") {
+        mock->gcode_script("G28"); // Home first
+        int result = mock->gcode_script("G0 X9999");
+        REQUIRE(result != 0);
+        REQUIRE_FALSE(mock->get_last_gcode_error().empty());
+    }
+
+    SECTION("out-of-range Z move returns error") {
+        mock->gcode_script("G28"); // Home first
+        int result = mock->gcode_script("G0 Z9999");
+        REQUIRE(result != 0);
+    }
+
+    mock->disconnect();
+}
+
 #pragma GCC diagnostic pop
