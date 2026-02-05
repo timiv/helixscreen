@@ -19,6 +19,7 @@
 #include "ui_panel_screws_tilt.h"
 #include "ui_panel_temp_control.h"
 #include "ui_position_utils.h"
+#include "ui_settings_sensors.h"
 #include "ui_subject_registry.h"
 
 #include "app_globals.h"
@@ -30,6 +31,7 @@
 #include "standard_macros.h"
 #include "static_panel_registry.h"
 #include "subject_managed_panel.h"
+#include "temperature_sensor_manager.h"
 #include "theme_manager.h"
 #include "ui/ui_cleanup_helpers.h"
 #include "ui/ui_event_trampoline.h"
@@ -324,6 +326,9 @@ void ControlsPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                             this);
     }
 
+    // Cache dynamic container for secondary temperature sensors
+    FIND_WIDGET(secondary_temps_list_, panel_, "secondary_temps_list", get_name());
+
     // Wire up card click handlers (cards need manual wiring for navigation)
     setup_card_handlers();
 
@@ -332,6 +337,9 @@ void ControlsPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     // Populate secondary fans on initial setup (will be empty until discovery)
     populate_secondary_fans();
+
+    // Populate secondary temperature sensors on initial setup
+    populate_secondary_temps();
 
     spdlog::info("[{}] Setup complete", get_name());
 }
@@ -344,11 +352,14 @@ void ControlsPanel::on_activate() {
     // 3. Observer callback was missed due to timing
     populate_secondary_fans();
 
+    // Refresh secondary temperature sensors list
+    populate_secondary_temps();
+
     // Refresh macro buttons in case StandardMacros was initialized after setup()
     // This ensures button labels reflect auto-detected macros, not just fallbacks
     refresh_macro_buttons();
 
-    spdlog::debug("[{}] Panel activated, refreshed fans and macro buttons", get_name());
+    spdlog::debug("[{}] Panel activated, refreshed fans, temps, and macro buttons", get_name());
 }
 
 // ============================================================================
@@ -408,6 +419,11 @@ void ControlsPanel::register_observers() {
     fans_version_observer_ = observe_int_sync<ControlsPanel>(
         printer_state_.get_fans_version_subject(), this,
         [](ControlsPanel* self, int /* version */) { self->populate_secondary_fans(); });
+
+    // Subscribe to temperature sensor count changes
+    temp_sensor_count_observer_ = observe_int_sync<ControlsPanel>(
+        helix::sensors::TemperatureSensorManager::instance().get_sensor_count_subject(), this,
+        [](ControlsPanel* self, int /* count */) { self->populate_secondary_temps(); });
 
     // Subscribe to pending Z-offset delta (for unsaved adjustment banner)
     pending_z_offset_observer_ =
@@ -1357,6 +1373,182 @@ void ControlsPanel::update_secondary_fan_speed(const std::string& object_name, i
             lv_label_set_text(row.speed_label, speed_buf);
             spdlog::trace("[{}] Updated secondary fan '{}' speed to {}", get_name(), object_name,
                           speed_buf);
+            break;
+        }
+    }
+}
+
+// ============================================================================
+// SECONDARY TEMPERATURE SENSORS (overflow list on temperature card)
+// ============================================================================
+
+void ControlsPanel::populate_secondary_temps() {
+    if (!secondary_temps_list_) {
+        return;
+    }
+
+    // Cleanup order: observers first, then tracking, then widgets
+    for (auto& obs : secondary_temp_observers_) {
+        obs.release();
+    }
+    secondary_temp_observers_.clear();
+    secondary_temp_rows_.clear();
+    lv_obj_clean(secondary_temps_list_);
+
+    auto& tsm = helix::sensors::TemperatureSensorManager::instance();
+    auto sensors = tsm.get_sensors_sorted();
+
+    // Filter to only enabled sensors (chamber is already shown as a dedicated row)
+    std::vector<helix::sensors::TemperatureSensorConfig> visible;
+    for (const auto& s : sensors) {
+        if (s.enabled && s.role != helix::sensors::TemperatureSensorRole::CHAMBER) {
+            visible.push_back(s);
+        }
+    }
+
+    constexpr int max_visible = 2;
+    int visible_count = 0;
+
+    for (const auto& sensor : visible) {
+        if (visible_count >= max_visible) {
+            break;
+        }
+
+        // Create a row: [Name] [Temp C] [thermometer icon]
+        lv_obj_t* row = lv_obj_create(secondary_temps_list_);
+        lv_obj_set_width(row, LV_PCT(100));
+        lv_obj_set_height(row, LV_SIZE_CONTENT);
+        lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(row, 0, 0);
+        lv_obj_set_style_pad_all(row, 0, 0);
+        lv_obj_set_style_pad_row(row, 0, 0);
+        lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_remove_flag(row, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER,
+                              LV_FLEX_ALIGN_CENTER);
+
+        // Sensor name label - 60% width, truncate with ellipsis
+        lv_obj_t* name_label = lv_label_create(row);
+        lv_label_set_text(name_label, sensor.display_name.c_str());
+        lv_obj_set_width(name_label, LV_PCT(60));
+        lv_obj_set_style_text_color(name_label, theme_manager_get_color("text_muted"), 0);
+        lv_obj_set_style_text_font(name_label, theme_manager_get_font("font_small"), 0);
+        lv_label_set_long_mode(name_label, LV_LABEL_LONG_DOT);
+
+        // Temperature value label - read initial value from subject
+        auto* subj = tsm.get_temp_subject(sensor.klipper_name);
+        int centidegrees = subj ? lv_subject_get_int(subj) : 0;
+        int temp_c = centidegrees / 100;
+        char temp_buf[16];
+        std::snprintf(temp_buf, sizeof(temp_buf), "%d\u00B0C", temp_c);
+        lv_obj_t* temp_label = lv_label_create(row);
+        lv_label_set_text(temp_label, temp_buf);
+        lv_obj_set_style_text_color(temp_label, theme_manager_get_color("text"), 0);
+        lv_obj_set_style_text_font(temp_label, theme_manager_get_font("font_small"), 0);
+
+        // Track for reactive updates
+        secondary_temp_rows_.push_back({sensor.klipper_name, temp_label});
+
+        // Thermometer icon
+        lv_obj_t* icon = lv_label_create(row);
+        lv_label_set_text(icon, ui_icon::lookup_codepoint("thermometer"));
+        lv_obj_set_style_text_color(icon, theme_manager_get_color("secondary"), 0);
+        lv_obj_set_style_text_font(icon, &mdi_icons_16, 0);
+
+        visible_count++;
+    }
+
+    // "N additional sensors >" overflow row
+    int additional = static_cast<int>(visible.size()) - visible_count;
+    if (additional > 0) {
+        lv_obj_t* more_row = lv_obj_create(secondary_temps_list_);
+        lv_obj_set_width(more_row, LV_PCT(100));
+        lv_obj_set_height(more_row, LV_SIZE_CONTENT);
+        lv_obj_set_style_bg_opa(more_row, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(more_row, 0, 0);
+        lv_obj_set_style_pad_all(more_row, 0, 0);
+        lv_obj_remove_flag(more_row, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(more_row, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_flex_flow(more_row, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(more_row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER,
+                              LV_FLEX_ALIGN_CENTER);
+
+        char more_buf[48];
+        std::snprintf(more_buf, sizeof(more_buf), "%d additional sensor%s", additional,
+                      additional == 1 ? "" : "s");
+        lv_obj_t* more_label = lv_label_create(more_row);
+        lv_label_set_text(more_label, more_buf);
+        lv_obj_set_style_text_color(more_label, theme_manager_get_color("text_muted"), 0);
+        lv_obj_set_style_text_font(more_label, theme_manager_get_font("font_small"), 0);
+
+        lv_obj_t* chevron = lv_label_create(more_row);
+        lv_label_set_text(chevron, ui_icon::lookup_codepoint("chevron_right"));
+        lv_obj_set_style_text_color(chevron, theme_manager_get_color("secondary"), 0);
+        lv_obj_set_style_text_font(chevron, &mdi_icons_16, 0);
+
+        // Tap to open sensors settings overlay
+        lv_obj_add_event_cb(
+            more_row,
+            [](lv_event_t* e) {
+                auto* self = static_cast<ControlsPanel*>(lv_event_get_user_data(e));
+                self->handle_secondary_temps_clicked();
+            },
+            LV_EVENT_CLICKED, this);
+    }
+
+    subscribe_to_secondary_temp_subjects();
+
+    spdlog::debug("[{}] Populated {} secondary temp sensors ({} visible, {} additional)",
+                  get_name(), visible.size(), visible_count, additional);
+}
+
+void ControlsPanel::handle_secondary_temps_clicked() {
+    spdlog::debug("[{}] Secondary temps overflow clicked - opening sensors overlay", get_name());
+    auto& overlay = helix::settings::get_sensor_settings_overlay();
+    overlay.show(parent_screen_);
+}
+
+void ControlsPanel::on_secondary_temp_changed(lv_observer_t* obs, lv_subject_t* subject) {
+    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
+    if (self) {
+        int centidegrees = lv_subject_get_int(subject);
+        auto& tsm = helix::sensors::TemperatureSensorManager::instance();
+        for (const auto& row : self->secondary_temp_rows_) {
+            auto* temp_subject = tsm.get_temp_subject(row.klipper_name);
+            if (temp_subject == subject) {
+                self->update_secondary_temp(row.klipper_name, centidegrees);
+                break;
+            }
+        }
+    }
+}
+
+void ControlsPanel::subscribe_to_secondary_temp_subjects() {
+    secondary_temp_observers_.reserve(secondary_temp_rows_.size());
+
+    auto& tsm = helix::sensors::TemperatureSensorManager::instance();
+    for (const auto& row : secondary_temp_rows_) {
+        if (auto* subject = tsm.get_temp_subject(row.klipper_name)) {
+            secondary_temp_observers_.emplace_back(subject, on_secondary_temp_changed, this);
+            spdlog::trace("[{}] Subscribed to temp subject for sensor '{}'", get_name(),
+                          row.klipper_name);
+        }
+    }
+
+    spdlog::debug("[{}] Subscribed to {} secondary temp sensor subjects", get_name(),
+                  secondary_temp_observers_.size());
+}
+
+void ControlsPanel::update_secondary_temp(const std::string& klipper_name, int centidegrees) {
+    for (const auto& row : secondary_temp_rows_) {
+        if (row.klipper_name == klipper_name && row.temp_label) {
+            char temp_buf[16];
+            int temp_c = centidegrees / 100;
+            std::snprintf(temp_buf, sizeof(temp_buf), "%d\u00B0C", temp_c);
+            lv_label_set_text(row.temp_label, temp_buf);
+            spdlog::trace("[{}] Updated secondary temp '{}' to {}", get_name(), klipper_name,
+                          temp_buf);
             break;
         }
     }

@@ -186,7 +186,8 @@ class ControlsPanel : public PanelBase {
     /// @brief Temperature observer bundle (nozzle + bed temps)
     helix::ui::TemperatureObserverBundle<ControlsPanel> temp_observers_;
     ObserverGuard fan_observer_;
-    ObserverGuard fans_version_observer_; // Multi-fan list changes
+    ObserverGuard fans_version_observer_;      // Multi-fan list changes
+    ObserverGuard temp_sensor_count_observer_; // Temp sensor list changes
 
     //
     // === Lazily-Created Child Panels ===
@@ -221,6 +222,16 @@ class ControlsPanel : public PanelBase {
     };
     std::vector<SecondaryFanRow> secondary_fan_rows_;    ///< Tracked for reactive updates
     std::vector<ObserverGuard> secondary_fan_observers_; ///< Per-fan speed observers
+
+    lv_obj_t* secondary_temps_list_ = nullptr; // Container for dynamic temp sensor rows
+
+    /// @brief Info for a secondary temperature sensor row for reactive temp updates
+    struct SecondaryTempRow {
+        std::string klipper_name; // e.g., "temperature_sensor mcu_temp"
+        lv_obj_t* temp_label = nullptr;
+    };
+    std::vector<SecondaryTempRow> secondary_temp_rows_;   ///< Tracked for reactive updates
+    std::vector<ObserverGuard> secondary_temp_observers_; ///< Per-sensor temp observers
 
     //
     // === Z-Offset Banner (reactive binding - no widget caching needed) ===
@@ -296,7 +307,8 @@ class ControlsPanel : public PanelBase {
     void update_nozzle_temp_display();
     void update_bed_temp_display();
     void update_fan_display();
-    void populate_secondary_fans();                        // Build fan list from PrinterState
+    void populate_secondary_fans();  // Build fan list from PrinterState
+    void populate_secondary_temps(); // Build temp sensor list from TemperatureSensorManager
     void update_z_offset_delta_display(int delta_microns); // Format delta for banner
 
     // Z-Offset save handler
@@ -314,6 +326,7 @@ class ControlsPanel : public PanelBase {
     void handle_bed_temp_clicked();
     void handle_cooling_clicked();
     void handle_secondary_fans_clicked();
+    void handle_secondary_temps_clicked();
 
     //
     // === Quick Action Button Handlers ===
@@ -444,6 +457,10 @@ class ControlsPanel : public PanelBase {
     static void on_secondary_fan_speed_changed(lv_observer_t* obs, lv_subject_t* subject);
     void subscribe_to_secondary_fan_speeds();
     void update_secondary_fan_speed(const std::string& object_name, int speed_pct);
+
+    static void on_secondary_temp_changed(lv_observer_t* obs, lv_subject_t* subject);
+    void subscribe_to_secondary_temp_subjects();
+    void update_secondary_temp(const std::string& klipper_name, int centidegrees);
 };
 
 // Global instance accessor (needed by main.cpp and XML event_cb trampolines)

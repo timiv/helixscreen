@@ -169,6 +169,12 @@
               <text_small text="Chamber:" translation_tag="Chamber:"/>
               <temp_display name="chamber_temp_display" size="md" show_target="false" bind_current="chamber_temp"/>
             </lv_obj>
+            <!-- Secondary temperature sensors list (populated dynamically) -->
+            <lv_obj name="secondary_temps_list"
+                    width="100%" height="content" style_pad_all="0" scrollable="false" flex_flow="column"
+                    style_pad_gap="#space_xxs" style_pad_top="#space_xs">
+              <!-- Dynamic temp sensor rows will be added here by C++ -->
+            </lv_obj>
           </ui_card>
           <!-- Card 3: Cooling (Multi-Fan) -->
           <ui_card name="card_cooling"
