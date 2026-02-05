@@ -131,9 +131,14 @@
                     style_margin_top="#space_sm" clickable="true" scrollable="false">
               <event_cb trigger="clicked" callback="on_nozzle_temp_clicked"/>
               <text_small text="Nozzle:" translation_tag="Nozzle:"/>
-              <temp_display name="nozzle_temp_display"
-                            size="md" show_target="true" bind_current="extruder_temp" bind_target="extruder_target"
-                            event_cb="on_nozzle_temp_clicked"/>
+              <lv_obj width="content" height="content" flex_flow="row" style_pad_all="0"
+                      scrollable="false" style_flex_cross_place="center" style_pad_gap="#space_xs"
+                      clickable="false" event_bubble="true">
+                <temp_display name="nozzle_temp_display"
+                              size="md" show_target="true" bind_current="extruder_temp" bind_target="extruder_target"
+                              event_cb="on_nozzle_temp_clicked"/>
+                <icon src="pencil" size="xs" variant="secondary" clickable="false" event_bubble="true"/>
+              </lv_obj>
             </lv_obj>
             <text_small name="nozzle_status"
                         width="100%" bind_text="controls_nozzle_status" style_text_color="#text"
@@ -144,9 +149,14 @@
                     clickable="true" scrollable="false">
               <event_cb trigger="clicked" callback="on_bed_temp_clicked"/>
               <text_small text="Bed:" translation_tag="Bed:"/>
-              <temp_display name="bed_temp_display"
-                            size="md" show_target="true" bind_current="bed_temp" bind_target="bed_target"
-                            event_cb="on_bed_temp_clicked"/>
+              <lv_obj width="content" height="content" flex_flow="row" style_pad_all="0"
+                      scrollable="false" style_flex_cross_place="center" style_pad_gap="#space_xs"
+                      clickable="false" event_bubble="true">
+                <temp_display name="bed_temp_display"
+                              size="md" show_target="true" bind_current="bed_temp" bind_target="bed_target"
+                              event_cb="on_bed_temp_clicked"/>
+                <icon src="pencil" size="xs" variant="secondary" clickable="false" event_bubble="true"/>
+              </lv_obj>
             </lv_obj>
             <text_small name="bed_status"
                         width="100%" bind_text="controls_bed_status" style_text_color="#text" style_text_align="right"
