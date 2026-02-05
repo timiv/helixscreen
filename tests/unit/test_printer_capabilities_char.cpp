@@ -223,12 +223,19 @@ TEST_CASE("Capabilities characterization: set_hardware updates capability subjec
 
     // Create hardware discovery with various capabilities
     PrinterDiscovery hardware;
-    nlohmann::json objects = {"quad_gantry_level", "z_tilt",
-                              "bed_mesh",          "probe",
-                              "heater_bed",        "neopixel led_strip",
-                              "adxl345",           "firmware_retraction",
-                              "timelapse",         "output_pin beeper"};
+    nlohmann::json objects = {"quad_gantry_level",
+                              "z_tilt",
+                              "bed_mesh",
+                              "probe",
+                              "heater_bed",
+                              "neopixel led_strip",
+                              "firmware_retraction",
+                              "timelapse",
+                              "output_pin beeper"};
     hardware.parse_objects(objects);
+    // Accelerometers are detected from configfile, not objects list
+    nlohmann::json config = {{"adxl345", nlohmann::json::object()}};
+    hardware.parse_config_keys(config);
 
     SECTION("set_hardware updates QGL from hardware discovery") {
         state.set_hardware(hardware);
@@ -431,19 +438,19 @@ TEST_CASE("Capabilities characterization: set_kinematics updates printer_bed_mov
 
     lv_subject_t* subject = state.get_printer_bed_moves_subject();
 
-    SECTION("corexy kinematics sets bed_moves to 0 (gantry moves on Z)") {
+    SECTION("corexy kinematics sets bed_moves to 1 (bed moves on Z)") {
         state.set_kinematics("corexy");
-        REQUIRE(lv_subject_get_int(subject) == 0);
-    }
-
-    SECTION("cartesian kinematics sets bed_moves to 1 (bed moves on Z)") {
-        state.set_kinematics("cartesian");
         REQUIRE(lv_subject_get_int(subject) == 1);
     }
 
-    SECTION("corexz kinematics sets bed_moves to 0") {
-        state.set_kinematics("corexz");
+    SECTION("cartesian kinematics sets bed_moves to 0 (gantry moves on Z)") {
+        state.set_kinematics("cartesian");
         REQUIRE(lv_subject_get_int(subject) == 0);
+    }
+
+    SECTION("corexz kinematics sets bed_moves to 1 (bed moves on Z)") {
+        state.set_kinematics("corexz");
+        REQUIRE(lv_subject_get_int(subject) == 1);
     }
 
     SECTION("delta kinematics sets bed_moves to 0") {
@@ -451,19 +458,19 @@ TEST_CASE("Capabilities characterization: set_kinematics updates printer_bed_mov
         REQUIRE(lv_subject_get_int(subject) == 0);
     }
 
-    SECTION("hybrid_corexy kinematics sets bed_moves to 0") {
+    SECTION("hybrid_corexy kinematics sets bed_moves to 1 (contains corexy)") {
         state.set_kinematics("hybrid_corexy");
-        REQUIRE(lv_subject_get_int(subject) == 0);
+        REQUIRE(lv_subject_get_int(subject) == 1);
     }
 
     SECTION("switching between kinematics updates correctly") {
-        state.set_kinematics("cartesian");
+        state.set_kinematics("corexy");
         REQUIRE(lv_subject_get_int(subject) == 1);
 
-        state.set_kinematics("corexy");
+        state.set_kinematics("cartesian");
         REQUIRE(lv_subject_get_int(subject) == 0);
 
-        state.set_kinematics("cartesian");
+        state.set_kinematics("corexy");
         REQUIRE(lv_subject_get_int(subject) == 1);
     }
 }
@@ -544,12 +551,12 @@ TEST_CASE("Capabilities characterization: observer fires when capability changes
 
         lv_observer_t* observer = lv_subject_add_observer(subject, observer_cb, user_data);
 
-        // Initial
+        // Initial (default is 0 = gantry moves)
         REQUIRE(user_data[0] == 1);
         REQUIRE(user_data[1] == 0);
 
-        // Change kinematics
-        state.set_kinematics("cartesian");
+        // Change kinematics to corexy (bed moves, triggers 0→1)
+        state.set_kinematics("corexy");
 
         REQUIRE(user_data[0] >= 2);
         REQUIRE(user_data[1] == 1);
@@ -595,8 +602,8 @@ TEST_CASE("Capabilities characterization: capability subjects are independent",
         REQUIRE(lv_subject_get_int(get_subject_by_name("printer_has_probe")) == 1);
         REQUIRE(lv_subject_get_int(get_subject_by_name("printer_has_heater_bed")) == 1);
 
-        // Change kinematics
-        state.set_kinematics("cartesian");
+        // Change kinematics to corexy (bed moves on Z for corexy family)
+        state.set_kinematics("corexy");
 
         // bed_moves should change, but not other capabilities
         REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
@@ -643,7 +650,7 @@ TEST_CASE("Capabilities characterization: subjects survive reset_for_testing cyc
     state.set_hardware(hardware);
     helix::ui::UpdateQueue::instance().drain_queue_for_testing();
 
-    state.set_kinematics("cartesian");
+    state.set_kinematics("corexy");
     state.set_spoolman_available(true);
     helix::ui::UpdateQueue::instance().drain_queue_for_testing();
 
@@ -664,7 +671,7 @@ TEST_CASE("Capabilities characterization: subjects survive reset_for_testing cyc
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
 
     // Subjects should still be functional after reset
-    state.set_kinematics("cartesian");
+    state.set_kinematics("corexy");
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
 }
 
@@ -806,20 +813,20 @@ TEST_CASE("Capabilities characterization: various hardware detection patterns",
         REQUIRE(lv_subject_get_int(get_subject_by_name("printer_has_speaker")) == 1);
     }
 
-    SECTION("accelerometer detected from resonance_tester") {
+    SECTION("accelerometer detected from resonance_tester in config") {
         PrinterDiscovery hardware;
-        nlohmann::json objects = {"resonance_tester"};
-        hardware.parse_objects(objects);
+        nlohmann::json config = {{"resonance_tester", nlohmann::json::object()}};
+        hardware.parse_config_keys(config);
         state.set_hardware(hardware);
         helix::ui::UpdateQueue::instance().drain_queue_for_testing();
 
         REQUIRE(lv_subject_get_int(get_subject_by_name("printer_has_accelerometer")) == 1);
     }
 
-    SECTION("accelerometer detected from adxl345") {
+    SECTION("accelerometer detected from adxl345 in config") {
         PrinterDiscovery hardware;
-        nlohmann::json objects = {"adxl345"};
-        hardware.parse_objects(objects);
+        nlohmann::json config = {{"adxl345", nlohmann::json::object()}};
+        hardware.parse_config_keys(config);
         state.set_hardware(hardware);
         helix::ui::UpdateQueue::instance().drain_queue_for_testing();
 
@@ -857,13 +864,15 @@ TEST_CASE("Capabilities characterization: typical Voron 2.4 configuration",
                               "heater_bed",
                               "neopixel sb_leds",
                               "neopixel chamber_lights",
-                              "adxl345",
-                              "resonance_tester",
                               "output_pin beeper",
                               "firmware_retraction",
                               "gcode_macro CLEAN_NOZZLE",
                               "gcode_macro PURGE_LINE"};
     hardware.parse_objects(objects);
+    // Accelerometers are detected from configfile, not objects list
+    nlohmann::json config = {{"adxl345", nlohmann::json::object()},
+                             {"resonance_tester", nlohmann::json::object()}};
+    hardware.parse_config_keys(config);
     state.set_hardware(hardware);
     helix::ui::UpdateQueue::instance().drain_queue_for_testing();
 
@@ -879,7 +888,7 @@ TEST_CASE("Capabilities characterization: typical Voron 2.4 configuration",
     REQUIRE(lv_subject_get_int(get_subject_by_name("printer_has_speaker")) == 1);
     REQUIRE(lv_subject_get_int(get_subject_by_name("printer_has_firmware_retraction")) == 1);
 
-    // CoreXY = gantry moves on Z
+    // CoreXY + QGL = gantry moves on Z (Voron 2.4)
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
 
     // Z-tilt not present on Voron 2.4 (uses QGL instead)
@@ -908,8 +917,8 @@ TEST_CASE("Capabilities characterization: typical Ender 3 configuration",
     REQUIRE(lv_subject_get_int(get_subject_by_name("printer_has_probe")) == 1);
     REQUIRE(lv_subject_get_int(get_subject_by_name("printer_has_heater_bed")) == 1);
 
-    // Cartesian = bed moves on Z
-    REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
+    // Cartesian = gantry moves on Z
+    REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
 
     // No QGL or Z-tilt on Ender 3
     REQUIRE(lv_subject_get_int(get_subject_by_name("printer_has_qgl")) == 0);

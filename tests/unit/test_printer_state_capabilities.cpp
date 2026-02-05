@@ -96,12 +96,12 @@ TEST_CASE("PrinterState: set_printer_type fetches capabilities from database",
     REQUIRE(caps.has_capability("bed_mesh"));
     const auto* bed_mesh = caps.get_capability("bed_mesh");
     REQUIRE(bed_mesh != nullptr);
-    REQUIRE(bed_mesh->param == "FORCE_LEVELING");
-    REQUIRE(bed_mesh->skip_value == "false");
-    REQUIRE(bed_mesh->enable_value == "true");
+    REQUIRE(bed_mesh->param == "SKIP_LEVELING");
+    REQUIRE(bed_mesh->skip_value == "1");
+    REQUIRE(bed_mesh->enable_value == "0");
 }
 
-TEST_CASE("PrinterState: capabilities include purge_line parameter",
+TEST_CASE("PrinterState: AD5M Pro does not include purge_line parameter",
           "[printer_state][capabilities]") {
     lv_init_safe();
 
@@ -113,16 +113,11 @@ TEST_CASE("PrinterState: capabilities include purge_line parameter",
 
     const PrintStartCapabilities& caps = state.get_print_start_capabilities();
 
-    // Verify purge_line param exists
-    REQUIRE(caps.has_capability("purge_line"));
-    const auto* purge = caps.get_capability("purge_line");
-    REQUIRE(purge != nullptr);
-    REQUIRE(purge->param == "DISABLE_PRIMING");
-    REQUIRE(purge->skip_value == "true");
-    REQUIRE(purge->enable_value == "false");
+    // AD5M Pro START_PRINT macro does not have purge_line or skew_correct params
+    REQUIRE_FALSE(caps.has_capability("purge_line"));
 }
 
-TEST_CASE("PrinterState: capabilities include skew_correct parameter",
+TEST_CASE("PrinterState: AD5M Pro does not include skew_correct parameter",
           "[printer_state][capabilities]") {
     lv_init_safe();
 
@@ -134,11 +129,8 @@ TEST_CASE("PrinterState: capabilities include skew_correct parameter",
 
     const PrintStartCapabilities& caps = state.get_print_start_capabilities();
 
-    // Verify skew_correct param exists
-    REQUIRE(caps.has_capability("skew_correct"));
-    const auto* skew = caps.get_capability("skew_correct");
-    REQUIRE(skew != nullptr);
-    REQUIRE(skew->param == "DISABLE_SKEW_CORRECT");
+    // AD5M Pro START_PRINT macro does not have skew_correct param
+    REQUIRE_FALSE(caps.has_capability("skew_correct"));
 }
 
 // ============================================================================

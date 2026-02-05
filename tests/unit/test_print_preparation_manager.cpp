@@ -615,7 +615,7 @@ TEST_CASE("PrintPreparationManager: capability keys match category_to_string",
         // Verify the param details are accessible via the correct key
         auto* bed_cap = caps.get_capability("bed_mesh");
         REQUIRE(bed_cap != nullptr);
-        REQUIRE(bed_cap->param == "FORCE_LEVELING");
+        REQUIRE(bed_cap->param == "SKIP_LEVELING");
 
         // This is the key assertion: code using capabilities MUST use "bed_mesh",
         // not "bed_leveling". Any lookup with "bed_leveling" will fail silently.
@@ -668,7 +668,7 @@ TEST_CASE("PrintPreparationManager: collect_macro_skip_params uses correct capab
         // Verify the param details are accessible via the correct key
         auto* bed_cap = caps.get_capability("bed_mesh");
         REQUIRE(bed_cap != nullptr);
-        REQUIRE(bed_cap->param == "FORCE_LEVELING");
+        REQUIRE(bed_cap->param == "SKIP_LEVELING");
     }
 
     SECTION("All capability keys match category_to_string output") {
@@ -773,7 +773,7 @@ TEST_CASE("PrintPreparationManager: capabilities come from PrinterState",
         // Get expected capability details for comparison
         auto* bed_cap = state_caps.get_capability("bed_mesh");
         REQUIRE(bed_cap != nullptr);
-        REQUIRE(bed_cap->param == "FORCE_LEVELING");
+        REQUIRE(bed_cap->param == "SKIP_LEVELING");
     }
 
     SECTION("Manager sees empty capabilities when PrinterState has no type") {
