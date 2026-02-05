@@ -40,6 +40,7 @@ static const IconMapping ICON_MAP[] = {
 
     // Arrow icons
     {"arrow_down",         "\xF3\xB0\x81\x85"},  // F0045 arrow-down (head descends)
+    {"arrow_down_bold",    "\xF3\xB0\x9C\xAE"},  // F072E arrow-down-bold (probe sensors)
     {"arrow_expand_down",  "\xF3\xB0\x9E\x96"},  // F0796 arrow-expand-down (bed drops - CoreXY)
     {"arrow_expand_up",    "\xF3\xB0\x9E\x99"},  // F0799 arrow-expand-up (bed rises - CoreXY)
     {"arrow_left",         "\xF3\xB0\x81\x8D"},  // F004D arrow-left
@@ -95,6 +96,7 @@ static const IconMapping ICON_MAP[] = {
     {"delete",             "\xF3\xB0\x86\xB4"},  // F01B4 delete/trash
     {"dots_vertical",      "\xF3\xB0\x87\x99"},  // F01D9 dots-vertical/advanced
     {"download",           "\xF3\xB0\x87\x9A"},  // F01DA download
+    {"electric_switch",    "\xF3\xB0\xBA\x9F"},  // F0E9F electric-switch
 
     // Engine/Motor
     {"engine",             "\xF3\xB0\x87\xBA"},  // F01FA engine/motor
@@ -164,6 +166,8 @@ static const IconMapping ICON_MAP[] = {
     {"network",            "\xF3\xB0\x88\x80"},  // F0200 ethernet (network)
     {"notifications",      "\xF3\xB0\x82\x9A"},  // F009A bell
 
+    {"palette",            "\xF3\xB0\x8F\x98"},  // F03D8 palette (color sensors)
+
     // Pause/Pencil/Play/Plus
     {"pause",              "\xF3\xB0\x8F\xA4"},  // F03E4 pause
     {"pencil",             "\xF3\xB0\x8F\xAB"},  // F03EB pencil (edit)
@@ -196,6 +200,7 @@ static const IconMapping ICON_MAP[] = {
     {"script_text",        "\xF3\xB0\xAF\x82"},  // F0BC2 script-text (macro/script)
     {"sd",                 "\xF3\xB0\x91\xB9"},  // F0479 sd
     {"send",               "\xF3\xB0\x92\x8A"},  // F048A send
+    {"sensor",             "\xF3\xB0\xB6\x91"},  // F0D91 motion-sensor (sensor placeholder)
     {"settings",           "\xF3\xB0\x92\x93"},  // F0493 cog
     {"sine_wave",          "\xF3\xB0\xA5\x9B"},  // F095B sine-wave
     {"source_branch",      "\xF3\xB0\x98\xAC"},  // F062C source-branch (bypass/fork)
@@ -235,6 +240,7 @@ static const IconMapping ICON_MAP[] = {
 
     // Water/Weight/WiFi icons
     {"water",              "\xF3\xB0\x96\x8C"},  // F058C water/droplet
+    {"waveform",           "\xF3\xB1\x91\xBD"},  // F147D waveform (accelerometers)
     {"weight",             "\xF3\xB0\x96\xA1"},  // F05A1 weight
     {"wifi",               "\xF3\xB0\x96\xA9"},  // F05A9 wifi
     {"wifi_alert",         "\xF3\xB1\x9A\xB5"},  // F16B5 wifi-alert
