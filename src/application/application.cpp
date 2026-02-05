@@ -1831,6 +1831,11 @@ void Application::shutdown() {
     // with stale 'self' pointers that will crash if processed after panel destruction.
     ui_update_queue_shutdown();
 
+    // Stop ALL LVGL animations before destroying panels.
+    // Animations hold pointers to objects; if panels are destroyed first,
+    // a pending anim_timer tick can try to refresh styles on freed objects.
+    lv_anim_delete_all();
+
     // Destroy ALL static panel/overlay globals via self-registration pattern.
     // Must happen BEFORE deinit_all() so ObserverGuards can properly unsubscribe
     // from subjects that still exist. Safe at this point because m_moonraker is
