@@ -17,6 +17,7 @@
 #include "ui_error_reporting.h"
 #include "ui_modal.h"
 #include "ui_panel_filament.h"
+#include "ui_update_queue.h"
 
 #include "abort_manager.h"
 #include "ams_state.h"
@@ -158,8 +159,12 @@ int MoonrakerManager::connect(const std::string& websocket_url, const std::strin
                             int max_temp = static_cast<int>(limits.max_temperature_celsius);
                             int min_temp = static_cast<int>(limits.min_temperature_celsius);
 
-                            get_global_filament_panel().set_limits(min_temp, max_temp, min_extrude);
-                            spdlog::info("[MoonrakerManager] Safety limits propagated to panels");
+                            ui_queue_update([min_temp, max_temp, min_extrude]() {
+                                get_global_filament_panel().set_limits(min_temp, max_temp,
+                                                                       min_extrude);
+                                spdlog::info(
+                                    "[MoonrakerManager] Safety limits propagated to panels");
+                            });
                         },
                         [](const MoonrakerError& err) {
                             spdlog::warn("[MoonrakerManager] Failed to fetch safety limits: {}",
