@@ -84,10 +84,6 @@ SPLASH_BIN="${BIN_DIR}/helix-splash"
 MAIN_BIN="${BIN_DIR}/helix-screen"
 WATCHDOG_BIN="${BIN_DIR}/helix-watchdog"
 
-# Default screen dimensions (can be overridden by environment)
-: "${HELIX_SCREEN_WIDTH:=800}"
-: "${HELIX_SCREEN_HEIGHT:=480}"
-
 # Log function (must be defined before first use)
 # Uses stderr to avoid polluting stdout which could be captured unexpectedly
 log() {
@@ -159,11 +155,10 @@ fi
 # Note: PASSTHROUGH_ARGS is unquoted to allow word splitting (POSIX compatible)
 if [ "${USE_WATCHDOG}" = "1" ]; then
     # Watchdog supervises helix-screen and manages splash lifecycle
-    # Pass screen dimensions and splash binary to watchdog, then use -- to separate helix-screen args
+    # Watchdog and splash auto-detect resolution from display hardware
     log "Starting via watchdog supervisor"
     # shellcheck disable=SC2086
-    "${WATCHDOG_BIN}" -w "${HELIX_SCREEN_WIDTH}" -h "${HELIX_SCREEN_HEIGHT}" \
-        ${SPLASH_ARGS} -- \
+    "${WATCHDOG_BIN}" ${SPLASH_ARGS} -- \
         "${MAIN_BIN}" ${EXTRA_FLAGS} ${PASSTHROUGH_ARGS}
     EXIT_CODE=$?
 else

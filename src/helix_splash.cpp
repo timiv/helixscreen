@@ -121,7 +121,7 @@ static void fade_anim_cb(void* obj, int32_t value) {
 /**
  * @brief Create and configure the splash screen UI
  */
-static lv_obj_t* create_splash_ui(lv_obj_t* screen, int width, int height) {
+static lv_obj_t* create_splash_ui(lv_obj_t* screen, int width) {
     // Set dark background
     lv_obj_set_style_bg_color(screen, lv_color_hex(BG_COLOR_DARK), 0);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
@@ -200,9 +200,9 @@ int main(int argc, char** argv) {
     signal(SIGINT, signal_handler);
     signal(SIGUSR1, signal_handler);
 
-    // Parse command line arguments
-    int width = DEFAULT_WIDTH;
-    int height = DEFAULT_HEIGHT;
+    // Parse command line arguments (CLI overrides auto-detection)
+    int width = 0;
+    int height = 0;
     parse_args(argc, argv, width, height);
 
     // Initialize LVGL
@@ -213,6 +213,20 @@ int main(int argc, char** argv) {
     if (!backend) {
         fprintf(stderr, "helix-splash: Failed to create display backend\n");
         return 1;
+    }
+
+    // Auto-detect resolution from display hardware if not overridden via CLI
+    if (width == 0 || height == 0) {
+        auto res = backend->detect_resolution();
+        if (res.valid) {
+            width = res.width;
+            height = res.height;
+            fprintf(stderr, "helix-splash: Auto-detected resolution: %dx%d\n", width, height);
+        } else {
+            width = DEFAULT_WIDTH;
+            height = DEFAULT_HEIGHT;
+            fprintf(stderr, "helix-splash: Using default resolution: %dx%d\n", width, height);
+        }
     }
 
     // Unblank display via framebuffer ioctl BEFORE creating LVGL display.
@@ -247,7 +261,7 @@ int main(int argc, char** argv) {
 
     // Create splash UI
     lv_obj_t* screen = lv_screen_active();
-    lv_obj_t* container = create_splash_ui(screen, width, height);
+    lv_obj_t* container = create_splash_ui(screen, width);
     (void)container; // Used by animation, no need to track
 
     // Main loop - run until signaled to quit

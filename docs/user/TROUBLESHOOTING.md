@@ -354,12 +354,11 @@ sudo usermod -aG video $USER
 
 **Solutions:**
 
-**Set correct dimensions in service environment:**
+HelixScreen auto-detects resolution from DRM and framebuffer backends. If auto-detection returns wrong values, override via command line:
 
-Edit `/etc/systemd/system/helixscreen.service`:
-```ini
-Environment="HELIX_SCREEN_WIDTH=800"
-Environment="HELIX_SCREEN_HEIGHT=480"
+```bash
+# In helixscreen.service ExecStart, add flags:
+ExecStart=/opt/helixscreen/bin/helix-launcher.sh --width 800 --height 480
 ```
 
 Then reload:
@@ -367,8 +366,6 @@ Then reload:
 sudo systemctl daemon-reload
 sudo systemctl restart helixscreen
 ```
-
-> **Note:** HelixScreen auto-detects resolution on DRM backends. Manual override is mainly needed for framebuffer displays.
 
 ---
 

@@ -698,9 +698,8 @@ When running as a systemd service, environment variables are set in the service 
 ```ini
 # /etc/systemd/system/helixscreen.service
 [Service]
-Environment="HELIX_SCREEN_WIDTH=800"
-Environment="HELIX_SCREEN_HEIGHT=480"
 Environment="HELIX_DISPLAY_BACKEND=drm"
+# Environment="HELIX_DATA_DIR=/usr/share/helixscreen"
 ```
 
 See `docs/user/CONFIGURATION.md` for systemd deployment details.

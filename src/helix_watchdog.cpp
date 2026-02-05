@@ -174,8 +174,8 @@ static int read_config_brightness(int default_value = 100) {
 // =============================================================================
 
 struct WatchdogArgs {
-    int width = DEFAULT_WIDTH;
-    int height = DEFAULT_HEIGHT;
+    int width = 0; // 0 = auto-detect from display hardware
+    int height = 0;
     std::string splash_binary; // Optional: --splash-bin=<path>
     std::string child_binary;
     std::vector<std::string> child_args;
@@ -255,13 +255,8 @@ static pid_t start_splash_process(const WatchdogArgs& args) {
     }
 
     if (pid == 0) {
-        // Child process: exec splash
-        char width_str[16], height_str[16];
-        snprintf(width_str, sizeof(width_str), "%d", args.width);
-        snprintf(height_str, sizeof(height_str), "%d", args.height);
-
-        execl(args.splash_binary.c_str(), "helix-splash", "-w", width_str, "-h", height_str,
-              nullptr);
+        // Child process: exec splash (splash auto-detects resolution)
+        execl(args.splash_binary.c_str(), "helix-splash", nullptr);
 
         // If exec fails
         fprintf(stderr, "[Watchdog] Failed to exec splash: %s\n", strerror(errno));
@@ -755,6 +750,25 @@ int main(int argc, char** argv) {
     log_config.target = helix::logging::LogTarget::Auto;
     log_config.enable_console = true;
     helix::logging::init(log_config);
+
+    // Auto-detect resolution from display hardware if not overridden via CLI
+    if (args.width == 0 || args.height == 0) {
+        auto backend = DisplayBackend::create();
+        if (backend) {
+            auto res = backend->detect_resolution();
+            if (res.valid) {
+                args.width = res.width;
+                args.height = res.height;
+                spdlog::info("[Watchdog] Auto-detected resolution: {}x{}", args.width, args.height);
+            }
+        }
+        // Fall back to defaults if detection failed
+        if (args.width == 0 || args.height == 0) {
+            args.width = DEFAULT_WIDTH;
+            args.height = DEFAULT_HEIGHT;
+            spdlog::info("[Watchdog] Using default resolution: {}x{}", args.width, args.height);
+        }
+    }
 
     // Run the watchdog
     return run_watchdog(args);
