@@ -24,8 +24,8 @@
       <ui_card name="detail_card"
                height="100%" flex_grow="5" style_radius="#border_radius" style_pad_all="0" style_clip_corner="true"
                style_margin_left="#space_sm">
-        <!-- Pre-rendered gradient background -->
-        <lv_image name="gradient_bg" width="100%" height="100%" src="A:assets/images/gradient-panel-medium.bin"/>
+        <!-- Pre-rendered gradient background (source updated by C++ on theme switch) -->
+        <lv_image name="gradient_bg" width="100%" height="100%" src="A:assets/images/gradient-panel-medium-dark.bin"/>
         <!-- Thumbnail with reactive binding - uses cached PNG for better upscaling quality -->
         <lv_image name="detail_thumbnail"
                   width="100%" height="100%" bind_src="selected_detail_thumbnail" align="center" inner_align="contain"

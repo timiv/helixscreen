@@ -4,10 +4,7 @@
 <!-- Timelapse Settings Overlay Panel -->
 <!-- Configure Moonraker-Timelapse plugin settings for recording prints -->
 <component>
-  <consts>
-    <!-- Panel background for info boxes -->
-    <color name="overlay_bg" value="#1E1E1E"/>
-  </consts>
+  <!-- overlay_bg is a theme-aware pair defined in globals.xml -->
   <view name="timelapse_settings_overlay"
         extends="overlay_panel" width="#overlay_panel_width_full" title="Timelapse Settings" title_tag="Timelapse Settings" bg_color="#screen_bg">
     <!-- Content Area - no padding, rows handle their own -->

@@ -2,11 +2,7 @@
 <!-- Copyright (C) 2025-2026 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <component>
-  <consts>
-    <!-- Overlay colors for preparing state (dark theme-like appearance) -->
-    <color name="overlay_bg" value="#1E1E1E"/>
-    <color name="overlay_text" value="#E0E0E0"/>
-  </consts>
+  <!-- overlay_bg and overlay_text are theme-aware pairs defined in globals.xml -->
   <styles>
     <!-- Fully transparent but still takes up layout space -->
     <style name="invisible" opa="0"/>
@@ -34,7 +30,7 @@
         <!-- All children overlap as direct children of the card (matching print_file_detail pattern) -->
 
         <!-- Pre-rendered gradient background (shown in thumbnail[0] and 2D[2] modes, hidden in 3D[1]) -->
-        <lv_image name="gradient_background" width="100%" height="100%" src="A:assets/images/gradient-panel-medium.bin">
+        <lv_image name="gradient_background" width="100%" height="100%" src="A:assets/images/gradient-panel-medium-dark.bin">
           <bind_flag_if_eq subject="gcode_viewer_mode" flag="hidden" ref_value="1"/>
         </lv_image>
 

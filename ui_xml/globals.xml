@@ -124,6 +124,22 @@
     <percentage name="card_width" value="45%"/>
     <percentage name="card_height" value="80%"/>
 
+    <!-- ===================================================================== -->
+    <!-- Pre-rendered Gradient Background Paths (dark/light theme variants)  -->
+    <!-- ===================================================================== -->
+    <!-- Card gradients (print file cards in grid view) -->
+    <string name="gradient_card_small_dark" value="A:assets/images/gradient-card-small-dark.bin"/>
+    <string name="gradient_card_small_light" value="A:assets/images/gradient-card-small-light.bin"/>
+    <string name="gradient_card_medium_dark" value="A:assets/images/gradient-card-medium-dark.bin"/>
+    <string name="gradient_card_medium_light" value="A:assets/images/gradient-card-medium-light.bin"/>
+    <string name="gradient_card_large_dark" value="A:assets/images/gradient-card-large-dark.bin"/>
+    <string name="gradient_card_large_light" value="A:assets/images/gradient-card-large-light.bin"/>
+    <!-- Panel gradients (detail overlays: print status, file detail, history) -->
+    <string name="gradient_panel_medium_dark" value="A:assets/images/gradient-panel-medium-dark.bin"/>
+    <string name="gradient_panel_medium_light" value="A:assets/images/gradient-panel-medium-light.bin"/>
+    <string name="gradient_panel_large_dark" value="A:assets/images/gradient-panel-large-dark.bin"/>
+    <string name="gradient_panel_large_light" value="A:assets/images/gradient-panel-large-light.bin"/>
+
     <!-- Preview/thumbnail vertical offset to account for metadata overlays -->
     <!-- Shifts content up to prevent overlap with bottom metadata areas -->
     <percentage name="preview_offset_y" value="-20%"/>
@@ -287,6 +303,13 @@
          nord15: #b48ead - special, unusual (purple)
     -->
     <!-- ===================================================================== -->
+
+    <!-- Overlay colors (preparing state, info boxes, progress bars) -->
+    <color name="overlay_bg_dark" value="#1E1E1E"/>
+    <color name="overlay_bg_light" value="#E0E0E0"/>
+    <color name="overlay_text_dark" value="#E0E0E0"/>
+    <color name="overlay_text_light" value="#2E3440"/>
+    <!-- nord0 -->
 
     <!-- Static colors not derived from palette -->
     <color name="section_bg_color" value="#434c5e"/>

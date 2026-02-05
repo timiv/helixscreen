@@ -31,9 +31,10 @@
         extends="ui_card" height="#card_height" style_flex_basis="#card_base_width" flex_grow="1"
         style_min_width="#card_min_width" style_max_width="#card_max_width" style_pad_all="0" style_clip_corner="true"
         clickable="true">
-    <!-- Pre-rendered gradient background (LVGL native .bin for instant blitting) -->
+    <!-- Pre-rendered gradient background (LVGL native .bin for instant blitting)
+         Source updated at runtime by C++ based on theme mode (dark/light) and card size -->
     <lv_image name="gradient_bg"
-              width="#card_base_width" height="#card_height" src="A:assets/images/gradient-card-medium.bin"/>
+              width="#card_base_width" height="#card_height" src="A:assets/images/gradient-card-medium-dark.bin"/>
     <!-- Thumbnail image - pre-scaled to display size via ThumbnailProcessor
          Source images are now ~160x160 (matching card size) instead of 300x300,
          so contain scaling is nearly 1:1 with minimal CPU overhead -->

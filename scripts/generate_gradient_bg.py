@@ -9,8 +9,15 @@ Generate pre-rendered diagonal gradient background images for print file cards.
 Creates LVGL-native .bin files that can be loaded directly without runtime
 gradient calculation, significantly improving scroll performance on embedded devices.
 
+Supports dark and light theme variants:
+  - Dark mode: gray 123 -> 43 (bright top-right to dark bottom-left)
+  - Light mode: gray 200 -> 235 (subtle light gradient for light theme backgrounds)
+
 Usage:
-    python scripts/generate_gradient_bg.py [--output-dir build/assets/gradients]
+    python scripts/generate_gradient_bg.py [--output-dir assets/images] [--mode both]
+    python scripts/generate_gradient_bg.py --mode dark   # Dark variants only
+    python scripts/generate_gradient_bg.py --mode light  # Light variants only
+    python scripts/generate_gradient_bg.py --mode both   # Both (default)
 """
 
 import argparse
@@ -18,10 +25,15 @@ import os
 import struct
 from pathlib import Path
 
-# Gradient colors (matching ui_gradient_canvas.cpp defaults)
+# Dark mode gradient colors (matching ui_gradient_canvas.cpp defaults)
 # Diagonal gradient: bright at top-right, dark at bottom-left
-START_GRAY = 123  # Top-right - brighter
-END_GRAY = 43     # Bottom-left - darker
+DARK_START_GRAY = 123  # Top-right - brighter
+DARK_END_GRAY = 43     # Bottom-left - darker
+
+# Light mode gradient colors (subtle gradient for light theme backgrounds)
+# Lighter values create a gentle gradient that works on light card backgrounds
+LIGHT_START_GRAY = 235  # Top-right - brightest
+LIGHT_END_GRAY = 200    # Bottom-left - slightly darker
 
 # 4x4 Bayer dither matrix (normalized to 0-15)
 BAYER_4X4 = [
@@ -55,33 +67,41 @@ def clamp(val: int, min_val: int, max_val: int) -> int:
     return max(min_val, min(max_val, val))
 
 
-def generate_gradient(width: int, height: int, dither: bool = True) -> bytes:
+def generate_gradient(width: int, height: int, start_gray: int, end_gray: int,
+                      dither: bool = True) -> bytes:
     """
     Generate diagonal gradient pixel data in ARGB8888 format.
-    
+
+    Args:
+        width: Image width in pixels
+        height: Image height in pixels
+        start_gray: Gray value at top-right (brighter end)
+        end_gray: Gray value at bottom-left (darker end)
+        dither: Enable Bayer dithering to reduce banding
+
     Returns bytes in LVGL draw buffer format (ARGB8888, row-major).
     """
     pixels = bytearray()
-    
+
     # For diagonal gradient (top-right to bottom-left), max distance is width + height - 2
     max_dist = float(width + height - 2) if (width + height > 2) else 1.0
-    
+
     for y in range(height):
         for x in range(width):
             # Diagonal interpolation: top-right (bright) to bottom-left (dark)
             # Distance from top-right corner: (width-1-x) + y
             t = float((width - 1 - x) + y) / max_dist
-            
+
             # Interpolate gray value
-            gray = int(START_GRAY + t * (END_GRAY - START_GRAY))
-            
+            gray = int(start_gray + t * (end_gray - start_gray))
+
             if dither:
                 threshold = bayer_threshold(x, y)
                 gray = clamp(gray + threshold, 0, 255)
-            
+
             # ARGB8888: Blue, Green, Red, Alpha (little-endian BGRA in memory)
             pixels.extend([gray, gray, gray, 255])
-    
+
     return bytes(pixels)
 
 
@@ -129,24 +149,44 @@ def main():
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("build/assets/gradients"),
-        help="Output directory for .bin files"
+        default=Path("assets/images"),
+        help="Output directory for .bin files (default: assets/images)"
     )
     parser.add_argument(
         "--no-dither",
         action="store_true",
         help="Disable Bayer dithering"
     )
+    parser.add_argument(
+        "--mode",
+        choices=["dark", "light", "both"],
+        default="both",
+        help="Which theme variants to generate (default: both)"
+    )
     args = parser.parse_args()
-    
-    print("Generating gradient backgrounds...")
-    
-    for name, width, height in GRADIENT_SIZES:
-        pixel_data = generate_gradient(width, height, dither=not args.no_dither)
-        output_path = args.output_dir / f"gradient-{name}.bin"
-        write_lvgl_bin(output_path, width, height, pixel_data)
-    
-    print(f"\nDone! Generated {len(GRADIENT_SIZES)} gradient images in {args.output_dir}")
+
+    dither = not args.no_dither
+    count = 0
+
+    # Mode configurations: (suffix, start_gray, end_gray)
+    modes = []
+    if args.mode in ("dark", "both"):
+        modes.append(("dark", DARK_START_GRAY, DARK_END_GRAY))
+    if args.mode in ("light", "both"):
+        modes.append(("light", LIGHT_START_GRAY, LIGHT_END_GRAY))
+
+    print(f"Generating gradient backgrounds (mode={args.mode})...")
+
+    for mode_suffix, start_gray, end_gray in modes:
+        print(f"\n  [{mode_suffix}] gray {start_gray} -> {end_gray}")
+        for name, width, height in GRADIENT_SIZES:
+            pixel_data = generate_gradient(width, height, start_gray, end_gray,
+                                           dither=dither)
+            output_path = args.output_dir / f"gradient-{name}-{mode_suffix}.bin"
+            write_lvgl_bin(output_path, width, height, pixel_data)
+            count += 1
+
+    print(f"\nDone! Generated {count} gradient images in {args.output_dir}")
 
 
 if __name__ == "__main__":
