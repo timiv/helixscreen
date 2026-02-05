@@ -576,11 +576,13 @@ curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/script
 # On your computer (replace vX.Y.Z with actual version):
 VERSION=vX.Y.Z  # Check latest at https://github.com/prestonbrown/helixscreen/releases/latest
 wget "https://github.com/prestonbrown/helixscreen/releases/download/${VERSION}/helixscreen-ad5m-${VERSION}.tar.gz"
-wget https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh
-scp -O helixscreen-ad5m-${VERSION}.tar.gz install.sh root@<printer-ip>:/data/
+scp -O helixscreen-ad5m-${VERSION}.tar.gz root@<printer-ip>:/data/
 
-# On the printer:
-sh /data/install.sh --local /data/helixscreen-ad5m-*.tar.gz --update
+# On the printer (use the bundled install.sh - no need to download it again):
+# Forge-X:
+/opt/helixscreen/install.sh --local /data/helixscreen-ad5m-*.tar.gz --update
+# Klipper Mod:
+/root/printer_software/helixscreen/install.sh --local /data/helixscreen-ad5m-*.tar.gz --update
 ```
 
 This preserves your configuration and updates to the latest version.
@@ -641,9 +643,12 @@ The install script with `--uninstall` removes HelixScreen and **restores your pr
 curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | sh -s -- --uninstall
 ```
 
-**Adventurer 5M** (use the install.sh already on the printer):
+**Adventurer 5M** (use the bundled install.sh):
 ```bash
-sh /data/install.sh --uninstall
+# Forge-X:
+/opt/helixscreen/install.sh --uninstall
+# Klipper Mod:
+/root/printer_software/helixscreen/install.sh --uninstall
 ```
 
 ### Manual Uninstall

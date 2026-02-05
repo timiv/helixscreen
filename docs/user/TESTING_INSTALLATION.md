@@ -343,9 +343,9 @@ ps --no-headers -o comm 1
    scp -O helixscreen-ad5m-${VERSION}.tar.gz install.sh root@<printer-ip>:/data/
    ```
 
-2. **Run with --update:**
+2. **Run with --update** (use bundled install.sh):
    ```bash
-   sh /data/install.sh --local /data/helixscreen-ad5m-*.tar.gz --update
+   /opt/helixscreen/install.sh --local /data/helixscreen-ad5m-*.tar.gz --update
    ```
 
 3. **Verify config preserved:**
@@ -355,9 +355,9 @@ ps --no-headers -o comm 1
 
 #### Uninstall Test
 
-1. **Run uninstaller** (install.sh should already be on printer from install):
+1. **Run uninstaller** (use bundled install.sh):
    ```bash
-   sh /data/install.sh --uninstall
+   /opt/helixscreen/install.sh --uninstall
    ```
 
 2. **Verify removal and GuppyScreen restoration:**
@@ -446,9 +446,9 @@ ps --no-headers -o comm 1
 
 #### Uninstall Test
 
-1. **Run uninstaller** (install.sh should already be on printer from install):
+1. **Run uninstaller** (use bundled install.sh):
    ```bash
-   sh /data/install.sh --uninstall
+   /root/printer_software/helixscreen/install.sh --uninstall
    ```
 
 2. **Verify removal and KlipperScreen restoration:**
