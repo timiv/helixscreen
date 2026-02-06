@@ -1848,17 +1848,23 @@ void Application::shutdown() {
     lv_anim_delete_all();
 
     // Destroy ALL static panel/overlay globals via self-registration pattern.
-    // Must happen BEFORE deinit_all() so ObserverGuards can properly unsubscribe
+    // Must happen BEFORE lv_deinit() so ObserverGuards can properly unsubscribe
     // from subjects that still exist. Safe at this point because m_moonraker is
     // already reset, preventing async callbacks from recreating panels.
     StaticPanelRegistry::instance().destroy_all();
 
-    // Deinitialize core singleton subjects (PrinterState, AmsState, SettingsManager, etc.)
-    // Now safe because all panels (and their observers) have been destroyed.
-    StaticSubjectRegistry::instance().deinit_all();
-
-    // Shutdown display (calls lv_deinit)
+    // Shutdown display (calls lv_deinit) BEFORE deiniting subjects.
+    // lv_deinit() deletes all widgets, firing LV_EVENT_DELETE which triggers
+    // unsubscribe_on_delete_cb to properly remove widget-bound observers
+    // (from XML bind_text, bind_flag_if_eq, etc.) from subject linked lists.
+    // If subjects are deinited first, those observers get freed, leaving
+    // dangling pointers that crash when widget deletion tries to unsubscribe.
     m_display.reset();
+
+    // Deinitialize core singleton subjects (PrinterState, AmsState, SettingsManager, etc.)
+    // Now safe: widget-bound observers were already removed by lv_deinit() above,
+    // so lv_subject_deinit() only cleans up any remaining non-widget observers.
+    StaticSubjectRegistry::instance().deinit_all();
 
     spdlog::info("[Application] Shutdown complete");
 }
