@@ -1361,6 +1361,22 @@ void PrintSelectPanel::set_selected_file(const char* filename, const char* thumb
     }
     lv_subject_set_pointer(&selected_detail_thumbnail_subject_, selected_detail_thumbnail_buffer_);
 
+    // Toggle no-thumbnail placeholder icon in detail view
+    if (detail_view_ && detail_view_->get_widget()) {
+        lv_obj_t* no_thumb =
+            lv_obj_find_by_name(detail_view_->get_widget(), "detail_no_thumbnail_icon");
+        if (no_thumb) {
+            bool has_real =
+                thumbnail_src && thumbnail_src[0] != '\0' &&
+                !helix::ui::PrintSelectCardView::is_placeholder_thumbnail(thumbnail_src);
+            if (has_real) {
+                lv_obj_add_flag(no_thumb, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_remove_flag(no_thumb, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+    }
+
     lv_subject_copy_string(&selected_print_time_subject_, print_time);
     lv_subject_copy_string(&selected_filament_weight_subject_, filament_weight);
     lv_subject_copy_string(&selected_layer_count_subject_, layer_count);
