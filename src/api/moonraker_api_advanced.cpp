@@ -23,6 +23,16 @@ using namespace moonraker_internal;
 void MoonrakerAPI::update_bed_mesh(const json& bed_mesh) {
     std::lock_guard<std::mutex> lock(bed_mesh_mutex_);
 
+    spdlog::debug("[MoonrakerAPI] update_bed_mesh called with keys: {}", [&]() {
+        std::string keys;
+        for (auto it = bed_mesh.begin(); it != bed_mesh.end(); ++it) {
+            if (!keys.empty())
+                keys += ", ";
+            keys += it.key();
+        }
+        return keys;
+    }());
+
     // Parse active profile name
     if (bed_mesh.contains("profile_name") && !bed_mesh["profile_name"].is_null()) {
         active_bed_mesh_.name = bed_mesh["profile_name"].template get<std::string>();
@@ -71,6 +81,8 @@ void MoonrakerAPI::update_bed_mesh(const json& bed_mesh) {
     if (bed_mesh.contains("profiles") && bed_mesh["profiles"].is_object()) {
         bed_mesh_profiles_.clear();
         stored_bed_mesh_profiles_.clear();
+
+        spdlog::debug("[MoonrakerAPI] Parsing {} bed mesh profiles", bed_mesh["profiles"].size());
 
         for (auto& [profile_name, profile_data] : bed_mesh["profiles"].items()) {
             bed_mesh_profiles_.push_back(profile_name);

@@ -254,10 +254,13 @@ lv_obj_t* BedMeshPanel::create(lv_obj_t* parent) {
                          mesh->x_count, mesh->y_count);
             on_mesh_update_internal(*mesh);
         }
-        // Update profile list
-        update_profile_list_subjects();
     } else {
         spdlog::info("[{}] No mesh data available from Moonraker", get_name());
+    }
+
+    // Always update profile list — saved profiles exist even without an active mesh
+    if (api) {
+        update_profile_list_subjects();
     }
 
     // Apply saved render mode preference from settings
@@ -359,6 +362,10 @@ void BedMeshPanel::on_activate() {
         if (mesh) {
             on_mesh_update_internal(*mesh);
         }
+    }
+
+    // Always refresh profile list — saved profiles exist even without an active mesh
+    if (api) {
         update_profile_list_subjects();
     }
 }
@@ -384,6 +391,9 @@ void BedMeshPanel::update_profile_list_subjects() {
     const auto profiles = api->get_bed_mesh_profiles();
     const BedMeshProfile* active_mesh = api->get_active_bed_mesh();
     std::string active_name = active_mesh ? active_mesh->name : "";
+
+    spdlog::debug("[{}] update_profile_list_subjects: {} profiles, active='{}'", get_name(),
+                  profiles.size(), active_name);
 
     int count = std::min(static_cast<int>(profiles.size()), BED_MESH_MAX_PROFILES);
     lv_subject_set_int(&bed_mesh_profile_count_, count);
@@ -696,6 +706,11 @@ void BedMeshPanel::on_mesh_update_internal(const BedMeshProfile& mesh) {
     MoonrakerAPI* api = get_moonraker_api();
     const auto& bed = api ? api->hardware().build_volume() : BuildVolume{};
     bool has_valid_build_volume = (bed.x_max > bed.x_min && bed.y_max > bed.y_min);
+
+    spdlog::debug("[{}] BuildVolume check: x=[{:.0f},{:.0f}] y=[{:.0f},{:.0f}] valid={}, "
+                  "mesh_bounds_cached={}",
+                  get_name(), bed.x_min, bed.x_max, bed.y_min, bed.y_max, has_valid_build_volume,
+                  has_cached_mesh_bounds_);
 
     if (has_valid_build_volume) {
         // Build volume available - set bounds and render immediately
