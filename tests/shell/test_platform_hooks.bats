@@ -74,3 +74,58 @@ REQUIRED_FUNCTIONS="platform_stop_competing_uis platform_enable_backlight platfo
 @test "k1 hooks have valid sh syntax" {
     sh -n "$HOOKS_DIR/hooks-k1.sh"
 }
+
+# --- Init script integration tests ---
+
+INIT_SCRIPT="config/helixscreen.init"
+
+@test "init script defines no-op defaults" {
+    # The no-op defaults should be defined even without a hook file present
+    grep -q 'platform_stop_competing_uis().*:' "$INIT_SCRIPT"
+    grep -q 'platform_enable_backlight().*:' "$INIT_SCRIPT"
+    grep -q 'platform_wait_for_services().*:' "$INIT_SCRIPT"
+    grep -q 'platform_pre_start().*:' "$INIT_SCRIPT"
+    grep -q 'platform_post_stop().*:' "$INIT_SCRIPT"
+}
+
+@test "init script sources platform hooks" {
+    grep -q 'PLATFORM_HOOKS' "$INIT_SCRIPT"
+    grep -q '\. "\$PLATFORM_HOOKS"' "$INIT_SCRIPT"
+}
+
+@test "init script has no inline backlight function" {
+    # The enable_backlight function should no longer exist
+    ! grep -q '^enable_backlight()' "$INIT_SCRIPT"
+}
+
+@test "init script has no inline Moonraker wait function" {
+    # The wait_for_moonraker function should no longer exist
+    ! grep -q '^wait_for_moonraker()' "$INIT_SCRIPT"
+}
+
+@test "init script has no inline competing UI function" {
+    # The stop_competing_uis function should no longer exist
+    ! grep -q '^stop_competing_uis()' "$INIT_SCRIPT"
+}
+
+@test "init script calls platform hooks in start" {
+    grep -q 'platform_pre_start' "$INIT_SCRIPT"
+    grep -q 'platform_stop_competing_uis' "$INIT_SCRIPT"
+    grep -q 'platform_enable_backlight' "$INIT_SCRIPT"
+    grep -q 'platform_wait_for_services' "$INIT_SCRIPT"
+}
+
+@test "init script calls platform hooks in stop" {
+    grep -q 'platform_post_stop' "$INIT_SCRIPT"
+}
+
+@test "init script passes sh syntax check" {
+    sh -n "$INIT_SCRIPT"
+}
+
+@test "init script has start/stop/restart/status cases" {
+    grep -q 'start)' "$INIT_SCRIPT"
+    grep -q 'stop)' "$INIT_SCRIPT"
+    grep -q 'restart' "$INIT_SCRIPT"
+    grep -q 'status)' "$INIT_SCRIPT"
+}

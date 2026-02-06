@@ -139,6 +139,25 @@ start_service_sysv() {
     log_warn "Check: $INIT_SCRIPT_DEST status"
 }
 
+# Deploy platform-specific hook file
+# Copies the correct hook file to $INSTALL_DIR/platform/hooks.sh so the
+# init script can source it at runtime.
+deploy_platform_hooks() {
+    local install_dir="$1"
+    local platform="$2"  # "ad5m-forgex", "ad5m-kmod", "pi", "k1"
+    local hooks_src="${install_dir}/config/platform/hooks-${platform}.sh"
+
+    if [ ! -f "$hooks_src" ]; then
+        log_warn "No platform hooks for: $platform"
+        return 0
+    fi
+
+    $SUDO mkdir -p "${install_dir}/platform"
+    $SUDO cp "$hooks_src" "${install_dir}/platform/hooks.sh"
+    $SUDO chmod +x "${install_dir}/platform/hooks.sh"
+    log_info "Deployed platform hooks: $platform"
+}
+
 # Stop service for update
 stop_service() {
     if [ "$INIT_SYSTEM" = "systemd" ]; then
