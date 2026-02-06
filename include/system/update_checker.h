@@ -14,6 +14,9 @@
 
 #pragma once
 
+#include "lvgl.h"
+#include "subject_managed_panel.h"
+
 #include <atomic>
 #include <chrono>
 #include <functional>
@@ -139,6 +142,12 @@ class UpdateChecker {
      */
     void shutdown();
 
+    // LVGL subjects for UI binding
+    lv_subject_t* status_subject();
+    lv_subject_t* checking_subject();
+    lv_subject_t* version_text_subject();
+    lv_subject_t* new_version_subject();
+
   private:
     UpdateChecker() = default;
     ~UpdateChecker();
@@ -160,6 +169,8 @@ class UpdateChecker {
      */
     void report_result(Status status, std::optional<ReleaseInfo> info, const std::string& error);
 
+    void init_subjects();
+
     // State (protected by mutex_)
     std::atomic<Status> status_{Status::Idle};
     std::optional<ReleaseInfo> cached_info_;
@@ -176,4 +187,17 @@ class UpdateChecker {
     std::atomic<bool> shutting_down_{false};
     std::atomic<bool> initialized_{false};
     Callback pending_callback_;
+
+    // LVGL subjects for UI binding
+    lv_subject_t status_subject_{};
+    lv_subject_t checking_subject_{};
+    lv_subject_t version_text_subject_{};
+    lv_subject_t new_version_subject_{};
+
+    // String buffers for string subjects (must outlive subjects)
+    char version_text_buf_[256]{};
+    char new_version_buf_[64]{};
+
+    SubjectManager subjects_;
+    bool subjects_initialized_{false};
 };

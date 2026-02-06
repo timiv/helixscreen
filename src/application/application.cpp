@@ -91,6 +91,7 @@
 
 #include "printer_detector.h"
 #include "settings_manager.h"
+#include "system/update_checker.h"
 #include "theme_manager.h"
 #include "wifi_manager.h"
 
@@ -261,6 +262,9 @@ int Application::run(int argc, char** argv) {
         shutdown();
         return 1;
     }
+
+    // Initialize UpdateChecker before panel subjects (subjects must exist for XML binding)
+    UpdateChecker::instance().init();
 
     // Phase 9c: Initialize panel subjects with API injection
     // Panels receive API at construction - no deferred set_api() needed
@@ -1801,6 +1805,9 @@ void Application::shutdown() {
 
     // Deactivate UI and clear navigation registries
     NavigationManager::instance().shutdown();
+
+    // Shutdown UpdateChecker (cancels pending checks)
+    UpdateChecker::instance().shutdown();
 
     // Unload plugins before destroying managers they depend on
     if (m_plugin_manager) {

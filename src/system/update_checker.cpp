@@ -171,6 +171,8 @@ void UpdateChecker::init() {
         return;
     }
 
+    init_subjects();
+
     spdlog::info("[UpdateChecker] Initialized");
     initialized_ = true;
 }
@@ -198,8 +200,47 @@ void UpdateChecker::shutdown() {
         pending_callback_ = nullptr;
     }
 
+    // Cleanup subjects
+    if (subjects_initialized_) {
+        subjects_.deinit_all();
+        subjects_initialized_ = false;
+    }
+
     initialized_ = false;
     spdlog::debug("[UpdateChecker] Shutdown complete");
+}
+
+void UpdateChecker::init_subjects() {
+    if (subjects_initialized_)
+        return;
+
+    UI_MANAGED_SUBJECT_INT(status_subject_, static_cast<int>(Status::Idle), "update_status",
+                           subjects_);
+    UI_MANAGED_SUBJECT_INT(checking_subject_, 0, "update_checking", subjects_);
+    UI_MANAGED_SUBJECT_STRING(version_text_subject_, version_text_buf_, "", "update_version_text",
+                              subjects_);
+    UI_MANAGED_SUBJECT_STRING(new_version_subject_, new_version_buf_, "", "update_new_version",
+                              subjects_);
+
+    subjects_initialized_ = true;
+    spdlog::debug("[UpdateChecker] LVGL subjects initialized");
+}
+
+// ============================================================================
+// Subject Accessors
+// ============================================================================
+
+lv_subject_t* UpdateChecker::status_subject() {
+    return &status_subject_;
+}
+lv_subject_t* UpdateChecker::checking_subject() {
+    return &checking_subject_;
+}
+lv_subject_t* UpdateChecker::version_text_subject() {
+    return &version_text_subject_;
+}
+lv_subject_t* UpdateChecker::new_version_subject() {
+    return &new_version_subject_;
 }
 
 // ============================================================================
@@ -274,6 +315,15 @@ void UpdateChecker::check_for_updates(Callback callback) {
     error_message_.clear();
     status_ = Status::Checking;
     cancelled_ = false;
+
+    // Update subjects on LVGL thread (check_for_updates is public, could be called from any thread)
+    if (subjects_initialized_) {
+        ui_queue_update([this]() {
+            lv_subject_set_int(&checking_subject_, 1);
+            lv_subject_set_int(&status_subject_, static_cast<int>(Status::Checking));
+            lv_subject_copy_string(&version_text_subject_, "Checking...");
+        });
+    }
 
     // Spawn worker thread
     worker_thread_ = std::thread(&UpdateChecker::do_check, this);
@@ -412,12 +462,34 @@ void UpdateChecker::report_result(Status status, std::optional<ReleaseInfo> info
         callback = pending_callback_;
     }
 
-    // Dispatch callback to LVGL thread
-    if (callback) {
-        spdlog::debug("[UpdateChecker] Dispatching callback to LVGL thread");
-        ui_queue_update([callback, status, info]() {
-            spdlog::debug("[UpdateChecker] Executing callback on LVGL thread");
+    // Dispatch to LVGL thread for subject updates and callback
+    spdlog::debug("[UpdateChecker] Dispatching to LVGL thread");
+    ui_queue_update([this, callback, status, info, error]() {
+        spdlog::debug("[UpdateChecker] Executing on LVGL thread");
+
+        // Update LVGL subjects
+        if (subjects_initialized_) {
+            lv_subject_set_int(&status_subject_, static_cast<int>(status));
+            lv_subject_set_int(&checking_subject_, 0); // Done checking
+
+            if (status == Status::UpdateAvailable && info) {
+                snprintf(version_text_buf_, sizeof(version_text_buf_), "v%s available",
+                         info->version.c_str());
+                lv_subject_copy_string(&version_text_subject_, version_text_buf_);
+                lv_subject_copy_string(&new_version_subject_, info->version.c_str());
+            } else if (status == Status::UpToDate) {
+                lv_subject_copy_string(&version_text_subject_, "Up to date");
+                lv_subject_copy_string(&new_version_subject_, "");
+            } else if (status == Status::Error) {
+                snprintf(version_text_buf_, sizeof(version_text_buf_), "Error: %s", error.c_str());
+                lv_subject_copy_string(&version_text_subject_, version_text_buf_);
+                lv_subject_copy_string(&new_version_subject_, "");
+            }
+        }
+
+        // Execute callback if present
+        if (callback) {
             callback(status, info);
-        });
-    }
+        }
+    });
 }

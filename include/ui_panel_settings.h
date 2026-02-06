@@ -133,6 +133,7 @@ class SettingsPanel : public PanelBase {
     lv_subject_t printer_value_subject_;
     lv_subject_t printer_host_value_subject_;
     lv_subject_t print_hours_value_subject_;
+    lv_subject_t update_current_version_subject_;
 
     // Visibility subjects (controls which settings are shown)
     lv_subject_t show_touch_calibration_subject_;
@@ -143,10 +144,11 @@ class SettingsPanel : public PanelBase {
 
     // Static buffers for string subjects (required for lv_subject_init_string)
     // Note: brightness_value_buf_ is now managed by DisplaySettingsOverlay
-    char version_value_buf_[32];      // e.g., "1.2.3"
-    char printer_value_buf_[64];      // e.g., "Voron 2.4"
-    char printer_host_value_buf_[96]; // e.g., "192.168.1.100:7125"
-    char print_hours_value_buf_[32];  // e.g., "142h 30m"
+    char version_value_buf_[32];          // e.g., "1.2.3"
+    char printer_value_buf_[64];          // e.g., "Voron 2.4"
+    char printer_host_value_buf_[96];     // e.g., "192.168.1.100:7125"
+    char print_hours_value_buf_[32];      // e.g., "142h 30m"
+    char update_current_version_buf_[32]; // e.g., "1.2.3"
 
     // Note: Display Settings overlay is now managed by DisplaySettingsOverlay class
     // See ui_settings_display.h

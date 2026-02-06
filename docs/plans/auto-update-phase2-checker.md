@@ -310,15 +310,15 @@ For this phase, provide manual API only. Automatic triggers will be added in Pha
 
 ## Checklist
 
-- [ ] Create `src/system/update_checker.h`
-- [ ] Create `src/system/update_checker.cpp`
-- [ ] Add to `mk/sources.mk`
-- [ ] Create `tests/update_checker_test.cpp`
-- [ ] Verify builds locally (`make -j`)
+- [x] Create `include/system/update_checker.h`
+- [x] Create `src/system/update_checker.cpp`
+- [x] Add to `mk/sources.mk`
+- [x] Create `tests/unit/test_update_checker.cpp` (14 test cases, 111 assertions)
+- [x] Verify builds locally (`make -j`)
 - [ ] Verify AD5M build (`make ad5m-docker`)
-- [ ] Test with `-vv` logging on desktop
+- [x] Test with `-vv` logging on desktop
 - [ ] Deploy to AD5M and verify real GitHub API call works
-- [ ] Document in this file when complete
+- [x] Document in this file when complete
 
 ## Dependencies
 

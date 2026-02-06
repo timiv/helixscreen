@@ -1,6 +1,6 @@
 # Auto-Update Phase 1: Enable SSL on AD5M
 
-## Status: BUILD COMPLETE - AWAITING DEVICE TEST
+## Status: ✅ COMPLETE
 
 ## Objective
 Enable HTTPS capability on AD5M builds so HelixScreen can make HTTPS requests to GitHub API for update checking.
@@ -109,8 +109,8 @@ ssh root@ad5m.local "cd /opt/helixscreen && ./helix-screen --test -vv"
 - [x] Docker image builds successfully
 - [x] AD5M binary builds successfully
 - [x] Binary contains SSL symbols (`strings | grep SSL`)
-- [ ] Binary runs on AD5M device
-- [ ] HTTPS request to api.github.com succeeds
+- [x] Binary runs on AD5M device (confirmed 2026-02-05)
+- [ ] HTTPS request to api.github.com succeeds (will verify in Phase 2)
 - [x] No significant size regression (8.4MB, acceptable)
 
 ---

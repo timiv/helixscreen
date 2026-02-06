@@ -39,6 +39,7 @@
 #include "sound_manager.h"
 #include "standard_macros.h"
 #include "static_panel_registry.h"
+#include "system/update_checker.h"
 #include "theme_manager.h"
 #include "wizard_config_paths.h"
 
@@ -196,6 +197,14 @@ static void on_version_clicked(lv_event_t*) {
 // Note: Macro Buttons overlay callbacks are now in MacroButtonsOverlay class
 // See ui_settings_macro_buttons.cpp
 
+// Static callback for check updates button
+static void on_check_updates_clicked(lv_event_t* /*e*/) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_check_updates_clicked");
+    spdlog::info("[SettingsPanel] Check for updates requested");
+    UpdateChecker::instance().check_for_updates();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
 // ============================================================================
 // MODAL DIALOG STATIC CALLBACKS (XML event_cb)
 // ============================================================================
@@ -257,6 +266,9 @@ void SettingsPanel::init_subjects() {
 
     UI_MANAGED_SUBJECT_STRING(print_hours_value_subject_, print_hours_value_buf_, "—",
                               "print_hours_value", subjects_);
+
+    UI_MANAGED_SUBJECT_STRING(update_current_version_subject_, update_current_version_buf_,
+                              helix_version(), "update_current_version", subjects_);
 
     // Initialize visibility subjects (controls which settings are shown)
     // Touch calibration: show on touch displays (non-SDL) OR in test mode (for testing on desktop)
@@ -334,6 +346,7 @@ void SettingsPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_factory_reset_clicked", on_factory_reset_clicked);
     lv_xml_register_event_cb(nullptr, "on_hardware_health_clicked", on_hardware_health_clicked);
     lv_xml_register_event_cb(nullptr, "on_plugins_clicked", on_plugins_clicked);
+    lv_xml_register_event_cb(nullptr, "on_check_updates_clicked", on_check_updates_clicked);
 
     // Register XML event callbacks for overlays
     lv_xml_register_event_cb(nullptr, "on_restart_later_clicked", on_restart_later_clicked);

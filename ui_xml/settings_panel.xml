@@ -132,6 +132,16 @@
                         callback="on_plugins_clicked">
       <bind_flag_if_eq subject="show_beta_features" flag="hidden" ref_value="0"/>
     </setting_action_row>
+    <!-- Software Update -->
+    <setting_info_row name="row_update_version" label="Current Version" label_tag="Current Version" icon="info">
+      <text_muted name="value" bind_text="update_current_version"/>
+    </setting_info_row>
+    <setting_action_row name="row_check_updates"
+                        label="Check for Updates" label_tag="Check for Updates" icon="refresh" description="" description_tag=""
+                        callback="on_check_updates_clicked"/>
+    <setting_info_row name="row_update_status" label="Update Status" label_tag="Update Status" icon="sysinfo">
+      <text_muted name="value" bind_text="update_version_text"/>
+    </setting_info_row>
     <!-- ================================================================== -->
     <!-- ABOUT SECTION -->
     <!-- ================================================================== -->

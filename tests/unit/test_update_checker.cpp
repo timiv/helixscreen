@@ -19,6 +19,7 @@
  * - Status enum transitions
  */
 
+#include "lvgl.h"
 #include "version.h"
 
 #include <chrono>
@@ -630,6 +631,61 @@ TEST_CASE("Version edge cases", "[update_checker][edge]") {
         REQUIRE(v->minor == 0);
         REQUIRE(v->patch == 0);
     }
+}
+
+// ============================================================================
+// LVGL Subject Integration Tests
+// ============================================================================
+
+TEST_CASE("UpdateChecker subject initialization", "[update_checker][subjects]") {
+    auto& checker = UpdateChecker::instance();
+    checker.clear_cache();
+    checker.init();
+
+    SECTION("all subject accessors return non-null after init") {
+        REQUIRE(checker.status_subject() != nullptr);
+        REQUIRE(checker.checking_subject() != nullptr);
+        REQUIRE(checker.version_text_subject() != nullptr);
+        REQUIRE(checker.new_version_subject() != nullptr);
+    }
+
+    SECTION("integer subjects have correct initial values") {
+        REQUIRE(lv_subject_get_int(checker.status_subject()) ==
+                static_cast<int>(UpdateChecker::Status::Idle));
+        REQUIRE(lv_subject_get_int(checker.checking_subject()) == 0);
+    }
+
+    SECTION("string subjects start empty") {
+        const char* version_text = lv_subject_get_string(checker.version_text_subject());
+        REQUIRE(version_text != nullptr);
+        REQUIRE(std::string(version_text).empty());
+
+        const char* new_version = lv_subject_get_string(checker.new_version_subject());
+        REQUIRE(new_version != nullptr);
+        REQUIRE(std::string(new_version).empty());
+    }
+
+    checker.shutdown();
+}
+
+TEST_CASE("UpdateChecker subject accessors remain stable after shutdown",
+          "[update_checker][subjects]") {
+    auto& checker = UpdateChecker::instance();
+    checker.clear_cache();
+    checker.init();
+
+    // Verify subjects exist before shutdown
+    REQUIRE(checker.status_subject() != nullptr);
+    REQUIRE(checker.checking_subject() != nullptr);
+
+    checker.shutdown();
+
+    // Accessors return member addresses, so they remain non-null even after shutdown.
+    // (The subjects themselves are deinitialized, but the pointers are stable.)
+    REQUIRE(checker.status_subject() != nullptr);
+    REQUIRE(checker.checking_subject() != nullptr);
+    REQUIRE(checker.version_text_subject() != nullptr);
+    REQUIRE(checker.new_version_subject() != nullptr);
 }
 
 TEST_CASE("JSON edge cases", "[update_checker][json][edge]") {
