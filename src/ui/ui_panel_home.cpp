@@ -118,7 +118,7 @@ HomePanel::HomePanel(PrinterState& printer_state, MoonrakerAPI* api)
                 printer_state_.get_led_brightness_subject(), this,
                 [](HomePanel* self, int /*brightness*/) { self->update_light_icon(); });
 
-            spdlog::info("[{}] Configured LED: {} (observing state)", get_name(), configured_led_);
+            spdlog::debug("[{}] Configured LED: {} (observing state)", get_name(), configured_led_);
         } else {
             spdlog::debug("[{}] No LED configured - light control will be hidden", get_name());
         }
@@ -132,9 +132,12 @@ HomePanel::~HomePanel() {
 
     // ObserverGuard handles observer cleanup automatically
 
-    // Clean up timers - must be deleted explicitly before LVGL shutdown
+    // Clean up timers and animations - must be deleted explicitly before LVGL shutdown
     // Check lv_is_initialized() to avoid crash during static destruction
     if (lv_is_initialized()) {
+        // Stop tip fade animations (var=this, not an lv_obj_t*, so lv_obj_delete won't clean them)
+        lv_anim_delete(this, nullptr);
+
         if (signal_poll_timer_) {
             lv_timer_delete(signal_poll_timer_);
             signal_poll_timer_ = nullptr;
@@ -274,7 +277,7 @@ void HomePanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Start tip rotation timer (60 seconds = 60000ms)
     if (!tip_rotation_timer_) {
         tip_rotation_timer_ = lv_timer_create(tip_rotation_timer_cb, 60000, this);
-        spdlog::info("[{}] Started tip rotation timer (60s interval)", get_name());
+        spdlog::debug("[{}] Started tip rotation timer (60s interval)", get_name());
     }
 
     // Use global WiFiManager for signal strength queries
@@ -333,7 +336,7 @@ void HomePanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         spdlog::debug("[{}] Registered injection point: home_widget_area", get_name());
     }
 
-    spdlog::info("[{}] Setup complete!", get_name());
+    spdlog::debug("[{}] Setup complete!", get_name());
 }
 
 void HomePanel::on_activate() {
@@ -387,7 +390,7 @@ void HomePanel::update_tip_of_day() {
             current_tip_ = tip;
             std::snprintf(status_buffer_, sizeof(status_buffer_), "%s", tip.title.c_str());
             lv_subject_copy_string(&status_subject_, status_buffer_);
-            spdlog::debug("[{}] Updated tip (instant): {}", get_name(), tip.title);
+            spdlog::trace("[{}] Updated tip (instant): {}", get_name(), tip.title);
         }
     } else {
         spdlog::warn("[{}] Failed to get tip, keeping current", get_name());
@@ -494,8 +497,8 @@ void HomePanel::detect_network_type() {
     if (ethernet_manager_) {
         EthernetInfo eth_info = ethernet_manager_->get_info();
         if (eth_info.connected) {
-            spdlog::info("[{}] Detected Ethernet connection on {} ({})", get_name(),
-                         eth_info.interface, eth_info.ip_address);
+            spdlog::debug("[{}] Detected Ethernet connection on {} ({})", get_name(),
+                          eth_info.interface, eth_info.ip_address);
             set_network(NETWORK_ETHERNET);
             return;
         }
@@ -598,7 +601,7 @@ void HomePanel::handle_tip_rotation_timer() {
 
 void HomePanel::set_temp_control_panel(TempControlPanel* temp_panel) {
     temp_control_panel_ = temp_panel;
-    spdlog::debug("[{}] TempControlPanel reference set", get_name());
+    spdlog::trace("[{}] TempControlPanel reference set", get_name());
 }
 
 void HomePanel::handle_temp_clicked() {
@@ -836,8 +839,8 @@ void HomePanel::reload_from_config() {
             lv_obj_t* printer_image = lv_obj_find_by_name(panel_, "printer_image");
             if (printer_image) {
                 lv_image_set_src(printer_image, image_path.c_str());
-                spdlog::info("[{}] Printer image: '{}' for '{}'", get_name(), image_path,
-                             printer_type);
+                spdlog::debug("[{}] Printer image: '{}' for '{}'", get_name(), image_path,
+                              printer_type);
             }
         }
     }

@@ -62,13 +62,17 @@ FanDial::FanDial(lv_obj_t* parent, const std::string& name, const std::string& f
     update_button_states(initial_speed);
     update_knob_glow(initial_speed);
 
-    spdlog::debug("[FanDial] Created '{}' (id={}) with initial speed {}%", name, fan_id,
+    spdlog::trace("[FanDial] Created '{}' (id={}) with initial speed {}%", name, fan_id,
                   initial_speed);
 }
 
 FanDial::~FanDial() {
-    // LVGL will clean up child widgets when root is deleted
-    // No need to manually remove event callbacks - they are cleaned up with the widget
+    // Stop any running animation BEFORE destruction.
+    // The animation's var points to `this` (FanDial*), not the lv_obj_t*,
+    // so lv_obj_delete() on the widget does NOT clean it up.
+    // Without this, a pending anim_timer tick will call label_anim_exec_cb
+    // on freed memory, crashing in lv_obj_set_style_* → lv_obj_get_parent.
+    lv_anim_delete(this, label_anim_exec_cb);
     spdlog::trace("[FanDial] Destroyed '{}'", name_);
 }
 
@@ -396,5 +400,5 @@ void register_fan_dial_callbacks() {
     lv_xml_register_event_cb(nullptr, "on_fan_dial_off_clicked", xml_fan_dial_off_clicked);
     lv_xml_register_event_cb(nullptr, "on_fan_dial_on_clicked", xml_fan_dial_on_clicked);
 
-    spdlog::debug("[FanDial] Registered XML event callbacks");
+    spdlog::trace("[FanDial] Registered XML event callbacks");
 }
