@@ -37,7 +37,7 @@ Built on LVGL 9's modern declarative XML system, HelixScreen delivers a fast, po
 
 - **Declarative XML UI** — Change layouts without recompiling
 - **Reactive Data Binding** — Subject-Observer pattern for automatic UI updates
-- **Resource Efficient** — ~50-80MB footprint, runs on constrained hardware
+- **Resource Efficient** — ~10MB RAM, runs on constrained hardware
 - **Scales Anywhere** — From a Creality K1 to a tricked-out Voron
 - **Modern C++17** — Type-safe architecture with RAII memory management
 
@@ -46,7 +46,7 @@ Built on LVGL 9's modern declarative XML system, HelixScreen delivers a fast, po
 | UI Framework | LVGL 9 XML | LVGL 8 C | GTK 3 (Python) |
 | Declarative UI | Full XML | C only | Python only |
 | Disk Size | ~50-80MB | ~60-80MB | ~150-200MB |
-| RAM Usage | ~12MB | ~15-20MB | ~40MB |
+| RAM Usage | ~10MB | ~15-20MB | ~50MB |
 | Reactive Binding | Built-in | Manual | Manual |
 | Status | Beta | Unmaintained | Mature (maintenance) |
 | Language | C++17 | C | Python 3 |
@@ -119,7 +119,7 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for detailed setup, cross-compila
 Beta status. Core features work, but we're seeking testers. Suitable for enthusiasts willing to provide feedback.
 
 **How is this different from GuppyScreen/KlipperScreen?**
-HelixScreen uses LVGL 9's declarative XML—change layouts without recompiling. Lower memory than KlipperScreen. See the [comparison table](#why-helixscreen).
+HelixScreen uses LVGL 9's declarative XML—change layouts without recompiling. ~10MB RAM vs ~50MB for KlipperScreen. See the [comparison table](#why-helixscreen).
 
 **Which printers are supported?**
 Any Klipper + Moonraker printer. Currently tested on Voron 2.4, Voron 0.2, FlashForge Adventurer 5M Pro, and Doron Velta. The wizard auto-discovers your printer's capabilities.

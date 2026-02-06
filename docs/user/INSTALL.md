@@ -86,7 +86,7 @@ The installer automatically detects which firmware you're running and configures
 | **Forge-X** | GuppyScreen | `/opt/helixscreen/` | `S90helixscreen` |
 | **Klipper Mod** | KlipperScreen | `/root/printer_software/helixscreen/` | `S80helixscreen` |
 
-**Memory Savings:** On Klipper Mod, HelixScreen (~12MB) replaces KlipperScreen (~36MB + 4.6MB X Server), freeing ~29MB RAM on the memory-constrained AD5M.
+**Memory Savings:** On Klipper Mod, HelixScreen (~10MB) replaces KlipperScreen (~50MB), freeing ~40MB RAM on the memory-constrained AD5M.
 
 #### Forge-X Prerequisites
 
@@ -822,13 +822,12 @@ The AD5M has limited RAM (~108MB total, with only ~24MB free after Klipper, Moon
 **Measured memory comparison (VmRSS):**
 | Component | KlipperScreen | HelixScreen |
 |-----------|---------------|-------------|
-| Screen UI | ~36 MB (Python) | **~12 MB** (C++) |
-| X Server | ~4.6 MB | **0 MB** (framebuffer) |
-| **Total** | ~40.5 MB | **~12 MB** |
+| Screen UI | ~50 MB (Python + X Server) | **~10 MB** (C++) |
+| **Total** | ~50 MB | **~10 MB** |
 
-On Klipper Mod systems, switching from KlipperScreen to HelixScreen frees approximately **29 MB** of RAM - a significant improvement on a memory-constrained device!
+On Klipper Mod systems, switching from KlipperScreen to HelixScreen frees approximately **40 MB** of RAM - a significant improvement on a memory-constrained device!
 
-> **Note:** The 12 MB footprint includes the full LVGL widget tree, draw buffers for UI elements (gradients, color pickers, AMS spool icons), and runtime state for all panels. Images are loaded on-demand, not pre-cached.
+> **Note:** The 10 MB footprint includes the full LVGL widget tree, draw buffers for UI elements (gradients, color pickers, AMS spool icons), and runtime state for all panels. Images are loaded on-demand, not pre-cached.
 
 If you experience memory issues:
 - Reduce print history retention in Moonraker

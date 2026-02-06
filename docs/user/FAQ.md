@@ -60,7 +60,7 @@ If you test on hardware not listed above, please let us know your results!
 | **UI Framework** | LVGL 9 XML | GTK 3 (Python) | LVGL 8 (C) |
 | **Declarative UI** | Full XML | Python only | C only |
 | **Disk Size** | ~50-80MB | ~150-200MB | ~60-80MB |
-| **RAM Usage** | ~12MB | ~40MB | ~15-20MB |
+| **RAM Usage** | ~10MB | ~50MB | ~15-20MB |
 | **Reactive Binding** | Built-in | Manual | Manual |
 | **3D G-code preview** | Yes | 2D layers | No |
 | **3D bed mesh** | Yes | 2D heatmap | 2D heatmap |
