@@ -321,6 +321,7 @@ main() {
         download_release "$version" "$platform"
     fi
     extract_release "$platform"
+    fix_install_ownership
     install_service "$platform"
     install_platform_hooks
 
