@@ -1565,7 +1565,7 @@ TEST_CASE_METHOD(MacroAnalysisRetryFixture,
  *
  * Key methods being tested:
  * - read_options_from_subjects(): Reads checkbox states from subjects
- * - is_option_disabled_from_subject(): Checks visibility + checked state
+ * - get_option_state(): Determines tri-state from visibility + checked subjects
  * - collect_ops_to_disable(): Uses subjects exclusively for determining what to disable
  */
 
@@ -1738,26 +1738,12 @@ TEST_CASE("PrintPreparationManager: read_options_from_subjects returns correct P
     }
 }
 
-TEST_CASE("PrintPreparationManager: is_option_disabled_from_subject handles visibility + checked",
+TEST_CASE("PrintPreparationManager: get_option_state returns correct tri-state",
           "[print_preparation][p1][subjects]") {
     lv_init_safe();
     PrintPreparationManager manager;
 
-    // Create test subjects for the four combinations
-    lv_subject_t visibility_visible{};
-    lv_subject_t visibility_hidden{};
-    lv_subject_t checked_true{};
-    lv_subject_t checked_false{};
-
-    lv_subject_init_int(&visibility_visible, 1); // visible
-    lv_subject_init_int(&visibility_hidden, 0);  // hidden
-    lv_subject_init_int(&checked_true, 1);       // checked
-    lv_subject_init_int(&checked_false, 0);      // unchecked
-
-    SECTION("Visible + checked = NOT disabled (option enabled)") {
-        // User can see the option and has it checked - they want this operation
-        // We need to call the private method via collect_ops_to_disable indirectly,
-        // but we can test the behavior through read_options_from_subjects
+    SECTION("Visible + checked = ENABLED") {
         PreprintSubjectsFixture subjects;
         subjects.init_all_subjects();
 
@@ -1773,8 +1759,7 @@ TEST_CASE("PrintPreparationManager: is_option_disabled_from_subject handles visi
         REQUIRE(options.bed_mesh == true);
     }
 
-    SECTION("Visible + unchecked = disabled (option disabled by user)") {
-        // User can see the option but has it unchecked - they DON'T want this operation
+    SECTION("Visible + unchecked = DISABLED (user explicitly skipped)") {
         PreprintSubjectsFixture subjects;
         subjects.init_all_subjects();
 
@@ -1790,9 +1775,7 @@ TEST_CASE("PrintPreparationManager: is_option_disabled_from_subject handles visi
         REQUIRE(options.bed_mesh == false);
     }
 
-    SECTION("Hidden + checked = NOT disabled (hidden means not applicable)") {
-        // Option is hidden because it's not applicable to this printer
-        // The checked state is irrelevant - hidden options shouldn't affect behavior
+    SECTION("Hidden + checked = NOT_APPLICABLE (not enabled, not disabled)") {
         PreprintSubjectsFixture subjects;
         subjects.init_all_subjects();
 
@@ -1805,12 +1788,11 @@ TEST_CASE("PrintPreparationManager: is_option_disabled_from_subject handles visi
                                                  nullptr, nullptr, nullptr);
 
         auto options = manager.read_options_from_subjects();
-        // Hidden means not applicable - should return false (not enabled, but also not "disabled")
+        // Hidden = NOT_APPLICABLE, not ENABLED
         REQUIRE(options.bed_mesh == false);
     }
 
-    SECTION("Hidden + unchecked = NOT disabled (hidden means not applicable)") {
-        // Option is hidden because it's not applicable to this printer
+    SECTION("Hidden + unchecked = NOT_APPLICABLE (not enabled, not disabled)") {
         PreprintSubjectsFixture subjects;
         subjects.init_all_subjects();
 
@@ -1823,15 +1805,82 @@ TEST_CASE("PrintPreparationManager: is_option_disabled_from_subject handles visi
                                                  nullptr, nullptr, nullptr);
 
         auto options = manager.read_options_from_subjects();
-        // Hidden means not applicable - should return false
+        // Hidden = NOT_APPLICABLE, not DISABLED
         REQUIRE(options.bed_mesh == false);
     }
+}
 
-    // Clean up test subjects
-    lv_subject_deinit(&checked_false);
-    lv_subject_deinit(&checked_true);
-    lv_subject_deinit(&visibility_hidden);
-    lv_subject_deinit(&visibility_visible);
+TEST_CASE("PrintPreparationManager: hidden options don't produce macro skip params",
+          "[print_preparation][p1][subjects]") {
+    // This is the actual bug test: when visibility=0 (hidden), the old code treated
+    // the option as "disabled" which caused collect_macro_skip_params() to add skip
+    // params, triggering modification, which then warned about missing plugin.
+    lv_init_safe();
+    PrintPreparationManager manager;
+    PreprintSubjectsFixture subjects;
+    subjects.init_all_subjects();
+
+    // Set up subjects on manager
+    manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
+                                  &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
+                                  &subjects.preprint_purge_line, &subjects.preprint_timelapse);
+    manager.set_preprint_visibility_subjects(
+        &subjects.can_show_bed_mesh, &subjects.can_show_qgl, &subjects.can_show_z_tilt,
+        &subjects.can_show_nozzle_clean, &subjects.can_show_purge_line,
+        &subjects.can_show_timelapse);
+
+    // Set up macro analysis with controllable bed mesh operation
+    PrintStartAnalysis analysis;
+    analysis.found = true;
+    analysis.macro_name = "PRINT_START";
+
+    PrintStartOperation op;
+    op.name = "BED_MESH_CALIBRATE";
+    op.category = PrintStartOpCategory::BED_MESH;
+    op.has_skip_param = true;
+    op.skip_param_name = "SKIP_BED_MESH";
+    op.param_semantic = ParameterSemantic::OPT_OUT;
+    analysis.operations.push_back(op);
+
+    manager.set_macro_analysis(analysis);
+
+    SECTION("Hidden visibility + unchecked produces NO skip params") {
+        // This was the bug: hidden (visibility=0) + unchecked was treated as "disabled"
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 0); // hidden (plugin not installed)
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 0); // unchecked
+
+        auto skip_params = manager.get_skip_params_for_testing();
+
+        // Should be EMPTY - hidden means not applicable, not "user disabled"
+        REQUIRE(skip_params.empty());
+    }
+
+    SECTION("Hidden visibility + checked also produces NO skip params") {
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 0); // hidden
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 1); // checked (irrelevant)
+
+        auto skip_params = manager.get_skip_params_for_testing();
+        REQUIRE(skip_params.empty());
+    }
+
+    SECTION("Visible + unchecked DOES produce skip params") {
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 1); // visible
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 0); // unchecked = user wants to skip
+
+        auto skip_params = manager.get_skip_params_for_testing();
+
+        REQUIRE(skip_params.size() == 1);
+        REQUIRE(skip_params[0].first == "SKIP_BED_MESH");
+        REQUIRE(skip_params[0].second == "1"); // OPT_OUT: 1 = skip
+    }
+
+    SECTION("Visible + checked produces NO skip params") {
+        lv_subject_set_int(&subjects.can_show_bed_mesh, 1); // visible
+        lv_subject_set_int(&subjects.preprint_bed_mesh, 1); // checked = user wants operation
+
+        auto skip_params = manager.get_skip_params_for_testing();
+        REQUIRE(skip_params.empty());
+    }
 }
 
 TEST_CASE("PrintPreparationManager: collect_ops_to_disable uses subjects exclusively",

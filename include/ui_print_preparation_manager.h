@@ -49,6 +49,16 @@ namespace helix::ui {
  */
 
 /**
+ * @brief Tri-state result for visibility + checked logic
+ *
+ * Single source of truth for determining the user's intent for a pre-print option:
+ * - ENABLED: visible + checked (user wants this operation)
+ * - DISABLED: visible + unchecked (user explicitly skipped this operation)
+ * - NOT_APPLICABLE: hidden or no subject (not relevant to this printer)
+ */
+enum class PrePrintOptionState { ENABLED, DISABLED, NOT_APPLICABLE };
+
+/**
  * @brief Pre-print options read from UI subjects
  */
 struct PrePrintOptions {
@@ -567,17 +577,19 @@ class PrintPreparationManager {
                               PrintCompletionCallback on_completion);
 
     /**
-     * @brief Helper to check if an option is disabled via subjects (LT2)
+     * @brief Unified helper to determine option state from visibility + checked subjects
      *
-     * An option is considered "disabled" if:
-     * 1. The visibility subject is set and value is 0 (hidden), OR
-     * 2. The checked subject is set and value is 0 (unchecked)
+     * Single source of truth for the three-way logic:
+     * - Hidden (visibility=0) → NOT_APPLICABLE (not relevant to this printer)
+     * - Visible + checked → ENABLED (user wants this operation)
+     * - Visible + unchecked → DISABLED (user explicitly skipped)
+     * - No checked subject → NOT_APPLICABLE (can't determine)
      *
      * @param visibility_subject Subject controlling row visibility (1=visible, 0=hidden)
      * @param checked_subject Subject controlling checkbox state (1=checked, 0=unchecked)
-     * @return true if the option should be considered disabled
+     * @return PrePrintOptionState indicating user intent
      */
-    [[nodiscard]] bool is_option_disabled_from_subject(lv_subject_t* visibility_subject,
+    [[nodiscard]] PrePrintOptionState get_option_state(lv_subject_t* visibility_subject,
                                                        lv_subject_t* checked_subject) const;
 
     /**
