@@ -19,7 +19,7 @@
 
 [Unit]
 Description=HelixScreen 3D Printer Touch UI
-Documentation=https://github.com/your-org/helixscreen
+Documentation=https://github.com/prestonbrown/helixscreen
 After=multi-user.target network.target
 
 # Wait for display hardware to be ready
@@ -40,6 +40,9 @@ WorkingDirectory=@@INSTALL_DIR@@
 ExecStart=@@INSTALL_DIR@@/bin/helix-launcher.sh
 
 # Environment variables
+# Use fbdev display backend on Pi (DRM atomic modesetting has compatibility issues
+# with some SoCs like Allwinner H616). fbdev works reliably across all Pi hardware.
+Environment="HELIX_DISPLAY_BACKEND=fbdev"
 # Override asset directory if ui_xml/assets/config are not under WorkingDirectory
 # Environment="HELIX_DATA_DIR=/usr/share/helixscreen"
 # Logging: auto-detects journal on systemd systems (can override with HELIX_LOG_DEST)
