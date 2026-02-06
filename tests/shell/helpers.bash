@@ -9,6 +9,12 @@ log_error() { :; }
 log_success() { :; }
 export -f log_info log_warn log_error log_success
 
+# Ensure BATS_TEST_TMPDIR exists (added in bats 1.4.1, Ubuntu 22.04 ships 1.2.1)
+# Each bats test runs in a subshell, so this creates a fresh dir per test.
+if [ -z "$BATS_TEST_TMPDIR" ]; then
+    BATS_TEST_TMPDIR=$(mktemp -d "${BATS_TMPDIR:-/tmp}/bats-test-XXXXXX")
+fi
+
 # Create a mock command that outputs specific text
 # Usage: mock_command "systemctl" "User=biqu"
 mock_command() {

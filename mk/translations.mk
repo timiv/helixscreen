@@ -29,8 +29,11 @@ $(TRANS_GEN_C) $(TRANS_GEN_H) $(TRANS_XML): $(TRANS_YAML) $(TRANS_SCRIPT)
 	$(Q)if [ -x "$(VENV_PYTHON_TRANS)" ]; then \
 		$(VENV_PYTHON_TRANS) $(TRANS_SCRIPT); \
 		echo "$(GREEN)✓ Translations generated$(RESET)"; \
+	elif [ -f "$(TRANS_GEN_C)" ] && [ -f "$(TRANS_GEN_H)" ]; then \
+		echo "$(YELLOW)⚠ Python venv not available - using existing generated translations$(RESET)"; \
+		touch $(TRANS_GEN_C) $(TRANS_GEN_H) $(TRANS_XML); \
 	else \
-		echo "$(RED)✗ Python venv not available - run 'make venv-setup'$(RESET)"; \
+		echo "$(RED)✗ Python venv not available and no generated files - run 'make venv-setup'$(RESET)"; \
 		exit 1; \
 	fi
 
