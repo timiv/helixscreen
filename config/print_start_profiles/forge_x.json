@@ -16,7 +16,7 @@
         "COOLING DOWN...":      { "phase": "CLEANING",        "message": "Cooling for probing...",   "progress": 45 },
         "FINISHING CLEANING...":{ "phase": "CLEANING",        "message": "Finishing clean...",        "progress": 55 },
         "DONE!":                { "phase": "CLEANING",        "message": "Nozzle clean complete",    "progress": 57 },
-        "KAMP LEVELING...":     { "phase": "BED_MESH",        "message": "Auto bed leveling...",     "progress": 60 },
+        "KAMP LEVELING...":     { "phase": "BED_MESH",        "message": "Creating bed mesh...",     "progress": 60 },
         "WAIT FOR TEMPERATURE...": { "phase": "HEATING_NOZZLE", "message": "Reheating...",           "progress": 82 },
         "KAMP PRIMING...":      { "phase": "PURGING",         "message": "Priming nozzle...",        "progress": 90 },
         "PRINTING...":          { "phase": "COMPLETE",         "message": "Starting print...",        "progress": 100 }

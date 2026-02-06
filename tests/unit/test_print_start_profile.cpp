@@ -469,6 +469,21 @@ TEST_CASE("PrintStartProfile: forge_x signal format matching for all 14 states",
     }
 }
 
+TEST_CASE("PrintStartProfile: forge_x KAMP LEVELING message says 'Creating bed mesh'",
+          "[profile][print][signal]") {
+    auto profile = get_forge_x_profile();
+    REQUIRE(profile != nullptr);
+
+    if (!profile->has_signal_formats()) {
+        SKIP("forge_x.json not available, skipping bed mesh message test");
+    }
+
+    PrintStartProfile::MatchResult result;
+    REQUIRE(profile->try_match_signal("// State: KAMP LEVELING...", result));
+    REQUIRE(result.phase == PrintStartPhase::BED_MESH);
+    REQUIRE(result.message == "Creating bed mesh...");
+}
+
 // ============================================================================
 // Signal Format Matching with Surrounding Context
 // ============================================================================

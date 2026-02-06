@@ -59,6 +59,7 @@ void PrintStartCollector::start() {
         detected_phases_.clear();
         current_phase_ = PrintStartPhase::IDLE;
         print_start_detected_ = false;
+        max_sequential_progress_ = 0;
     }
     fallbacks_enabled_.store(false); // Will be enabled after initial window
 
@@ -163,6 +164,7 @@ void PrintStartCollector::reset() {
         detected_phases_.clear();
         current_phase_ = PrintStartPhase::IDLE;
         print_start_detected_ = false;
+        max_sequential_progress_ = 0;
         printing_state_start_ = std::chrono::steady_clock::now();
     }
     fallbacks_enabled_.store(false);
@@ -468,14 +470,23 @@ void PrintStartCollector::update_phase(PrintStartPhase phase, const char* messag
 
 void PrintStartCollector::update_phase(PrintStartPhase phase, const std::string& message,
                                        int progress) {
+    int effective_progress;
     {
         std::lock_guard<std::mutex> lock(state_mutex_);
         current_phase_ = phase;
         detected_phases_.insert(phase);
+
+        // Monotonic progress guard: never allow progress to decrease in sequential mode
+        // (except COMPLETE which always goes to 100%)
+        if (phase == PrintStartPhase::COMPLETE) {
+            effective_progress = 100;
+        } else {
+            effective_progress = std::max(progress, max_sequential_progress_);
+            effective_progress = std::min(effective_progress, 95);
+        }
+        max_sequential_progress_ = effective_progress;
     }
-    // Use sequential progress directly, cap at 95% unless COMPLETE
-    int capped_progress = (phase == PrintStartPhase::COMPLETE) ? 100 : std::min(progress, 95);
-    state_.set_print_start_state(phase, message.c_str(), capped_progress);
+    state_.set_print_start_state(phase, message.c_str(), effective_progress);
 }
 
 void PrintStartCollector::set_profile(std::shared_ptr<PrintStartProfile> profile) {

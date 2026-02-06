@@ -1372,3 +1372,182 @@ TEST_CASE_METHOD(PrintStartCollectorHeaterFixture,
         REQUIRE(get_current_phase() == PrintStartPhase::HEATING_BED);
     }
 }
+
+// ============================================================================
+// AREA C: Sequential Progress Monotonic Guard Tests
+// ============================================================================
+// Tests that sequential mode progress never regresses, even when signals
+// are re-emitted in a different order (e.g., AD5M firmware re-emitting
+// HEATING after bed mesh probing).
+// ============================================================================
+
+/**
+ * @brief Test fixture for sequential profile (Forge-X) progress tests
+ *
+ * Loads forge_x profile and provides helpers for dispatching G-code
+ * responses and reading progress values.
+ */
+class PrintStartCollectorSequentialFixture : public LVGLTestFixture {
+  public:
+    PrintStartCollectorSequentialFixture() {
+        state_.init_subjects(false);
+        client_ = std::make_unique<MoonrakerClientMock>();
+        collector_ = std::make_shared<PrintStartCollector>(*client_, state_);
+        collector_->set_profile(PrintStartProfile::load("forge_x"));
+    }
+
+    ~PrintStartCollectorSequentialFixture() override {
+        if (collector_->is_active()) {
+            collector_->stop();
+        }
+        collector_.reset();
+        client_.reset();
+    }
+
+    PrinterState& state() {
+        return state_;
+    }
+    MoonrakerClientMock& client() {
+        return *client_;
+    }
+    PrintStartCollector& collector() {
+        return *collector_;
+    }
+
+    int get_current_progress() {
+        return lv_subject_get_int(state_.get_print_start_progress_subject());
+    }
+
+    PrintStartPhase get_current_phase() {
+        return static_cast<PrintStartPhase>(
+            lv_subject_get_int(state_.get_print_start_phase_subject()));
+    }
+
+    std::string get_current_message() {
+        return lv_subject_get_string(state_.get_print_start_message_subject());
+    }
+
+    void send_gcode_response(const std::string& line) {
+        json msg = {{"method", "notify_gcode_response"}, {"params", {line}}};
+        client().dispatch_method_callback("notify_gcode_response", msg);
+        drain_async_updates();
+    }
+
+    void drain_async_updates() {
+        helix::ui::UpdateQueue::instance().drain_queue_for_testing();
+    }
+
+  protected:
+    PrinterState state_;
+    std::unique_ptr<MoonrakerClientMock> client_;
+    std::shared_ptr<PrintStartCollector> collector_;
+};
+
+// ============================================================================
+// Sequential Progress Never Regresses on Repeated Signals
+// ============================================================================
+
+TEST_CASE_METHOD(PrintStartCollectorSequentialFixture,
+                 "Sequential progress never regresses on repeated signals",
+                 "[print][collector][sequential]") {
+    collector().start();
+    drain_async_updates();
+
+    send_gcode_response("// State: HOMING...");
+    REQUIRE(get_current_progress() == 10);
+
+    send_gcode_response("// State: KAMP LEVELING...");
+    REQUIRE(get_current_progress() == 60);
+
+    send_gcode_response("// State: WAIT FOR TEMPERATURE...");
+    REQUIRE(get_current_progress() == 82);
+
+    // AD5M firmware re-emits HEATING after bed mesh probing — this should NOT regress
+    send_gcode_response("// State: HEATING...");
+    REQUIRE(get_current_progress() >= 82);
+
+    send_gcode_response("// State: KAMP PRIMING...");
+    REQUIRE(get_current_progress() == 90);
+}
+
+// ============================================================================
+// Sequential Progress Allows Forward Movement
+// ============================================================================
+
+TEST_CASE_METHOD(PrintStartCollectorSequentialFixture,
+                 "Sequential progress allows forward movement through all signals",
+                 "[print][collector][sequential]") {
+    collector().start();
+    drain_async_updates();
+
+    int prev_progress = 0;
+
+    // Walk through all 14 AD5M signals in order
+    std::vector<std::string> signals = {
+        "// State: PREPARING...",
+        "// State: MD5 CHECK",
+        "// State: HOMING...",
+        "// State: PREPARE CLEANING...",
+        "// State: HEATING...",
+        "// State: CLEANING START SOON",
+        "// State: CLEANING...",
+        "// State: COOLING DOWN...",
+        "// State: FINISHING CLEANING...",
+        "// State: DONE!",
+        "// State: KAMP LEVELING...",
+        "// State: WAIT FOR TEMPERATURE...",
+        "// State: KAMP PRIMING...",
+        "// State: PRINTING...",
+    };
+
+    for (const auto& signal : signals) {
+        send_gcode_response(signal);
+        int progress = get_current_progress();
+        CAPTURE(signal, progress, prev_progress);
+        REQUIRE(progress >= prev_progress);
+        prev_progress = progress;
+    }
+
+    // Final signal should reach 100%
+    REQUIRE(prev_progress == 100);
+}
+
+// ============================================================================
+// Response Pattern Weight Doesn't Regress Sequential Progress
+// ============================================================================
+
+TEST_CASE_METHOD(PrintStartCollectorSequentialFixture,
+                 "Response pattern weight doesn't regress sequential progress",
+                 "[print][collector][sequential]") {
+    collector().start();
+    drain_async_updates();
+
+    // HEATING signal sets progress to 25
+    send_gcode_response("// State: HEATING...");
+    REQUIRE(get_current_progress() == 25);
+
+    // Response pattern "Wait extruder temperature to reach 220" has weight=15
+    // which would be used as progress in sequential mode — but monotonic guard prevents regression
+    send_gcode_response("// Wait extruder temperature to reach 220");
+    REQUIRE(get_current_progress() >= 25);
+}
+
+// ============================================================================
+// COMPLETE Always Reaches 100%
+// ============================================================================
+
+TEST_CASE_METHOD(PrintStartCollectorSequentialFixture,
+                 "COMPLETE always reaches 100% regardless of prior progress",
+                 "[print][collector][sequential]") {
+    collector().start();
+    drain_async_updates();
+
+    // Advance to 82%
+    send_gcode_response("// State: WAIT FOR TEMPERATURE...");
+    REQUIRE(get_current_progress() == 82);
+
+    // PRINTING signal maps to COMPLETE phase → always 100%
+    send_gcode_response("// State: PRINTING...");
+    REQUIRE(get_current_progress() == 100);
+    REQUIRE(get_current_phase() == PrintStartPhase::COMPLETE);
+}

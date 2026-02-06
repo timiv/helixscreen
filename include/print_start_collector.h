@@ -171,6 +171,7 @@ class PrintStartCollector : public std::enable_shared_from_this<PrintStartCollec
     std::set<PrintStartPhase> detected_phases_;
     PrintStartPhase current_phase_ = PrintStartPhase::IDLE;
     bool print_start_detected_ = false;
+    int max_sequential_progress_ = 0; // Monotonic progress guard for sequential mode
     std::chrono::steady_clock::time_point printing_state_start_;
 
     // Profile for signal/pattern matching (set via set_profile() or loaded by start())
