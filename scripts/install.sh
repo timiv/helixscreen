@@ -266,9 +266,19 @@ detect_platform() {
         fi
     fi
 
-    # Unknown ARM device - don't assume it's a Pi
-    # Require explicit platform indicators to avoid false positives
+    # Generic ARM Linux (OrangePi, Banana Pi, Rock Pi, etc.)
+    # If it's a standard Linux distro on ARM, the pi/pi32 binary works fine
     if [ "$arch" = "aarch64" ] || [ "$arch" = "armv7l" ]; then
+        if [ -f /etc/os-release ]; then
+            log_warn "Non-Pi ARM board detected. Using generic ARM build."
+            if [ "$arch" = "aarch64" ]; then
+                echo "pi"
+            else
+                echo "pi32"
+            fi
+            return
+        fi
+        # No /etc/os-release = probably not a standard Linux userspace
         log_warn "Unknown ARM platform. Cannot auto-detect."
         echo "unsupported"
         return
