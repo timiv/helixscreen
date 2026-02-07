@@ -242,8 +242,8 @@ class Modal {
 
     // Helpers
     lv_obj_t* find_widget(const char* name);
-    void wire_ok_button(const char* name = "btn_ok");
-    void wire_cancel_button(const char* name = "btn_cancel");
+    void wire_ok_button(const char* name = "btn_primary");
+    void wire_cancel_button(const char* name = "btn_secondary");
     void wire_tertiary_button(const char* name = "btn_tertiary");
     void wire_quaternary_button(const char* name = "btn_quaternary");
     void wire_quinary_button(const char* name = "btn_quinary");

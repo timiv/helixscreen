@@ -61,8 +61,8 @@ class SaveZOffsetModal : public Modal {
      * Wires up the "Save & Restart" (ok) and "Cancel" buttons.
      */
     void on_show() override {
-        wire_ok_button();     // "Save & Restart" button
-        wire_cancel_button(); // "Cancel" button
+        wire_ok_button("btn_primary");       // "Save & Restart" button
+        wire_cancel_button("btn_secondary"); // "Cancel" button
     }
 
     /**

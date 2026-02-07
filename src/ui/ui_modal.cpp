@@ -676,10 +676,12 @@ void Modal::destroy() {
 // Helper macro to reduce boilerplate in button callbacks.
 // All button callbacks follow the same pattern: extract Modal* from button's
 // user_data and call the appropriate virtual method.
+// Uses current_target (where handler is registered) not target (which may be
+// a child label due to event bubbling, with unrelated user_data).
 #define MODAL_BUTTON_CB_IMPL(cb_name, method_name, button_label)                                   \
     void Modal::cb_name(lv_event_t* e) {                                                           \
         LVGL_SAFE_EVENT_CB_BEGIN("[Modal] " #cb_name);                                             \
-        lv_obj_t* btn = static_cast<lv_obj_t*>(lv_event_get_target(e));                            \
+        lv_obj_t* btn = static_cast<lv_obj_t*>(lv_event_get_current_target(e));                    \
         auto* self = static_cast<Modal*>(lv_obj_get_user_data(btn));                               \
         if (self) {                                                                                \
             spdlog::debug("[{}] " button_label " button clicked", self->get_name());               \

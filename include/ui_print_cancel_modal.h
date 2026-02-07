@@ -60,8 +60,8 @@ class PrintCancelModal : public Modal {
      * Wires up the "Stop" (ok) and "Keep Printing" (cancel) buttons.
      */
     void on_show() override {
-        wire_ok_button();     // "Stop" button
-        wire_cancel_button(); // "Keep Printing" button
+        wire_ok_button("btn_primary");       // "Stop" button
+        wire_cancel_button("btn_secondary"); // "Keep Printing" button
     }
 
     /**

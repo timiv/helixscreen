@@ -4,6 +4,6 @@
 #include "ui_exclude_object_modal.h"
 
 void ExcludeObjectModal::on_show() {
-    wire_ok_button("btn_ok");
-    wire_cancel_button("btn_cancel");
+    wire_ok_button("btn_primary");
+    wire_cancel_button("btn_secondary");
 }
