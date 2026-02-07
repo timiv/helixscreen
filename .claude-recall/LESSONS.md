@@ -133,3 +133,7 @@
 > **Step 4** - Read the log file: `Read tool on /tmp/test.log`
 > FAILURES: shell `&`, `timeout X cmd &`, multiple attempts, assuming automatic navigation. ONE background task, tee for logging, user does interaction, you read results.
 
+### [L061] [-----|-----] AD5M test printer environment
+- **Uses**: 0 | **Velocity**: 0 | **Learned**: 2026-02-07 | **Last**: 2026-02-07 | **Category**: system
+> AD5M (192.168.1.67, root@) runs armv7l Linux 5.4.61 (BusyBox). Key gotchas: (1) No curl, only wget - and wget has NO HTTPS support (compiled without SSL). (2) No sftp-server - use 'scp -O' (legacy protocol) instead of default scp. (3) Logging: default level is WARN, app logs to BOTH /tmp/helixscreen.log AND syslog (/var/log/messages) - syslog has the CURRENT session, /tmp/helixscreen.log may be stale from previous session. (4) No CA certificate bundle shipped - /etc/ssl/certs/ is empty, breaks ALL outbound HTTPS (libhv, wget). Must ship ca-certificates.crt with install. (5) No openssl CLI command. (6) No inotify support. (7) No WiFi (wpa_supplicant present but no interfaces). (8) OpenSSL 1.1 libs exist at /usr/lib/libssl.so.1.1. (9) Binary at /opt/helixscreen/, config at /opt/helixscreen/config/helixconfig.json. (10) ldd may return empty for statically-linked ARM binaries.
+
