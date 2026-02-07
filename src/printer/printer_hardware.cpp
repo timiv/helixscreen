@@ -366,40 +366,53 @@ std::string PrinterHardware::guess_main_led_strip() const {
         return "";
     }
 
-    // Priority 1: LEDs containing "case" (most common for case lighting)
-    std::string match = find_containing(leds_, "case");
-    if (!match.empty()) {
-        spdlog::debug("[PrinterHardware] guess_main_led_strip() -> '{}' (contains 'case')", match);
-        return match;
+    // Priority 1: Definitely room/case lighting
+    for (const auto& keyword : {"case", "chamber", "enclosure", "room", "ambient"}) {
+        std::string match = find_containing(leds_, keyword);
+        if (!match.empty()) {
+            spdlog::debug("[PrinterHardware] guess_main_led_strip() -> '{}' (contains '{}')", match,
+                          keyword);
+            return match;
+        }
     }
 
-    // Priority 2: LEDs containing "chamber"
-    match = find_containing(leds_, "chamber");
-    if (!match.empty()) {
-        spdlog::debug("[PrinterHardware] guess_main_led_strip() -> '{}' (contains 'chamber')",
-                      match);
-        return match;
+    // Priority 2: Likely room lighting (positional/structural keywords)
+    for (const auto& keyword : {"ceiling", "overhead", "cabinet", "frame"}) {
+        std::string match = find_containing(leds_, keyword);
+        if (!match.empty()) {
+            spdlog::debug("[PrinterHardware] guess_main_led_strip() -> '{}' (contains '{}')", match,
+                          keyword);
+            return match;
+        }
     }
 
-    // Priority 3: LEDs containing "light" (general lighting)
-    match = find_containing(leds_, "light");
-    if (!match.empty()) {
-        spdlog::debug("[PrinterHardware] guess_main_led_strip() -> '{}' (contains 'light')", match);
-        return match;
+    // Priority 3: Generic light/lamp keywords
+    for (const auto& keyword : {"light", "lamp", "illuminat"}) {
+        std::string match = find_containing(leds_, keyword);
+        if (!match.empty()) {
+            spdlog::debug("[PrinterHardware] guess_main_led_strip() -> '{}' (contains '{}')", match,
+                          keyword);
+            return match;
+        }
     }
 
-    // Priority 4: Any LED that's NOT a specialty indicator
-    // Avoid: indicator, status, corner (these are typically status LEDs, not room lighting)
-    match = find_not_containing(leds_,
-                                {"indicator", "status", "corner", "Indicator", "Status", "Corner"});
+    // Priority 4: Any LED that's NOT a specialty/toolhead indicator
+    // Avoid status LEDs: indicator, status, corner
+    // Avoid toolhead LEDs: sb_led (Stealthburner), logo, nozzle, toolhead
+    // Note: "toolhead_light" is already matched by Priority 3 ("light"), so excluding
+    // "toolhead" here only filters toolhead status LEDs like "toolhead_leds"
+    std::string match =
+        find_not_containing(leds_, {"indicator", "status", "corner", "Indicator", "Status",
+                                    "Corner", "sb_led", "logo", "nozzle", "toolhead"});
     if (!match.empty()) {
         spdlog::debug("[PrinterHardware] guess_main_led_strip() -> '{}' (non-indicator)", match);
         return match;
     }
 
-    // Fallback: first LED in list
-    spdlog::debug("[PrinterHardware] guess_main_led_strip() -> '{}' (fallback)", leds_[0]);
-    return leds_[0];
+    // No room lighting found -- all LEDs are status/toolhead LEDs.
+    // Return empty so the UI can handle the no-light-configured case gracefully.
+    spdlog::debug("[PrinterHardware] guess_main_led_strip() -> no room lighting found");
+    return "";
 }
 
 // ============================================================================

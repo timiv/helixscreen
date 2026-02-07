@@ -188,16 +188,18 @@ class PrinterHardware {
      * @brief Guess the most likely main LED strip (case/chamber lighting)
      *
      * Priority order:
-     * 1. Substring match: "case" (e.g., "neopixel case_lights")
-     * 2. Substring match: "chamber" (e.g., "neopixel chamber_light")
-     * 3. Substring match: "light" (e.g., "led toolhead_light")
-     * 4. Avoid specialty indicators: skip LEDs containing "indicator", "status", "corner"
-     * 5. Fallback: first LED in list (if no better match)
+     * 1. Substring match: room/case keywords ("case", "chamber", "enclosure", "room", "ambient")
+     * 2. Substring match: positional keywords ("ceiling", "overhead", "cabinet", "frame")
+     * 3. Substring match: generic light keywords ("light", "lamp", "illuminat")
+     * 4. Any LED that's NOT a status/toolhead indicator:
+     *    Excludes: "indicator", "status", "corner", "sb_led", "logo", "nozzle", "toolhead"
+     * 5. Return empty string if all LEDs are status/toolhead LEDs
      *
      * The goal is to find the primary case/chamber lighting that users
-     * typically want to control, rather than status LEDs or indicators.
+     * typically want to control, rather than status LEDs, Stealthburner LEDs,
+     * or other toolhead indicators.
      *
-     * @return Main LED strip name or empty string if none found
+     * @return Main LED strip name or empty string if no room lighting found
      */
     std::string guess_main_led_strip() const;
 
