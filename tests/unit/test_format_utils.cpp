@@ -341,3 +341,83 @@ TEST_CASE("heater_display() edge cases", "[format_utils][heater_display]") {
         REQUIRE(result.status == "Heating...");
     }
 }
+
+// =============================================================================
+// Duration formatting (padded)
+// =============================================================================
+
+TEST_CASE("duration_padded shows seconds under 5 minutes", "[format_utils][duration]") {
+    SECTION("zero seconds") {
+        CHECK(duration_padded(0) == "0s");
+    }
+
+    SECTION("negative values") {
+        CHECK(duration_padded(-10) == "0s");
+    }
+
+    SECTION("under 1 minute shows seconds only") {
+        CHECK(duration_padded(5) == "5s");
+        CHECK(duration_padded(30) == "30s");
+        CHECK(duration_padded(59) == "59s");
+    }
+
+    SECTION("1 to 4 minutes shows minutes and seconds") {
+        CHECK(duration_padded(60) == "1m 00s");
+        CHECK(duration_padded(90) == "1m 30s");
+        CHECK(duration_padded(150) == "2m 30s");
+        CHECK(duration_padded(299) == "4m 59s");
+    }
+
+    SECTION("5 minutes and above shows minutes only") {
+        CHECK(duration_padded(300) == "5m");
+        CHECK(duration_padded(360) == "6m");
+        CHECK(duration_padded(600) == "10m");
+        CHECK(duration_padded(3540) == "59m");
+    }
+
+    SECTION("hours shows hours and padded minutes") {
+        CHECK(duration_padded(3600) == "1h 00m");
+        CHECK(duration_padded(3660) == "1h 01m");
+        CHECK(duration_padded(7200) == "2h 00m");
+        CHECK(duration_padded(7830) == "2h 10m");
+    }
+}
+
+// =============================================================================
+// Duration remaining formatting
+// =============================================================================
+
+TEST_CASE("duration_remaining shows seconds under 5 minutes", "[format_utils][duration]") {
+    SECTION("zero seconds") {
+        CHECK(duration_remaining(0) == "0 min left");
+    }
+
+    SECTION("negative values") {
+        CHECK(duration_remaining(-10) == "0 min left");
+    }
+
+    SECTION("under 1 minute shows 0:SS") {
+        CHECK(duration_remaining(5) == "0:05 left");
+        CHECK(duration_remaining(30) == "0:30 left");
+        CHECK(duration_remaining(59) == "0:59 left");
+    }
+
+    SECTION("1 to 4 minutes shows M:SS") {
+        CHECK(duration_remaining(60) == "1:00 left");
+        CHECK(duration_remaining(90) == "1:30 left");
+        CHECK(duration_remaining(150) == "2:30 left");
+        CHECK(duration_remaining(299) == "4:59 left");
+    }
+
+    SECTION("5 minutes and above shows minutes") {
+        CHECK(duration_remaining(300) == "5 min left");
+        CHECK(duration_remaining(360) == "6 min left");
+        CHECK(duration_remaining(600) == "10 min left");
+    }
+
+    SECTION("hours shows H:MM") {
+        CHECK(duration_remaining(3600) == "1:00 left");
+        CHECK(duration_remaining(3660) == "1:01 left");
+        CHECK(duration_remaining(7200) == "2:00 left");
+    }
+}

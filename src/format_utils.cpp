@@ -145,12 +145,20 @@ std::string duration_remaining(int total_seconds) {
 
     int hours = total_seconds / 3600;
     int minutes = (total_seconds % 3600) / 60;
+    int seconds = total_seconds % 60;
 
     char buf[32];
 
     if (hours > 0) {
         // Show as H:MM format for longer durations
         std::snprintf(buf, sizeof(buf), "%d:%02d left", hours, minutes);
+    } else if (total_seconds < 300) {
+        // Under 5 minutes: show minutes:seconds for precision
+        if (minutes > 0) {
+            std::snprintf(buf, sizeof(buf), "%d:%02d left", minutes, seconds);
+        } else {
+            std::snprintf(buf, sizeof(buf), "0:%02d left", seconds);
+        }
     } else {
         // Show as "X min left" for shorter durations
         std::snprintf(buf, sizeof(buf), "%d min left", minutes > 0 ? minutes : 1);
@@ -220,15 +228,23 @@ size_t duration_to_buffer(char* buf, size_t buf_size, int total_seconds) {
 std::string duration_padded(int total_seconds) {
     // Handle negative or zero
     if (total_seconds <= 0) {
-        return "0m";
+        return "0s";
     }
 
     int hours = total_seconds / 3600;
     int minutes = (total_seconds % 3600) / 60;
+    int seconds = total_seconds % 60;
 
     char buf[32];
 
-    if (hours == 0) {
+    if (hours == 0 && total_seconds < 300) {
+        // Under 5 minutes: show minutes and seconds for precision
+        if (minutes > 0) {
+            std::snprintf(buf, sizeof(buf), "%dm %02ds", minutes, seconds);
+        } else {
+            std::snprintf(buf, sizeof(buf), "%ds", seconds);
+        }
+    } else if (hours == 0) {
         // Under 1 hour: show minutes only
         std::snprintf(buf, sizeof(buf), "%dm", minutes);
     } else {
