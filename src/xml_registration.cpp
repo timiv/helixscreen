@@ -175,6 +175,10 @@ void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/info_note.xml");
     lv_xml_register_component_from_file("A:ui_xml/form_field.xml");
 
+    // Beta feature indicators (badge before wrapper - dependency order)
+    lv_xml_register_component_from_file("A:ui_xml/beta_badge.xml");
+    lv_xml_register_component_from_file("A:ui_xml/beta_feature.xml");
+
     // emergency_stop_button.xml removed - E-Stop buttons are now embedded in panels
     lv_xml_register_component_from_file("A:ui_xml/estop_confirmation_dialog.xml");
     lv_xml_register_component_from_file("A:ui_xml/klipper_recovery_dialog.xml");
