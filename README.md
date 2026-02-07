@@ -20,13 +20,15 @@ Built on LVGL 9's modern declarative XML system, HelixScreen delivers a fast, po
 
 ---
 
-> **First Public Beta Release — v0.9.3**
+> **Beta Release — v0.9.5**
 >
-> Core features are complete. This is the first public beta — we're looking for early adopters to help find edge cases.
+> Core features are complete and stabilizing. We're looking for testers across different printer setups.
 >
-> **Tested on:** Voron 2.4 (Raspberry Pi 5), FlashForge Adventurer 5M Pro ([Forge-X](https://github.com/DrA1ex/ff5m) firmware)
+> **Tested on:** Voron 2.4 (Raspberry Pi 5), Voron 0.2, Doron Velta, FlashForge Adventurer 5M Pro ([Forge-X](https://github.com/DrA1ex/ff5m) firmware)
 >
-> **Creality K1:** Binaries are included in the release but have **not been tested at all**. If you have a K1, we'd love your help verifying it works!
+> **Raspberry Pi:** Both 64-bit and 32-bit Raspberry Pi OS are supported.
+>
+> **Creality K1:** Binaries are included in the release but have **not been tested on hardware**. If you have a K1, we'd love your help verifying it works!
 >
 > **Ready to help?** See [Installation](#installation). Found a bug? [Open an issue](https://github.com/prestonbrown/helixscreen/issues). Have an idea? [Request a feature](https://github.com/prestonbrown/helixscreen/issues/new?labels=enhancement).
 
@@ -79,7 +81,7 @@ See [docs/GALLERY.md](docs/GALLERY.md) for all screenshots.
 
 **Integrations** — HelixPrint plugin, power devices, print history, timelapse, exclude objects
 
-**System** — First-run wizard, 30 panels, light/dark themes, responsive from 800×480 to 1024×600+ (480×320 is a work-in-progress)
+**System** — First-run wizard, 31 panels + 17 overlays, light/dark themes, responsive from 800×480 to 1024×600+ (480×320 is a work-in-progress)
 
 ## Installation
 
@@ -119,13 +121,13 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for detailed setup, cross-compila
 ## FAQ
 
 **Is HelixScreen production-ready?**
-Beta status. Core features work, but we're seeking testers. Suitable for enthusiasts willing to provide feedback.
+Beta status. Core features are stable and improving with each release. Suitable for enthusiasts willing to provide feedback.
 
 **How is this different from GuppyScreen/KlipperScreen?**
 HelixScreen uses LVGL 9's declarative XML—change layouts without recompiling. ~10MB RAM vs ~50MB for KlipperScreen. See the [comparison table](#why-helixscreen).
 
 **Which printers are supported?**
-Any Klipper + Moonraker printer. Currently tested on Voron 2.4, Voron 0.2, FlashForge Adventurer 5M Pro, and Doron Velta. Both 32-bit and 64-bit Raspberry Pi OS are supported. The wizard auto-discovers your printer's capabilities.
+Any Klipper + Moonraker printer. Tested on Voron 2.4, Voron 0.2, Doron Velta, and FlashForge Adventurer 5M Pro. Both 64-bit and 32-bit Raspberry Pi OS are supported. Creality K1 binaries are available but untested. The wizard auto-discovers your printer's capabilities.
 
 **What screen sizes are supported?**
 800×480 and up (including 1024×600) work well. Smaller displays like 480×320 are a work-in-progress — they'll run but may have some layout overlap issues.
