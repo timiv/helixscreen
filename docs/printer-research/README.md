@@ -8,7 +8,7 @@ This directory contains research documentation on various 3D printers for HelixS
 |---------|-------------|---------|-----------|----------------|-------------------|
 | **FlashForge AD5M Pro** | ARM (Allwinner T113) | 800x480 FB | Forge-X | None | **Supported** |
 | **AnyCubic Kobra S1** | ARM (Cortex-A7) | 480x320 FB | Rinkhals | ACE Pro | **ValgACE ready** |
-| **Creality K2 Plus** | MIPS (X2000E?) | 480x800 FB | Stock | CFS (16 colors) | Needs MIPS port |
+| **Creality K2 Plus** | ARM (Allwinner A133?) | 480x800 FB | Stock | CFS (16 colors) | Needs ARM port |
 | **Creality K1C/K1 Max** | MIPS (X2000E) | 480x400 FB | After root | Single | Needs MIPS port |
 | **FlashForge AD5X** | MIPS | 720x480 FB | ZMOD | IFS (4 colors) | Needs MIPS port |
 | **Snapmaker U1** | Unknown | Unknown | Modified | 4-toolhead | Blocked (closed source) |
@@ -20,9 +20,12 @@ This directory contains research documentation on various 3D printers for HelixS
 - **AnyCubic + ACE Pro**: ValgACE backend already implemented, just needs Rinkhals for Moonraker
 
 ### Needs MIPS Toolchain
-- **Creality K1/K2 series**: All use Ingenic X2000E (MIPS32r2)
+- **Creality K1 series**: Ingenic X2000E (MIPS32r2) - GuppyScreen proves LVGL works
 - **FlashForge AD5X**: Also MIPS (unlike AD5M which is ARM)
-- GuppyScreen proves LVGL works on these - we'd need cross-compilation
+
+### Needs ARM Port (Different from AD5M)
+- **Creality K2 series**: Allwinner ARM (Tina Linux) - stock Moonraker, easier to build for
+- See [K1 vs K2 Community Comparison](CREALITY_K1_VS_K2_COMMUNITY.md) for ecosystem differences
 
 ### Blocked
 - **Snapmaker U1**: Custom Moonraker fork, open source promised by March 2026
@@ -34,9 +37,14 @@ This directory contains research documentation on various 3D printers for HelixS
 - Rockchip RV1106G3 (AnyCubic Kobra series)
 
 ### MIPS (Would Need New Toolchain)
-- Ingenic X2000E (Creality K1/K2, FlashForge AD5X)
+- Ingenic X2000E (Creality K1 series, FlashForge AD5X)
 - Dual-core 1.2GHz, 256MB RAM typical
 - nan2008 ABI required
+
+### ARM - Allwinner (Different Linux base)
+- Allwinner A133/T800 (Creality K2 series) - Tina Linux (OpenWrt-based)
+- Quad-core Cortex-A53, likely 512MB+ RAM
+- Standard armv7/aarch64 toolchains
 
 ## Multi-Material Systems
 
@@ -58,6 +66,7 @@ This directory contains research documentation on various 3D printers for HelixS
 | [ANYCUBIC_KOBRA_COREXY_RESEARCH.md](ANYCUBIC_KOBRA_COREXY_RESEARCH.md) | Kobra S1/3 series, ACE Pro, Rinkhals |
 | [CREALITY_K1_SERIES_RESEARCH.md](CREALITY_K1_SERIES_RESEARCH.md) | K1C, K1 Max, GuppyScreen |
 | [CREALITY_K2_PLUS_RESEARCH.md](CREALITY_K2_PLUS_RESEARCH.md) | K2 Plus, CFS multi-material |
+| [CREALITY_K1_VS_K2_COMMUNITY.md](CREALITY_K1_VS_K2_COMMUNITY.md) | K1 vs K2 enthusiast/aftermarket ecosystem comparison |
 | [CREALITY_NEBULA_PAD_RESEARCH.md](CREALITY_NEBULA_PAD_RESEARCH.md) | Nebula Pad add-on touchscreen (competitor) |
 | [FLASHFORGE_AD5X_RESEARCH.md](FLASHFORGE_AD5X_RESEARCH.md) | AD5X, IFS multi-color, ZMOD |
 | [SNAPMAKER_U1_RESEARCH.md](SNAPMAKER_U1_RESEARCH.md) | U1 toolchanger, SnapSwap |

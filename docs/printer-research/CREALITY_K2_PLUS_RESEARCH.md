@@ -1,7 +1,7 @@
 # Creality K2 Plus (and K2 Series) Research
 
-**Date**: 2026-02-02
-**Status**: Comprehensive research complete
+**Date**: 2026-02-02 (updated 2026-02-07)
+**Status**: Comprehensive research complete (architecture corrected)
 
 ## Executive Summary
 
@@ -28,11 +28,13 @@ The Creality K2 Plus is Creality's flagship CoreXY enclosed printer with 350mm³
 | **Weight** | 35 kg |
 | **Price** | $1,499 (Combo with CFS) |
 
-### Processor (Likely)
-Based on K1 discovery research:
-- **CPU**: Ingenic X2000E SoC (MIPS, dual-core 1.2GHz)
-- **RAM**: LPDDR2 (unconfirmed, likely 512MB-1GB)
-- **MCU**: GD32F303RET6 (ARM Cortex-M3) for motion
+### Processor
+**CORRECTED**: The K2 uses a DIFFERENT SoC than the K1 series.
+- **Linux SoC**: Allwinner (likely A133/T800), ARM Cortex-A53 quad-core (NOT Ingenic MIPS like K1)
+- **Evidence**: Tina Linux (Allwinner's distro), entware armv7sf installer, linux-sunxi.org lists "Creality T800" as A133 rebadge
+- **RAM**: Unconfirmed, likely 512MB-1GB
+- **Storage**: 32 GB
+- **Motion MCU**: GD32F303RET6 (ARM Cortex-M3) - same as K1
 
 ### K2 Series Variants
 
@@ -122,12 +124,15 @@ Community criticism:
 
 ### Community Projects
 
-| Project | Description |
-|---------|-------------|
-| [k2-improvements](https://github.com/jamincollins/k2-improvements) | Full Klipper venv, Entware (archived) |
-| [Fluidd-K2](https://github.com/BusPirateV5/Fluidd-K2) | Customized Fluidd, WebRTC camera |
-| [Mainsail-K2](https://github.com/Guilouz/Mainsail-K2) | Lightweight Mainsail build |
-| [k2_powerups](https://github.com/minimal3dp/k2_powerups) | Improved leveling/start procedures |
+| Project | Status | Description |
+|---------|--------|-------------|
+| [k2-improvements](https://github.com/jamincollins/k2-improvements) | **ARCHIVED Aug 2025** | Full Klipper venv, Entware, Cartographer (148 stars, 42 forks) |
+| [K2Plus-entware](https://github.com/vsevolod-volkov/K2Plus-entware) | Active? | Basic entware installer |
+| [Fluidd-K2](https://github.com/BusPirateV5/Fluidd-K2) | Unknown | Customized Fluidd, WebRTC camera |
+| [Mainsail-K2](https://github.com/Guilouz/Mainsail-K2) | Unknown | Lightweight Mainsail build |
+| [k2_powerups](https://github.com/minimal3dp/k2_powerups) | Unknown | Improved leveling/start procedures |
+
+**Note**: Guilouz Helper Script will NOT support K2 Plus - developer returned the printer (May 2025). GuppyScreen also does not support K2. See [K1 vs K2 Community Comparison](CREALITY_K1_VS_K2_COMMUNITY.md) for full analysis.
 
 ---
 
@@ -205,16 +210,16 @@ ssh root@<printer-ip>
 
 | Challenge | Severity | Notes |
 |-----------|----------|-------|
-| MIPS Architecture | HIGH | Requires MIPS32r2 cross-compilation |
 | Display Resolution | MEDIUM | 480x800 portrait orientation |
 | CFS Integration | MEDIUM | Proprietary blobs for filament system |
-| Resource Constraints | MEDIUM | Limited CPU/RAM |
+| No Custom UI Precedent | MEDIUM | No GuppyScreen or other LVGL UI deployed on K2 |
+| Declining Community | LOW-MEDIUM | Key maintainers (Guilouz, jamincollins) left |
 
 ### Implementation Path
-1. **Confirm SoC** - Check `/proc/cpuinfo`
-2. **Build toolchain** - Cross-compilation for MIPS
-3. **Port LVGL drivers** - Framebuffer compatibility
-4. **Moonraker integration** - Use existing API
+1. **Confirm SoC** - Check `/proc/cpuinfo` (expected: Allwinner ARM)
+2. **Build toolchain** - Standard ARM aarch64/armv7 cross-compilation (much easier than K1 MIPS)
+3. **Port LVGL drivers** - Framebuffer `/dev/fb0`, evdev touch
+4. **Moonraker integration** - Stock on port 4408
 5. **CFS support** - Use G-code macros (T0-T3, BOX_*)
 
 ---
@@ -237,12 +242,111 @@ ssh root@<printer-ip>
 
 ---
 
+## 11. Known Filesystem Paths
+
+| What | Path |
+|------|------|
+| Klipper | `/usr/share/klipper/` |
+| Klipper config | `/usr/share/klipper/config/printer.cfg` |
+| G-code macros | `/usr/share/klipper/config/gcode_macro.cfg` |
+| Moonraker | Stock, port **4408** (Fluidd) / **4409** (Mainsail) |
+| Stock UI | `/usr/bin/display-server` |
+| Init system | **procd** (OpenWrt-style, NOT SysV or systemd) |
+| Service startup | `/etc/init.d/app` (starts display-server, master-server, app-server, etc.) |
+| SSH credentials | `root` / `creality_2024` |
+
+---
+
+## 12. Display Details
+
+| Attribute | Value |
+|-----------|-------|
+| Size | 4.3 inches |
+| Panel resolution | 480 x 800 (native portrait panel) |
+| **Displayed orientation** | **Appears landscape from product photos** - likely 800x480 after driver/software rotation |
+| Touch type | **Capacitive** (Goodix GT9xx or TLSC6x controllers) |
+| Touch modules | `gt9xxnew_ts.ko`, `tlsc6x.ko` (two variants for different HW revisions) |
+| Framebuffer | `/dev/fb0` |
+| G2D accelerator | `g2d_sunxi` loaded at boot (Allwinner hardware 2D accel, supports rotation) |
+| Display control | `/sys/kernel/debug/dispdbg` IOCTLs |
+
+**UNCONFIRMED**: Whether the framebuffer reports 800x480 (driver-rotated, ideal for us) or 480x800 (would need software rotation). Need `cat /sys/class/graphics/fb0/virtual_size` from actual hardware.
+
+---
+
+## 13. Open Questions (Need Hardware Access)
+
+These can only be answered by someone with SSH access to a K2/K2 Plus:
+
+```bash
+# 1. Display - is it already rotated by the driver?
+cat /sys/class/graphics/fb0/virtual_size
+# Expected: "800,480" (great) or "480,800" (need sw rotation)
+
+# 2. CPU architecture - what ARM variant?
+uname -m
+# Expected: "armv7l" or "aarch64"
+
+# 3. SoC confirmation
+cat /proc/cpuinfo
+# Looking for: Allwinner, Cortex-A53, etc.
+
+# 4. Libc - musl or glibc?
+ldd --version 2>&1 || ls /lib/libc.so* /lib/ld-*
+# Determines static linking strategy
+
+# 5. Writable space - where to install HelixScreen?
+df -h
+mount
+# Need a writable partition with space for our binary + assets
+
+# 6. Framebuffer release - does killing display-server work cleanly?
+killall display-server
+cat /dev/urandom > /dev/fb0  # should see noise on screen
+
+# 7. Touch device path
+ls /dev/input/event*
+cat /proc/bus/input/devices | grep -A 4 -i touch
+
+# 8. Moonraker confirmation
+curl -s http://localhost:4408/server/info | head
+```
+
+---
+
+## 14. HelixScreen Build Target Assessment
+
+### What We'd Need
+
+| Component | Effort | Notes |
+|-----------|--------|-------|
+| `PLATFORM_TARGET=k2` in `mk/cross.mk` | Low | Copy AD5M or Pi target, adjust for ARM variant |
+| Toolchain / Docker image | Low | Standard ARM cross-compiler (armv7 or aarch64) |
+| Framebuffer backend | **Done** | Existing fbdev backend auto-detects resolution |
+| Touch input | **Done** | Existing evdev auto-detection handles Goodix/TLSC |
+| Display rotation (if fb is 480x800) | Medium | LVGL `lv_display_set_rotation()` + touch coord transform |
+| Display rotation (if fb is 800x480) | **None** | Already our primary resolution target |
+| procd init script | Low | Different from K1's SysV init, but simple |
+| Deploy script | Low | tar+ssh pipe (same as K1/AD5M, BusyBox environment) |
+| Moonraker port config | Trivial | Default to 4408 instead of 7125 |
+| Static linking | Low | Same approach as K1/AD5M, proven pattern |
+
+### Best case (fb already 800x480)
+Mostly plumbing - new cross.mk target, Docker image, deploy script, procd init. UI fits as-is.
+
+### Worst case (fb is 480x800, needs rotation)
+Add LVGL software rotation in fbdev flush callback + touch coordinate transform. Medium effort but well-documented path (GuppyScreen does this).
+
+---
+
 ## Conclusion
 
-The Creality K2 Plus is a capable HelixScreen target with stock Moonraker support. Key challenges:
-1. **Architecture** - Likely MIPS requiring specialized cross-compilation
-2. **CFS integration** - Multi-material via existing macros or reverse-engineering
-3. **Display takeover** - Must handle stock display-server
-4. **Community tooling** - K2 Plus scene less mature than K1 series
+The K2 Plus is architecturally easier to target than K1 (ARM vs MIPS) with stock Moonraker (no community tools needed). Key remaining unknowns:
 
-Most promising path: Study GuppyScreen's LVGL/Moonraker architecture and adapt, while using existing CFS G-code macros.
+1. **Framebuffer orientation** - determines if we need rotation support (the big question)
+2. **ARM variant** - armv7 vs aarch64 determines which toolchain
+3. **Install location** - where to put HelixScreen on the filesystem
+4. **CFS integration** - multi-material via existing G-code macros (T0-T3, BOX_*)
+5. **Community ecosystem** - thin and declining, but stock Moonraker means less dependency on community tools
+
+See also: [K1 vs K2 Community Comparison](CREALITY_K1_VS_K2_COMMUNITY.md)
