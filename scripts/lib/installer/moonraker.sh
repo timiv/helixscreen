@@ -39,8 +39,14 @@ setup_updater_repo() {
 
     log_info "Setting up updater repo at $UPDATER_REPO_DIR..."
     $SUDO mkdir -p "$UPDATER_REPO_DIR"
+    # Sparse checkout: only need scripts/install.sh for Moonraker's install_script option.
+    # Full checkout would pull ~200MB of gcode test files, images, and submodule docs.
     if $SUDO git clone --depth 1 --filter=blob:none --no-checkout \
         "https://github.com/${GITHUB_REPO}.git" "$UPDATER_REPO_DIR" 2>/dev/null; then
+        cd "$UPDATER_REPO_DIR"
+        $SUDO git sparse-checkout set scripts/install.sh
+        $SUDO git checkout 2>/dev/null
+        cd - >/dev/null
         log_success "Updater repo created at $UPDATER_REPO_DIR"
     else
         log_warn "Could not create updater repo - Moonraker updates may not work"
