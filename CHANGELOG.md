@@ -5,6 +5,38 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.5] - 2026-02-07
+
+### Added
+- Exclude object support for streaming/2D mode with selection brackets and long-press interaction
+- Print Objects list overlay showing defined objects during a print
+- LED selection dropdown in settings for multi-LED printers
+- Version number displayed on splash screen
+- Beta and dev update channels with UI toggle and R2 upload script
+- Beta feature wrapper component with badge indicator
+- 32-bit ARM (armv7l) Raspberry Pi build target (#10)
+
+### Fixed
+- Use-after-free race in wpa_supplicant backend shutdown (#8)
+- Deadlock in Happy Hare and ToolChanger AMS backend start (#9)
+- DNS resolver fallback for static glibc builds
+- Crash when navigating folders during metadata fetch in print selection
+- LED detection excluding toolhead LEDs from main LED control
+- WebSocket max message size increased from 1MB to 5MB (#7)
+- Elapsed/remaining time display during mock printing
+- Crash on window close from SDL event handling during shutdown
+- Accidental scroll taps by increasing scroll limit default
+- G-code parser now reads layer_height, first_layer_height, object_height from metadata
+- Invalid text_secondary color token replaced with text_muted
+- KIAUH metadata wrapper key and moonraker updater path (#3)
+- Installer sparse checkout for updater repo (#11)
+
+### Changed
+- Log levels cleaned up: INFO is concise, DEBUG is useful without per-layer/shutdown spam
+- Duplicate log bugs fixed (PrintStartCollector double-completion, PluginManager double-unload)
+- Settings panel version rows deduplicated
+- Exclude object modal XML registration and single-select behavior
+
 ## [0.9.4] - 2026-02-07
 
 ### Added
