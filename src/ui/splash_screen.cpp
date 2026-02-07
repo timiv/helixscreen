@@ -6,6 +6,7 @@
 #include "ui_utils.h"
 
 #include "helix_timing.h"
+#include "helix_version.h"
 #include "prerendered_images.h"
 #include "theme_manager.h"
 
@@ -129,6 +130,14 @@ void show_splash_screen(int screen_width, int screen_height) {
         splash_widget = container;
     }
 
+    // Version number in lower-right corner (subtle, theme-aware)
+    lv_obj_t* version_label = lv_label_create(screen);
+    lv_label_set_text(version_label, "v" HELIX_VERSION);
+    lv_obj_set_style_text_color(
+        version_label, dark_mode ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x000000), LV_PART_MAIN);
+    lv_obj_set_style_text_opa(version_label, LV_OPA_40, LV_PART_MAIN);
+    lv_obj_align(version_label, LV_ALIGN_BOTTOM_RIGHT, -8, -6);
+
     // Create fade-in animation (0.5 seconds)
     lv_anim_t anim;
     lv_anim_init(&anim);
@@ -153,6 +162,7 @@ void show_splash_screen(int screen_width, int screen_height) {
     }
 
     // Clean up splash screen (guard against early shutdown)
+    lv_obj_safe_delete(version_label);
     lv_obj_safe_delete(splash_widget);
 
     spdlog::debug("[Splash Screen] complete");
