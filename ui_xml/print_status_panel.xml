@@ -70,6 +70,19 @@
                       style_text_color="#overlay_text" style_text_opa="180"/>
         </lv_obj>
 
+        <!-- Objects list button: top-left corner, visible only when multi-object print -->
+        <lv_obj name="btn_objects"
+                align="top_left" width="36" height="36"
+                style_translate_x="#space_md" style_translate_y="#space_md"
+                style_bg_color="#card_bg" style_bg_opa="180" style_radius="18"
+                clickable="true" style_pad_all="0"
+                scrollable="false">
+          <bind_flag_if_eq subject="exclude_objects_available" flag="hidden" ref_value="0"/>
+          <lv_label text="#icon_view_list" style_text_font="mdi_icons_24" style_text_color="#text_muted"
+                    align="center"/>
+          <event_cb trigger="clicked" callback="on_print_status_objects"/>
+        </lv_obj>
+
         <!-- PRINT COMPLETE OVERLAY: Shown when print finishes successfully -->
         <!-- Hidden by default. Binding removes hidden ONLY when outcome == COMPLETE (1) -->
         <lv_obj name="print_complete_overlay"
