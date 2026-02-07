@@ -5,7 +5,7 @@
 <!-- Creates a clickable row that opens a sub-panel or performs an action -->
 <!-- Usage: <setting_action_row label="Network Settings" label_tag="Network Settings" icon="lan" description="WiFi and Ethernet" description_tag="WiFi and Ethernet"/> -->
 <!-- Optional: disabled="subject_name" to dim label and disable button when subject = 1 -->
-<!-- Optional: bind_description="subject_name" to dynamically bind description text to a subject -->
+<!-- Description binding done in C++ via lv_label_bind_text on the "description" child -->
 <component>
   <api>
     <prop name="label" type="string" default="Action"/>
@@ -13,7 +13,6 @@
     <prop name="icon" type="string" default=""/>
     <prop name="description" type="string" default=""/>
     <prop name="description_tag" type="string" default=""/>
-    <prop name="bind_description" type="string" default=""/>
     <prop name="callback" type="string" default=""/>
     <prop name="disabled" type="string" default=""/>
   </api>
@@ -44,7 +43,7 @@
           <bind_style name="label_disabled" subject="$disabled" ref_value="1"/>
         </text_body>
         <text_small name="description"
-                    text="$description" translation_tag="$description_tag" bind_text="$bind_description"/>
+                    text="$description" translation_tag="$description_tag"/>
       </lv_obj>
       <!-- Right side: Chevron icon -->
       <icon src="chevron_right" size="sm" variant="secondary" clickable="false" event_bubble="true"/>

@@ -152,8 +152,7 @@ static void on_language_changed(lv_event_t* e) {
     SettingsManager::instance().set_language_by_index(index);
 }
 
-// Static callback for version row tap (memory debug toggle via 7-tap secret)
-// This provides a touch-based way to enable memory debugging on Pi (no keyboard)
+// Static callback for version row tap (toggle beta_features via 7-tap secret)
 // Like Android's "tap build number 7 times" to enable developer mode
 static constexpr int kSecretTapCount = 7;
 static constexpr uint32_t kSecretTapTimeoutMs = 2000; // Reset counter after 2s of no taps
@@ -174,20 +173,36 @@ static void on_version_clicked(lv_event_t*) {
     int remaining = kSecretTapCount - tap_count;
 
     if (remaining > 0 && remaining <= 3) {
-        // Show countdown when close
+        // Show countdown - say "enable" or "disable" based on current state
+        Config* config = Config::get_instance();
+        bool currently_on = config && config->is_beta_features_enabled();
+        const char* action = currently_on ? "disable" : "enable";
         ui_toast_show(ToastSeverity::INFO,
-                      fmt::format("{} more tap{} to toggle memory debug", remaining,
-                                  remaining == 1 ? "" : "s")
+                      fmt::format("{} more tap{} to {} beta features", remaining,
+                                  remaining == 1 ? "" : "s", action)
                           .c_str(),
                       1000);
     } else if (remaining == 0) {
-        // Toggle memory debug
-        MemoryStatsOverlay::instance().toggle();
-        bool is_visible = MemoryStatsOverlay::instance().is_visible();
-        ui_toast_show(ToastSeverity::SUCCESS,
-                      is_visible ? lv_tr("Memory debug: ON") : lv_tr("Memory debug: OFF"), 1500);
-        spdlog::info("[SettingsPanel] Memory debug toggled via 7-tap secret: {}",
-                     is_visible ? "ON" : "OFF");
+        // Toggle beta_features config flag and reactive subject
+        Config* config = Config::get_instance();
+        if (config) {
+            bool currently_enabled = config->is_beta_features_enabled();
+            bool new_value = !currently_enabled;
+            config->set("/beta_features", new_value);
+            config->save();
+
+            // Update the reactive subject so UI elements respond immediately
+            lv_subject_t* subject = lv_xml_get_subject(nullptr, "show_beta_features");
+            if (subject) {
+                lv_subject_set_int(subject, new_value ? 1 : 0);
+            }
+
+            ui_toast_show(ToastSeverity::SUCCESS,
+                          new_value ? lv_tr("Beta features: ON") : lv_tr("Beta features: OFF"),
+                          1500);
+            spdlog::info("[SettingsPanel] Beta features toggled via 7-tap secret: {}",
+                         new_value ? "ON" : "OFF");
+        }
         tap_count = 0; // Reset for next time
     }
 }
@@ -608,6 +623,17 @@ void SettingsPanel::setup_action_handlers() {
             // Bind to subject for "Calibrated" / "Not calibrated" status
             lv_label_bind_text(description, &touch_cal_status_subject_, "%s");
             spdlog::trace("[{}]   ✓ Touch calibration row with reactive description", get_name());
+        }
+    }
+
+    // === Check for Updates Row (reactive description binding) ===
+    lv_obj_t* check_updates_row = lv_obj_find_by_name(panel_, "row_check_updates");
+    if (check_updates_row) {
+        lv_obj_t* description = lv_obj_find_by_name(check_updates_row, "description");
+        lv_subject_t* version_text = lv_xml_get_subject(nullptr, "update_version_text");
+        if (description && version_text) {
+            lv_label_bind_text(description, version_text, "%s");
+            spdlog::trace("[{}]   ✓ Check for Updates row with reactive description", get_name());
         }
     }
 }

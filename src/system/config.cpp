@@ -527,10 +527,10 @@ void Config::set_language(const std::string& lang) {
 
 bool Config::is_beta_features_enabled() {
 #if !defined(HELIX_SPLASH_ONLY) && !defined(HELIX_WATCHDOG)
-    // Always enable beta features in test mode
+    // In test mode, default to true unless explicitly set to false
     auto* rt = get_runtime_config();
     if (rt && rt->is_test_mode()) {
-        return true;
+        return get<bool>("/beta_features", true);
     }
 #endif
 
