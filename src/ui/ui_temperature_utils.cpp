@@ -102,7 +102,7 @@ lv_color_t get_heating_state_color(int current_deg, int target_deg, int toleranc
         return theme_manager_get_color("text_muted");
     } else if (current_deg < target_deg - tolerance) {
         // HEATING: Actively heating up - RED
-        return theme_manager_get_color("primary");
+        return theme_manager_get_color("danger");
     } else if (current_deg > target_deg + tolerance) {
         // COOLING: Cooling down to target - BLUE
         return theme_manager_get_color("info");
