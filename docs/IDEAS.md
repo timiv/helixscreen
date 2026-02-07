@@ -6,6 +6,10 @@
 * Belt tension visualization: controlled belt excitation + stroboscopic LED feedback to visualize resonance
 * **LVGL lv_bar value=0 bug** (upstream issue) - Bar shows FULL instead of empty when created with cur_value=0 and XML sets value=0. `lv_bar_set_value()` returns early without invalidation. Workaround: set to 1 then 0.
 * Improve filament sensor widget on home screen
+* **Controller fan display/control** - Show controller fan status and allow on/off control from the UI
+* **Z-axis direction flip toggle** - Settings option to invert Z movement buttons for printers where the heuristic gets it wrong
+* **Customizable home screen layout** - Let users configure which widgets/cards appear on the home screen (e.g., hide WiFi if not needed)
+* **Custom printer image on home page** - Allow manually choosing the printer picture shown on the home screen, and optionally uploading a custom image to replace the auto-detected one
 * **Smart plug control via MQTT** - Turn printer power on/off via controllable plug (Tasmota, etc.)
 
 ---
