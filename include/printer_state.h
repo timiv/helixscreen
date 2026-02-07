@@ -460,6 +460,22 @@ class PrinterState {
         print_domain_.set_print_layer_total(total);
     }
 
+    /**
+     * @brief Set slicer's estimated total print time (from file metadata)
+     *
+     * Used as fallback for remaining time when print_duration is still 0.
+     */
+    void set_estimated_print_time(int seconds) {
+        print_domain_.set_estimated_print_time(seconds);
+    }
+
+    /**
+     * @brief Get slicer's estimated total print time
+     */
+    int get_estimated_print_time() const {
+        return print_domain_.get_estimated_print_time();
+    }
+
     // Print time tracking subjects (in seconds) - delegated to PrinterPrintState
     lv_subject_t* get_print_duration_subject() {
         return print_domain_.get_print_duration_subject();

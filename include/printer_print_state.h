@@ -253,6 +253,20 @@ class PrinterPrintState {
      */
     void set_preprint_elapsed_seconds(int seconds);
 
+    /**
+     * @brief Set slicer's estimated total print time (from file metadata)
+     *
+     * Used as a fallback for remaining time when print_duration is still 0.
+     * @param seconds Slicer's estimated total print time in seconds
+     */
+    void set_estimated_print_time(int seconds);
+
+    /**
+     * @brief Get slicer's estimated total print time
+     * @return Estimated print time in seconds, or 0 if not set
+     */
+    int get_estimated_print_time() const;
+
     // ========================================================================
     // State queries
     // ========================================================================
@@ -331,6 +345,9 @@ class PrinterPrintState {
     lv_subject_t print_start_time_left_{};
     lv_subject_t preprint_remaining_{}; // int: seconds remaining for pre-print
     lv_subject_t preprint_elapsed_{};   // int: seconds elapsed since pre-print started
+
+    // Slicer estimated total print time (not a subject - no XML binding needed)
+    int estimated_print_time_ = 0;
 
     // String buffers for subject storage
     char print_filename_buf_[256]{};

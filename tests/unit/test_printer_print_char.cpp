@@ -32,7 +32,7 @@
  * Time Tracking (3):
  * - print_duration_ (int seconds): from print_stats.print_duration (extrusion only)
  * - print_elapsed_ (int seconds): from print_stats.total_duration (wall-clock elapsed)
- * - print_time_left_ (int seconds): estimated from total_duration and progress
+ * - print_time_left_ (int seconds): estimated from print_duration and progress
  *
  * Print Start Phases (3):
  * - print_start_phase_ (int): PrintStartPhase enum (0-10)
@@ -558,23 +558,24 @@ TEST_CASE("Print characterization: time tracking from JSON", "[characterization]
         REQUIRE(lv_subject_get_int(state.get_print_elapsed_subject()) == 360);
     }
 
-    SECTION("time_left estimated from progress and total_duration") {
+    SECTION("time_left estimated from progress and print_duration") {
         // Set progress to 50%
         json status1 = {{"virtual_sdcard", {{"progress", 0.5}}}};
         state.update_from_status(status1);
 
-        // Set total_duration (wall-clock elapsed)
-        json status2 = {{"print_stats", {{"total_duration", 3600.0}}}};
+        // Set print_duration (actual print time) and total_duration (wall-clock)
+        // Remaining estimate uses print_duration, not total_duration
+        json status2 = {{"print_stats", {{"print_duration", 3600.0}, {"total_duration", 3600.0}}}};
         state.update_from_status(status2);
 
-        // remaining = total_elapsed * (100 - progress) / progress
+        // remaining = print_duration * (100 - progress) / progress
         // remaining = 3600 * (100 - 50) / 50 = 3600
         REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 3600);
     }
 
     SECTION("time_left zero when progress is 100%") {
         json status = {{"virtual_sdcard", {{"progress", 1.0}}},
-                       {"print_stats", {{"total_duration", 7200.0}}}};
+                       {"print_stats", {{"print_duration", 7200.0}, {"total_duration", 7200.0}}}};
         state.update_from_status(status);
 
         REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 0);
@@ -585,7 +586,7 @@ TEST_CASE("Print characterization: time tracking from JSON", "[characterization]
         json status1 = {{"virtual_sdcard", {{"progress", 0.03}}}};
         state.update_from_status(status1);
 
-        json status2 = {{"print_stats", {{"total_duration", 360.0}}}};
+        json status2 = {{"print_stats", {{"print_duration", 360.0}, {"total_duration", 400.0}}}};
         state.update_from_status(status2);
 
         // time_left stays at 0 (progress too low for reliable estimate)
@@ -594,10 +595,39 @@ TEST_CASE("Print characterization: time tracking from JSON", "[characterization]
 
     SECTION("time_left not updated when progress is 0") {
         // With no progress, remaining cannot be estimated
-        json status = {{"print_stats", {{"total_duration", 360.0}}}};
+        json status = {{"print_stats", {{"print_duration", 360.0}, {"total_duration", 360.0}}}};
         state.update_from_status(status);
 
         // time_left stays at 0
+        REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 0);
+    }
+
+    SECTION("time_left uses print_duration not total_duration (prep time excluded)") {
+        // Simulate a print that spent significant time in prep:
+        // 300s total wall-clock, but only 30s of actual printing at 7% progress
+        json progress_status = {{"virtual_sdcard", {{"progress", 0.07}}}};
+        state.update_from_status(progress_status);
+
+        json status = {{"print_stats", {{"print_duration", 30.0}, {"total_duration", 300.0}}}};
+        state.update_from_status(status);
+
+        // Using print_duration: 30 * (100-7)/7 = 30 * 93/7 = 398
+        // NOT total_duration:  300 * (100-7)/7 = 300 * 93/7 = 3985 (wildly wrong)
+        int remaining = lv_subject_get_int(state.get_print_time_left_subject());
+        REQUIRE(remaining == 398);
+        REQUIRE(remaining < 500); // Sanity check: reasonable for a short print
+    }
+
+    SECTION("time_left not updated when print_duration is 0 (all prep time)") {
+        // Progress is 5% but print_duration is 0 (Moonraker sometimes does this
+        // at very early stages when only prep has happened)
+        json progress_status = {{"virtual_sdcard", {{"progress", 0.05}}}};
+        state.update_from_status(progress_status);
+
+        json status = {{"print_stats", {{"print_duration", 0.0}, {"total_duration", 200.0}}}};
+        state.update_from_status(status);
+
+        // Should stay at 0 (can't estimate with no actual print time)
         REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 0);
     }
 
@@ -611,8 +641,8 @@ TEST_CASE("Print characterization: time tracking from JSON", "[characterization]
 
         REQUIRE(lv_subject_get_int(state.get_print_duration_subject()) == 1800);
         REQUIRE(lv_subject_get_int(state.get_print_elapsed_subject()) == 2000);
-        // remaining = 2000 * (100 - 25) / 25 = 6000
-        REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 6000);
+        // remaining = print_duration * (100 - 25) / 25 = 1800 * 3 = 5400
+        REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 5400);
     }
 }
 
@@ -1203,6 +1233,88 @@ TEST_CASE("Print characterization: print_job_state_to_string function",
     REQUIRE(std::string(print_job_state_to_string(PrintJobState::COMPLETE)) == "Complete");
     REQUIRE(std::string(print_job_state_to_string(PrintJobState::CANCELLED)) == "Cancelled");
     REQUIRE(std::string(print_job_state_to_string(PrintJobState::ERROR)) == "Error");
+}
+
+// ============================================================================
+// Slicer Estimated Print Time Fallback Tests
+// ============================================================================
+
+TEST_CASE("Print characterization: slicer estimated_print_time used as fallback",
+          "[characterization][print][time][slicer]") {
+    lv_init_safe();
+
+    PrinterState& state = get_printer_state();
+    state.reset_for_testing();
+    state.init_subjects(false);
+
+    SECTION("slicer estimate used when print_duration is 0") {
+        // Set slicer estimated time (e.g., 83 seconds for a small cube)
+        state.set_estimated_print_time(83);
+        REQUIRE(state.get_estimated_print_time() == 83);
+
+        // Progress at 5% but no actual print_duration yet
+        json progress_status = {{"virtual_sdcard", {{"progress", 0.05}}}};
+        state.update_from_status(progress_status);
+
+        json status = {{"print_stats", {{"print_duration", 0.0}, {"total_duration", 30.0}}}};
+        state.update_from_status(status);
+
+        // Fallback: 83 * (100-5) / 100 = 83 * 95 / 100 = 78
+        REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 78);
+    }
+
+    SECTION("progress-based estimate takes over when print_duration > 0") {
+        state.set_estimated_print_time(83);
+
+        // Set progress to 25%
+        json progress_status = {{"virtual_sdcard", {{"progress", 0.25}}}};
+        state.update_from_status(progress_status);
+
+        // Now print_duration has real data - progress-based estimate should be used
+        json status = {{"print_stats", {{"print_duration", 20.0}, {"total_duration", 50.0}}}};
+        state.update_from_status(status);
+
+        // Progress-based: 20 * (100-25) / 25 = 20 * 3 = 60
+        // NOT slicer-based: 83 * 75 / 100 = 62
+        REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 60);
+    }
+
+    SECTION("estimated_print_time clears on reset_for_new_print") {
+        state.set_estimated_print_time(300);
+        REQUIRE(state.get_estimated_print_time() == 300);
+
+        state.reset_for_new_print();
+
+        REQUIRE(state.get_estimated_print_time() == 0);
+    }
+
+    SECTION("slicer fallback not used when estimated_print_time is 0") {
+        // Don't set estimated_print_time (default 0)
+        json progress_status = {{"virtual_sdcard", {{"progress", 0.05}}}};
+        state.update_from_status(progress_status);
+
+        json status = {{"print_stats", {{"print_duration", 0.0}, {"total_duration", 30.0}}}};
+        state.update_from_status(status);
+
+        // No fallback available, should stay at 0
+        REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 0);
+    }
+
+    SECTION("slicer fallback not used when progress is 0") {
+        state.set_estimated_print_time(83);
+
+        // Progress at 0%, print_duration at 0
+        json status = {{"print_stats", {{"print_duration", 0.0}, {"total_duration", 5.0}}}};
+        state.update_from_status(status);
+
+        // No fallback when progress is 0 (avoid 100% remaining)
+        REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 0);
+    }
+
+    SECTION("negative estimated_print_time is clamped to 0") {
+        state.set_estimated_print_time(-10);
+        REQUIRE(state.get_estimated_print_time() == 0);
+    }
 }
 
 // ============================================================================

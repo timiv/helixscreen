@@ -1743,6 +1743,12 @@ void PrintStatusPanel::load_thumbnail_for_file(const std::string& filename) {
 
             // Note: Layer count from metadata is now set by ActivePrintMediaManager
 
+            // Store slicer's estimated print time for remaining time fallback
+            if (metadata.estimated_time > 0) {
+                get_printer_state().set_estimated_print_time(
+                    static_cast<int>(metadata.estimated_time));
+            }
+
             // Get the largest thumbnail available
             std::string thumbnail_rel_path = metadata.get_largest_thumbnail();
             if (thumbnail_rel_path.empty()) {
