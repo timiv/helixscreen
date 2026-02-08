@@ -10,7 +10,6 @@
 
 #include "ui_event_safety.h"
 #include "ui_modal.h"
-#include "ui_nav.h"
 #include "ui_nav_manager.h"
 #include "ui_theme_editor_overlay.h"
 #include "ui_toast_manager.h"
@@ -502,10 +501,10 @@ void DisplaySettingsOverlay::handle_apply_theme_clicked() {
     // Get display name for toast (use cached theme list if available)
     std::string display_name = theme_name;
     if (selected_index >= 0 && selected_index < static_cast<int>(cached_themes_.size())) {
-        display_name = cached_themes_[selected_index].name;
+        display_name = cached_themes_[selected_index].display_name;
     }
-    ToastManager::instance().show(ToastSeverity::SUCCESS,
-                                  "Theme set to " + display_name);
+    std::string toast_msg = "Theme set to " + display_name;
+    ToastManager::instance().show(ToastSeverity::SUCCESS, toast_msg.c_str());
 
     // Close the theme explorer overlay
     ui_nav_go_back();
