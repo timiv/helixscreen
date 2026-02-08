@@ -241,9 +241,20 @@ void PrinterPrintState::update_from_status(const nlohmann::json& status) {
             // NOT total_duration (which includes prep/preheat and inflates the estimate)
             int print_time = lv_subject_get_int(&print_duration_);
             int progress = lv_subject_get_int(&print_progress_);
-            if (progress >= 5 && progress < 100 && print_time > 0) {
+            if (progress >= 1 && progress < 100 && print_time > 0) {
                 int remaining =
                     static_cast<int>(static_cast<double>(print_time) * (100 - progress) / progress);
+
+                // At very low progress (<5%), blend with slicer estimate to avoid
+                // wild extrapolation from tiny samples (e.g. 30s at 1% → 50 min)
+                if (progress < 5 && estimated_print_time_ > 0) {
+                    // Linear blend: at 1% use 80% slicer, at 4% use 20% slicer
+                    double slicer_weight = (5.0 - progress) / 5.0;
+                    int slicer_remaining = estimated_print_time_ * (100 - progress) / 100;
+                    remaining = static_cast<int>(slicer_weight * slicer_remaining +
+                                                 (1.0 - slicer_weight) * remaining);
+                }
+
                 lv_subject_set_int(&print_time_left_, remaining);
             } else if (progress > 0 && progress < 100 && print_time == 0 &&
                        estimated_print_time_ > 0) {
