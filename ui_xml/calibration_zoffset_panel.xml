@@ -67,7 +67,7 @@
         <!-- Current Z Position Display -->
         <lv_obj width="100%"
                 height="80" style_bg_color="#section_bg_color" style_radius="#border_radius" style_pad_all="#space_md"
-                flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+                flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" scrollable="false">
           <text_small text="Current Z Position" translation_tag="Current Z Position"/>
           <lv_label name="z_position_display" text="Z: 0.000" translation_tag="Z: 0.000" style_text_font="montserrat_28"/>
         </lv_obj>
