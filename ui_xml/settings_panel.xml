@@ -202,10 +202,9 @@
     <setting_info_row name="row_printer" label="Printer" label_tag="Printer" icon="printer_3d">
       <text_muted name="value" bind_text="printer_value"/>
     </setting_info_row>
-    <!-- Printer Host -->
-    <setting_info_row name="row_printer_host" label="Host" label_tag="Host" icon="lan">
-      <text_muted name="value" bind_text="printer_host_value"/>
-    </setting_info_row>
+    <!-- Printer Host (clickable - opens change host modal) -->
+    <setting_action_row name="row_printer_host" label="Host" label_tag="Host"
+                        icon="lan" callback="on_change_host_clicked"/>
     <!-- Klipper Version -->
     <setting_info_row name="row_klipper" label="Klipper" label_tag="Klipper" icon="toy_brick_outline">
       <text_muted name="value" text="—"/>

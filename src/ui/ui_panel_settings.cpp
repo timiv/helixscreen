@@ -5,6 +5,7 @@
 
 #include "ui_ams_device_operations_overlay.h"
 #include "ui_ams_spoolman_overlay.h"
+#include "ui_change_host_modal.h"
 #include "ui_emergency_stop.h"
 #include "ui_event_safety.h"
 #include "ui_modal.h"
@@ -34,6 +35,7 @@
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
+#include "moonraker_manager.h"
 #include "printer_hardware.h"
 #include "printer_state.h"
 #include "runtime_config.h"
@@ -704,11 +706,11 @@ void SettingsPanel::populate_info_rows() {
         }
     }
 
-    // === Printer Host (from config - shows IP/hostname:port) ===
+    // === Printer Host (action row - shows IP/hostname:port as description) ===
     lv_obj_t* host_row = lv_obj_find_by_name(panel_, "row_printer_host");
     if (host_row) {
-        lv_obj_t* host_value = lv_obj_find_by_name(host_row, "value");
-        if (host_value) {
+        lv_obj_t* description = lv_obj_find_by_name(host_row, "description");
+        if (description) {
             Config* config = Config::get_instance();
             std::string host = config->get<std::string>(config->df() + "moonraker_host", "");
             int port = config->get<int>(config->df() + "moonraker_port", 7125);
@@ -716,8 +718,9 @@ void SettingsPanel::populate_info_rows() {
             if (!host.empty()) {
                 std::string host_display = host + ":" + std::to_string(port);
                 lv_subject_copy_string(&printer_host_value_subject_, host_display.c_str());
-                spdlog::trace("[{}]   ✓ Printer Host: {}", get_name(), host_display);
             }
+            lv_label_bind_text(description, &printer_host_value_subject_, "%s");
+            spdlog::trace("[{}]   ✓ Printer Host action row with reactive description", get_name());
         }
     }
 
@@ -1044,6 +1047,50 @@ void SettingsPanel::handle_machine_limits_clicked() {
     overlay.show(parent_screen_);
 }
 
+void SettingsPanel::handle_change_host_clicked() {
+    spdlog::debug("[{}] Change Host clicked", get_name());
+
+    if (!change_host_modal_) {
+        change_host_modal_ = std::make_unique<ChangeHostModal>();
+    }
+
+    change_host_modal_->set_completion_callback([this](bool changed) {
+        if (!changed)
+            return;
+
+        // Update host display subject from config
+        Config* config = Config::get_instance();
+        std::string host = config->get<std::string>(config->df() + "moonraker_host", "");
+        int port = config->get<int>(config->df() + "moonraker_port", 7125);
+        std::string host_display = host + ":" + std::to_string(port);
+        lv_subject_copy_string(&printer_host_value_subject_, host_display.c_str());
+
+        // Reconnect to the new host
+        MoonrakerClient* client = get_moonraker_client();
+        MoonrakerManager* manager = get_moonraker_manager();
+
+        if (!client || !manager) {
+            spdlog::error("[{}] Cannot reconnect - client or manager not available", get_name());
+            return;
+        }
+
+        // Suppress disconnect modal during intentional switch
+        client->suppress_disconnect_modal(5000);
+
+        // Disconnect current connection
+        client->disconnect();
+
+        // Build new URLs and connect with full discovery pipeline
+        std::string ws_url = "ws://" + host + ":" + std::to_string(port) + "/websocket";
+        std::string http_url = "http://" + host + ":" + std::to_string(port);
+
+        spdlog::info("[{}] Reconnecting to {}:{}", get_name(), host, port);
+        manager->connect(ws_url, http_url);
+    });
+
+    change_host_modal_->show_modal(lv_screen_active());
+}
+
 void SettingsPanel::handle_network_clicked() {
     spdlog::debug("[{}] Network Settings clicked", get_name());
 
@@ -1312,6 +1359,12 @@ void SettingsPanel::on_machine_limits_clicked(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
+void SettingsPanel::on_change_host_clicked(lv_event_t* /*e*/) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_change_host_clicked");
+    get_global_settings_panel().handle_change_host_clicked();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
 void SettingsPanel::on_network_clicked(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_network_clicked");
     get_global_settings_panel().handle_network_clicked();
@@ -1428,6 +1481,8 @@ void register_settings_panel_callbacks() {
                              SettingsPanel::on_hardware_health_clicked);
     lv_xml_register_event_cb(nullptr, "on_restart_helix_settings_clicked",
                              SettingsPanel::on_restart_helix_settings_clicked);
+    lv_xml_register_event_cb(nullptr, "on_change_host_clicked",
+                             SettingsPanel::on_change_host_clicked);
     lv_xml_register_event_cb(nullptr, "on_check_updates_clicked", on_check_updates_clicked);
     lv_xml_register_event_cb(nullptr, "on_install_update_clicked", on_install_update_clicked);
 }

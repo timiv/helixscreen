@@ -619,6 +619,12 @@ helix::MacroModificationManager* MoonrakerManager::macro_analysis() const {
     return nullptr;
 }
 
+// Stub for MoonrakerManager::connect (never called since get_moonraker_manager returns null)
+int MoonrakerManager::connect(const std::string& /*websocket_url*/,
+                              const std::string& /*http_base_url*/) {
+    return -1;
+}
+
 // ============================================================================
 // Stubs for LVGLUITestFixture - Full UI Integration Tests
 // ============================================================================

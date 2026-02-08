@@ -259,6 +259,7 @@ void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/theme_restart_modal.xml");
     lv_xml_register_component_from_file("A:ui_xml/factory_reset_modal.xml");
     lv_xml_register_component_from_file("A:ui_xml/update_download_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/change_host_modal.xml");
 
     // Calibration panels (overlays launched from settings)
     lv_xml_register_component_from_file("A:ui_xml/calibration_zoffset_panel.xml");

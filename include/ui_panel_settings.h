@@ -8,8 +8,11 @@
 
 #include "subject_managed_panel.h" // For SubjectManager
 
+#include <memory>
 #include <string>
 #include <vector>
+
+class ChangeHostModal;
 
 /**
  * @file ui_panel_settings.h
@@ -115,6 +118,9 @@ class SettingsPanel : public PanelBase {
     lv_obj_t* filament_sensors_row_ = nullptr;
     lv_obj_t* network_row_ = nullptr;
     lv_obj_t* factory_reset_row_ = nullptr;
+
+    // Change host modal (lazy-created)
+    std::unique_ptr<ChangeHostModal> change_host_modal_;
 
     // Info rows (for dynamic updates)
     lv_obj_t* version_value_ = nullptr;
@@ -225,6 +231,7 @@ class SettingsPanel : public PanelBase {
     void handle_spoolman_settings_clicked();
     void handle_macro_buttons_clicked();
     void handle_machine_limits_clicked();
+    void handle_change_host_clicked();
     void handle_network_clicked();
     void handle_touch_calibration_clicked();
     void handle_restart_helix_clicked();
@@ -272,6 +279,7 @@ class SettingsPanel : public PanelBase {
     static void on_spoolman_settings_clicked(lv_event_t* e);
     static void on_macro_buttons_clicked(lv_event_t* e);
     static void on_machine_limits_clicked(lv_event_t* e);
+    static void on_change_host_clicked(lv_event_t* e);
     static void on_network_clicked(lv_event_t* e);
     static void on_touch_calibration_clicked(lv_event_t* e);
     static void on_factory_reset_clicked(lv_event_t* e);

@@ -63,6 +63,7 @@ class Config {
 
     /// Allow test fixtures to access protected members
     friend class ConfigTestFixture;
+    friend class ChangeHostConfigFixture;
     friend class HardwareValidatorConfigFixture;
     friend class MmuDetectionFixture;
 
