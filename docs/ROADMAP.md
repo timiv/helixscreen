@@ -187,12 +187,8 @@ Remaining items for production readiness:
 |---------|--------|-------|
 | **Lazy panel initialization** | Medium | Defer `init_subjects()` until first nav; blocked on LVGL XML subject timing |
 | **Camera/Webcam** | Low | Lower priority for local touchscreen use case |
-| **Client-side thumbnails** | Low | Fallback when Moonraker doesn't provide (USB symlinked files) |
-| **mDNS discovery** | Low | Auto-find Moonraker; manual IP works fine |
-| ~~NULL → nullptr cleanup~~ | ✅ Done | d326ec77 - 29 files converted |
-| **Belt tension visualization** | Future | Controlled excitation + stroboscopic LED feedback |
+| **Belt tension visualization** | Future | Accelerometer-based CoreXY belt comparison; reuses frequency chart |
 | **OTA updates** | Future | Currently requires manual binary update |
-| ~~Custom theme creation wizard~~ | ✅ Done | Theme editor with live preview now complete |
 
 See `docs/IDEAS.md` for additional ideas and design rationale.
 

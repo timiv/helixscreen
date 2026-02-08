@@ -1,24 +1,18 @@
 # Ideas & Future Improvements
 
-* More test coverage
 * Have libhv use spdlog for logging if possible
 * **Lazy panel initialization** - Defer `init_subjects()` and `setup()` until first navigation. Challenge: LVGL XML binding requires subjects to exist before parsing. Solution: register empty subjects at startup, populate on first use. Would reduce startup time and memory.
-* Belt tension visualization: controlled belt excitation + stroboscopic LED feedback to visualize resonance
-* **LVGL lv_bar value=0 bug** (upstream issue) - Bar shows FULL instead of empty when created with cur_value=0 and XML sets value=0. `lv_bar_set_value()` returns early without invalidation. Workaround: set to 1 then 0.
-* Improve filament sensor widget on home screen
-* **Controller fan display/control** - Show controller fan status and allow on/off control from the UI
+* **Belt tension visualization** - Use Klipper's accelerometer (ADXL345) to measure belt resonance frequencies on CoreXY printers. Comparing X and Y frequency peaks reveals belt tension imbalance. MVP: run `TEST_RESONANCES` on each axis, display a frequency chart comparing peaks (reuses `ui_frequency_response_chart.cpp` from input shaper). A "matched" result means belts are balanced. Future: live spectrum analyzer mode for real-time tuning while adjusting tensioners.
 * **Z-axis direction flip toggle** - Settings option to invert Z movement buttons for printers where the heuristic gets it wrong
 * **Customizable home screen layout** - Let users configure which widgets/cards appear on the home screen (e.g., hide WiFi if not needed)
 * **Custom printer image on home page** - Allow manually choosing the printer picture shown on the home screen, and optionally uploading a custom image to replace the auto-detected one
-* **Smart plug control via MQTT** - Turn printer power on/off via controllable plug (Tasmota, etc.)
+* **Power device setup wizard** - Guided Moonraker config editing to help users set up smart plugs, relay boards, and other power devices through the UI instead of manually editing `moonraker.conf`. Basic power device control already works (see `ui_panel_power.cpp`); this adds the setup/onboarding flow.
 
 ---
 
-## Deferred: Agent Documentation Compression
+## Known Issues
 
-Agents (~3,700 lines total) could be compressed ~60% using table format and external examples.
-Currently not needed - agents work well. Revisit if startup times degrade or context limits hit.
-See git history (2025-11-10) for full analysis.
+* **LVGL lv_bar value=0 bug** (upstream issue) - Bar shows FULL instead of empty when created with cur_value=0 and XML sets value=0. `lv_bar_set_value()` returns early without invalidation. Workaround: set to 1 then 0.
 
 ---
 
