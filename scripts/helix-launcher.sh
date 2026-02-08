@@ -107,6 +107,52 @@ if [ -z "${SSL_CERT_FILE:-}" ]; then
     unset _cert_path
 fi
 
+# Source environment configuration file if present.
+# Supports both installed (/etc/helixscreen/) and deployed (config/) locations.
+# Variables already set in the environment take precedence — the env file only
+# provides defaults for unset variables.
+_helix_env_file=""
+for _env_path in \
+    "${INSTALL_DIR}/config/helixscreen.env" \
+    /etc/helixscreen/helixscreen.env; do
+    if [ -f "$_env_path" ]; then
+        _helix_env_file="$_env_path"
+        break
+    fi
+done
+unset _env_path
+
+if [ -n "$_helix_env_file" ]; then
+    # Read each VAR=value line; only export if not already set
+    while IFS= read -r _line || [ -n "$_line" ]; do
+        # Skip comments and blank lines
+        case "$_line" in
+            '#'*|'') continue ;;
+        esac
+        _var="${_line%%=*}"
+        # Only set if not already in environment
+        eval "_existing=\"\${${_var}:-}\"" 2>/dev/null || continue
+        if [ -z "$_existing" ]; then
+            eval "export $_line" 2>/dev/null || true
+        fi
+    done < "$_helix_env_file"
+    unset _line _var _existing
+fi
+unset _helix_env_file
+
+# Default display backend to fbdev on embedded Linux targets.
+# DRM atomic modesetting has compatibility issues with some SoCs and breaks
+# framebuffer-based VNC setups. fbdev works reliably across all Pi hardware.
+# Can be overridden by setting HELIX_DISPLAY_BACKEND in the environment or
+# systemd service file.
+if [ -z "${HELIX_DISPLAY_BACKEND:-}" ]; then
+    case "$(uname -s)" in
+        Linux)
+            export HELIX_DISPLAY_BACKEND=fbdev
+            ;;
+    esac
+fi
+
 # Log function (must be defined before first use)
 # Uses stderr to avoid polluting stdout which could be captured unexpectedly
 log() {
