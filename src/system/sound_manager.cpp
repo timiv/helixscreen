@@ -3,6 +3,7 @@
 
 #include "sound_manager.h"
 
+#include "m300_sound_backend.h"
 #include "moonraker_client.h"
 #include "pwm_sound_backend.h"
 #include "runtime_config.h"
@@ -20,67 +21,6 @@
 #include <algorithm>
 #include <dirent.h>
 #include <string>
-
-// ============================================================================
-// M300SoundBackend — sends M300 G-code via Moonraker
-// ============================================================================
-
-class M300SoundBackend : public SoundBackend {
-  public:
-    explicit M300SoundBackend(MoonrakerClient* client) : client_(client) {}
-
-    void set_tone(float freq_hz, float amplitude, float duty_cycle) override {
-        (void)duty_cycle;
-
-        if (!client_)
-            return;
-
-        // Skip if same frequency (avoid spamming redundant commands)
-        int freq_int = static_cast<int>(freq_hz);
-        if (freq_int == last_freq_ && amplitude > 0)
-            return;
-
-        if (amplitude <= 0.01f) {
-            silence();
-            return;
-        }
-
-        // Clamp to M300 safe range
-        freq_int = std::max(100, std::min(10000, freq_int));
-
-        // M300 format: S=frequency (Hz), P=duration (ms)
-        // Use min_tick_ms as duration — the sequencer ticks at this interval
-        // and will re-send if the tone continues, or call silence() to stop.
-        // This prevents short notes (e.g., 6ms tap) from ringing for too long.
-        int dur_ms = static_cast<int>(min_tick_ms());
-        std::string gcode = "M300 S" + std::to_string(freq_int) + " P" + std::to_string(dur_ms);
-
-        client_->gcode_script(gcode);
-        last_freq_ = freq_int;
-
-        spdlog::trace("[M300Backend] set_tone: {} Hz, P{}", freq_int, dur_ms);
-    }
-
-    void silence() override {
-        if (last_freq_ == 0)
-            return;
-        last_freq_ = 0;
-        // M300 S0 = silence on most firmware
-        if (client_) {
-            client_->gcode_script("M300 S0 P1");
-        }
-        spdlog::trace("[M300Backend] silence");
-    }
-
-    float min_tick_ms() const override {
-        // M300 has high latency — no point ticking faster than ~50ms
-        return 50.0f;
-    }
-
-  private:
-    MoonrakerClient* client_ = nullptr;
-    int last_freq_ = 0;
-};
 
 // ============================================================================
 // SoundManager singleton
@@ -246,7 +186,9 @@ std::shared_ptr<SoundBackend> SoundManager::create_backend() {
 
     if (client_) {
         spdlog::debug("[SoundManager] Creating M300 backend via Moonraker");
-        return std::make_shared<M300SoundBackend>(client_);
+        auto* client = client_;
+        return std::make_shared<M300SoundBackend>(
+            [client](const std::string& gcode) { return client->gcode_script(gcode); });
     }
 
     spdlog::debug("[SoundManager] No backend available");
