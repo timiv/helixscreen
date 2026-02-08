@@ -5,9 +5,10 @@
 /// print status panel. Pure logic — no LVGL dependency.
 
 #include <algorithm>
-#include <catch2/catch_test_macros.hpp>
 #include <cstdio>
 #include <string>
+
+#include "../catch_amalgamated.hpp"
 
 // ---------------------------------------------------------------------------
 // Extracted formatting logic (mirrors PrintStatusPanel::update_objects_text)
