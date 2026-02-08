@@ -202,6 +202,20 @@ void SoundSequencer::tick(float dt_ms) {
     amplitude = std::clamp(amplitude, 0.0f, 1.0f);
     duty = std::clamp(duty, 0.0f, 1.0f);
 
+    // Set waveform if backend supports it
+    if (backend_->supports_waveforms()) {
+        backend_->set_waveform(step.wave);
+    }
+
+    // Set filter if backend supports it and step has a filter configured
+    if (backend_->supports_filter() && !step.filter.type.empty()) {
+        float cutoff = step.filter.cutoff;
+        if (step.filter.sweep_to > 0) {
+            cutoff = compute_sweep(step.filter.cutoff, step.filter.sweep_to, progress);
+        }
+        backend_->set_filter(step.filter.type, cutoff);
+    }
+
     backend_->set_tone(freq, amplitude, duty);
 }
 

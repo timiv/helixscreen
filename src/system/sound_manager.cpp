@@ -10,6 +10,10 @@
 #include "sound_sequencer.h"
 #include "sound_theme.h"
 
+#ifdef HELIX_DISPLAY_SDL
+#include "sdl_sound_backend.h"
+#endif
+
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -217,10 +221,19 @@ bool SoundManager::is_available() const {
 
 std::shared_ptr<SoundBackend> SoundManager::create_backend() {
     // Auto-detection order:
-    // 1. SDL audio available (desktop build) -> SDLBackend (future)
+    // 1. SDL audio available (desktop build) -> SDLBackend
     // 2. /sys/class/pwm/pwmchip0 exists -> PWMBackend (future)
     // 3. Moonraker connected -> M300Backend
     // 4. None -> sounds disabled
+
+#ifdef HELIX_DISPLAY_SDL
+    auto sdl_backend = std::make_shared<SDLSoundBackend>();
+    if (sdl_backend->initialize()) {
+        spdlog::info("[SoundManager] Using SDL audio backend");
+        return sdl_backend;
+    }
+    spdlog::warn("[SoundManager] SDL audio init failed, falling back");
+#endif
 
     if (client_) {
         spdlog::debug("[SoundManager] Creating M300 backend via Moonraker");

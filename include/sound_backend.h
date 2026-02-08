@@ -3,6 +3,11 @@
 
 #pragma once
 
+#include <string>
+
+/// Forward declaration — defined in sound_theme.h
+enum class Waveform;
+
 /**
  * @brief Abstract interface for sound output backends
  *
@@ -39,6 +44,14 @@ class SoundBackend {
     virtual bool supports_filter() const {
         return false;
     }
+
+    /// Set the active waveform type (only called if supports_waveforms() is true)
+    virtual void set_waveform(Waveform /* w */) {}
+
+    /// Set active filter parameters (only called if supports_filter() is true)
+    /// @param type "lowpass" or "highpass"
+    /// @param cutoff Filter cutoff frequency in Hz
+    virtual void set_filter(const std::string& /* type */, float /* cutoff */) {}
 
     /// Minimum tick interval the backend can handle (ms)
     virtual float min_tick_ms() const {
