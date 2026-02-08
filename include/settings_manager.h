@@ -230,6 +230,23 @@ class SettingsManager {
     bool has_backlight_control() const;
 
     /**
+     * @brief Get sleep while printing state
+     * @return true if display is allowed to sleep during active prints
+     */
+    bool get_sleep_while_printing() const;
+
+    /**
+     * @brief Set sleep while printing state
+     *
+     * When enabled (default), the display can dim and sleep during active prints
+     * based on the normal inactivity timeout. When disabled, the display stays
+     * awake for the entire duration of a print.
+     *
+     * @param enabled true to allow sleep during prints, false to inhibit
+     */
+    void set_sleep_while_printing(bool enabled);
+
+    /**
      * @brief Get animations enabled state
      * @return true if UI animations are enabled
      */
@@ -552,6 +569,11 @@ class SettingsManager {
         return &has_backlight_subject_;
     }
 
+    /** @brief Sleep while printing subject (integer: 0=inhibit, 1=allow) */
+    lv_subject_t* subject_sleep_while_printing() {
+        return &sleep_while_printing_subject_;
+    }
+
     /** @brief Animations enabled subject (integer: 0=off, 1=on) */
     lv_subject_t* subject_animations_enabled() {
         return &animations_enabled_subject_;
@@ -696,6 +718,7 @@ class SettingsManager {
     lv_subject_t display_sleep_subject_;
     lv_subject_t brightness_subject_;
     lv_subject_t has_backlight_subject_;
+    lv_subject_t sleep_while_printing_subject_;
     lv_subject_t animations_enabled_subject_;
     lv_subject_t gcode_3d_enabled_subject_;
     lv_subject_t bed_mesh_render_mode_subject_;

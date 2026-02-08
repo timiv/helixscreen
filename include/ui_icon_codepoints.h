@@ -209,6 +209,7 @@ static const IconMapping ICON_MAP[] = {
     {"sensor",             "\xF3\xB0\xB6\x91"},  // F0D91 motion-sensor (sensor placeholder)
     {"settings",           "\xF3\xB0\x92\x93"},  // F0493 cog
     {"sine_wave",          "\xF3\xB0\xA5\x9B"},  // F095B sine-wave
+    {"sleep",              "\xF3\xB0\x92\xB2"},  // F04B2 sleep (moon/zzz)
     {"source_branch",      "\xF3\xB0\x98\xAC"},  // F062C source-branch (bypass/fork)
     {"speed",              "\xF3\xB0\x93\x85"},  // F04C5 speedometer
     {"speed_down",         "\xF3\xB0\xBE\x86"},  // F0F86 speedometer-slow

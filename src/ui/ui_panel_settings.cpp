@@ -395,6 +395,8 @@ void SettingsPanel::init_subjects() {
     // Note: on_retraction_row_clicked is registered by RetractionSettingsOverlay
     lv_xml_register_event_cb(nullptr, "on_sounds_changed", on_sounds_changed);
     lv_xml_register_event_cb(nullptr, "on_estop_confirm_changed", on_estop_confirm_changed);
+    lv_xml_register_event_cb(nullptr, "on_sleep_while_printing_changed",
+                             on_sleep_while_printing_changed);
 
     // Register XML event callbacks for action rows
     lv_xml_register_event_cb(nullptr, "on_display_settings_clicked", on_display_settings_clicked);
@@ -551,6 +553,20 @@ void SettingsPanel::setup_toggle_handlers() {
                 },
                 this);
             spdlog::trace("[{}]   ✓ LED light toggle (observing printer state)", get_name());
+        }
+    }
+
+    // === Sleep While Printing Toggle ===
+    lv_obj_t* sleep_while_printing_row = lv_obj_find_by_name(panel_, "row_sleep_while_printing");
+    if (sleep_while_printing_row) {
+        sleep_while_printing_switch_ = lv_obj_find_by_name(sleep_while_printing_row, "toggle");
+        if (sleep_while_printing_switch_) {
+            if (settings.get_sleep_while_printing()) {
+                lv_obj_add_state(sleep_while_printing_switch_, LV_STATE_CHECKED);
+            } else {
+                lv_obj_remove_state(sleep_while_printing_switch_, LV_STATE_CHECKED);
+            }
+            spdlog::trace("[{}]   ✓ Sleep while printing toggle", get_name());
         }
     }
 
@@ -926,6 +942,11 @@ void SettingsPanel::handle_estop_confirm_changed(bool enabled) {
     EmergencyStopOverlay::instance().set_require_confirmation(enabled);
 }
 
+void SettingsPanel::handle_sleep_while_printing_changed(bool enabled) {
+    spdlog::info("[{}] Sleep while printing toggled: {}", get_name(), enabled ? "ON" : "OFF");
+    SettingsManager::instance().set_sleep_while_printing(enabled);
+}
+
 void SettingsPanel::show_restart_prompt() {
     // Only show once per session - check if dialog already exists and is visible
     if (restart_prompt_dialog_ && !lv_obj_has_flag(restart_prompt_dialog_, LV_OBJ_FLAG_HIDDEN)) {
@@ -1291,6 +1312,14 @@ void SettingsPanel::on_estop_confirm_changed(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
+void SettingsPanel::on_sleep_while_printing_changed(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_sleep_while_printing_changed");
+    auto* toggle = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+    bool enabled = lv_obj_has_state(toggle, LV_STATE_CHECKED);
+    get_global_settings_panel().handle_sleep_while_printing_changed(enabled);
+    LVGL_SAFE_EVENT_CB_END();
+}
+
 void SettingsPanel::on_display_settings_clicked(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_display_settings_clicked");
     get_global_settings_panel().handle_display_settings_clicked();
@@ -1430,6 +1459,8 @@ void register_settings_panel_callbacks() {
     lv_xml_register_event_cb(nullptr, "on_sounds_changed", SettingsPanel::on_sounds_changed);
     lv_xml_register_event_cb(nullptr, "on_estop_confirm_changed",
                              SettingsPanel::on_estop_confirm_changed);
+    lv_xml_register_event_cb(nullptr, "on_sleep_while_printing_changed",
+                             SettingsPanel::on_sleep_while_printing_changed);
 
     // Action row callbacks used in settings_panel.xml
     lv_xml_register_event_cb(nullptr, "on_display_settings_clicked",

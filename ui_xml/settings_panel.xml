@@ -26,6 +26,12 @@
                         label="3D Preview" label_tag="3D Preview" icon="rotate_3d"
                         description="Interactive 3D G-code during prints"
                         description_tag="Interactive 3D G-code during prints" callback="on_gcode_3d_changed"/>
+    <!-- Sleep While Printing Toggle -->
+    <setting_toggle_row name="row_sleep_while_printing"
+                        label="Sleep While Printing" label_tag="Sleep While Printing" icon="sleep"
+                        description="Allow display to sleep during active prints"
+                        description_tag="Allow display to sleep during active prints"
+                        callback="on_sleep_while_printing_changed"/>
     <!-- Display Settings (opens overlay for brightness + sleep timeout) -->
     <setting_action_row name="row_display_settings"
                         label="Display Settings" label_tag="Display Settings" icon="light"
@@ -59,13 +65,12 @@
                           description_tag="Weight sync settings" callback="on_spoolman_settings_clicked"/>
     </lv_obj>
     <!-- LED Light Settings (hidden if no LED capability) -->
-    <lv_obj name="container_led_light" width="100%" style_pad_all="0" style_layout="flex" style_flex_flow="column" scrollable="false">
+    <lv_obj name="container_led_light"
+            width="100%" style_pad_all="0" style_layout="flex" style_flex_flow="column" scrollable="false">
       <bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
       <setting_dropdown_row name="row_led_select"
-                            label="Main LED" label_tag="Main LED" icon="light"
-                            description="Select which LED to control"
-                            description_tag="Select which LED to control"
-                            callback="on_led_select_changed"/>
+                            label="Main LED" label_tag="Main LED" icon="light" description="Select which LED to control"
+                            description_tag="Select which LED to control" callback="on_led_select_changed"/>
       <setting_toggle_row name="row_led_light"
                           label="LED on at Start" label_tag="LED on at Start" icon="light"
                           description="Turn on LED when printer starts"
@@ -110,8 +115,7 @@
                           label="Z Movement" label_tag="Z Movement" icon="arrow_up_down"
                           description="How Z-axis movement is displayed"
                           description_tag="How Z-axis movement is displayed"
-                          options="Auto&#10;Bed Moves&#10;Nozzle Moves"
-                          callback="on_z_movement_style_changed"/>
+                          options="Auto&#10;Bed Moves&#10;Nozzle Moves" callback="on_z_movement_style_changed"/>
     <!-- Machine Limits -->
     <setting_action_row name="row_machine_limits"
                         label="Machine Limits" label_tag="Machine Limits" icon="dashboard"
@@ -152,8 +156,8 @@
     <!-- Restart HelixScreen -->
     <setting_action_row name="row_restart_helix"
                         label="Restart HelixScreen" label_tag="Restart HelixScreen" icon="restart"
-                        description="Restart the display application"
-                        description_tag="Restart the display application" callback="on_restart_helix_settings_clicked"/>
+                        description="Restart the display application" description_tag="Restart the display application"
+                        callback="on_restart_helix_settings_clicked"/>
     <!-- Factory Reset -->
     <setting_action_row name="row_factory_reset"
                         label="Factory Reset" label_tag="Factory Reset" icon="refresh"
@@ -171,8 +175,7 @@
       <bind_flag_if_eq subject="show_beta_features" flag="hidden" ref_value="0"/>
       <setting_dropdown_row name="row_update_channel"
                             label="Update Channel" label_tag="Update Channel" icon="swap_vertical"
-                            options="Stable&#10;Beta&#10;Dev"
-                            bind_selected="update_channel"
+                            options="Stable&#10;Beta&#10;Dev" bind_selected="update_channel"
                             callback="on_update_channel_changed"/>
     </lv_obj>
     <!-- Install Update (visible only when update available) -->
@@ -195,8 +198,8 @@
               event_bubble="true">
         <icon name="row_icon" src="info" size="sm" variant="secondary" clickable="false" event_bubble="true"/>
         <text_body name="label"
-                   text="Current Version" translation_tag="Current Version" style_text_color="#text" flex_grow="1" clickable="false"
-                   event_bubble="true"/>
+                   text="Current Version" translation_tag="Current Version" style_text_color="#text" flex_grow="1"
+                   clickable="false" event_bubble="true"/>
         <text_muted name="value" bind_text="version_value" clickable="false" event_bubble="true"/>
       </lv_obj>
       <event_cb trigger="clicked" callback="on_version_clicked"/>
@@ -210,8 +213,8 @@
       <text_muted name="value" bind_text="printer_value"/>
     </setting_info_row>
     <!-- Printer Host (clickable - opens change host modal) -->
-    <setting_action_row name="row_printer_host" label="Host" label_tag="Host"
-                        icon="lan" callback="on_change_host_clicked"/>
+    <setting_action_row name="row_printer_host"
+                        label="Host" label_tag="Host" icon="lan" callback="on_change_host_clicked"/>
     <!-- Klipper Version -->
     <setting_info_row name="row_klipper" label="Klipper" label_tag="Klipper" icon="toy_brick_outline">
       <text_muted name="value" text="—"/>

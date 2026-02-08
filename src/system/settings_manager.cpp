@@ -176,6 +176,11 @@ void SettingsManager::init_subjects() {
     scroll_limit = std::max(1, std::min(20, scroll_limit));
     UI_MANAGED_SUBJECT_INT(scroll_limit_subject_, scroll_limit, "settings_scroll_limit", subjects_);
 
+    // Sleep while printing (default: true = allow sleep during prints)
+    bool sleep_while_printing = config->get<bool>("/display/sleep_while_printing", true);
+    UI_MANAGED_SUBJECT_INT(sleep_while_printing_subject_, sleep_while_printing ? 1 : 0,
+                           "settings_sleep_while_printing", subjects_);
+
     // Animations enabled (default: true)
     bool animations = config->get<bool>("/display/animations_enabled", true);
     UI_MANAGED_SUBJECT_INT(animations_enabled_subject_, animations ? 1 : 0,
@@ -485,6 +490,22 @@ bool SettingsManager::has_backlight_control() const {
         return dm->has_backlight_control();
     }
     return false;
+}
+
+bool SettingsManager::get_sleep_while_printing() const {
+    return lv_subject_get_int(const_cast<lv_subject_t*>(&sleep_while_printing_subject_)) != 0;
+}
+
+void SettingsManager::set_sleep_while_printing(bool enabled) {
+    spdlog::info("[SettingsManager] set_sleep_while_printing({})", enabled);
+
+    // 1. Update subject (UI reacts)
+    lv_subject_set_int(&sleep_while_printing_subject_, enabled ? 1 : 0);
+
+    // 2. Persist to config
+    Config* config = Config::get_instance();
+    config->set<bool>("/display/sleep_while_printing", enabled);
+    config->save();
 }
 
 bool SettingsManager::get_animations_enabled() const {

@@ -20,7 +20,9 @@
 #include "ui_fatal_error.h"
 #include "ui_update_queue.h"
 
+#include "app_globals.h"
 #include "config.h"
+#include "printer_state.h"
 #include "settings_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -356,6 +358,16 @@ void DisplayManager::delay(uint32_t ms) {
 // ============================================================================
 
 void DisplayManager::check_display_sleep() {
+    // If sleep-while-printing is disabled, inhibit sleep/dim during active prints
+    if (!SettingsManager::instance().get_sleep_while_printing()) {
+        PrintJobState job_state = get_printer_state().get_print_job_state();
+        if (job_state == PrintJobState::PRINTING || job_state == PrintJobState::PAUSED) {
+            // Reset LVGL activity timer so we don't immediately sleep when print ends
+            lv_display_trigger_activity(nullptr);
+            return;
+        }
+    }
+
     // Get configured sleep timeout from settings (0 = disabled)
     int sleep_timeout_sec = SettingsManager::instance().get_display_sleep_sec();
 
