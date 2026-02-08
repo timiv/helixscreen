@@ -2,11 +2,6 @@
 <!-- Copyright (C) 2025-2026 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <component>
-  <!-- Styles for reactive Z-offset amount button state binding (L040: no inline bg attrs) -->
-  <styles>
-    <style name="z_amount_selected" bg_color="#primary" bg_opa="255"/>
-    <style name="z_amount_unselected" bg_color="#primary" bg_opa="40"/>
-  </styles>
   <!-- Print Tuning Panel: Speed and Flow adjustment during active print -->
   <view name="print_tune_panel" extends="overlay_panel" title="Print Tuning" title_tag="Print Tuning">
     <!-- Content Area -->
@@ -64,66 +59,53 @@
           <text_heading name="z_offset_display" bind_text="tune_z_offset_display"/>
         </lv_obj>
 
-        <!-- Buttons Container: Amount selectors (left) + Up/Down (right) -->
-        <lv_obj width="100%"
-                height="content" style_pad_all="0" flex_flow="row" style_flex_cross_place="center"
-                style_pad_gap="#space_sm" scrollable="false">
+        <!-- Nozzle-over-bed visual indicator -->
+        <z_offset_indicator name="z_offset_indicator" width="100%" height="80"/>
 
-          <!-- Amount selector buttons (radio-style, one selected at a time) -->
-          <lv_obj flex_grow="1"
-                  style_pad_all="0" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_xxs"
-                  scrollable="false">
-            <ui_button name="btn_z_amount_005" flex_grow="1" text="0.05">
-              <bind_style name="z_amount_selected" subject="z_amount_005_active" ref_value="1"/>
-              <bind_style name="z_amount_unselected" subject="z_amount_005_active" ref_value="0"/>
-              <event_cb trigger="clicked" callback="on_tune_z_amount_select"/>
-            </ui_button>
-            <ui_button name="btn_z_amount_0025" flex_grow="1" text="0.025">
-              <bind_style name="z_amount_selected" subject="z_amount_0025_active" ref_value="1"/>
-              <bind_style name="z_amount_unselected" subject="z_amount_0025_active" ref_value="0"/>
-              <event_cb trigger="clicked" callback="on_tune_z_amount_select"/>
-            </ui_button>
-            <ui_button name="btn_z_amount_001" flex_grow="1" text="0.01">
-              <bind_style name="z_amount_selected" subject="z_amount_001_active" ref_value="1"/>
-              <bind_style name="z_amount_unselected" subject="z_amount_001_active" ref_value="0"/>
-              <event_cb trigger="clicked" callback="on_tune_z_amount_select"/>
-            </ui_button>
-            <ui_button name="btn_z_amount_00025" flex_grow="1" text="0.0025">
-              <bind_style name="z_amount_selected" subject="z_amount_00025_active" ref_value="1"/>
-              <bind_style name="z_amount_unselected" subject="z_amount_00025_active" ref_value="0"/>
-              <event_cb trigger="clicked" callback="on_tune_z_amount_select"/>
-            </ui_button>
-          </lv_obj>
-          <!-- Up/Down direction buttons (stacked vertically) -->
-          <lv_obj width="56"
-                  height="content" style_pad_all="0" flex_flow="column" style_pad_gap="#space_xxs" scrollable="false">
-            <!-- Closer button (more squish) - icon depends on kinematics -->
-            <ui_button name="btn_z_closer" width="100%">
-              <event_cb trigger="clicked" callback="on_tune_z_closer"/>
-              <!-- Bed moves Z (CoreXY): bed goes down toward nozzle = arrow_expand_down -->
-              <icon src="arrow_expand_down" size="sm">
-                <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
-              </icon>
-              <!-- Head moves Z (Cartesian): head goes down = arrow_down -->
-              <icon src="arrow_down" size="sm">
-                <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
-              </icon>
-            </ui_button>
-            <!-- Farther button (less squish) - icon depends on kinematics -->
-            <ui_button name="btn_z_farther" width="100%">
-              <event_cb trigger="clicked" callback="on_tune_z_farther"/>
-              <!-- Bed moves Z (CoreXY): bed goes up away from nozzle = arrow_expand_up -->
-              <icon src="arrow_expand_up" size="sm">
-                <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="0"/>
-              </icon>
-              <!-- Head moves Z (Cartesian): head goes up = arrow_up -->
-              <icon src="arrow_up" size="sm">
-                <bind_flag_if_eq subject="printer_bed_moves" flag="hidden" ref_value="1"/>
-              </icon>
-            </ui_button>
-          </lv_obj>
+        <!-- Step buttons Row 1: larger steps -->
+        <lv_obj width="100%"
+                height="content" style_pad_all="0" flex_flow="row" style_flex_main_place="center"
+                style_pad_gap="#space_xxs" scrollable="false">
+          <ui_button name="btn_z_n05" flex_grow="1" text="-0.05">
+            <event_cb trigger="clicked" callback="on_tune_z_n05"/>
+          </ui_button>
+          <ui_button name="btn_z_n025" flex_grow="1" text="-0.025">
+            <event_cb trigger="clicked" callback="on_tune_z_n025"/>
+          </ui_button>
+          <!-- Reset button in center -->
+          <ui_button name="btn_z_reset" flex_grow="1" icon="refresh" text="">
+            <event_cb trigger="clicked" callback="on_tune_z_reset"/>
+          </ui_button>
+          <ui_button name="btn_z_p025" flex_grow="1" text="+0.025">
+            <event_cb trigger="clicked" callback="on_tune_z_p025"/>
+          </ui_button>
+          <ui_button name="btn_z_p05" flex_grow="1" text="+0.05">
+            <event_cb trigger="clicked" callback="on_tune_z_p05"/>
+          </ui_button>
         </lv_obj>
-        <text_small text="Closer = more squish | Farther = less squish" translation_tag="Closer = more squish | Farther = less squish"/>
+
+        <!-- Step buttons Row 2: finer steps -->
+        <lv_obj width="100%"
+                height="content" style_pad_all="0" flex_flow="row" style_flex_main_place="center"
+                style_pad_gap="#space_xxs" scrollable="false">
+          <ui_button name="btn_z_n01" flex_grow="1" text="-0.01">
+            <event_cb trigger="clicked" callback="on_tune_z_n01"/>
+          </ui_button>
+          <ui_button name="btn_z_n005" flex_grow="1" text="-0.005">
+            <event_cb trigger="clicked" callback="on_tune_z_n005"/>
+          </ui_button>
+          <!-- Spacer in center to match reset button above -->
+          <lv_obj flex_grow="1" style_pad_all="0" scrollable="false"/>
+          <ui_button name="btn_z_p005" flex_grow="1" text="+0.005">
+            <event_cb trigger="clicked" callback="on_tune_z_p005"/>
+          </ui_button>
+          <ui_button name="btn_z_p01" flex_grow="1" text="+0.01">
+            <event_cb trigger="clicked" callback="on_tune_z_p01"/>
+          </ui_button>
+        </lv_obj>
+
+        <!-- Help text -->
+        <text_small text="Closer ← → Farther" translation_tag="Closer ← → Farther" style_text_align="center" width="100%"/>
         <text_small name="z_offset_help_text" text="Temporary adjustment for this print, unless saved on Controls panel" translation_tag="Temporary adjustment for this print, unless saved on Controls panel"/>
       </lv_obj>
     </lv_obj>

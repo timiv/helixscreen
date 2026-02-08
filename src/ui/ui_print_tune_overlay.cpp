@@ -7,6 +7,7 @@
 #include "ui_nav_manager.h"
 #include "ui_panel_common.h"
 #include "ui_toast.h"
+#include "ui_z_offset_indicator.h"
 
 #include "format_utils.h"
 #include "lvgl/src/others/translation/lv_translation.h"
@@ -81,55 +82,35 @@ static void on_tune_reset_clicked_cb(lv_event_t* /*e*/) {
     get_print_tune_overlay().handle_reset();
 }
 
-/**
- * @brief Callback for Z-offset amount selector buttons (radio behavior)
- *
- * Parses button name to get amount:
- *   - btn_z_amount_005   -> 0.05mm
- *   - btn_z_amount_0025  -> 0.025mm
- *   - btn_z_amount_001   -> 0.01mm
- *   - btn_z_amount_00025 -> 0.0025mm
- */
-static void on_tune_z_amount_select_cb(lv_event_t* e) {
-    lv_obj_t* btn = static_cast<lv_obj_t*>(lv_event_get_target(e));
-    if (!btn) {
-        return;
-    }
-
-    const char* name = lv_obj_get_name(btn);
-    if (!name) {
-        spdlog::warn("[on_tune_z_amount_select_cb] Button has no name");
-        return;
-    }
-
-    // Parse amount from button name suffix
-    double amount = 0.05; // default
-    if (strstr(name, "_00025")) {
-        amount = 0.0025;
-    } else if (strstr(name, "_0025")) {
-        amount = 0.025;
-    } else if (strstr(name, "_001")) {
-        amount = 0.01;
-    } else if (strstr(name, "_005")) {
-        amount = 0.05;
-    }
-
-    spdlog::trace("[on_tune_z_amount_select_cb] Selected amount: {}mm", amount);
-    get_print_tune_overlay().handle_z_amount_select(amount);
+// Z-offset step button callbacks - each calls handle_z_offset_changed with fixed delta
+static void on_tune_z_n05_cb(lv_event_t*) {
+    get_print_tune_overlay().handle_z_offset_changed(-0.05);
+}
+static void on_tune_z_n025_cb(lv_event_t*) {
+    get_print_tune_overlay().handle_z_offset_changed(-0.025);
+}
+static void on_tune_z_n01_cb(lv_event_t*) {
+    get_print_tune_overlay().handle_z_offset_changed(-0.01);
+}
+static void on_tune_z_n005_cb(lv_event_t*) {
+    get_print_tune_overlay().handle_z_offset_changed(-0.005);
+}
+static void on_tune_z_p005_cb(lv_event_t*) {
+    get_print_tune_overlay().handle_z_offset_changed(0.005);
+}
+static void on_tune_z_p01_cb(lv_event_t*) {
+    get_print_tune_overlay().handle_z_offset_changed(0.01);
+}
+static void on_tune_z_p025_cb(lv_event_t*) {
+    get_print_tune_overlay().handle_z_offset_changed(0.025);
+}
+static void on_tune_z_p05_cb(lv_event_t*) {
+    get_print_tune_overlay().handle_z_offset_changed(0.05);
 }
 
-/**
- * @brief Callback for Z closer button (more squish = negative Z adjust)
- */
-static void on_tune_z_closer_cb(lv_event_t* /*e*/) {
-    get_print_tune_overlay().handle_z_closer();
-}
-
-/**
- * @brief Callback for Z farther button (less squish = positive Z adjust)
- */
-static void on_tune_z_farther_cb(lv_event_t* /*e*/) {
-    get_print_tune_overlay().handle_z_farther();
+// Z-offset reset button callback
+static void on_tune_z_reset_cb(lv_event_t*) {
+    get_print_tune_overlay().handle_z_reset();
 }
 
 static void on_tune_save_z_offset_cb(lv_event_t* /*e*/) {
@@ -224,13 +205,6 @@ void PrintTuneOverlay::init_subjects_internal() {
     UI_MANAGED_SUBJECT_STRING(tune_z_offset_subject_, tune_z_offset_buf_, "0.000mm",
                               "tune_z_offset_display", subjects_);
 
-    // Z-offset amount button active states (for bind_style)
-    // Default: 0.01mm selected
-    UI_MANAGED_SUBJECT_INT(z_amount_005_subject_, 0, "z_amount_005_active", subjects_);
-    UI_MANAGED_SUBJECT_INT(z_amount_0025_subject_, 0, "z_amount_0025_active", subjects_);
-    UI_MANAGED_SUBJECT_INT(z_amount_001_subject_, 1, "z_amount_001_active", subjects_);
-    UI_MANAGED_SUBJECT_INT(z_amount_00025_subject_, 0, "z_amount_00025_active", subjects_);
-
     // Register XML event callbacks
     // Speed/flow sliders: separate display (while dragging) and send (on release) callbacks
     lv_xml_register_event_cb(nullptr, "on_tune_speed_display", on_tune_speed_display_cb);
@@ -238,10 +212,18 @@ void PrintTuneOverlay::init_subjects_internal() {
     lv_xml_register_event_cb(nullptr, "on_tune_flow_display", on_tune_flow_display_cb);
     lv_xml_register_event_cb(nullptr, "on_tune_flow_send", on_tune_flow_send_cb);
     lv_xml_register_event_cb(nullptr, "on_tune_reset_clicked", on_tune_reset_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "on_tune_z_amount_select", on_tune_z_amount_select_cb);
-    lv_xml_register_event_cb(nullptr, "on_tune_z_closer", on_tune_z_closer_cb);
-    lv_xml_register_event_cb(nullptr, "on_tune_z_farther", on_tune_z_farther_cb);
     lv_xml_register_event_cb(nullptr, "on_tune_save_z_offset", on_tune_save_z_offset_cb);
+
+    // Z-offset step button callbacks
+    lv_xml_register_event_cb(nullptr, "on_tune_z_n05", on_tune_z_n05_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_z_n025", on_tune_z_n025_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_z_n01", on_tune_z_n01_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_z_n005", on_tune_z_n005_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_z_p005", on_tune_z_p005_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_z_p01", on_tune_z_p01_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_z_p025", on_tune_z_p025_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_z_p05", on_tune_z_p05_cb);
+    lv_xml_register_event_cb(nullptr, "on_tune_z_reset", on_tune_z_reset_cb);
 
     subjects_initialized_ = true;
     spdlog::debug("[PrintTuneOverlay] Subjects initialized");
@@ -293,6 +275,12 @@ void PrintTuneOverlay::sync_sliders_to_state() {
     // Sync Z offset from PrinterState
     int z_offset_microns = lv_subject_get_int(printer_state_->get_gcode_z_offset_subject());
     update_z_offset_display(z_offset_microns);
+
+    // Sync the visual indicator
+    lv_obj_t* indicator = lv_obj_find_by_name(tune_panel_, "z_offset_indicator");
+    if (indicator) {
+        ui_z_offset_indicator_set_value(indicator, z_offset_microns);
+    }
 
     // Update displays
     update_display();
@@ -476,6 +464,16 @@ void PrintTuneOverlay::handle_z_offset_changed(double delta) {
     spdlog::debug("[PrintTuneOverlay] Z-offset adjust: {:+.3f}mm (total: {:.3f}mm)", delta,
                   current_z_offset_);
 
+    // Update the visual indicator
+    if (tune_panel_) {
+        lv_obj_t* indicator = lv_obj_find_by_name(tune_panel_, "z_offset_indicator");
+        if (indicator) {
+            int microns = static_cast<int>(current_z_offset_ * 1000.0);
+            ui_z_offset_indicator_set_value(indicator, microns);
+            ui_z_offset_indicator_flash_direction(indicator, delta > 0 ? 1 : -1);
+        }
+    }
+
     // Send SET_GCODE_OFFSET Z_ADJUST command to Klipper
     if (api_) {
         char gcode[64];
@@ -489,26 +487,32 @@ void PrintTuneOverlay::handle_z_offset_changed(double delta) {
     }
 }
 
-void PrintTuneOverlay::handle_z_amount_select(double amount_mm) {
-    selected_z_amount_ = amount_mm;
-    spdlog::debug("[PrintTuneOverlay] Z-offset amount selected: {}mm", amount_mm);
+void PrintTuneOverlay::handle_z_reset() {
+    spdlog::debug("[PrintTuneOverlay] Z-offset reset requested");
 
-    // Update subjects for bind_style (radio behavior via boolean subjects)
-    // Set selected button's subject to 1, all others to 0
-    lv_subject_set_int(&z_amount_005_subject_, amount_mm == 0.05 ? 1 : 0);
-    lv_subject_set_int(&z_amount_0025_subject_, amount_mm == 0.025 ? 1 : 0);
-    lv_subject_set_int(&z_amount_001_subject_, amount_mm == 0.01 ? 1 : 0);
-    lv_subject_set_int(&z_amount_00025_subject_, amount_mm == 0.0025 ? 1 : 0);
-}
+    // Reset local state
+    current_z_offset_ = 0.0;
+    helix::fmt::format_distance_mm(0.0, 3, tune_z_offset_buf_, sizeof(tune_z_offset_buf_));
+    lv_subject_copy_string(&tune_z_offset_subject_, tune_z_offset_buf_);
 
-void PrintTuneOverlay::handle_z_closer() {
-    // Closer = more squish = negative Z adjust
-    handle_z_offset_changed(-selected_z_amount_);
-}
+    // Update indicator
+    if (tune_panel_) {
+        lv_obj_t* indicator = lv_obj_find_by_name(tune_panel_, "z_offset_indicator");
+        if (indicator) {
+            ui_z_offset_indicator_set_value(indicator, 0);
+        }
+    }
 
-void PrintTuneOverlay::handle_z_farther() {
-    // Farther = less squish = positive Z adjust
-    handle_z_offset_changed(selected_z_amount_);
+    // Send G-code to reset z-offset
+    if (api_) {
+        api_->execute_gcode(
+            "SET_GCODE_OFFSET Z=0 MOVE=1",
+            []() { spdlog::debug("[PrintTuneOverlay] Z-offset reset to 0"); },
+            [](const MoonrakerError& err) {
+                spdlog::error("[PrintTuneOverlay] Z-offset reset failed: {}", err.message);
+                NOTIFY_ERROR("Z-offset reset failed: {}", err.user_message());
+            });
+    }
 }
 
 void PrintTuneOverlay::handle_save_z_offset() {

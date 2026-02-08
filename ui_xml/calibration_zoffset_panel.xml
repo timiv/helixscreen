@@ -71,6 +71,8 @@
           <text_small text="Current Z Position" translation_tag="Current Z Position"/>
           <lv_label name="z_position_display" text="Z: 0.000" translation_tag="Z: 0.000" style_text_font="montserrat_28"/>
         </lv_obj>
+        <!-- Nozzle-over-bed visual indicator -->
+        <z_offset_indicator name="z_offset_indicator" width="100%" height="80"/>
         <!-- Instructions -->
         <text_small width="100%"
                     text="Move paper back and forth while adjusting. Stop when paper catches slightly but still slides." translation_tag="Move paper back and forth while adjusting. Stop when paper catches slightly but still slides."

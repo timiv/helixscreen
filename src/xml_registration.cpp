@@ -19,6 +19,7 @@
 #include "ui_switch.h"
 #include "ui_text.h"
 #include "ui_text_input.h"
+#include "ui_z_offset_indicator.h"
 
 #include "theme_manager.h"
 
@@ -146,9 +147,10 @@ void register_xml_components() {
 
     // Register custom widgets (BEFORE components that use them)
     ui_gcode_viewer_register();
-    ui_spool_canvas_register(); // Needed by Spoolman panel (and AMS panel)
-    ui_hsv_picker_register();   // HSV color picker for edit filament modal
-    ui_ams_current_tool_init(); // AMS current tool indicator callbacks
+    ui_spool_canvas_register();       // Needed by Spoolman panel (and AMS panel)
+    ui_hsv_picker_register();         // HSV color picker for edit filament modal
+    ui_z_offset_indicator_register(); // Z-offset nozzle indicator
+    ui_ams_current_tool_init();       // AMS current tool indicator callbacks
     // NOTE: Other AMS widgets (ams_slot, filament_path_canvas) are
     // registered lazily in ui_panel_ams.cpp when the AMS panel is first accessed
 

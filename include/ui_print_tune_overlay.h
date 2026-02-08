@@ -89,20 +89,9 @@ class PrintTuneOverlay : public OverlayBase {
     void handle_z_offset_changed(double delta);
 
     /**
-     * @brief Handle Z-offset amount selector click (radio behavior)
-     * @param amount_mm The amount in mm (0.05, 0.025, 0.01, 0.0025)
+     * @brief Handle Z-offset reset button - resets z-offset to 0
      */
-    void handle_z_amount_select(double amount_mm);
-
-    /**
-     * @brief Handle Z closer button (more squish = negative Z adjust)
-     */
-    void handle_z_closer();
-
-    /**
-     * @brief Handle Z farther button (less squish = positive Z adjust)
-     */
-    void handle_z_farther();
+    void handle_z_reset();
 
     /**
      * @brief Handle save Z-offset button click
@@ -215,12 +204,6 @@ class PrintTuneOverlay : public OverlayBase {
     lv_subject_t tune_flow_subject_;
     lv_subject_t tune_z_offset_subject_;
 
-    // Z-offset amount button selection subjects (for bind_style)
-    lv_subject_t z_amount_005_subject_;
-    lv_subject_t z_amount_0025_subject_;
-    lv_subject_t z_amount_001_subject_;
-    lv_subject_t z_amount_00025_subject_;
-
     // Subject storage buffers
     char tune_speed_buf_[16] = "100%";
     char tune_flow_buf_[16] = "100%";
@@ -231,7 +214,6 @@ class PrintTuneOverlay : public OverlayBase {
     //
 
     double current_z_offset_ = 0.0;
-    double selected_z_amount_ = 0.01; ///< Currently selected Z-offset amount in mm
     int speed_percent_ = 100;
     int flow_percent_ = 100;
 

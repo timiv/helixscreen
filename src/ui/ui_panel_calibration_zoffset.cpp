@@ -6,6 +6,7 @@
 #include "ui_event_safety.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
+#include "ui_z_offset_indicator.h"
 
 #include "app_globals.h"
 #include "moonraker_api.h"
@@ -231,6 +232,14 @@ void ZOffsetCalibrationPanel::on_activate() {
     cumulative_z_delta_ = 0.0f;
     if (z_position_display_) {
         lv_label_set_text(z_position_display_, "Z: 0.000");
+    }
+
+    // Reset the visual indicator
+    if (overlay_root_) {
+        lv_obj_t* indicator = lv_obj_find_by_name(overlay_root_, "z_offset_indicator");
+        if (indicator) {
+            ui_z_offset_indicator_set_value(indicator, 0);
+        }
     }
 }
 
@@ -521,6 +530,14 @@ void ZOffsetCalibrationPanel::handle_z_adjust(float delta) {
     if (state_ != State::ADJUSTING)
         return;
     adjust_z(delta);
+
+    // Flash the direction indicator
+    if (overlay_root_) {
+        lv_obj_t* indicator = lv_obj_find_by_name(overlay_root_, "z_offset_indicator");
+        if (indicator) {
+            ui_z_offset_indicator_flash_direction(indicator, delta > 0 ? 1 : -1);
+        }
+    }
 }
 
 void ZOffsetCalibrationPanel::handle_accept_clicked() {
@@ -554,6 +571,15 @@ void ZOffsetCalibrationPanel::update_z_position(float z_position) {
         char buf[32];
         snprintf(buf, sizeof(buf), "Z: %.3f", z_position);
         lv_label_set_text(z_position_display_, buf);
+    }
+
+    // Update the visual indicator (convert mm to microns)
+    if (overlay_root_) {
+        lv_obj_t* indicator = lv_obj_find_by_name(overlay_root_, "z_offset_indicator");
+        if (indicator) {
+            int microns = static_cast<int>(z_position * 1000.0f);
+            ui_z_offset_indicator_set_value(indicator, microns);
+        }
     }
 }
 
