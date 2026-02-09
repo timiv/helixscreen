@@ -346,7 +346,7 @@
                        height="#button_height_sm" flex_grow="1" bind_text="macro_1_name" variant="secondary">
               <bind_flag_if_eq subject="macro_1_visible" flag="hidden" ref_value="0"/>
               <bind_state_if_eq subject="print_active" state="disabled" ref_value="1"/>
-              <event_cb trigger="clicked" callback="on_controls_macro_1"/>
+              <event_cb trigger="clicked" callback="on_controls_macro" user_data="0"/>
             </ui_button>
           </lv_obj>
           <!-- Macro row 2 -->
@@ -356,19 +356,19 @@
                        height="#button_height_sm" flex_grow="1" bind_text="macro_2_name" variant="secondary">
               <bind_flag_if_eq subject="macro_2_visible" flag="hidden" ref_value="0"/>
               <bind_state_if_eq subject="print_active" state="disabled" ref_value="1"/>
-              <event_cb trigger="clicked" callback="on_controls_macro_2"/>
+              <event_cb trigger="clicked" callback="on_controls_macro" user_data="1"/>
             </ui_button>
             <ui_button name="btn_macro_3"
                        height="#button_height_sm" flex_grow="1" bind_text="macro_3_name" variant="secondary">
               <bind_flag_if_eq subject="macro_3_visible" flag="hidden" ref_value="0"/>
               <bind_state_if_eq subject="print_active" state="disabled" ref_value="1"/>
-              <event_cb trigger="clicked" callback="on_controls_macro_3"/>
+              <event_cb trigger="clicked" callback="on_controls_macro" user_data="2"/>
             </ui_button>
             <ui_button name="btn_macro_4"
                        height="#button_height_sm" flex_grow="1" bind_text="macro_4_name" variant="secondary">
               <bind_flag_if_eq subject="macro_4_visible" flag="hidden" ref_value="0"/>
               <bind_state_if_eq subject="print_active" state="disabled" ref_value="1"/>
-              <event_cb trigger="clicked" callback="on_controls_macro_4"/>
+              <event_cb trigger="clicked" callback="on_controls_macro" user_data="3"/>
             </ui_button>
           </lv_obj>
         </lv_obj>

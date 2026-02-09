@@ -122,10 +122,7 @@ class RetractionSettingsOverlay : public OverlayBase {
 
     // Event handlers
     static void on_enabled_changed(lv_event_t* e);
-    static void on_retract_length_changed(lv_event_t* e);
-    static void on_retract_speed_changed(lv_event_t* e);
-    static void on_unretract_extra_changed(lv_event_t* e);
-    static void on_unretract_speed_changed(lv_event_t* e);
+    static void on_setting_changed(lv_event_t* e);
 
     // Widget references
     lv_obj_t* enable_switch_ = nullptr;

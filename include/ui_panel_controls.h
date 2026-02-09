@@ -337,10 +337,6 @@ class ControlsPanel : public PanelBase {
     void handle_home_z();
     void handle_qgl();
     void handle_z_tilt();
-    void handle_macro_1();
-    void handle_macro_2();
-    void handle_macro_3();
-    void handle_macro_4();
 
     /**
      * @brief Execute a macro by slot index (0-3)
@@ -433,10 +429,7 @@ class ControlsPanel : public PanelBase {
     static void on_home_z(lv_event_t* e);
     static void on_qgl(lv_event_t* e);
     static void on_z_tilt(lv_event_t* e);
-    static void on_macro_1(lv_event_t* e);
-    static void on_macro_2(lv_event_t* e);
-    static void on_macro_3(lv_event_t* e);
-    static void on_macro_4(lv_event_t* e);
+    static void on_macro(lv_event_t* e);
     static void on_fan_slider_changed(lv_event_t* e);
     static void on_save_z_offset(lv_event_t* e);
     static void on_speed_up(lv_event_t* e);

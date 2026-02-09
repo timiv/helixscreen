@@ -148,14 +148,7 @@ class ZOffsetCalibrationPanel : public OverlayBase {
 
     // Static trampolines for XML event_cb (must be public for registration)
     static void on_start_clicked(lv_event_t* e);
-    static void on_z_down_1(lv_event_t* e);
-    static void on_z_down_01(lv_event_t* e);
-    static void on_z_down_005(lv_event_t* e);
-    static void on_z_down_001(lv_event_t* e);
-    static void on_z_up_001(lv_event_t* e);
-    static void on_z_up_005(lv_event_t* e);
-    static void on_z_up_01(lv_event_t* e);
-    static void on_z_up_1(lv_event_t* e);
+    static void on_z_adjust(lv_event_t* e);
     static void on_accept_clicked(lv_event_t* e);
     static void on_abort_clicked(lv_event_t* e);
     static void on_done_clicked(lv_event_t* e);

@@ -76,22 +76,22 @@
             <ui_button name="btn_z_amount_005" flex_grow="1" text="0.05">
               <bind_style name="z_amount_selected" subject="z_amount_005_active" ref_value="1"/>
               <bind_style name="z_amount_unselected" subject="z_amount_005_active" ref_value="0"/>
-              <event_cb trigger="clicked" callback="on_tune_z_amount_select"/>
+              <event_cb trigger="clicked" callback="on_tune_z_amount_select" user_data="0.05"/>
             </ui_button>
             <ui_button name="btn_z_amount_0025" flex_grow="1" text="0.025">
               <bind_style name="z_amount_selected" subject="z_amount_0025_active" ref_value="1"/>
               <bind_style name="z_amount_unselected" subject="z_amount_0025_active" ref_value="0"/>
-              <event_cb trigger="clicked" callback="on_tune_z_amount_select"/>
+              <event_cb trigger="clicked" callback="on_tune_z_amount_select" user_data="0.025"/>
             </ui_button>
             <ui_button name="btn_z_amount_001" flex_grow="1" text="0.01">
               <bind_style name="z_amount_selected" subject="z_amount_001_active" ref_value="1"/>
               <bind_style name="z_amount_unselected" subject="z_amount_001_active" ref_value="0"/>
-              <event_cb trigger="clicked" callback="on_tune_z_amount_select"/>
+              <event_cb trigger="clicked" callback="on_tune_z_amount_select" user_data="0.01"/>
             </ui_button>
             <ui_button name="btn_z_amount_00025" flex_grow="1" text="0.0025">
               <bind_style name="z_amount_selected" subject="z_amount_00025_active" ref_value="1"/>
               <bind_style name="z_amount_unselected" subject="z_amount_00025_active" ref_value="0"/>
-              <event_cb trigger="clicked" callback="on_tune_z_amount_select"/>
+              <event_cb trigger="clicked" callback="on_tune_z_amount_select" user_data="0.0025"/>
             </ui_button>
           </lv_obj>
           <!-- Up/Down direction buttons (stacked vertically) -->

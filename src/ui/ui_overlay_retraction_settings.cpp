@@ -67,10 +67,7 @@ void RetractionSettingsOverlay::init_subjects() {
 
     // Register slider/toggle callbacks
     lv_xml_register_event_cb(nullptr, "on_retraction_enabled_changed", on_enabled_changed);
-    lv_xml_register_event_cb(nullptr, "on_retract_length_changed", on_retract_length_changed);
-    lv_xml_register_event_cb(nullptr, "on_retract_speed_changed", on_retract_speed_changed);
-    lv_xml_register_event_cb(nullptr, "on_unretract_extra_changed", on_unretract_extra_changed);
-    lv_xml_register_event_cb(nullptr, "on_unretract_speed_changed", on_unretract_speed_changed);
+    lv_xml_register_event_cb(nullptr, "on_retraction_setting_changed", on_setting_changed);
 
     spdlog::debug("[{}] init_subjects() - registered callbacks", get_name());
 }
@@ -247,37 +244,7 @@ void RetractionSettingsOverlay::on_enabled_changed(lv_event_t* e) {
     }
 }
 
-void RetractionSettingsOverlay::on_retract_length_changed(lv_event_t* /*e*/) {
-    auto& overlay = get_global_retraction_settings();
-    overlay.update_display_labels();
-
-    if (overlay.syncing_from_state_) {
-        return;
-    }
-    overlay.send_retraction_settings();
-}
-
-void RetractionSettingsOverlay::on_retract_speed_changed(lv_event_t* /*e*/) {
-    auto& overlay = get_global_retraction_settings();
-    overlay.update_display_labels();
-
-    if (overlay.syncing_from_state_) {
-        return;
-    }
-    overlay.send_retraction_settings();
-}
-
-void RetractionSettingsOverlay::on_unretract_extra_changed(lv_event_t* /*e*/) {
-    auto& overlay = get_global_retraction_settings();
-    overlay.update_display_labels();
-
-    if (overlay.syncing_from_state_) {
-        return;
-    }
-    overlay.send_retraction_settings();
-}
-
-void RetractionSettingsOverlay::on_unretract_speed_changed(lv_event_t* /*e*/) {
+void RetractionSettingsOverlay::on_setting_changed(lv_event_t* /*e*/) {
     auto& overlay = get_global_retraction_settings();
     overlay.update_display_labels();
 

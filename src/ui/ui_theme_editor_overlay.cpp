@@ -22,6 +22,7 @@
 #include <cctype>
 #include <chrono>
 #include <cstdlib>
+#include <cstring>
 #include <sys/stat.h>
 
 // ============================================================================
@@ -128,11 +129,8 @@ void ThemeEditorOverlay::register_callbacks() {
     // Swatch click callback for color editing
     lv_xml_register_event_cb(nullptr, "on_theme_swatch_clicked", on_swatch_clicked);
 
-    // Slider callbacks for property adjustments
-    lv_xml_register_event_cb(nullptr, "on_border_radius_changed", on_border_radius_changed);
-    lv_xml_register_event_cb(nullptr, "on_border_width_changed", on_border_width_changed);
-    lv_xml_register_event_cb(nullptr, "on_border_opacity_changed", on_border_opacity_changed);
-    lv_xml_register_event_cb(nullptr, "on_shadow_changed", on_shadow_changed);
+    // Unified slider callback for property adjustments (uses user_data to identify property)
+    lv_xml_register_event_cb(nullptr, "on_theme_property_changed", on_property_changed);
 
     // Action button callbacks
     lv_xml_register_event_cb(nullptr, "on_theme_save_clicked", on_theme_save_clicked);
@@ -370,35 +368,23 @@ void ThemeEditorOverlay::update_title_dirty_indicator() {
 // STATIC CALLBACKS - Slider Property Changes
 // ============================================================================
 
-void ThemeEditorOverlay::on_border_radius_changed(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[ThemeEditorOverlay] on_border_radius_changed");
-    auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int value = lv_slider_get_value(slider);
-    get_theme_editor_overlay().handle_border_radius_changed(value);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void ThemeEditorOverlay::on_border_width_changed(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[ThemeEditorOverlay] on_border_width_changed");
-    auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int value = lv_slider_get_value(slider);
-    get_theme_editor_overlay().handle_border_width_changed(value);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void ThemeEditorOverlay::on_border_opacity_changed(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[ThemeEditorOverlay] on_border_opacity_changed");
-    auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int value = lv_slider_get_value(slider);
-    get_theme_editor_overlay().handle_border_opacity_changed(value);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void ThemeEditorOverlay::on_shadow_changed(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[ThemeEditorOverlay] on_shadow_changed");
-    auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int value = lv_slider_get_value(slider);
-    get_theme_editor_overlay().handle_shadow_intensity_changed(value);
+void ThemeEditorOverlay::on_property_changed(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ThemeEditorOverlay] on_property_changed");
+    const char* property = static_cast<const char*>(lv_event_get_user_data(e));
+    if (property) {
+        auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+        int value = lv_slider_get_value(slider);
+        auto& editor = get_theme_editor_overlay();
+        if (strcmp(property, "border_radius") == 0) {
+            editor.handle_border_radius_changed(value);
+        } else if (strcmp(property, "border_width") == 0) {
+            editor.handle_border_width_changed(value);
+        } else if (strcmp(property, "border_opacity") == 0) {
+            editor.handle_border_opacity_changed(value);
+        } else if (strcmp(property, "shadow") == 0) {
+            editor.handle_shadow_intensity_changed(value);
+        }
+    }
     LVGL_SAFE_EVENT_CB_END();
 }
 

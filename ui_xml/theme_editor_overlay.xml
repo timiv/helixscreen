@@ -299,20 +299,23 @@
       <setting_slider_row name="row_border_radius"
                           label="Border Radius" label_tag="Border Radius" icon="cube" description="Corner roundness (0 = sharp, 40 = very round)" description_tag="Corner roundness (0 = sharp, 40 = very round)"
                           min="0" max="40" value="8" min_icon="minus" max_icon="plus"
-                          callback="on_border_radius_changed"/>
+                          callback="on_theme_property_changed" user_data="border_radius"/>
 
       <setting_slider_row name="row_border_width"
                           label="Border Width" label_tag="Border Width" icon="ruler" description="Default border thickness" description_tag="Default border thickness" min="0" max="6"
-                          value="1" min_icon="minus" max_icon="plus" callback="on_border_width_changed"/>
+                          value="1" min_icon="minus" max_icon="plus"
+                          callback="on_theme_property_changed" user_data="border_width"/>
 
       <setting_slider_row name="row_border_opacity"
                           label="Border Opacity" label_tag="Border Opacity" icon="layers"
                           description="Border transparency (0 = invisible, 255 = solid)" description_tag="Border transparency (0 = invisible, 255 = solid)" min="0" max="255" value="128"
-                          min_icon="minus" max_icon="plus" callback="on_border_opacity_changed"/>
+                          min_icon="minus" max_icon="plus"
+                          callback="on_theme_property_changed" user_data="border_opacity"/>
 
       <setting_slider_row name="row_shadow_intensity"
                           label="Shadow Intensity" label_tag="Shadow Intensity" icon="animation" description="Drop shadow strength (0 = disabled)" description_tag="Drop shadow strength (0 = disabled)"
-                          min="0" max="50" value="0" min_icon="minus" max_icon="plus" callback="on_shadow_changed"/>
+                          min="0" max="50" value="0" min_icon="minus" max_icon="plus"
+                          callback="on_theme_property_changed" user_data="shadow"/>
 
       <!-- ================================================================== -->
       <!-- ACTION BUTTONS -->

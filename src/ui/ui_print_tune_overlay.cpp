@@ -17,7 +17,7 @@
 #include <spdlog/spdlog.h>
 
 #include <cstdio>
-#include <cstring>
+#include <cstdlib>
 #include <memory>
 
 // ============================================================================
@@ -84,36 +84,16 @@ static void on_tune_reset_clicked_cb(lv_event_t* /*e*/) {
 /**
  * @brief Callback for Z-offset amount selector buttons (radio behavior)
  *
- * Parses button name to get amount:
- *   - btn_z_amount_005   -> 0.05mm
- *   - btn_z_amount_0025  -> 0.025mm
- *   - btn_z_amount_001   -> 0.01mm
- *   - btn_z_amount_00025 -> 0.0025mm
+ * Amount is passed via user_data from XML (e.g., "0.05", "0.025", "0.01", "0.0025")
  */
 static void on_tune_z_amount_select_cb(lv_event_t* e) {
-    lv_obj_t* btn = static_cast<lv_obj_t*>(lv_event_get_target(e));
-    if (!btn) {
+    const char* amount_str = static_cast<const char*>(lv_event_get_user_data(e));
+    if (!amount_str) {
+        spdlog::warn("[on_tune_z_amount_select_cb] No user_data in event");
         return;
     }
 
-    const char* name = lv_obj_get_name(btn);
-    if (!name) {
-        spdlog::warn("[on_tune_z_amount_select_cb] Button has no name");
-        return;
-    }
-
-    // Parse amount from button name suffix
-    double amount = 0.05; // default
-    if (strstr(name, "_00025")) {
-        amount = 0.0025;
-    } else if (strstr(name, "_0025")) {
-        amount = 0.025;
-    } else if (strstr(name, "_001")) {
-        amount = 0.01;
-    } else if (strstr(name, "_005")) {
-        amount = 0.05;
-    }
-
+    double amount = strtod(amount_str, nullptr);
     spdlog::trace("[on_tune_z_amount_select_cb] Selected amount: {}mm", amount);
     get_print_tune_overlay().handle_z_amount_select(amount);
 }

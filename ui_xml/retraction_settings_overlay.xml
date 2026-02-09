@@ -59,7 +59,7 @@
           <lv_slider name="retract_length_slider"
                      flex_grow="1" min_value="0" max_value="600" value="80" style_margin_left="#space_sm"
                      style_margin_right="#space_sm">
-            <event_cb trigger="value_changed" callback="on_retract_length_changed"/>
+            <event_cb trigger="value_changed" callback="on_retraction_setting_changed"/>
           </lv_slider>
           <text_small width="40" text="6mm" translation_tag="6mm"/>
         </lv_obj>
@@ -91,7 +91,7 @@
           <lv_slider name="retract_speed_slider"
                      flex_grow="1" min_value="10" max_value="80" value="35" style_margin_left="#space_sm"
                      style_margin_right="#space_sm">
-            <event_cb trigger="value_changed" callback="on_retract_speed_changed"/>
+            <event_cb trigger="value_changed" callback="on_retraction_setting_changed"/>
           </lv_slider>
           <text_small width="30" text="80"/>
         </lv_obj>
@@ -123,7 +123,7 @@
           <lv_slider name="unretract_extra_slider"
                      flex_grow="1" min_value="0" max_value="100" value="0" style_margin_left="#space_sm"
                      style_margin_right="#space_sm">
-            <event_cb trigger="value_changed" callback="on_unretract_extra_changed"/>
+            <event_cb trigger="value_changed" callback="on_retraction_setting_changed"/>
           </lv_slider>
           <text_small width="40" text="1mm" translation_tag="1mm"/>
         </lv_obj>
@@ -155,7 +155,7 @@
           <lv_slider name="unretract_speed_slider"
                      flex_grow="1" min_value="10" max_value="60" value="35" style_margin_left="#space_sm"
                      style_margin_right="#space_sm">
-            <event_cb trigger="value_changed" callback="on_unretract_speed_changed"/>
+            <event_cb trigger="value_changed" callback="on_retraction_setting_changed"/>
           </lv_slider>
           <text_small width="30" text="60"/>
         </lv_obj>

@@ -43,6 +43,7 @@
 
 #include <algorithm> // std::clamp
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 
@@ -232,11 +233,8 @@ void ControlsPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_controls_qgl", on_qgl);
     lv_xml_register_event_cb(nullptr, "on_controls_z_tilt", on_z_tilt);
 
-    // Quick Actions: Macro buttons
-    lv_xml_register_event_cb(nullptr, "on_controls_macro_1", on_macro_1);
-    lv_xml_register_event_cb(nullptr, "on_controls_macro_2", on_macro_2);
-    lv_xml_register_event_cb(nullptr, "on_controls_macro_3", on_macro_3);
-    lv_xml_register_event_cb(nullptr, "on_controls_macro_4", on_macro_4);
+    // Quick Actions: Macro buttons (unified callback with user_data index)
+    lv_xml_register_event_cb(nullptr, "on_controls_macro", on_macro);
 
     // Speed/Flow override buttons
     lv_xml_register_event_cb(nullptr, "on_controls_speed_up", on_speed_up);
@@ -1044,19 +1042,6 @@ void ControlsPanel::execute_macro(size_t index) {
     }
 }
 
-void ControlsPanel::handle_macro_1() {
-    execute_macro(0);
-}
-void ControlsPanel::handle_macro_2() {
-    execute_macro(1);
-}
-void ControlsPanel::handle_macro_3() {
-    execute_macro(2);
-}
-void ControlsPanel::handle_macro_4() {
-    execute_macro(3);
-}
-
 // ============================================================================
 // SPEED/FLOW OVERRIDE HANDLERS
 // ============================================================================
@@ -1305,11 +1290,17 @@ PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, home_xy)
 PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, home_z)
 PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, qgl)
 PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, z_tilt)
-PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, macro_1)
+// Unified macro callback - extracts index from user_data
+void ControlsPanel::on_macro(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_macro");
+    const char* index_str = static_cast<const char*>(lv_event_get_user_data(e));
+    if (index_str) {
+        size_t index = strtoul(index_str, nullptr, 10);
+        get_global_controls_panel().execute_macro(index);
+    }
+    LVGL_SAFE_EVENT_CB_END();
+}
 
-PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, macro_2)
-PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, macro_3)
-PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, macro_4)
 PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, speed_up)
 PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, speed_down)
 PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, flow_up)

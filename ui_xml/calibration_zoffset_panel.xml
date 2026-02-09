@@ -83,16 +83,16 @@
                   height="56" style_pad_all="0" flex_flow="row" style_flex_main_place="center" style_pad_gap="#space_md"
                   scrollable="false">
             <ui_button name="btn_z_down_1" width="100" height="56" text="-1mm" translation_tag="-1mm">
-              <event_cb trigger="clicked" callback="on_zoffset_z_down_1"/>
+              <event_cb trigger="clicked" callback="on_zoffset_z_adjust" user_data="-1.0"/>
             </ui_button>
             <ui_button name="btn_z_down_01" width="100" height="56" text="-0.1mm" translation_tag="-0.1mm">
-              <event_cb trigger="clicked" callback="on_zoffset_z_down_01"/>
+              <event_cb trigger="clicked" callback="on_zoffset_z_adjust" user_data="-0.1"/>
             </ui_button>
             <ui_button name="btn_z_up_01" width="100" height="56" text="+0.1mm" translation_tag="+0.1mm">
-              <event_cb trigger="clicked" callback="on_zoffset_z_up_01"/>
+              <event_cb trigger="clicked" callback="on_zoffset_z_adjust" user_data="0.1"/>
             </ui_button>
             <ui_button name="btn_z_up_1" width="100" height="56" text="+1mm" translation_tag="+1mm">
-              <event_cb trigger="clicked" callback="on_zoffset_z_up_1"/>
+              <event_cb trigger="clicked" callback="on_zoffset_z_adjust" user_data="1.0"/>
             </ui_button>
           </lv_obj>
           <!-- Row 2: Fine adjustments -->
@@ -100,16 +100,16 @@
                   height="56" style_pad_all="0" flex_flow="row" style_flex_main_place="center" style_pad_gap="#space_md"
                   scrollable="false">
             <ui_button name="btn_z_down_001" width="100" height="56" text="-0.01mm" translation_tag="-0.01mm">
-              <event_cb trigger="clicked" callback="on_zoffset_z_down_001"/>
+              <event_cb trigger="clicked" callback="on_zoffset_z_adjust" user_data="-0.01"/>
             </ui_button>
             <ui_button name="btn_z_down_005" width="100" height="56" text="-0.05mm" translation_tag="-0.05mm">
-              <event_cb trigger="clicked" callback="on_zoffset_z_down_005"/>
+              <event_cb trigger="clicked" callback="on_zoffset_z_adjust" user_data="-0.05"/>
             </ui_button>
             <ui_button name="btn_z_up_005" width="100" height="56" text="+0.05mm" translation_tag="+0.05mm">
-              <event_cb trigger="clicked" callback="on_zoffset_z_up_005"/>
+              <event_cb trigger="clicked" callback="on_zoffset_z_adjust" user_data="0.05"/>
             </ui_button>
             <ui_button name="btn_z_up_001" width="100" height="56" text="+0.01mm" translation_tag="+0.01mm">
-              <event_cb trigger="clicked" callback="on_zoffset_z_up_001"/>
+              <event_cb trigger="clicked" callback="on_zoffset_z_adjust" user_data="0.01"/>
             </ui_button>
           </lv_obj>
         </lv_obj>
