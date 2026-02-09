@@ -265,6 +265,14 @@ class PrinterDetector {
     static PrintStartCapabilities get_print_start_capabilities(const std::string& printer_name);
 
     /**
+     * @brief Get Z-offset calibration strategy string for a printer
+     *
+     * Looks up the z_offset_calibration_strategy field from the printer database.
+     * Returns "probe_calibrate", "gcode_offset", "endstop", or "" if not specified.
+     */
+    static std::string get_z_offset_calibration_strategy(const std::string& printer_name);
+
+    /**
      * @brief Get print start profile name for a printer
      *
      * Looks up the print_start_profile field from the printer database JSON
