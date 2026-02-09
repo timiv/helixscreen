@@ -463,6 +463,10 @@ class HardwareValidatorConfigFixture {
                            {"last_snapshot", json::object()}}}}}};
     }
 
+    void setup_config(const json& j) {
+        config.data = j;
+    }
+
     void setup_hardware_with_snapshot() {
         // NEW structure: includes last_snapshot for session change detection
         json snapshot = {
@@ -870,14 +874,14 @@ TEST_CASE_METHOD(HardwareValidatorConfigFixture,
     client.set_leds({}); // No LEDs on printer
 
     // Config with empty LED strip (user selected "None" in wizard)
-    config.data = {{"printer",
-                    {{"moonraker_host", "127.0.0.1"},
-                     {"moonraker_port", 7125},
-                     {"leds", {{"strip", ""}}},
-                     {"hardware",
-                      {{"optional", json::array()},
-                       {"expected", json::array()},
-                       {"last_snapshot", json::object()}}}}}};
+    setup_config({{"printer",
+                   {{"moonraker_host", "127.0.0.1"},
+                    {"moonraker_port", 7125},
+                    {"leds", {{"strip", ""}}},
+                    {"hardware",
+                     {{"optional", json::array()},
+                      {"expected", json::array()},
+                      {"last_snapshot", json::object()}}}}}});
 
     HardwareValidator validator;
     auto result = validator.validate(&config, client.hardware());
@@ -900,14 +904,14 @@ TEST_CASE_METHOD(HardwareValidatorConfigFixture,
     client.set_leds({}); // No LEDs on printer
 
     // Config with literal "None" (the old bug — wizard saved "None" as a string)
-    config.data = {{"printer",
-                    {{"moonraker_host", "127.0.0.1"},
-                     {"moonraker_port", 7125},
-                     {"leds", {{"strip", "None"}}},
-                     {"hardware",
-                      {{"optional", json::array()},
-                       {"expected", json::array()},
-                       {"last_snapshot", json::object()}}}}}};
+    setup_config({{"printer",
+                   {{"moonraker_host", "127.0.0.1"},
+                    {"moonraker_port", 7125},
+                    {"leds", {{"strip", "None"}}},
+                    {"hardware",
+                     {{"optional", json::array()},
+                      {"expected", json::array()},
+                      {"last_snapshot", json::object()}}}}}});
 
     HardwareValidator validator;
     auto result = validator.validate(&config, client.hardware());
@@ -931,18 +935,18 @@ TEST_CASE_METHOD(HardwareValidatorConfigFixture,
     client.set_fans({"fan", "heater_fan hotend_fan"});
 
     // Config with empty chamber and exhaust fans (user selected "None")
-    config.data = {{"printer",
-                    {{"moonraker_host", "127.0.0.1"},
-                     {"moonraker_port", 7125},
-                     {"fans",
-                      {{"part", "fan"},
-                       {"hotend", "heater_fan hotend_fan"},
-                       {"chamber", ""},
-                       {"exhaust", ""}}},
-                     {"hardware",
-                      {{"optional", json::array()},
-                       {"expected", json::array()},
-                       {"last_snapshot", json::object()}}}}}};
+    setup_config({{"printer",
+                   {{"moonraker_host", "127.0.0.1"},
+                    {"moonraker_port", 7125},
+                    {"fans",
+                     {{"part", "fan"},
+                      {"hotend", "heater_fan hotend_fan"},
+                      {"chamber", ""},
+                      {"exhaust", ""}}},
+                    {"hardware",
+                     {{"optional", json::array()},
+                      {"expected", json::array()},
+                      {"last_snapshot", json::object()}}}}}});
 
     HardwareValidator validator;
     auto result = validator.validate(&config, client.hardware());
