@@ -762,6 +762,14 @@ void ControlsPanel::handle_save_z_offset() {
     double offset_mm = static_cast<double>(offset_microns) / 1000.0;
     spdlog::info("[{}] Save Z-offset clicked: {:+.3f}mm", get_name(), offset_mm);
 
+    // Choose dialog text based on calibration strategy
+    const char* dialog_msg =
+        (strategy == ZOffsetCalibrationStrategy::PROBE_CALIBRATE)
+            ? "This will apply the Z-offset to your probe and restart Klipper to save the "
+              "configuration. The printer will briefly disconnect."
+            : "This will apply the Z-offset to your endstop and restart Klipper to save the "
+              "configuration. The printer will briefly disconnect.";
+
     // Show confirmation dialog - SAVE_CONFIG will restart Klipper
     const char* confirm_msg =
         (strategy == ZOffsetCalibrationStrategy::PROBE_CALIBRATE)
