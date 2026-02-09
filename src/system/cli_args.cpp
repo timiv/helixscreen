@@ -127,6 +127,7 @@ static void print_help(const char* program_name) {
     printf("  --log-file <path>    Log file path (when --log-dest=file)\n");
     printf("  -M, --memory-report  Log memory usage every 30 seconds (development)\n");
     printf("  --show-memory        Show memory stats overlay (press M to toggle)\n");
+    printf("  --release-notes      Fetch latest release notes and show in update modal\n");
     printf("  --debug-subjects     Enable verbose subject debugging with stack traces\n");
     printf("  --moonraker <url>    Override Moonraker URL (e.g., ws://192.168.1.112:7125)\n");
     printf("  -h, --help           Show this help message\n");
@@ -614,6 +615,8 @@ bool parse_cli_args(int argc, char** argv, CliArgs& args, int& screen_width, int
             args.memory_report = true;
         } else if (strcmp(argv[i], "--show-memory") == 0) {
             args.show_memory = true;
+        } else if (strcmp(argv[i], "--release-notes") == 0) {
+            args.overlays.release_notes = true;
         } else if (strcmp(argv[i], "--debug-subjects") == 0) {
             RuntimeConfig::set_debug_subjects(true);
         }

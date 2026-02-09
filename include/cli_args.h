@@ -63,11 +63,13 @@ struct OverlayFlags {
     bool macros = false;
     bool print_tune = false;
 
+    // Dev/test overlays
+    bool release_notes = false; // --release-notes: show update modal with sample markdown
+
     /** @brief Check if any overlay requiring Moonraker data is requested */
     bool needs_moonraker() const {
-        return motion || nozzle_temp || bed_temp || fan || print_status || bed_mesh ||
-               zoffset || pid || screws_tilt || input_shaper || file_detail || history_dashboard ||
-               spoolman;
+        return motion || nozzle_temp || bed_temp || fan || print_status || bed_mesh || zoffset ||
+               pid || screws_tilt || input_shaper || file_detail || history_dashboard || spoolman;
     }
 };
 

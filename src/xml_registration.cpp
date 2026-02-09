@@ -12,6 +12,7 @@
 #include "ui_gcode_viewer.h"
 #include "ui_hsv_picker.h"
 #include "ui_icon_codepoints.h"
+#include "ui_markdown.h"
 #include "ui_notification_badge.h"
 #include "ui_panel_settings.h"
 #include "ui_spinner.h"
@@ -131,6 +132,7 @@ void register_xml_components() {
     ui_text_input_init();         // <text_input> with bind_text support
     ui_spinner_init();            // <spinner> with responsive sizing
     ui_button_init();             // <ui_button> with variant styles and auto-contrast
+    ui_markdown_init();           // <ui_markdown> with theme-aware markdown rendering
     ui_notification_badge_init(); // <notification_badge> with auto-contrast text
     ui_confetti_init();           // <ui_confetti> celebration animation canvas
 

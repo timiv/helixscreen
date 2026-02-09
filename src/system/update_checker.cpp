@@ -1023,7 +1023,8 @@ void UpdateChecker::do_check() {
         report_result(Status::UpdateAvailable, info, "");
     } else {
         spdlog::info("[UpdateChecker] Already up to date ({})", current_version);
-        report_result(Status::UpToDate, std::nullopt, "");
+        // Pass info even for UpToDate so callbacks (e.g., --release-notes) can access it
+        report_result(Status::UpToDate, info, "");
     }
 
     spdlog::debug("[UpdateChecker] Worker thread finished");

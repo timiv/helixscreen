@@ -44,8 +44,7 @@
               style_pad_top="0" style_pad_bottom="#space_md"
               scrollable="true" scroll_snap_y="none" hidden="true">
         <bind_flag_if_not_eq subject="update_changelog_visible" flag="hidden" ref_value="1"/>
-        <text_body name="changelog_text" bind_text="update_release_notes" width="100%"
-                   long_mode="wrap" style_text_align="left"/>
+        <ui_markdown name="changelog_text" bind_text="update_release_notes" width="100%"/>
       </lv_obj>
 
       <!-- Button row: Ignore | Install -->

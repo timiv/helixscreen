@@ -1269,6 +1269,35 @@ void Application::create_overlays() {
         }
     }
 
+    // Handle --release-notes flag: fetch latest release notes and show in modal
+    if (m_args.overlays.release_notes) {
+        auto& checker = UpdateChecker::instance();
+        spdlog::info("[Application] Fetching latest release notes via CLI...");
+        // check_for_updates callback runs on the LVGL thread (dispatched by report_result)
+        checker.check_for_updates([](UpdateChecker::Status status,
+                                     std::optional<UpdateChecker::ReleaseInfo> info) {
+            auto& checker = UpdateChecker::instance();
+            // Show release notes regardless of version comparison (even if "up to date")
+            if (!info) {
+                spdlog::warn("[Application] --release-notes: no release info available (status={})",
+                             static_cast<int>(status));
+                return;
+            }
+
+            // Populate subjects with real release data
+            // (report_result already set version_text for UpdateAvailable,
+            //  but we override for UpToDate/other statuses too)
+            char version_text[128];
+            snprintf(version_text, sizeof(version_text), "v%s (latest release)",
+                     info->version.c_str());
+            lv_subject_copy_string(checker.version_text_subject(), version_text);
+            lv_subject_copy_string(checker.release_notes_subject(), info->release_notes.c_str());
+            lv_subject_set_int(checker.changelog_visible_subject(), 1);
+            checker.show_update_notification();
+            spdlog::info("[Application] Showing release notes for v{}", info->version);
+        });
+    }
+
     // Handle --select-file flag
     RuntimeConfig* runtime_config = get_runtime_config();
     if (runtime_config->select_file != nullptr) {

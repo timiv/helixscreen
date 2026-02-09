@@ -470,6 +470,7 @@ $(TEST_BIN): $(TEST_CORE_DEPS) \
              $(TEST_LVGL_DEPS) \
              $(TEST_APP_OBJS) \
              $(MOCK_OBJS) \
+             $(LV_MARKDOWN_OBJS) \
              $(FONT_OBJS) \
              $(TRANS_OBJS) \
              $(OBJCPP_OBJS) \
