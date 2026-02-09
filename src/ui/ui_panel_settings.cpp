@@ -13,6 +13,7 @@
 #include "ui_nav_manager.h"
 #include "ui_overlay_network_settings.h"
 #include "ui_panel_memory_stats.h"
+#include "ui_settings_about.h"
 #include "ui_settings_display.h"
 #include "ui_settings_hardware_health.h"
 #include "ui_settings_machine_limits.h"
@@ -65,16 +66,8 @@ SettingsPanel::~SettingsPanel() {
     // Applying [L041]: deinit_subjects() as first line in destructor
     deinit_subjects();
 
-    // Widget-bound observers (from lv_label_bind_text) are automatically removed
-    // by LVGL when the bound widget is deleted. We avoid manual lv_observer_remove()
-    // because the observers may already be removed (stale pointers) if the widget
-    // tree was cleaned up. The subjects (in PrinterState) outlive this panel and
-    // will handle any remaining observer cleanup via lv_subject_deinit().
+    // Note: Klipper/Moonraker/OS version observers moved to AboutOverlay
     if (lv_is_initialized()) {
-        klipper_version_observer_ = nullptr;
-        moonraker_version_observer_ = nullptr;
-        os_version_observer_ = nullptr;
-
         // Unregister overlay callbacks to prevent dangling 'this' in callbacks
         auto& nav = NavigationManager::instance();
         if (factory_reset_dialog_) {
@@ -338,6 +331,10 @@ void SettingsPanel::init_subjects() {
     UI_MANAGED_SUBJECT_STRING(version_value_subject_, version_value_buf_, "—", "version_value",
                               subjects_);
 
+    // Formatted version for About row description (e.g., "Current Version: 1.2.3")
+    UI_MANAGED_SUBJECT_STRING(about_version_description_subject_, about_version_description_buf_,
+                              "—", "about_version_description", subjects_);
+
     UI_MANAGED_SUBJECT_STRING(printer_value_subject_, printer_value_buf_, "—", "printer_value",
                               subjects_);
 
@@ -431,8 +428,8 @@ void SettingsPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_factory_reset_clicked", on_factory_reset_clicked);
     lv_xml_register_event_cb(nullptr, "on_hardware_health_clicked", on_hardware_health_clicked);
     lv_xml_register_event_cb(nullptr, "on_plugins_clicked", on_plugins_clicked);
-    lv_xml_register_event_cb(nullptr, "on_check_updates_clicked", on_check_updates_clicked);
-    lv_xml_register_event_cb(nullptr, "on_install_update_clicked", on_install_update_clicked);
+    // Note: on_about_clicked registered in register_settings_panel_callbacks() per [L013]
+    // Note: on_check_updates_clicked, on_install_update_clicked also registered there
     lv_xml_register_event_cb(nullptr, "on_update_download_start", on_update_download_start);
     lv_xml_register_event_cb(nullptr, "on_update_download_cancel", on_update_download_cancel);
     lv_xml_register_event_cb(nullptr, "on_update_download_dismiss", on_update_download_dismiss);
@@ -671,29 +668,25 @@ void SettingsPanel::setup_action_handlers() {
         }
     }
 
-    // === Check for Updates Row (reactive description binding) ===
-    lv_obj_t* check_updates_row = lv_obj_find_by_name(panel_, "row_check_updates");
-    if (check_updates_row) {
-        lv_obj_t* description = lv_obj_find_by_name(check_updates_row, "description");
-        lv_subject_t* version_text = lv_xml_get_subject(nullptr, "update_version_text");
-        if (description && version_text) {
-            lv_label_bind_text(description, version_text, "%s");
-            spdlog::trace("[{}]   ✓ Check for Updates row with reactive description", get_name());
+    // === About HelixScreen Row (description shows formatted version) ===
+    lv_obj_t* about_row = lv_obj_find_by_name(panel_, "row_about");
+    if (about_row) {
+        lv_obj_t* description = lv_obj_find_by_name(about_row, "description");
+        if (description) {
+            lv_label_bind_text(description, &about_version_description_subject_, "%s");
+            spdlog::trace("[{}]   About row with version description", get_name());
         }
     }
+
+    // Note: Check for Updates row moved to AboutOverlay
 }
 
 void SettingsPanel::populate_info_rows() {
-    // === Version ===
-    lv_obj_t* version_row = lv_obj_find_by_name(panel_, "row_version");
-    if (version_row) {
-        version_value_ = lv_obj_find_by_name(version_row, "value");
-        if (version_value_) {
-            // Update subject (label binding happens in XML)
-            lv_subject_copy_string(&version_value_subject_, helix_version());
-            spdlog::trace("[{}]   ✓ Version: {}", get_name(), helix_version());
-        }
-    }
+    // === Version (subject used by About overlay and About row description) ===
+    lv_subject_copy_string(&version_value_subject_, helix_version());
+    std::string about_desc = std::string("Current Version: ") + helix_version();
+    lv_subject_copy_string(&about_version_description_subject_, about_desc.c_str());
+    spdlog::trace("[{}]   Version subject: {}", get_name(), helix_version());
 
     // === Printer Name (from PrinterState or Config) ===
     lv_obj_t* printer_row = lv_obj_find_by_name(panel_, "row_printer");
@@ -728,88 +721,11 @@ void SettingsPanel::populate_info_rows() {
         }
     }
 
-    // === Klipper Version (reactive binding from PrinterState) ===
-    lv_obj_t* klipper_row = lv_obj_find_by_name(panel_, "row_klipper");
-    if (klipper_row) {
-        klipper_value_ = lv_obj_find_by_name(klipper_row, "value");
-        if (klipper_value_) {
-            // Bind to reactive subject - updates automatically after discovery
-            // Track observer for cleanup in destructor
-            klipper_version_observer_ = lv_label_bind_text(
-                klipper_value_, printer_state_.get_klipper_version_subject(), "%s");
-            spdlog::trace("[{}]   ✓ Klipper version bound to subject", get_name());
-        }
-    }
-
-    // === Moonraker Version (reactive binding from PrinterState) ===
-    lv_obj_t* moonraker_row = lv_obj_find_by_name(panel_, "row_moonraker");
-    if (moonraker_row) {
-        moonraker_value_ = lv_obj_find_by_name(moonraker_row, "value");
-        if (moonraker_value_) {
-            // Bind to reactive subject - updates automatically after discovery
-            // Track observer for cleanup in destructor
-            moonraker_version_observer_ = lv_label_bind_text(
-                moonraker_value_, printer_state_.get_moonraker_version_subject(), "%s");
-            spdlog::trace("[{}]   ✓ Moonraker version bound to subject", get_name());
-        }
-    }
-
-    // === OS Version (reactive binding from PrinterState) ===
-    lv_obj_t* os_row = lv_obj_find_by_name(panel_, "row_os");
-    if (os_row) {
-        lv_obj_t* os_value = lv_obj_find_by_name(os_row, "value");
-        if (os_value) {
-            os_version_observer_ =
-                lv_label_bind_text(os_value, printer_state_.get_os_version_subject(), "%s");
-            spdlog::trace("[{}]   ✓ OS version bound to subject", get_name());
-        }
-    }
+    // Note: Klipper/Moonraker/OS version binding and MCU rows moved to AboutOverlay
+    // See ui_settings_about.cpp
 
     // Print hours: fetched on-demand via fetch_print_hours() after connection is live.
     // Called from discovery complete callback and on notify_history_changed events.
-
-    // === MCU Version Rows (dynamic, created from discovery data) ===
-    if (api_) {
-        const auto& mcu_versions = api_->hardware().mcu_versions();
-        if (!mcu_versions.empty()) {
-            // Find the bottom padding spacer to insert MCU rows before it
-            lv_obj_t* last_child = lv_obj_get_child(panel_, lv_obj_get_child_count(panel_) - 1);
-
-            for (const auto& [mcu_name, mcu_version] : mcu_versions) {
-                // Format label: "MCU" for primary, "MCU EBBCan" etc for secondaries
-                std::string label = "MCU";
-                if (mcu_name != "mcu") {
-                    // "mcu EBBCan" → "MCU EBBCan"
-                    label = "MCU" + mcu_name.substr(3);
-                }
-
-                // Create setting_info_row via XML component
-                const char* attrs[] = {"label", label.c_str(), "label_tag", label.c_str(),
-                                       "icon",  "code_braces", nullptr,     nullptr};
-                lv_obj_t* row =
-                    static_cast<lv_obj_t*>(lv_xml_create(panel_, "setting_info_row", attrs));
-                if (row) {
-                    // Move before the bottom padding spacer
-                    if (last_child) {
-                        lv_obj_swap(row, last_child);
-                    }
-
-                    // Set the value text
-                    lv_obj_t* value_label = lv_obj_find_by_name(row, "value");
-                    if (value_label) {
-                        // Truncate long version strings
-                        std::string display_version = mcu_version;
-                        if (display_version.length() > 30) {
-                            display_version = display_version.substr(0, 27) + "...";
-                        }
-                        lv_label_set_text(value_label, display_version.c_str());
-                    }
-
-                    spdlog::trace("[{}]   ✓ MCU row: {} = {}", get_name(), label, mcu_version);
-                }
-            }
-        }
-    }
 }
 
 // ============================================================================
@@ -952,6 +868,13 @@ void SettingsPanel::show_restart_prompt() {
         // Clear pending flag so we don't show again until next change
         SettingsManager::instance().clear_restart_pending();
     }
+}
+
+void SettingsPanel::handle_about_clicked() {
+    spdlog::debug("[{}] About clicked - delegating to AboutOverlay", get_name());
+
+    auto& overlay = helix::settings::get_about_overlay();
+    overlay.show(parent_screen_);
 }
 
 void SettingsPanel::handle_display_settings_clicked() {
@@ -1291,6 +1214,12 @@ void SettingsPanel::on_estop_confirm_changed(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
+void SettingsPanel::on_about_clicked(lv_event_t* /*e*/) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_about_clicked");
+    get_global_settings_panel().handle_about_clicked();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
 void SettingsPanel::on_display_settings_clicked(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_display_settings_clicked");
     get_global_settings_panel().handle_display_settings_clicked();
@@ -1451,6 +1380,7 @@ void register_settings_panel_callbacks() {
                              SettingsPanel::on_restart_helix_settings_clicked);
     lv_xml_register_event_cb(nullptr, "on_change_host_clicked",
                              SettingsPanel::on_change_host_clicked);
+    lv_xml_register_event_cb(nullptr, "on_about_clicked", SettingsPanel::on_about_clicked);
     lv_xml_register_event_cb(nullptr, "on_check_updates_clicked", on_check_updates_clicked);
     lv_xml_register_event_cb(nullptr, "on_install_update_clicked", on_install_update_clicked);
 }

@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<!-- Copyright (C) 2025-2026 356C LLC -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- About Overlay Panel -->
+<!-- Shows version info, update controls, and system component versions -->
+<!-- Update Channel and Install Update rows moved here from settings_panel SYSTEM section -->
+<component>
+  <view name="about_overlay"
+        extends="overlay_panel" width="#overlay_panel_width_full" title="About HelixScreen"
+        title_tag="About HelixScreen" bg_color="#screen_bg">
+    <!-- Content Area -->
+    <lv_obj name="overlay_content" width="100%" flex_grow="1" style_pad_all="0" scrollable="true" flex_flow="column">
+      <!-- Current Version - ui_button for native press feedback (7-tap secret to toggle beta features) -->
+      <ui_button name="row_version" width="100%" height="content" variant="ghost" style_radius="0" style_pad_all="0">
+        <lv_obj width="100%"
+                height="content" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
+                style_pad_left="#space_lg" style_pad_right="#space_lg" style_pad_top="#space_md"
+                style_pad_bottom="#space_md" style_pad_gap="#space_sm" scrollable="false" clickable="false"
+                event_bubble="true">
+          <icon name="row_icon" src="info" size="sm" variant="secondary" clickable="false" event_bubble="true"/>
+          <lv_obj height="content"
+                  style_pad_all="0" flex_flow="column" style_pad_gap="#space_xs" flex_grow="1" scrollable="false"
+                  clickable="false" event_bubble="true">
+            <text_body name="label"
+                       text="Current Version" translation_tag="Current Version" style_text_color="#text"
+                       clickable="false" event_bubble="true"/>
+            <text_small name="beta_description"
+                        text="Beta features are enabled" translation_tag="Beta features are enabled" clickable="false"
+                        event_bubble="true">
+              <bind_flag_if_eq subject="show_beta_features" flag="hidden" ref_value="0"/>
+            </text_small>
+          </lv_obj>
+          <text_muted name="value" bind_text="version_value" clickable="false" event_bubble="true"/>
+        </lv_obj>
+        <event_cb trigger="clicked" callback="on_version_clicked"/>
+      </ui_button>
+      <!-- Check for Updates (reactive description bound in C++ to update_version_text subject) -->
+      <setting_action_row name="row_check_updates"
+                          label="Check for Updates" label_tag="Check for Updates" icon="refresh" description=""
+                          callback="on_check_updates_clicked"/>
+      <!-- Install Update (visible only when update available) -->
+      <lv_obj name="container_install_update" width="100%" style_pad_all="0">
+        <bind_flag_if_not_eq subject="update_status" flag="hidden" ref_value="2"/>
+        <setting_action_row name="row_install_update"
+                            label="Install Update" label_tag="Install Update" icon="download" description=""
+                            description_tag="" callback="on_install_update_clicked"/>
+      </lv_obj>
+      <!-- Update Channel (gated by beta_features) -->
+      <lv_obj name="container_update_channel" width="100%" style_pad_all="0">
+        <bind_flag_if_eq subject="show_beta_features" flag="hidden" ref_value="0"/>
+        <setting_dropdown_row name="row_update_channel"
+                              label="Update Channel" label_tag="Update Channel" icon="swap_vertical"
+                              options="Stable&#10;Beta&#10;Dev" bind_selected="update_channel"
+                              callback="on_update_channel_changed"/>
+      </lv_obj>
+      <!-- ================================================================== -->
+      <!-- SYSTEM COMPONENT VERSIONS -->
+      <!-- ================================================================== -->
+      <!-- Klipper Version -->
+      <setting_info_row name="row_klipper" label="Klipper" label_tag="Klipper" icon="toy_brick_outline">
+        <text_muted name="value" text="—"/>
+      </setting_info_row>
+      <!-- Moonraker Version -->
+      <setting_info_row name="row_moonraker" label="Moonraker" label_tag="Moonraker" icon="toy_brick_outline">
+        <text_muted name="value" text="—"/>
+      </setting_info_row>
+      <!-- OS Version -->
+      <setting_info_row name="row_os" label="OS" label_tag="OS" icon="console">
+        <text_muted name="value" text="—"/>
+      </setting_info_row>
+      <!-- Total Print Hours -->
+      <setting_info_row name="row_print_hours" label="Print Hours" label_tag="Print Hours" icon="clock">
+        <text_body name="value" bind_text="print_hours_value" style_text_color="#text_muted"/>
+      </setting_info_row>
+      <!-- MCU rows will be dynamically added in C++ -->
+    </lv_obj>
+  </view>
+</component>

@@ -122,15 +122,7 @@ class SettingsPanel : public PanelBase {
     std::unique_ptr<ChangeHostModal> change_host_modal_;
 
     // Info rows (for dynamic updates)
-    lv_obj_t* version_value_ = nullptr;
     lv_obj_t* printer_value_ = nullptr;
-    lv_obj_t* klipper_value_ = nullptr;
-    lv_obj_t* moonraker_value_ = nullptr;
-
-    // Observers for reactive bindings (must be removed before labels are destroyed)
-    lv_observer_t* klipper_version_observer_ = nullptr;
-    lv_observer_t* moonraker_version_observer_ = nullptr;
-    lv_observer_t* os_version_observer_ = nullptr;
 
     // LED state observer (syncs toggle with printer LED state)
     ObserverGuard led_state_observer_;
@@ -146,6 +138,7 @@ class SettingsPanel : public PanelBase {
 
     // Info row subjects
     lv_subject_t version_value_subject_;
+    lv_subject_t about_version_description_subject_;
     lv_subject_t printer_value_subject_;
     lv_subject_t printer_host_value_subject_;
     lv_subject_t print_hours_value_subject_;
@@ -160,11 +153,12 @@ class SettingsPanel : public PanelBase {
 
     // Static buffers for string subjects (required for lv_subject_init_string)
     // Note: brightness_value_buf_ is now managed by DisplaySettingsOverlay
-    char version_value_buf_[32];          // e.g., "1.2.3"
-    char printer_value_buf_[64];          // e.g., "Voron 2.4"
-    char printer_host_value_buf_[96];     // e.g., "192.168.1.100:7125"
-    char print_hours_value_buf_[32];      // e.g., "142h 30m"
-    char update_current_version_buf_[32]; // e.g., "1.2.3"
+    char version_value_buf_[32];             // e.g., "1.2.3"
+    char about_version_description_buf_[48]; // e.g., "Current Version: 1.2.3"
+    char printer_value_buf_[64];             // e.g., "Voron 2.4"
+    char printer_host_value_buf_[96];        // e.g., "192.168.1.100:7125"
+    char print_hours_value_buf_[32];         // e.g., "142h 30m"
+    char update_current_version_buf_[32];    // e.g., "1.2.3"
 
     // Note: Display Settings overlay is now managed by DisplaySettingsOverlay class
     // See ui_settings_display.h
@@ -223,6 +217,7 @@ class SettingsPanel : public PanelBase {
     void handle_sounds_changed(bool enabled);
     void handle_estop_confirm_changed(bool enabled);
     void handle_led_select_changed(int index);
+    void handle_about_clicked();
     void handle_display_settings_clicked();
     void handle_filament_sensors_clicked();
     void handle_ams_settings_clicked();
@@ -269,6 +264,7 @@ class SettingsPanel : public PanelBase {
     static void on_led_light_changed(lv_event_t* e);
     static void on_sounds_changed(lv_event_t* e);
     static void on_estop_confirm_changed(lv_event_t* e);
+    static void on_about_clicked(lv_event_t* e);
     static void on_display_settings_clicked(lv_event_t* e);
     static void on_filament_sensors_clicked(lv_event_t* e);
     static void on_ams_settings_clicked(lv_event_t* e);
