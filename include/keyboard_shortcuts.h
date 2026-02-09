@@ -66,8 +66,11 @@ class KeyboardShortcuts {
      *
      * @param is_key_pressed Function that returns true if scancode is pressed
      * @param current_modifiers Current modifier key state
+     * @param suppress_plain_keys When true, skip non-combo shortcuts (e.g., when a text input has
+     * focus)
      */
-    void process(KeyStateProvider is_key_pressed, int current_modifiers);
+    void process(KeyStateProvider is_key_pressed, int current_modifiers,
+                 bool suppress_plain_keys = false);
 
     /**
      * @brief Remove all registered shortcuts

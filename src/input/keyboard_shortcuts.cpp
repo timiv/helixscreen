@@ -17,7 +17,8 @@ void KeyboardShortcuts::register_combo(int modifiers, int scancode, Action actio
     m_bindings.push_back({scancode, modifiers, std::move(action), nullptr, false});
 }
 
-void KeyboardShortcuts::process(KeyStateProvider is_key_pressed, int current_modifiers) {
+void KeyboardShortcuts::process(KeyStateProvider is_key_pressed, int current_modifiers,
+                                bool suppress_plain_keys) {
     for (auto& binding : m_bindings) {
         bool key_pressed = is_key_pressed(binding.scancode);
 
@@ -27,6 +28,12 @@ void KeyboardShortcuts::process(KeyStateProvider is_key_pressed, int current_mod
             if ((current_modifiers & binding.modifiers) == 0) {
                 key_pressed = false;
             }
+        }
+
+        // Skip non-combo shortcuts when a text input has focus
+        if (suppress_plain_keys && binding.modifiers == 0) {
+            binding.was_pressed = key_pressed;
+            continue;
         }
 
         // Edge detection: fire on press, not on hold

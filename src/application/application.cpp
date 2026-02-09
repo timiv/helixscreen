@@ -1816,10 +1816,14 @@ void Application::handle_keyboard_shortcuts() {
         shortcuts_initialized = true;
     }
 
+    // Suppress plain-key shortcuts when a textarea has focus (e.g., typing a password)
+    lv_obj_t* focused = lv_group_get_focused(lv_group_get_default());
+    bool text_input_active = focused != nullptr && lv_obj_check_type(focused, &lv_textarea_class);
+
     // Process shortcuts with SDL key state
     const Uint8* keyboard_state = SDL_GetKeyboardState(nullptr);
     shortcuts.process([keyboard_state](int scancode) { return keyboard_state[scancode] != 0; },
-                      SDL_GetModState());
+                      SDL_GetModState(), text_input_active);
 #endif
 }
 
