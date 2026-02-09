@@ -1247,8 +1247,17 @@ void ControlsPanel::handle_flow_up() {
     api_->execute_gcode(
         gcode,
         [this, new_flow]() {
-            helix::fmt::format_percent(new_flow, flow_override_buf_, sizeof(flow_override_buf_));
-            lv_subject_copy_string(&flow_override_subject_, flow_override_buf_);
+            struct Ctx {
+                ControlsPanel* panel;
+                int flow;
+            };
+            auto ctx = std::make_unique<Ctx>(Ctx{this, new_flow});
+            ui_queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
+                helix::fmt::format_percent(c->flow, c->panel->flow_override_buf_,
+                                           sizeof(c->panel->flow_override_buf_));
+                lv_subject_copy_string(&c->panel->flow_override_subject_,
+                                       c->panel->flow_override_buf_);
+            });
         },
         [](const MoonrakerError& err) {
             NOTIFY_ERROR("Flow change failed: {}", err.user_message());
@@ -1272,8 +1281,17 @@ void ControlsPanel::handle_flow_down() {
     api_->execute_gcode(
         gcode,
         [this, new_flow]() {
-            helix::fmt::format_percent(new_flow, flow_override_buf_, sizeof(flow_override_buf_));
-            lv_subject_copy_string(&flow_override_subject_, flow_override_buf_);
+            struct Ctx {
+                ControlsPanel* panel;
+                int flow;
+            };
+            auto ctx = std::make_unique<Ctx>(Ctx{this, new_flow});
+            ui_queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
+                helix::fmt::format_percent(c->flow, c->panel->flow_override_buf_,
+                                           sizeof(c->panel->flow_override_buf_));
+                lv_subject_copy_string(&c->panel->flow_override_subject_,
+                                       c->panel->flow_override_buf_);
+            });
         },
         [](const MoonrakerError& err) {
             NOTIFY_ERROR("Flow change failed: {}", err.user_message());

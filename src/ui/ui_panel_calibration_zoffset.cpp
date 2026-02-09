@@ -7,6 +7,7 @@
 #include "ui_event_safety.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
+#include "ui_update_queue.h"
 #include "ui_z_offset_indicator.h"
 
 #include "app_globals.h"
@@ -396,12 +397,22 @@ void ZOffsetCalibrationPanel::start_calibration() {
             gcode,
             [this]() {
                 spdlog::info("[ZOffsetCal] Moved to center at Z0.1, ready for adjustment");
-                set_state(State::ADJUSTING);
-                update_z_position(0.1f);
+                ui_async_call(
+                    [](void* ud) {
+                        auto* self = static_cast<ZOffsetCalibrationPanel*>(ud);
+                        self->set_state(State::ADJUSTING);
+                        self->update_z_position(0.1f);
+                    },
+                    this);
             },
             [this](const MoonrakerError& err) {
                 spdlog::error("[ZOffsetCal] Failed to move to position: {}", err.message);
-                on_calibration_result(false, "Failed to move to calibration position");
+                ui_async_call(
+                    [](void* ud) {
+                        static_cast<ZOffsetCalibrationPanel*>(ud)->on_calibration_result(
+                            false, "Failed to move to calibration position");
+                    },
+                    this);
             });
     } else {
         // Probe calibrate or endstop strategy
@@ -436,7 +447,12 @@ void ZOffsetCalibrationPanel::start_calibration() {
             },
             [this](const MoonrakerError& err) {
                 spdlog::error("[ZOffsetCal] Failed to start calibration: {}", err.message);
-                on_calibration_result(false, "Failed to start calibration");
+                ui_async_call(
+                    [](void* ud) {
+                        static_cast<ZOffsetCalibrationPanel*>(ud)->on_calibration_result(
+                            false, "Failed to start calibration");
+                    },
+                    this);
             });
     }
 }
@@ -455,10 +471,17 @@ void ZOffsetCalibrationPanel::adjust_z(float delta) {
         api_->execute_gcode(
             cmd,
             [this, delta]() {
-                cumulative_z_delta_ += delta;
-                update_z_position(0.1f + cumulative_z_delta_);
-                spdlog::debug("[ZOffsetCal] G1 Z adjust: delta={:.3f}, cumulative={:.3f}", delta,
-                              cumulative_z_delta_);
+                struct Ctx {
+                    ZOffsetCalibrationPanel* panel;
+                    float delta;
+                };
+                auto ctx = std::make_unique<Ctx>(Ctx{this, delta});
+                ui_queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
+                    c->panel->cumulative_z_delta_ += c->delta;
+                    c->panel->update_z_position(0.1f + c->panel->cumulative_z_delta_);
+                    spdlog::debug("[ZOffsetCal] G1 Z adjust: delta={:.3f}, cumulative={:.3f}",
+                                  c->delta, c->panel->cumulative_z_delta_);
+                });
             },
             [](const MoonrakerError& err) {
                 spdlog::warn("[ZOffsetCal] Z adjust failed: {}", err.message);
@@ -497,11 +520,20 @@ void ZOffsetCalibrationPanel::send_accept() {
             cmd,
             [this]() {
                 spdlog::info("[ZOffsetCal] SET_GCODE_OFFSET applied successfully");
-                on_calibration_result(true, "");
+                ui_async_call(
+                    [](void* ud) {
+                        static_cast<ZOffsetCalibrationPanel*>(ud)->on_calibration_result(true, "");
+                    },
+                    this);
             },
             [this](const MoonrakerError& err) {
                 spdlog::error("[ZOffsetCal] SET_GCODE_OFFSET failed: {}", err.message);
-                on_calibration_result(false, "Failed to set Z-offset");
+                ui_async_call(
+                    [](void* ud) {
+                        static_cast<ZOffsetCalibrationPanel*>(ud)->on_calibration_result(
+                            false, "Failed to set Z-offset");
+                    },
+                    this);
             });
     } else {
         // Probe/endstop: ACCEPT then SAVE_CONFIG
@@ -519,29 +551,72 @@ void ZOffsetCalibrationPanel::send_accept() {
                             spdlog::info(
                                 "[ZOffsetCal] Z_OFFSET_APPLY_ENDSTOP success, saving config");
                             api_->execute_gcode(
-                                "SAVE_CONFIG", [this]() { on_calibration_result(true, ""); },
+                                "SAVE_CONFIG",
+                                [this]() {
+                                    ui_async_call(
+                                        [](void* ud) {
+                                            static_cast<ZOffsetCalibrationPanel*>(ud)
+                                                ->on_calibration_result(true, "");
+                                        },
+                                        this);
+                                },
                                 [this](const MoonrakerError& err) {
-                                    on_calibration_result(false, "SAVE_CONFIG failed: " +
-                                                                     err.user_message());
+                                    struct Ctx {
+                                        ZOffsetCalibrationPanel* panel;
+                                        std::string msg;
+                                    };
+                                    auto ctx = std::make_unique<Ctx>(
+                                        Ctx{this, "SAVE_CONFIG failed: " + err.user_message()});
+                                    ui_queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
+                                        c->panel->on_calibration_result(false, c->msg);
+                                    });
                                 });
                         },
                         [this](const MoonrakerError& err) {
-                            on_calibration_result(false, "Z_OFFSET_APPLY_ENDSTOP failed: " +
-                                                             err.user_message());
+                            struct Ctx {
+                                ZOffsetCalibrationPanel* panel;
+                                std::string msg;
+                            };
+                            auto ctx = std::make_unique<Ctx>(
+                                Ctx{this, "Z_OFFSET_APPLY_ENDSTOP failed: " + err.user_message()});
+                            ui_queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
+                                c->panel->on_calibration_result(false, c->msg);
+                            });
                         });
                 } else {
                     // Probe calibrate: just SAVE_CONFIG
                     spdlog::info("[ZOffsetCal] Sending SAVE_CONFIG");
                     api_->execute_gcode(
-                        "SAVE_CONFIG", [this]() { on_calibration_result(true, ""); },
+                        "SAVE_CONFIG",
+                        [this]() {
+                            ui_async_call(
+                                [](void* ud) {
+                                    static_cast<ZOffsetCalibrationPanel*>(ud)
+                                        ->on_calibration_result(true, "");
+                                },
+                                this);
+                        },
                         [this](const MoonrakerError& err) {
-                            on_calibration_result(false,
-                                                  "SAVE_CONFIG failed: " + err.user_message());
+                            struct Ctx {
+                                ZOffsetCalibrationPanel* panel;
+                                std::string msg;
+                            };
+                            auto ctx = std::make_unique<Ctx>(
+                                Ctx{this, "SAVE_CONFIG failed: " + err.user_message()});
+                            ui_queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
+                                c->panel->on_calibration_result(false, c->msg);
+                            });
                         });
                 }
             },
             [this](const MoonrakerError& err) {
-                on_calibration_result(false, "ACCEPT failed: " + err.user_message());
+                struct Ctx {
+                    ZOffsetCalibrationPanel* panel;
+                    std::string msg;
+                };
+                auto ctx = std::make_unique<Ctx>(Ctx{this, "ACCEPT failed: " + err.user_message()});
+                ui_queue_update<Ctx>(
+                    std::move(ctx), [](Ctx* c) { c->panel->on_calibration_result(false, c->msg); });
             });
     }
 }
