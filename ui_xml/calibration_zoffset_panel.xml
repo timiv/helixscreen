@@ -172,7 +172,7 @@
         <bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="4"/>
         <lv_label text="#icon_check_circle" style_text_font="mdi_icons_48" style_text_color="#success"/>
         <text_heading text="Calibration Complete!" translation_tag="Calibration Complete!" style_text_align="center"/>
-        <text_body name="final_offset_label" text="New Z-Offset: 0.000" translation_tag="New Z-Offset: 0.000"/>
+        <text_body name="final_offset_label" text="Accepted Z Position: 0.000" translation_tag="Accepted Z Position: 0.000"/>
         <ui_button name="btn_done" width="40%" text="Done" translation_tag="Done">
           <event_cb trigger="clicked" callback="on_zoffset_done_clicked"/>
         </ui_button>

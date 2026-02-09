@@ -458,6 +458,7 @@ void ZOffsetCalibrationPanel::send_accept() {
 
     auto strategy = get_printer_state().get_z_offset_calibration_strategy();
     final_offset_ = current_z_;
+    on_calibration_result(true, "");
 
     if (strategy == ZOffsetCalibrationStrategy::GCODE_OFFSET) {
         // Apply cumulative delta as gcode Z offset
@@ -617,7 +618,7 @@ void ZOffsetCalibrationPanel::on_calibration_result(bool success, const std::str
         // Update final offset display
         if (final_offset_label_) {
             char buf[64];
-            snprintf(buf, sizeof(buf), "New Z-Offset: %.3f", final_offset_);
+            snprintf(buf, sizeof(buf), "Accepted Z Position: %.3f", final_offset_);
             lv_label_set_text(final_offset_label_, buf);
         }
         set_state(State::COMPLETE);
