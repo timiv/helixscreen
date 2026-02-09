@@ -4,6 +4,8 @@
 # This extension integrates HelixScreen with KIAUH for easy installation,
 # updates, and removal through the KIAUH menu system.
 
+from __future__ import annotations
+
 from pathlib import Path
 
 # Module path for asset resolution

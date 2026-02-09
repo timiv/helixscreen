@@ -94,3 +94,25 @@ assert isinstance(data['updates'], bool), f'updates should be bool, got {type(da
 @test "helixscreen_extension.py implements remove_extension" {
     grep -q 'def remove_extension' "$KIAUH_DIR/helixscreen_extension.py"
 }
+
+# --- __init__.py structural tests ---
+
+@test "__init__.py has valid Python syntax" {
+    python3 -c "import ast; ast.parse(open('$KIAUH_DIR/__init__.py').read())"
+}
+
+@test "__init__.py uses future annotations (Python 3.9 compat, issue #28)" {
+    grep -q 'from __future__ import annotations' "$KIAUH_DIR/__init__.py"
+}
+
+@test "helixscreen_extension.py uses future annotations (Python 3.9 compat)" {
+    grep -q 'from __future__ import annotations' "$KIAUH_DIR/helixscreen_extension.py"
+}
+
+@test "__init__.py exports find_install_dir" {
+    grep -q 'def find_install_dir' "$KIAUH_DIR/__init__.py"
+}
+
+@test "__init__.py exports HELIXSCREEN_REPO" {
+    grep -q 'HELIXSCREEN_REPO' "$KIAUH_DIR/__init__.py"
+}
