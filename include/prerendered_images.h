@@ -96,6 +96,18 @@ namespace helix {
 [[nodiscard]] const char* get_splash_3d_size_name(int screen_width, int screen_height);
 
 /**
+ * @brief Get the target height of a pre-rendered 3D splash size category
+ *
+ * Returns the known screen height for a pre-rendered splash size name.
+ * Used to validate that a pre-rendered image won't exceed the actual screen height.
+ * Returns 0 for unknown sizes (caller should fall back to runtime scaling).
+ *
+ * @param size_name Size category name from get_splash_3d_size_name()
+ * @return Target height in pixels, or 0 if unknown
+ */
+[[nodiscard]] int get_splash_3d_target_height(const char* size_name);
+
+/**
  * @brief Get path to pre-rendered full-screen 3D splash image
  *
  * Returns the path to a composited full-screen splash image (logo centered

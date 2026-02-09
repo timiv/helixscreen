@@ -39,6 +39,7 @@ SCREEN_SIZES = [
     ("small", 800, 480, 400),       # 50% of width (height < 500) - AD5M
     ("medium", 1024, 600, 614),     # 60% of width (height >= 500)
     ("large", 1280, 720, 768),      # 60% of width (height >= 500)
+    ("ultrawide", 1920, 440, 384),  # Ultra-wide bar display (1920x440)
 ]
 
 # Source images (relative to project root)

@@ -68,6 +68,17 @@ void show_splash_screen(int screen_width, int screen_height) {
                                           mode_name + "-tiny.bin");
     }
 
+    // Safety: skip pre-rendered image if it would be taller than the screen
+    if (!splash_3d_path.empty()) {
+        int target_h = get_splash_3d_target_height(size_name);
+        if (target_h > 0 && target_h > screen_height) {
+            spdlog::debug("[Splash Screen] Pre-rendered {} ({}px) exceeds screen height {}px, "
+                          "falling back to PNG",
+                          size_name, target_h, screen_height);
+            splash_3d_path.clear();
+        }
+    }
+
     // The widget we'll animate and clean up
     lv_obj_t* splash_widget = nullptr;
 
@@ -150,7 +161,11 @@ void show_splash_screen(int screen_width, int screen_height) {
 
                 uint32_t width = header.w;
                 uint32_t height = header.h;
-                uint32_t scale = (static_cast<uint32_t>(target_size) * 256U) / width;
+                uint32_t scale_w = (static_cast<uint32_t>(target_size) * 256U) / width;
+                // Ensure logo fits vertically (10% margin)
+                int usable_h = (screen_height * 9) / 10;
+                uint32_t scale_h = (static_cast<uint32_t>(usable_h) * 256U) / height;
+                uint32_t scale = (scale_w < scale_h) ? scale_w : scale_h;
                 lv_image_set_scale(logo, static_cast<uint16_t>(scale));
 
                 spdlog::info("[Splash Screen] PNG fallback: {}x{} scaled to {} (scale factor: {})",

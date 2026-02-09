@@ -5,6 +5,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <cstring>
 #include <filesystem>
 
 namespace helix {
@@ -26,6 +27,11 @@ const char* get_splash_size_name(int screen_width) {
 }
 
 const char* get_splash_3d_size_name(int screen_width, int screen_height) {
+    // Ultra-wide displays (e.g. 1920x440): wide but very short
+    if (screen_width >= 1100 && screen_height < 500) {
+        return "ultrawide";
+    }
+
     if (screen_width < 600) {
         // Distinguish K1 (480x400) from generic tiny (480x320)
         return (screen_height >= 380) ? "tiny_alt" : "tiny";
@@ -36,6 +42,23 @@ const char* get_splash_3d_size_name(int screen_width, int screen_height) {
     } else {
         return "large"; // 1280x720+ class
     }
+}
+
+int get_splash_3d_target_height(const char* size_name) {
+    // Known heights for pre-rendered splash images (from gen_splash_3d.py SCREEN_SIZES)
+    if (strcmp(size_name, "tiny") == 0)
+        return 320;
+    if (strcmp(size_name, "tiny_alt") == 0)
+        return 400;
+    if (strcmp(size_name, "small") == 0)
+        return 480;
+    if (strcmp(size_name, "medium") == 0)
+        return 600;
+    if (strcmp(size_name, "large") == 0)
+        return 720;
+    if (strcmp(size_name, "ultrawide") == 0)
+        return 440;
+    return 0; // Unknown — caller should fall back to runtime scaling
 }
 
 std::string get_prerendered_splash_3d_path(int screen_width, int screen_height, bool dark_mode) {

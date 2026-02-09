@@ -128,6 +128,9 @@ static bool read_config_dark_mode(bool default_value = true) {
 
 // Get size name for a screen width (matches prerendered_images.cpp logic)
 static const char* get_splash_3d_size_name(int screen_width, int screen_height) {
+    // Ultra-wide displays (e.g. 1920x440): wide but very short
+    if (screen_width >= 1100 && screen_height < 500)
+        return "ultrawide";
     if (screen_width < 600) {
         // Distinguish K1 (480x400) from generic tiny (480x320)
         return (screen_height >= 380) ? "tiny_alt" : "tiny";
@@ -137,6 +140,23 @@ static const char* get_splash_3d_size_name(int screen_width, int screen_height) 
     if (screen_width < 1100)
         return "medium";
     return "large";
+}
+
+// Known heights for pre-rendered splash images (from gen_splash_3d.py SCREEN_SIZES)
+static int get_splash_3d_target_height(const char* size_name) {
+    if (strcmp(size_name, "tiny") == 0)
+        return 320;
+    if (strcmp(size_name, "tiny_alt") == 0)
+        return 400;
+    if (strcmp(size_name, "small") == 0)
+        return 480;
+    if (strcmp(size_name, "medium") == 0)
+        return 600;
+    if (strcmp(size_name, "large") == 0)
+        return 720;
+    if (strcmp(size_name, "ultrawide") == 0)
+        return 440;
+    return 0;
 }
 
 /**
@@ -200,6 +220,18 @@ static lv_obj_t* create_splash_ui(lv_obj_t* screen, int width, int height, bool 
         snprintf(splash_3d_png, sizeof(splash_3d_png), "assets/images/helixscreen-logo-3d-%s.png",
                  mode_name);
         use_3d_png = (stat(splash_3d_png, &st) == 0);
+    }
+
+    // Safety: skip pre-rendered .bin if it would be taller than the screen
+    if (use_3d) {
+        int target_h = get_splash_3d_target_height(size_name);
+        if (target_h > 0 && target_h > height) {
+            fprintf(stderr,
+                    "helix-splash: Pre-rendered %s (%dpx) exceeds screen height %dpx, "
+                    "falling back to PNG\n",
+                    size_name, target_h, height);
+            use_3d = false;
+        }
     }
 
     if (use_3d || use_3d_png) {
@@ -294,11 +326,14 @@ static lv_obj_t* create_splash_ui(lv_obj_t* screen, int width, int height, bool 
         lv_image_set_src(logo, logo_path);
         fprintf(stderr, "helix-splash: Using PNG fallback (slow path)\n");
 
-        // Scale logo to 50% of screen width (AD5M height 480 < 500)
+        // Scale logo to 50% of screen width, but constrain by height too
         lv_image_header_t header;
         if (lv_image_decoder_get_info(logo_path, &header) == LV_RESULT_OK) {
-            int target_size = width / 2; // 50% on small screens
-            int scale = (target_size * 256) / header.w;
+            int target_size = width / 2;
+            int scale_w = (target_size * 256) / header.w;
+            int usable_h = (height * 9) / 10; // 10% vertical margin
+            int scale_h = (usable_h * 256) / header.h;
+            int scale = (scale_w < scale_h) ? scale_w : scale_h;
             lv_image_set_scale(logo, scale);
         } else {
             lv_image_set_scale(logo, 128); // Fallback: 50%
