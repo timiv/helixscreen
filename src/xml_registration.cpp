@@ -219,7 +219,6 @@ void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/motion_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/nozzle_temp_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/bed_temp_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/extrusion_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/fan_dial.xml");
     register_fan_dial_callbacks(); // Register FanDial event callbacks
     lv_xml_register_component_from_file("A:ui_xml/fan_status_card.xml");

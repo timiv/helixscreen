@@ -54,7 +54,6 @@
 #include "ui_panel_bed_mesh.h"
 #include "ui_panel_calibration_pid.h"
 #include "ui_panel_calibration_zoffset.h"
-#include "ui_panel_extrusion.h"
 #include "ui_panel_filament.h"
 #include "ui_panel_gcode_test.h"
 #include "ui_panel_glyphs.h"
@@ -1028,24 +1027,6 @@ void Application::create_overlays() {
         if (auto* p = create_overlay_panel(m_screen, "bed_temp_panel", "bed temp")) {
             m_overlay_panels.bed_temp = p;
             m_subjects->temp_control_panel()->setup_bed_panel(p, m_screen);
-            ui_nav_push_overlay(p);
-        }
-    }
-
-    if (m_args.overlays.extrusion) {
-        auto& extrusion = get_global_extrusion_panel();
-
-        // Initialize subjects and callbacks if not already done
-        if (!extrusion.are_subjects_initialized()) {
-            extrusion.init_subjects();
-        }
-        extrusion.register_callbacks();
-
-        // Create overlay UI
-        auto* p = extrusion.create(m_screen);
-        if (p) {
-            m_overlay_panels.extrusion = p;
-            NavigationManager::instance().register_overlay_instance(p, &extrusion);
             ui_nav_push_overlay(p);
         }
     }

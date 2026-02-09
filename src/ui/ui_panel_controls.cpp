@@ -14,7 +14,6 @@
 #include "ui_notification.h"
 #include "ui_panel_bed_mesh.h"
 #include "ui_panel_calibration_zoffset.h"
-#include "ui_panel_extrusion.h"
 #include "ui_panel_motion.h"
 #include "ui_panel_screws_tilt.h"
 #include "ui_panel_temp_control.h"
@@ -53,8 +52,6 @@ using helix::ui::observe_string;
 // Forward declarations for class-based API
 class MotionPanel;
 MotionPanel& get_global_motion_panel();
-class ExtrusionPanel;
-ExtrusionPanel& get_global_extrusion_panel();
 
 using helix::ui::position::format_position;
 
@@ -838,6 +835,7 @@ void ControlsPanel::handle_save_z_offset_confirm() {
                  apply_cmd);
 
     // Execute apply command first, then SAVE_CONFIG to persist and restart Klipper
+    NOTIFY_INFO("Saving Z-offset...");
     api_->execute_gcode(
         apply_cmd,
         [this, offset_mm, apply_cmd]() {
@@ -1036,8 +1034,9 @@ void ControlsPanel::handle_home_z() {
 void ControlsPanel::handle_qgl() {
     spdlog::debug("[{}] QGL clicked", get_name());
     if (api_) {
+        NOTIFY_INFO("Quad Gantry Level started...");
         api_->execute_gcode(
-            "QUAD_GANTRY_LEVEL", []() { NOTIFY_SUCCESS("Quad Gantry Level started"); },
+            "QUAD_GANTRY_LEVEL", []() { NOTIFY_SUCCESS("Quad Gantry Level complete"); },
             [](const MoonrakerError& err) { NOTIFY_ERROR("QGL failed: {}", err.user_message()); });
     }
 }
@@ -1045,8 +1044,9 @@ void ControlsPanel::handle_qgl() {
 void ControlsPanel::handle_z_tilt() {
     spdlog::debug("[{}] Z-Tilt clicked", get_name());
     if (api_) {
+        NOTIFY_INFO("Z-Tilt Adjust started...");
         api_->execute_gcode(
-            "Z_TILT_ADJUST", []() { NOTIFY_SUCCESS("Z-Tilt Adjust started"); },
+            "Z_TILT_ADJUST", []() { NOTIFY_SUCCESS("Z-Tilt Adjust complete"); },
             [](const MoonrakerError& err) {
                 NOTIFY_ERROR("Z-Tilt failed: {}", err.user_message());
             });
@@ -1074,8 +1074,10 @@ void ControlsPanel::execute_macro(size_t index) {
     spdlog::debug("[{}] Macro {} clicked, executing slot '{}' → {}", get_name(), button_num,
                   info.slot_name, info.get_macro());
 
+    NOTIFY_INFO("Running {}...", info.display_name);
     if (!StandardMacros::instance().execute(
-            *slot, api_, []() { NOTIFY_SUCCESS("Macro started"); },
+            *slot, api_,
+            [name = info.display_name]() { NOTIFY_SUCCESS("{} complete", name); },
             [](const MoonrakerError& err) {
                 NOTIFY_ERROR("Macro failed: {}", err.user_message());
             })) {
@@ -1271,6 +1273,7 @@ void ControlsPanel::handle_motors_confirm() {
 
     // Send M84 command to disable motors
     if (api_) {
+        NOTIFY_INFO("Disabling motors...");
         api_->execute_gcode(
             "M84", // Klipper command to disable steppers
             []() { NOTIFY_SUCCESS("Motors disabled"); },

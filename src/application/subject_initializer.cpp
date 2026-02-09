@@ -19,7 +19,6 @@
 #include "ui_panel_calibration_zoffset.h"
 #include "ui_panel_console.h"
 #include "ui_panel_controls.h"
-#include "ui_panel_extrusion.h"
 #include "ui_panel_filament.h"
 #include "ui_panel_history_dashboard.h"
 #include "ui_panel_history_list.h"
@@ -257,13 +256,10 @@ void SubjectInitializer::init_panel_subjects(MoonrakerAPI* api) {
     StaticPanelRegistry::instance().register_destroy(
         "PrintStatusPanelSubjects", []() { get_global_print_status_panel().deinit_subjects(); });
 
-    // Motion and Extrusion panels: deinit handled by destructor
+    // Motion panel: deinit handled by destructor
     // (registered with StaticPanelRegistry in their get_global_* functions)
     m_motion_panel = &get_global_motion_panel();
     m_motion_panel->init_subjects();
-
-    m_extrusion_panel = &get_global_extrusion_panel();
-    m_extrusion_panel->init_subjects();
 
     m_bed_mesh_panel = &get_global_bed_mesh_panel();
     m_bed_mesh_panel->init_subjects();

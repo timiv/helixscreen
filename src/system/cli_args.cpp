@@ -155,7 +155,7 @@ static void print_help(const char* program_name) {
     printf("\nAvailable panels:\n");
     printf("  Base: home, controls, filament, settings, advanced\n");
     printf("  Print: print-select (cards), print-select-list, print-detail\n");
-    printf("  Controls: motion, nozzle-temp, bed-temp, extrusion, fan, bed-mesh, pid\n");
+    printf("  Controls: motion, nozzle-temp, bed-temp, fan, bed-mesh, pid\n");
     printf("  Settings: display, sensors, touch-cal, hardware-health, network, theme\n");
     printf("  Advanced: zoffset, screws, input-shaper, spoolman, history-dashboard, macros\n");
     printf("  Print: print-status, print-tune\n");
@@ -196,9 +196,6 @@ static bool parse_panel_arg(const char* panel_arg, CliArgs& args) {
     } else if (strcmp(panel_arg, "bed-temp") == 0) {
         args.initial_panel = UI_PANEL_CONTROLS;
         args.overlays.bed_temp = true;
-    } else if (strcmp(panel_arg, "extrusion") == 0) {
-        args.initial_panel = UI_PANEL_CONTROLS;
-        args.overlays.extrusion = true;
     } else if (strcmp(panel_arg, "fan") == 0) {
         args.initial_panel = UI_PANEL_CONTROLS;
         args.overlays.fan = true;
@@ -287,7 +284,7 @@ static bool parse_panel_arg(const char* panel_arg, CliArgs& args) {
         } else {
             printf("Unknown panel: %s\n", panel_arg);
             printf("Available panels: home, controls, motion, nozzle-temp, bed-temp, "
-                   "bed-mesh, zoffset, pid, screws, input-shaper, extrusion, fan, ams, "
+                   "bed-mesh, zoffset, pid, screws, input-shaper, fan, ams, "
                    "spoolman, print-status, filament, settings, advanced, print-history, "
                    "print-select, step-test, test, gcode-test, glyphs, gradient-test, "
                    "wizard-ams-identify\n");

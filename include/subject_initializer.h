@@ -16,7 +16,6 @@ class MoonrakerAPI;
 class PrintSelectPanel;
 class PrintStatusPanel;
 class MotionPanel;
-class ExtrusionPanel;
 class BedMeshPanel;
 class TempControlPanel;
 class UsbManager;
@@ -130,9 +129,6 @@ class SubjectInitializer {
     MotionPanel* motion_panel() const {
         return m_motion_panel;
     }
-    ExtrusionPanel* extrusion_panel() const {
-        return m_extrusion_panel;
-    }
     BedMeshPanel* bed_mesh_panel() const {
         return m_bed_mesh_panel;
     }
@@ -158,7 +154,6 @@ class SubjectInitializer {
     PrintSelectPanel* m_print_select_panel = nullptr;
     PrintStatusPanel* m_print_status_panel = nullptr;
     MotionPanel* m_motion_panel = nullptr;
-    ExtrusionPanel* m_extrusion_panel = nullptr;
     BedMeshPanel* m_bed_mesh_panel = nullptr;
 
     bool m_initialized = false;

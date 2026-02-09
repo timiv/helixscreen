@@ -134,7 +134,6 @@ class Application {
         lv_obj_t* motion = nullptr;
         lv_obj_t* nozzle_temp = nullptr;
         lv_obj_t* bed_temp = nullptr;
-        lv_obj_t* extrusion = nullptr;
         lv_obj_t* print_status = nullptr;
         lv_obj_t* ams = nullptr;
         lv_obj_t* bed_mesh = nullptr;

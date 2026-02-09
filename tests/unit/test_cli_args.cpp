@@ -44,12 +44,6 @@ TEST_CASE("OverlayFlags: needs_moonraker", "[cli_args]") {
         REQUIRE(flags.needs_moonraker());
     }
 
-    SECTION("extrusion overlay needs moonraker") {
-        OverlayFlags flags;
-        flags.extrusion = true;
-        REQUIRE(flags.needs_moonraker());
-    }
-
     SECTION("fan overlay needs moonraker") {
         OverlayFlags flags;
         flags.fan = true;
