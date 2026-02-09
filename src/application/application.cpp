@@ -597,8 +597,10 @@ bool Application::init_theme() {
     // Apply background color to screen
     theme_manager_apply_bg_color(m_screen, "screen_bg", LV_PART_MAIN);
 
-    // Show splash screen if not skipped
-    if (!get_runtime_config()->should_skip_splash()) {
+    // Show LVGL splash screen only when no external splash process is running.
+    // On embedded targets, helix-splash provides visual coverage during startup;
+    // showing the internal splash too causes a visible double-splash.
+    if (!get_runtime_config()->should_skip_splash() && get_runtime_config()->splash_pid <= 0) {
         helix::show_splash_screen(m_screen_width, m_screen_height);
     }
 
