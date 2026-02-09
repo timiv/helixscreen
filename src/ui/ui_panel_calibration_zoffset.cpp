@@ -18,6 +18,7 @@
 #include <spdlog/spdlog.h>
 
 #include <cstdio>
+#include <cstdlib>
 #include <memory>
 
 using helix::ui::observe_int_sync;
@@ -88,17 +89,8 @@ void ZOffsetCalibrationPanel::init_subjects() {
         lv_xml_register_event_cb(nullptr, "on_zoffset_done_clicked", on_done_clicked);
         lv_xml_register_event_cb(nullptr, "on_zoffset_retry_clicked", on_retry_clicked);
 
-        // Z adjustment buttons
-        lv_xml_register_event_cb(nullptr, "on_zoffset_z_down_1", on_z_down_1);
-        lv_xml_register_event_cb(nullptr, "on_zoffset_z_down_01", on_z_down_01);
-        lv_xml_register_event_cb(nullptr, "on_zoffset_z_down_005", on_z_down_005);
-        lv_xml_register_event_cb(nullptr, "on_zoffset_z_down_001", on_z_down_001);
-        lv_xml_register_event_cb(nullptr, "on_zoffset_z_down_0005", on_z_down_0005);
-        lv_xml_register_event_cb(nullptr, "on_zoffset_z_up_0005", on_z_up_0005);
-        lv_xml_register_event_cb(nullptr, "on_zoffset_z_up_001", on_z_up_001);
-        lv_xml_register_event_cb(nullptr, "on_zoffset_z_up_005", on_z_up_005);
-        lv_xml_register_event_cb(nullptr, "on_zoffset_z_up_01", on_z_up_01);
-        lv_xml_register_event_cb(nullptr, "on_zoffset_z_up_1", on_z_up_1);
+        // Z adjustment (single callback — user_data carries the delta as a string)
+        lv_xml_register_event_cb(nullptr, "on_zoffset_z_adjust", on_z_adjust);
 
         s_callbacks_registered = true;
     }
@@ -648,73 +640,14 @@ void ZOffsetCalibrationPanel::on_start_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
-void ZOffsetCalibrationPanel::on_z_down_1(lv_event_t* e) {
-    (void)e;
-    LVGL_SAFE_EVENT_CB_BEGIN("[ZOffsetCal] on_z_down_1");
-    get_global_zoffset_cal_panel().handle_z_adjust(-1.0f);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void ZOffsetCalibrationPanel::on_z_down_01(lv_event_t* e) {
-    (void)e;
-    LVGL_SAFE_EVENT_CB_BEGIN("[ZOffsetCal] on_z_down_01");
-    get_global_zoffset_cal_panel().handle_z_adjust(-0.1f);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void ZOffsetCalibrationPanel::on_z_down_005(lv_event_t* e) {
-    (void)e;
-    LVGL_SAFE_EVENT_CB_BEGIN("[ZOffsetCal] on_z_down_005");
-    get_global_zoffset_cal_panel().handle_z_adjust(-0.05f);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void ZOffsetCalibrationPanel::on_z_down_001(lv_event_t* e) {
-    (void)e;
-    LVGL_SAFE_EVENT_CB_BEGIN("[ZOffsetCal] on_z_down_001");
-    get_global_zoffset_cal_panel().handle_z_adjust(-0.01f);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void ZOffsetCalibrationPanel::on_z_down_0005(lv_event_t* e) {
-    (void)e;
-    LVGL_SAFE_EVENT_CB_BEGIN("[ZOffsetCal] on_z_down_0005");
-    get_global_zoffset_cal_panel().handle_z_adjust(-0.005f);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void ZOffsetCalibrationPanel::on_z_up_0005(lv_event_t* e) {
-    (void)e;
-    LVGL_SAFE_EVENT_CB_BEGIN("[ZOffsetCal] on_z_up_0005");
-    get_global_zoffset_cal_panel().handle_z_adjust(0.005f);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void ZOffsetCalibrationPanel::on_z_up_001(lv_event_t* e) {
-    (void)e;
-    LVGL_SAFE_EVENT_CB_BEGIN("[ZOffsetCal] on_z_up_001");
-    get_global_zoffset_cal_panel().handle_z_adjust(0.01f);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void ZOffsetCalibrationPanel::on_z_up_005(lv_event_t* e) {
-    (void)e;
-    LVGL_SAFE_EVENT_CB_BEGIN("[ZOffsetCal] on_z_up_005");
-    get_global_zoffset_cal_panel().handle_z_adjust(0.05f);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void ZOffsetCalibrationPanel::on_z_up_01(lv_event_t* e) {
-    (void)e;
-    LVGL_SAFE_EVENT_CB_BEGIN("[ZOffsetCal] on_z_up_01");
-    get_global_zoffset_cal_panel().handle_z_adjust(0.1f);
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-void ZOffsetCalibrationPanel::on_z_up_1(lv_event_t* e) {
-    (void)e;
-    LVGL_SAFE_EVENT_CB_BEGIN("[ZOffsetCal] on_z_up_1");
-    get_global_zoffset_cal_panel().handle_z_adjust(1.0f);
+void ZOffsetCalibrationPanel::on_z_adjust(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ZOffsetCal] on_z_adjust");
+    const char* delta_str = static_cast<const char*>(lv_event_get_user_data(e));
+    if (delta_str) {
+        float delta = strtof(delta_str, nullptr);
+        spdlog::debug("[ZOffsetCal] Z adjust: {} (from user_data \"{}\")", delta, delta_str);
+        get_global_zoffset_cal_panel().handle_z_adjust(delta);
+    }
     LVGL_SAFE_EVENT_CB_END();
 }
 
