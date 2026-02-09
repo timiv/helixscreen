@@ -588,6 +588,11 @@ bool PrinterState::can_start_new_print() const {
 }
 
 void PrinterState::set_kinematics(const std::string& kinematics) {
+    if (kinematics == last_kinematics_) {
+        return;
+    }
+    last_kinematics_ = kinematics;
+
     // Determine if the bed moves on Z based on kinematics type:
     // - CoreXY: bed typically moves on Z (Voron 0/Trident, Bambu, AD5M, etc.)
     //   Exception: Voron 2.4 and similar with quad_gantry_level have gantry-Z

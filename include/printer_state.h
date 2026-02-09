@@ -1513,6 +1513,9 @@ class PrinterState {
     std::string printer_type_;                        ///< Selected printer type name
     PrintStartCapabilities print_start_capabilities_; ///< Cached capabilities for current type
 
+    /// Last kinematics string (to skip redundant recomputation)
+    std::string last_kinematics_;
+
     /// Auto-detected bed_moves value from kinematics (before user override)
     bool auto_detected_bed_moves_ = false;
 
