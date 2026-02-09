@@ -191,6 +191,8 @@ class GCodeViewerState {
 
     // Rendering settings
     bool use_filament_color{true};
+    bool has_external_color_override{false}; ///< True when external color (AMS/Spoolman) is set
+    lv_color_t external_color_override{};    ///< Stored override color for lazy-init renderers
     bool first_render{true};
     bool rendering_paused_{
         false}; ///< When true, draw_cb skips rendering (for visibility optimization)
@@ -356,8 +358,11 @@ static void gcode_viewer_draw_cb(lv_event_t* e) {
             st->layer_renderer_2d_->set_canvas_size(width, height);
             st->layer_renderer_2d_->auto_fit();
 
-            // Apply filament color from G-code metadata if available
-            if (st->use_filament_color && st->gcode_file->filament_color_hex.length() >= 2) {
+            // Apply color: external override (AMS/Spoolman) takes priority over gcode metadata
+            if (st->has_external_color_override) {
+                st->layer_renderer_2d_->set_extrusion_color(st->external_color_override);
+                spdlog::debug("[GCode Viewer] 2D renderer using external color override");
+            } else if (st->use_filament_color && st->gcode_file->filament_color_hex.length() >= 2) {
                 lv_color_t color = lv_color_hex(static_cast<uint32_t>(
                     std::strtol(st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16)));
                 st->layer_renderer_2d_->set_extrusion_color(color);
@@ -991,14 +996,19 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
                     st->layer_renderer_2d_->set_streaming_controller(
                         st->streaming_controller_.get());
 
-                    // Apply filament color from G-code metadata if available
-                    const auto& stats = st->streaming_controller_->get_index_stats();
-                    if (!stats.filament_color.empty()) {
-                        lv_color_t color = lv_color_hex(
-                            std::strtol(stats.filament_color.c_str() + 1, nullptr, 16));
-                        st->layer_renderer_2d_->set_extrusion_color(color);
-                        spdlog::info("[GCode Viewer] Using filament color from metadata: {}",
-                                     stats.filament_color);
+                    // Apply color: external override (AMS/Spoolman) takes priority
+                    if (st->has_external_color_override) {
+                        st->layer_renderer_2d_->set_extrusion_color(st->external_color_override);
+                        spdlog::info("[GCode Viewer] Streaming 2D using external color override");
+                    } else {
+                        const auto& stats = st->streaming_controller_->get_index_stats();
+                        if (!stats.filament_color.empty()) {
+                            lv_color_t color = lv_color_hex(
+                                std::strtol(stats.filament_color.c_str() + 1, nullptr, 16));
+                            st->layer_renderer_2d_->set_extrusion_color(color);
+                            spdlog::info("[GCode Viewer] Using filament color from metadata: {}",
+                                         stats.filament_color);
+                        }
                     }
 
                     // Get canvas size from widget
@@ -1378,8 +1388,9 @@ void ui_gcode_viewer_clear(lv_obj_t* obj) {
         return;
 
     st->gcode_file.reset();
-    st->streaming_controller_.reset(); // Clear streaming controller (Phase 6)
-    st->layer_renderer_2d_.reset();    // Clear 2D renderer to avoid dangling pointer
+    st->streaming_controller_.reset();       // Clear streaming controller (Phase 6)
+    st->layer_renderer_2d_.reset();          // Clear 2D renderer to avoid dangling pointer
+    st->has_external_color_override = false; // Clear external color override
     st->viewer_state = GCODE_VIEWER_STATE_EMPTY;
 
     lv_obj_invalidate(obj);
@@ -1716,7 +1727,14 @@ void ui_gcode_viewer_set_extrusion_color(lv_obj_t* obj, lv_color_t color) {
     if (!st)
         return;
 
+    // Store override so lazy-initialized renderers pick it up
+    st->has_external_color_override = true;
+    st->external_color_override = color;
+
     st->renderer_->set_extrusion_color(color);
+    if (st->layer_renderer_2d_) {
+        st->layer_renderer_2d_->set_extrusion_color(color);
+    }
     lv_obj_invalidate(obj);
 }
 
@@ -1735,6 +1753,17 @@ void ui_gcode_viewer_use_filament_color(lv_obj_t* obj, bool enable) {
         return;
 
     st->use_filament_color = enable;
+
+    // External override (AMS/Spoolman) always takes priority when set
+    if (st->has_external_color_override) {
+        st->renderer_->set_extrusion_color(st->external_color_override);
+        if (st->layer_renderer_2d_) {
+            st->layer_renderer_2d_->set_extrusion_color(st->external_color_override);
+        }
+        lv_obj_invalidate(obj);
+        spdlog::debug("[GCode Viewer] Filament color toggle: external override active, keeping it");
+        return;
+    }
 
     // If enabling and we have a loaded file with filament color, apply it now
     if (enable && st->gcode_file && st->gcode_file->filament_color_hex.length() >= 2) {

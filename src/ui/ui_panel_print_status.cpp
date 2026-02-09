@@ -21,6 +21,7 @@
 #include "ui_utils.h"
 
 #include "abort_manager.h"
+#include "ams_state.h"
 #include "app_globals.h"
 #include "config.h"
 #include "display_manager.h"
@@ -153,6 +154,15 @@ PrintStatusPanel::PrintStatusPanel(PrinterState& printer_state, MoonrakerAPI* ap
     excluded_objects_version_observer_ = observe_int_sync<PrintStatusPanel>(
         printer_state_.get_excluded_objects_version_subject(), this,
         [](PrintStatusPanel* self, int) { self->update_objects_text(); });
+
+    // Subscribe to AMS current filament color for gcode viewer color override
+    // When a known filament color is available (from Spoolman spool or AMS lane),
+    // use it instead of the gcode metadata color for the 2D/3D render
+    ams_color_observer_ = observe_int_sync<PrintStatusPanel>(
+        AmsState::instance().get_current_color_subject(), this,
+        [](PrintStatusPanel* self, int color_rgb) {
+            self->apply_filament_color_override(static_cast<uint32_t>(color_rgb));
+        });
 
     spdlog::debug("[{}] Subscribed to PrinterState subjects", get_name());
 
@@ -646,6 +656,13 @@ void PrintStatusPanel::load_gcode_file(const char* file_path) {
 
             // Mark G-code as successfully loaded (enables viewer mode on state changes)
             self->gcode_loaded_ = true;
+
+            // Override extrusion color with known filament color from AMS/Spoolman
+            // This runs after the gcode viewer applies its own metadata color,
+            // so our override takes priority when a real filament color is known
+            uint32_t ams_color = static_cast<uint32_t>(
+                lv_subject_get_int(AmsState::instance().get_current_color_subject()));
+            self->apply_filament_color_override(ams_color);
 
             // Only show viewer if print is still active (avoid race with completion)
             bool want_viewer = (self->current_state_ == PrintState::Preparing ||
@@ -2044,6 +2061,29 @@ void PrintStatusPanel::load_gcode_for_viewing(const std::string& filename) {
         },
         true // silent - don't trigger RPC_ERROR event/toast
     );
+}
+
+// ============================================================================
+// FILAMENT COLOR OVERRIDE
+// ============================================================================
+
+void PrintStatusPanel::apply_filament_color_override(uint32_t color_rgb) {
+    if (!gcode_viewer_ || !gcode_loaded_) {
+        return;
+    }
+
+    // Skip default/unknown colors — these indicate no filament info is available
+    // 0x505050 = no filament loaded, 0x808080 = AMS_DEFAULT_SLOT_COLOR, 0x888888 = bypass
+    if (color_rgb == 0x505050 || color_rgb == AMS_DEFAULT_SLOT_COLOR || color_rgb == 0x888888) {
+        spdlog::trace("[{}] AMS color is default/unknown (0x{:06X}) - using gcode metadata color",
+                      get_name(), color_rgb);
+        return;
+    }
+
+    lv_color_t color = lv_color_hex(color_rgb);
+    ui_gcode_viewer_set_extrusion_color(gcode_viewer_, color);
+    spdlog::debug("[{}] Applied AMS/Spoolman filament color override: #{:06X}", get_name(),
+                  color_rgb);
 }
 
 // ============================================================================

@@ -427,6 +427,8 @@ class PrintStatusPanel : public OverlayBase {
     void animate_print_cancelled(); ///< Warning animation when print is cancelled
     void animate_print_error();     ///< Error animation when print fails
     void cleanup_temp_gcode();      ///< Remove temp G-code file downloaded for viewing
+    void apply_filament_color_override(
+        uint32_t color_rgb); ///< Apply AMS/Spoolman filament color to gcode viewer
 
     static void format_time(int seconds, char* buf, size_t buf_size);
 
@@ -498,6 +500,7 @@ class PrintStatusPanel : public OverlayBase {
     ObserverGuard preprint_elapsed_observer_;
     ObserverGuard exclude_objects_observer_;
     ObserverGuard excluded_objects_version_observer_;
+    ObserverGuard ams_color_observer_; ///< Tracks AMS/Spoolman filament color for gcode viewer
 
     //
     // === Exclude Object Manager ===
