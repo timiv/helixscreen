@@ -218,6 +218,12 @@ endif
 LVGL_SRCS := $(shell find $(LVGL_DIR)/src -name "*.c" 2>/dev/null)
 LVGL_OBJS := $(patsubst $(LVGL_DIR)/%.c,$(OBJ_DIR)/lvgl/%.o,$(LVGL_SRCS))
 
+# lv_markdown (LVGL markdown widget)
+LV_MARKDOWN_DIR := lib/lv_markdown
+LV_MARKDOWN_INC := -isystem $(LV_MARKDOWN_DIR)/src -isystem $(LV_MARKDOWN_DIR)/deps/md4c
+LV_MARKDOWN_SRCS := $(wildcard $(LV_MARKDOWN_DIR)/src/*.c) $(LV_MARKDOWN_DIR)/deps/md4c/md4c.c
+LV_MARKDOWN_OBJS := $(patsubst $(LV_MARKDOWN_DIR)/%.c,$(OBJ_DIR)/lv_markdown/%.o,$(LV_MARKDOWN_SRCS))
+
 # ThorVG sources (.cpp files for SVG support)
 THORVG_SRCS := $(shell find $(LVGL_DIR)/src/libs/thorvg -name "*.cpp" 2>/dev/null)
 THORVG_OBJS := $(patsubst $(LVGL_DIR)/%.cpp,$(OBJ_DIR)/lvgl/%.o,$(THORVG_SRCS))
