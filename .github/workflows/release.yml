@@ -73,6 +73,9 @@ jobs:
           helixscreen/toolchain-pi \
           make PLATFORM_TARGET=pi SKIP_OPTIONAL_DEPS=1 -j$(nproc)
 
+    - name: Fix build directory ownership
+      run: sudo chown -R $(id -u):$(id -g) build/
+
     - name: Package Pi release
       run: make release-pi
 
@@ -131,6 +134,9 @@ jobs:
           -w /src \
           helixscreen/toolchain-pi32 \
           make PLATFORM_TARGET=pi32 SKIP_OPTIONAL_DEPS=1 -j$(nproc)
+
+    - name: Fix build directory ownership
+      run: sudo chown -R $(id -u):$(id -g) build/
 
     - name: Package Pi 32-bit release
       run: make release-pi32
@@ -191,6 +197,9 @@ jobs:
           helixscreen/toolchain-ad5m \
           make PLATFORM_TARGET=ad5m SKIP_OPTIONAL_DEPS=1 -j$(nproc)
 
+    - name: Fix build directory ownership
+      run: sudo chown -R $(id -u):$(id -g) build/
+
     - name: Package AD5M release
       run: make release-ad5m
 
@@ -249,6 +258,9 @@ jobs:
           -w /src \
           helixscreen/toolchain-k1 \
           make PLATFORM_TARGET=k1 SKIP_OPTIONAL_DEPS=1 -j$(nproc)
+
+    - name: Fix build directory ownership
+      run: sudo chown -R $(id -u):$(id -g) build/
 
     - name: Package K1 release
       run: make release-k1
