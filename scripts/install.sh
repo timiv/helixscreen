@@ -510,6 +510,63 @@ set_install_paths() {
     fi
 }
 
+# Create symlink from printer_data/config/helixscreen → INSTALL_DIR/config
+# Allows Mainsail/Fluidd users to edit HelixScreen config from the web UI.
+# Only applies to Pi/Klipper platforms where printer_data exists.
+# Gracefully skips if printer_data/config doesn't exist or permissions fail.
+# Reads: KLIPPER_HOME, INSTALL_DIR
+setup_config_symlink() {
+    # Only proceed if we have a Klipper home and install directory
+    if [ -z "${KLIPPER_HOME:-}" ] || [ -z "${INSTALL_DIR:-}" ]; then
+        return 0
+    fi
+
+    local config_dir="${KLIPPER_HOME}/printer_data/config"
+    local symlink_path="${config_dir}/helixscreen"
+    local target="${INSTALL_DIR}/config"
+
+    # Skip if printer_data/config doesn't exist
+    if [ ! -d "$config_dir" ]; then
+        log_info "No printer_data/config found, skipping config symlink"
+        return 0
+    fi
+
+    # Skip if target config directory doesn't exist
+    if [ ! -d "$target" ]; then
+        log_warn "Install config directory not found: $target"
+        return 0
+    fi
+
+    # Check if symlink already exists
+    if [ -L "$symlink_path" ]; then
+        local current_target
+        current_target=$(readlink "$symlink_path" 2>/dev/null || echo "")
+        if [ "$current_target" = "$target" ]; then
+            log_info "Config symlink already exists and is correct"
+            return 0
+        fi
+        # Wrong target — update it
+        log_info "Updating config symlink (was: $current_target)"
+        $SUDO rm -f "$symlink_path"
+    elif [ -e "$symlink_path" ]; then
+        # Something exists but isn't a symlink — don't destroy it
+        log_warn "Config symlink path already exists as a regular file/directory: $symlink_path"
+        log_warn "Skipping symlink creation to avoid data loss"
+        return 0
+    fi
+
+    # Create the symlink
+    if $SUDO ln -s "$target" "$symlink_path" 2>/dev/null; then
+        log_success "Config symlink: $symlink_path → $target"
+        log_info "You can now edit HelixScreen config from Mainsail/Fluidd"
+    else
+        log_warn "Could not create config symlink (permission denied?)"
+        log_warn "To create manually: ln -s $target $symlink_path"
+    fi
+
+    return 0
+}
+
 # ============================================
 # Module: permissions.sh
 # ============================================
@@ -2637,6 +2694,9 @@ main() {
     fix_install_ownership
     install_service "$platform"
     install_platform_hooks
+
+    # Symlink config into printer_data (Pi/Klipper only - enables web UI editing)
+    setup_config_symlink
 
     # Configure Moonraker update_manager (Pi only - enables web UI updates)
     configure_moonraker_updates "$platform"

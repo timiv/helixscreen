@@ -325,6 +325,9 @@ main() {
     install_service "$platform"
     install_platform_hooks
 
+    # Symlink config into printer_data (Pi/Klipper only - enables web UI editing)
+    setup_config_symlink
+
     # Configure Moonraker update_manager (Pi only - enables web UI updates)
     configure_moonraker_updates "$platform"
 
