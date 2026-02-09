@@ -858,19 +858,11 @@ void FilamentPanel::on_cooldown_clicked(lv_event_t* e) {
 void FilamentPanel::handle_cooldown() {
     spdlog::info("[{}] Cooldown requested - turning off heaters", get_name());
 
-    // Turn off nozzle heater
     if (api_) {
-        api_->set_temperature(
-            "extruder", 0.0, []() { NOTIFY_SUCCESS("Nozzle heater off"); },
+        api_->execute_gcode(
+            "TURN_OFF_HEATERS", []() { NOTIFY_SUCCESS("Heaters off"); },
             [](const MoonrakerError& error) {
-                NOTIFY_ERROR("Failed to turn off nozzle: {}", error.user_message());
-            });
-
-        // Also turn off bed heater for full cooldown
-        api_->set_temperature(
-            "heater_bed", 0.0, []() { NOTIFY_SUCCESS("Bed heater off"); },
-            [](const MoonrakerError& error) {
-                NOTIFY_ERROR("Failed to turn off bed: {}", error.user_message());
+                NOTIFY_ERROR("Failed to turn off heaters: {}", error.user_message());
             });
     }
 
