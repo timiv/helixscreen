@@ -90,6 +90,7 @@
 #include "ui_wizard_touch_calibration.h"
 #include "ui_wizard_wifi.h"
 
+#include "data_root_resolver.h"
 #include "printer_detector.h"
 #include "settings_manager.h"
 #include "system/crash_handler.h"
@@ -137,6 +138,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #ifdef __APPLE__
@@ -365,12 +367,18 @@ void Application::ensure_project_root_cwd() {
     using EnvConfig = helix::config::EnvironmentConfig;
 
     // HELIX_DATA_DIR takes priority - allows standalone deployment
+    // Validate BEFORE chdir to avoid corrupting the working directory
     if (auto data_dir = EnvConfig::get_data_dir()) {
-        if (chdir(data_dir->c_str()) == 0) {
-            spdlog::info("[Application] Using HELIX_DATA_DIR: {}", *data_dir);
-            return;
+        if (helix::is_valid_data_root(data_dir->c_str())) {
+            if (chdir(data_dir->c_str()) == 0) {
+                spdlog::info("[Application] Using HELIX_DATA_DIR: {}", *data_dir);
+                return;
+            }
+            spdlog::warn("[Application] HELIX_DATA_DIR '{}' valid but chdir failed: {}", *data_dir,
+                         strerror(errno));
+        } else {
+            spdlog::warn("[Application] HELIX_DATA_DIR '{}' has no ui_xml/ directory", *data_dir);
         }
-        spdlog::warn("[Application] HELIX_DATA_DIR set to '{}' but chdir failed", *data_dir);
     }
 
     // Fall back to auto-detection from executable path
@@ -379,6 +387,7 @@ void Application::ensure_project_root_cwd() {
 #ifdef __APPLE__
     uint32_t size = sizeof(exe_path);
     if (_NSGetExecutablePath(exe_path, &size) != 0) {
+        spdlog::warn("[Application] Could not get executable path");
         return;
     }
     char resolved[PATH_MAX];
@@ -389,6 +398,7 @@ void Application::ensure_project_root_cwd() {
 #elif defined(__linux__)
     ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
     if (len == -1) {
+        spdlog::warn("[Application] Could not read /proc/self/exe");
         return;
     }
     exe_path[len] = '\0';
@@ -396,21 +406,25 @@ void Application::ensure_project_root_cwd() {
     return;
 #endif
 
-    char* last_slash = strrchr(exe_path, '/');
-    if (!last_slash)
-        return;
-    *last_slash = '\0';
-
-    size_t dir_len = strlen(exe_path);
-    const char* suffix = "/build/bin";
-    size_t suffix_len = strlen(suffix);
-
-    if (dir_len >= suffix_len && strcmp(exe_path + dir_len - suffix_len, suffix) == 0) {
-        exe_path[dir_len - suffix_len] = '\0';
-        if (chdir(exe_path) == 0) {
-            spdlog::debug("[Application] Changed working directory to: {}", exe_path);
+    std::string data_root = helix::resolve_data_root_from_exe(exe_path);
+    if (!data_root.empty()) {
+        if (chdir(data_root.c_str()) == 0) {
+            spdlog::info("[Application] Auto-detected data root: {}", data_root);
+            return;
         }
+        spdlog::warn("[Application] Found data root '{}' but chdir failed: {}", data_root,
+                     strerror(errno));
     }
+
+    // Last resort: check if CWD already has what we need
+    char cwd[PATH_MAX];
+    if (getcwd(cwd, sizeof(cwd)) && helix::is_valid_data_root(cwd)) {
+        spdlog::debug("[Application] Current working directory is already valid: {}", cwd);
+        return;
+    }
+
+    spdlog::error("[Application] Could not find HelixScreen data root (ui_xml/ directory). "
+                  "Set HELIX_DATA_DIR or run from the install directory.");
 }
 
 bool Application::parse_args(int argc, char** argv) {
@@ -610,9 +624,19 @@ bool Application::init_theme() {
         dark_mode = m_config->get<bool>("/dark_mode", true);
     }
 
-    // Register globals.xml first (required for theme constants)
+    // Register globals.xml first (required for theme constants, fonts, spacing tokens)
     // Note: fonts must be registered before this (done in init_assets phase)
-    lv_xml_register_component_from_file("A:ui_xml/globals.xml");
+    lv_result_t globals_result = lv_xml_register_component_from_file("A:ui_xml/globals.xml");
+    if (globals_result != LV_RESULT_OK) {
+        spdlog::error("[Application] FATAL: Failed to load globals.xml - "
+                      "all XML constants (fonts, colors, spacing) will be missing. "
+                      "Check working directory and verify ui_xml/globals.xml exists.");
+        char cwd[PATH_MAX];
+        if (getcwd(cwd, sizeof(cwd))) {
+            spdlog::error("[Application] Current working directory: {}", cwd);
+        }
+        return false;
+    }
 
     // Initialize theme
     theme_manager_init(m_display->display(), dark_mode);
