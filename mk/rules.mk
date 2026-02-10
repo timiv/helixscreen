@@ -111,7 +111,7 @@ ifndef _PARALLEL_CHECKED
 	fi
 else
 # Phase 2: Actual build (only runs when _PARALLEL_CHECKED is set)
-all: apply-patches generate-fonts $(TRANS_GEN_C) splash watchdog $(TARGET)
+all: apply-patches generate-fonts $(TRANS_GEN_C) splash watchdog $(TARGET) strip
 	$(ECHO) "$(GREEN)$(BOLD)✓ Build complete!$(RESET)"
 	$(ECHO) "$(CYAN)Run with: $(YELLOW)./$(TARGET)$(RESET)"
 ifndef SKIP_COMPILE_COMMANDS

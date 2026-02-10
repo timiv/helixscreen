@@ -645,7 +645,10 @@ screenshots: $(BIN)
 	$(Q)$(ECHO) "$(GREEN)✓ Documentation screenshots generated in docs/images/$(RESET)"
 
 # =============================================================================
-# Symbol extraction and stripping (for CI crash backtrace resolution)
+# Symbol extraction and stripping (for crash backtrace resolution)
+# Runs automatically for cross-compiled builds (STRIP_BINARY=yes).
+# Extracts symbol maps first, then strips — preserving debug info for
+# offline crash resolution while keeping the deployed binary small.
 # =============================================================================
 symbols: $(TARGET)
 ifeq ($(STRIP_BINARY),yes)
@@ -655,10 +658,12 @@ else
 	@echo "STRIP_BINARY not set — skipping symbol extraction"
 endif
 
-strip: $(TARGET)
+strip: symbols
 ifeq ($(STRIP_BINARY),yes)
 	$(STRIP_CMD) $(TARGET)
-	@echo "Stripped: $(TARGET)"
+	$(STRIP_CMD) $(SPLASH_BIN)
+	$(STRIP_CMD) $(WATCHDOG_BIN)
+	@echo "Stripped: $(TARGET) $(SPLASH_BIN) $(WATCHDOG_BIN)"
 else
 	@echo "STRIP_BINARY not set — skipping strip"
 endif
