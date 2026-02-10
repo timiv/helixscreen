@@ -11,6 +11,7 @@
 #include "ui_z_offset_indicator.h"
 
 #include "app_globals.h"
+#include "config.h"
 #include "moonraker_api.h"
 #include "observer_factory.h"
 #include "printer_state.h"
@@ -31,7 +32,12 @@ using helix::ui::observe_int_sync;
 
 // State subject (0=IDLE, 1=PROBING, 2=ADJUSTING, 3=SAVING, 4=COMPLETE, 5=ERROR)
 static lv_subject_t s_zoffset_cal_state;
+// Warm bed toggle subject (0=off, 1=on)
+static lv_subject_t s_zoffset_warm_bed;
 static bool s_callbacks_registered = false;
+
+/// Default bed temperature for calibration warm-up (°C)
+static constexpr int DEFAULT_WARM_BED_TEMP = 45;
 
 // ============================================================================
 // CONSTRUCTOR / DESTRUCTOR
@@ -80,6 +86,8 @@ void ZOffsetCalibrationPanel::init_subjects() {
 
     // Register state subject (shared across all instances)
     UI_MANAGED_SUBJECT_INT(s_zoffset_cal_state, 0, "zoffset_cal_state", subjects_);
+    // Warm bed toggle (default off)
+    UI_MANAGED_SUBJECT_INT(s_zoffset_warm_bed, 0, "zoffset_warm_bed", subjects_);
 
     subjects_initialized_ = true;
 
@@ -93,6 +101,9 @@ void ZOffsetCalibrationPanel::init_subjects() {
 
         // Z adjustment (single callback — user_data carries the delta as a string)
         lv_xml_register_event_cb(nullptr, "on_zoffset_z_adjust", on_z_adjust);
+
+        // Warm bed toggle
+        lv_xml_register_event_cb(nullptr, "on_zoffset_warm_bed_toggled", on_warm_bed_toggled);
 
         s_callbacks_registered = true;
     }
@@ -276,10 +287,13 @@ void ZOffsetCalibrationPanel::on_deactivate() {
     if (state_ == State::ADJUSTING || state_ == State::PROBING) {
         if (!NavigationManager::instance().is_shutting_down()) {
             spdlog::info("[ZOffsetCal] Aborting calibration on deactivate");
-            send_abort();
+            send_abort(); // send_abort() calls turn_off_bed_if_needed()
         } else {
             spdlog::info("[ZOffsetCal] Skipping abort during app shutdown");
         }
+    } else {
+        // Safety net: turn off bed if navigating away after completion/error
+        turn_off_bed_if_needed();
     }
 
     // Call base class
@@ -295,6 +309,7 @@ void ZOffsetCalibrationPanel::cleanup() {
     // Reset ObserverGuards to remove observers before cleanup (applying [L020])
     manual_probe_active_observer_.reset();
     manual_probe_z_observer_.reset();
+    bed_temp_observer_.reset();
 
     // Unregister from NavigationManager before cleaning up
     if (overlay_root_) {
@@ -323,6 +338,13 @@ void ZOffsetCalibrationPanel::set_state(State new_state) {
 
     // Manage operation timeout guard based on state transitions
     switch (new_state) {
+    case State::WARMING:
+        operation_guard_.begin(WARMING_TIMEOUT_MS, [this] {
+            turn_off_bed_if_needed();
+            set_state(State::ERROR);
+            NOTIFY_WARNING("Bed warming timed out");
+        });
+        break;
     case State::PROBING:
         operation_guard_.begin(PROBING_TIMEOUT_MS, [this] {
             set_state(State::ERROR);
@@ -340,6 +362,7 @@ void ZOffsetCalibrationPanel::set_state(State new_state) {
     case State::ERROR:
     case State::IDLE:
         operation_guard_.end();
+        bed_temp_observer_.reset(); // Stop watching bed temp when not warming
         break;
     }
 
@@ -357,6 +380,58 @@ void ZOffsetCalibrationPanel::start_calibration() {
         on_calibration_result(false, "No printer connection");
         return;
     }
+
+    // Check if warm bed is requested
+    bool warm_bed = lv_subject_get_int(&s_zoffset_warm_bed) == 1;
+    if (warm_bed) {
+        auto* cfg = Config::get_instance();
+        int temp = cfg->get<int>("/calibration/warm_bed_temp", DEFAULT_WARM_BED_TEMP);
+        warm_bed_target_centi_ = temp * 10; // Convert °C to centidegrees
+
+        // Send non-blocking M140 to start heating
+        char cmd[32];
+        snprintf(cmd, sizeof(cmd), "M140 S%d", temp);
+        spdlog::info("[ZOffsetCal] Warming bed to {}°C for calibration", temp);
+        bed_was_warmed_ = true;
+
+        api_->execute_gcode(
+            cmd, []() { spdlog::debug("[ZOffsetCal] M140 sent, bed heating"); },
+            [this](const MoonrakerError& err) {
+                spdlog::error("[ZOffsetCal] Failed to start bed heating: {}", err.message);
+                ui_async_call(
+                    [](void* ud) {
+                        static_cast<ZOffsetCalibrationPanel*>(ud)->on_calibration_result(
+                            false, "Failed to start bed heating");
+                    },
+                    this);
+            });
+
+        // Enter WARMING state and observe bed temperature
+        set_state(State::WARMING);
+
+        PrinterState& ps = get_printer_state();
+        bed_temp_observer_ = observe_int_sync<ZOffsetCalibrationPanel>(
+            ps.get_bed_temp_subject(), this, [](ZOffsetCalibrationPanel* self, int temp_centi) {
+                if (self->state_ != State::WARMING)
+                    return;
+
+                spdlog::trace("[ZOffsetCal] Bed temp: {}.{}°C (target: {}°C)", temp_centi / 10,
+                              temp_centi % 10, self->warm_bed_target_centi_ / 10);
+
+                if (temp_centi >= self->warm_bed_target_centi_) {
+                    spdlog::info("[ZOffsetCal] Bed reached target temperature, proceeding");
+                    self->bed_temp_observer_.reset();
+                    self->begin_probe_sequence();
+                }
+            });
+    } else {
+        // No warming, go straight to probing
+        begin_probe_sequence();
+    }
+}
+
+void ZOffsetCalibrationPanel::begin_probe_sequence() {
+    set_state(State::PROBING);
 
     PrinterState& ps = get_printer_state();
     auto strategy = ps.get_z_offset_calibration_strategy();
@@ -625,6 +700,14 @@ void ZOffsetCalibrationPanel::send_abort() {
     if (!api_)
         return;
 
+    // If warming, just cancel heating — no calibration gcode was sent yet
+    if (state_ == State::WARMING) {
+        spdlog::info("[ZOffsetCal] Aborting during bed warming");
+        turn_off_bed_if_needed();
+        set_state(State::IDLE);
+        return;
+    }
+
     auto strategy = get_printer_state().get_z_offset_calibration_strategy();
 
     if (strategy == ZOffsetCalibrationStrategy::GCODE_OFFSET) {
@@ -644,6 +727,7 @@ void ZOffsetCalibrationPanel::send_abort() {
             });
     }
 
+    turn_off_bed_if_needed();
     set_state(State::IDLE);
 }
 
@@ -653,8 +737,7 @@ void ZOffsetCalibrationPanel::send_abort() {
 
 void ZOffsetCalibrationPanel::handle_start_clicked() {
     spdlog::debug("[ZOffsetCal] Start clicked");
-    set_state(State::PROBING);
-    start_calibration();
+    start_calibration(); // Enters WARMING or PROBING depending on warm bed toggle
 }
 
 void ZOffsetCalibrationPanel::handle_z_adjust(float delta) {
@@ -692,6 +775,26 @@ void ZOffsetCalibrationPanel::handle_retry_clicked() {
     set_state(State::IDLE);
 }
 
+void ZOffsetCalibrationPanel::handle_warm_bed_toggled() {
+    int current = lv_subject_get_int(&s_zoffset_warm_bed);
+    int toggled = current ? 0 : 1;
+    lv_subject_set_int(&s_zoffset_warm_bed, toggled);
+    spdlog::info("[ZOffsetCal] Warm bed toggled: {}", toggled ? "on" : "off");
+}
+
+void ZOffsetCalibrationPanel::turn_off_bed_if_needed() {
+    if (!bed_was_warmed_ || !api_)
+        return;
+
+    bed_was_warmed_ = false;
+    spdlog::info("[ZOffsetCal] Turning off bed heater after calibration");
+    api_->execute_gcode(
+        "M140 S0", []() { spdlog::debug("[ZOffsetCal] Bed heater off"); },
+        [](const MoonrakerError& err) {
+            spdlog::warn("[ZOffsetCal] Failed to turn off bed: {}", err.message);
+        });
+}
+
 // ============================================================================
 // PUBLIC METHODS
 // ============================================================================
@@ -722,6 +825,7 @@ void ZOffsetCalibrationPanel::on_calibration_result(bool success, const std::str
             snprintf(buf, sizeof(buf), "Accepted Z Position: %.3f", final_offset_);
             lv_label_set_text(final_offset_label_, buf);
         }
+        turn_off_bed_if_needed();
         set_state(State::COMPLETE);
     } else {
         if (error_message_) {
@@ -778,6 +882,13 @@ void ZOffsetCalibrationPanel::on_retry_clicked(lv_event_t* e) {
     (void)e;
     LVGL_SAFE_EVENT_CB_BEGIN("[ZOffsetCal] on_retry_clicked");
     get_global_zoffset_cal_panel().handle_retry_clicked();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ZOffsetCalibrationPanel::on_warm_bed_toggled(lv_event_t* e) {
+    (void)e;
+    LVGL_SAFE_EVENT_CB_BEGIN("[ZOffsetCal] on_warm_bed_toggled");
+    get_global_zoffset_cal_panel().handle_warm_bed_toggled();
     LVGL_SAFE_EVENT_CB_END();
 }
 

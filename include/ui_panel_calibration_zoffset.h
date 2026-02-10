@@ -55,7 +55,8 @@ class ZOffsetCalibrationPanel : public OverlayBase {
         ADJUSTING, ///< Interactive Z adjustment phase
         SAVING,    ///< ACCEPT sent, waiting for SAVE_CONFIG
         COMPLETE,  ///< Calibration finished successfully
-        ERROR      ///< Error occurred
+        ERROR,     ///< Error occurred
+        WARMING    ///< Bed warming before calibration (6)
     };
 
     ZOffsetCalibrationPanel();
@@ -157,6 +158,7 @@ class ZOffsetCalibrationPanel : public OverlayBase {
     static void on_abort_clicked(lv_event_t* e);
     static void on_done_clicked(lv_event_t* e);
     static void on_retry_clicked(lv_event_t* e);
+    static void on_warm_bed_toggled(lv_event_t* e);
 
   private:
     // API reference
@@ -173,6 +175,7 @@ class ZOffsetCalibrationPanel : public OverlayBase {
 
     // Strategy-aware gcode command helpers
     void start_calibration();
+    void begin_probe_sequence(); ///< Start homing/probing (called after warming or directly)
     void adjust_z(float delta);
     void send_accept();
     void send_abort();
@@ -184,6 +187,10 @@ class ZOffsetCalibrationPanel : public OverlayBase {
     void handle_abort_clicked();
     void handle_done_clicked();
     void handle_retry_clicked();
+    void handle_warm_bed_toggled();
+
+    /// Turn off bed heater if we turned it on for calibration
+    void turn_off_bed_if_needed();
 
     // Interactive elements
     lv_obj_t* saved_z_offset_display_ = nullptr;
@@ -196,6 +203,11 @@ class ZOffsetCalibrationPanel : public OverlayBase {
     float final_offset_ = 0.0f;
     float cumulative_z_delta_ = 0.0f; ///< Tracks total Z adjustment in gcode_offset mode
 
+    // Warm bed for calibration
+    bool bed_was_warmed_ = false;     ///< True if we sent M140 to warm bed this session
+    int warm_bed_target_centi_ = 0;   ///< Target temp in centidegrees during WARMING
+    ObserverGuard bed_temp_observer_; ///< Watches bed temp during WARMING phase
+
     // Subject manager for automatic cleanup
     SubjectManager subjects_;
 
@@ -205,6 +217,7 @@ class ZOffsetCalibrationPanel : public OverlayBase {
 
     // Operation timeout guard (PROBING: 180s, SAVING: 30s)
     OperationTimeoutGuard operation_guard_;
+    static constexpr uint32_t WARMING_TIMEOUT_MS = 300000; // 5 min for bed to reach temp
     static constexpr uint32_t PROBING_TIMEOUT_MS = 180000;
     static constexpr uint32_t SAVING_TIMEOUT_MS = 30000;
 };
