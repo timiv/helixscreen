@@ -26,6 +26,7 @@
 #include "panel_factory.h"
 #include "print_history_manager.h"
 #include "screenshot.h"
+#include "sound_manager.h"
 #include "static_panel_registry.h"
 #include "static_subject_registry.h"
 #include "streaming_policy.h"
@@ -292,6 +293,11 @@ int Application::run(int argc, char** argv) {
     // Note: record_session() is deferred to on_discovery_complete callback so hardware data is
     // available
     TelemetryManager::instance().set_enabled(SettingsManager::instance().get_telemetry_enabled());
+
+    // Initialize SoundManager (beta feature - audio feedback)
+    if (Config::get_instance()->is_beta_features_enabled()) {
+        SoundManager::instance().initialize();
+    }
 
     // Update SettingsManager with theme mode support (must be after both theme and settings init)
     SettingsManager::instance().on_theme_changed();
@@ -1965,6 +1971,9 @@ void Application::shutdown() {
 
     // Shutdown TelemetryManager (persists queue, joins send thread)
     TelemetryManager::instance().shutdown();
+
+    // Shutdown SoundManager (stops sequencer, closes audio backends)
+    SoundManager::instance().shutdown();
 
     // Unload plugins before destroying managers they depend on
     if (m_plugin_manager) {
