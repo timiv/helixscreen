@@ -521,6 +521,21 @@ class SettingsManager {
     void set_sounds_enabled(bool enabled);
 
     /**
+     * @brief Get master volume level (0-100)
+     * @return Volume percentage (0=mute, 100=full)
+     */
+    int get_volume() const;
+
+    /**
+     * @brief Set master volume level
+     *
+     * Attenuates all sound output. Updates subject and persists.
+     *
+     * @param volume Volume percentage (0-100, clamped)
+     */
+    void set_volume(int volume);
+
+    /**
      * @brief Get UI sounds enabled state
      * @return true if UI interaction sounds (taps, nav) enabled
      */
@@ -649,6 +664,11 @@ class SettingsManager {
     /** @brief UI sounds enabled subject (integer: 0=off, 1=on) */
     lv_subject_t* subject_ui_sounds_enabled() {
         return &ui_sounds_enabled_subject_;
+    }
+
+    /** @brief Volume subject (integer: 0-100 percent) */
+    lv_subject_t* subject_volume() {
+        return &volume_subject_;
     }
 
     /** @brief Completion alert subject (integer: 0=off, 1=on) */
@@ -780,6 +800,7 @@ class SettingsManager {
     lv_subject_t led_enabled_subject_;
     lv_subject_t sounds_enabled_subject_;
     lv_subject_t ui_sounds_enabled_subject_;
+    lv_subject_t volume_subject_;
     lv_subject_t completion_alert_subject_;
     lv_subject_t estop_require_confirmation_subject_;
     lv_subject_t scroll_throw_subject_;

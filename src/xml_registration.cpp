@@ -283,6 +283,7 @@ void register_xml_components() {
     // Settings overlay panels
     lv_xml_register_component_from_file("A:ui_xml/about_overlay.xml");
     lv_xml_register_component_from_file("A:ui_xml/display_settings_overlay.xml");
+    lv_xml_register_component_from_file("A:ui_xml/sound_settings_overlay.xml");
     lv_xml_register_component_from_file("A:ui_xml/theme_editor_overlay.xml");
     lv_xml_register_component_from_file("A:ui_xml/theme_preview_overlay.xml");
     lv_xml_register_component_from_file("A:ui_xml/theme_save_as_modal.xml");

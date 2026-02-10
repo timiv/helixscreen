@@ -151,8 +151,8 @@ void SettingsManager::init_subjects() {
     // LED state (ephemeral, not persisted - start as off)
     UI_MANAGED_SUBJECT_INT(led_enabled_subject_, 0, "settings_led_enabled", subjects_);
 
-    // Sounds (default: true)
-    bool sounds = config->get<bool>("/sounds_enabled", true);
+    // Sounds (default: false)
+    bool sounds = config->get<bool>("/sounds_enabled", false);
     UI_MANAGED_SUBJECT_INT(sounds_enabled_subject_, sounds ? 1 : 0, "settings_sounds_enabled",
                            subjects_);
 
@@ -160,6 +160,10 @@ void SettingsManager::init_subjects() {
     bool ui_sounds = config->get<bool>("/ui_sounds_enabled", true);
     UI_MANAGED_SUBJECT_INT(ui_sounds_enabled_subject_, ui_sounds ? 1 : 0,
                            "settings_ui_sounds_enabled", subjects_);
+
+    // Volume (0-100, default 80)
+    int volume = std::clamp(config->get<int>("/sounds/volume", 80), 0, 100);
+    UI_MANAGED_SUBJECT_INT(volume_subject_, volume, "settings_volume", subjects_);
 
     // Completion alert mode (default: NOTIFICATION=1, handles old bool migration)
     int completion_mode = config->get<int>("/completion_alert", 1);
@@ -825,6 +829,23 @@ void SettingsManager::set_ui_sounds_enabled(bool enabled) {
     Config* config = Config::get_instance();
     config->set<bool>("/ui_sounds_enabled", enabled);
     config->save();
+}
+
+int SettingsManager::get_volume() const {
+    return lv_subject_get_int(const_cast<lv_subject_t*>(&volume_subject_));
+}
+
+void SettingsManager::set_volume(int volume) {
+    volume = std::clamp(volume, 0, 100);
+    spdlog::info("[SettingsManager] set_volume({})", volume);
+
+    lv_subject_set_int(&volume_subject_, volume);
+
+    Config* config = Config::get_instance();
+    if (config) {
+        config->set<int>("/sounds/volume", volume);
+        config->save();
+    }
 }
 
 std::string SettingsManager::get_sound_theme() const {

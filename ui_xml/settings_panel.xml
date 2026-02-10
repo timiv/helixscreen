@@ -88,36 +88,13 @@
     <!-- NOTIFICATIONS SECTION -->
     <!-- ================================================================== -->
     <setting_section_header title="NOTIFICATIONS" title_tag="NOTIFICATIONS" icon="notifications"/>
-    <!-- Sounds Toggle (hidden if no speaker capability) -->
-    <lv_obj name="container_sounds"
-            width="100%" style_pad_all="0" style_layout="flex" style_flex_flow="column" scrollable="false">
+    <!-- Sound Settings (opens overlay for volume, themes, UI sounds) -->
+    <lv_obj name="container_sound_settings" width="100%" style_pad_all="0" scrollable="false">
       <bind_flag_if_eq subject="printer_has_speaker" flag="hidden" ref_value="0"/>
-      <setting_toggle_row name="row_sounds"
-                          label="Sounds" label_tag="Sounds" icon="notifications" description="Enable audio feedback"
-                          description_tag="Enable audio feedback" callback="on_sounds_changed"/>
-      <!-- UI Sounds Toggle (hidden when master sounds off) -->
-      <lv_obj name="container_ui_sounds" width="100%" style_pad_all="0" scrollable="false">
-        <bind_flag_if_eq subject="settings_sounds_enabled" flag="hidden" ref_value="0"/>
-        <setting_toggle_row name="row_ui_sounds"
-                            label="UI Sounds" label_tag="UI Sounds" icon="notifications"
-                            description="Button taps and navigation sounds"
-                            description_tag="Button taps and navigation sounds" subject="settings_ui_sounds_enabled"
-                            callback="on_ui_sounds_changed"/>
-      </lv_obj>
-      <!-- Sound Theme Dropdown (hidden when master sounds off) -->
-      <lv_obj name="container_sound_theme" width="100%" style_pad_all="0" scrollable="false">
-        <bind_flag_if_eq subject="settings_sounds_enabled" flag="hidden" ref_value="0"/>
-        <setting_dropdown_row name="row_sound_theme"
-                              label="Sound Theme" label_tag="Sound Theme" icon="tune" description="Choose sound style"
-                              description_tag="Choose sound style" callback="on_sound_theme_changed"/>
-      </lv_obj>
-      <!-- Test Beep Button (hidden when master sounds off) -->
-      <lv_obj name="container_test_beep" width="100%" style_pad_all="0" scrollable="false">
-        <bind_flag_if_eq subject="settings_sounds_enabled" flag="hidden" ref_value="0"/>
-        <setting_action_row name="row_test_beep"
-                            label="Test Sound" label_tag="Test Sound" icon="play" description="Play a test beep"
-                            description_tag="Play a test beep" callback="on_test_beep"/>
-      </lv_obj>
+      <setting_action_row name="row_sound_settings"
+                          label="Sound Settings" label_tag="Sound Settings" icon="notifications"
+                          description="Volume, themes, and UI sounds" description_tag="Volume, themes, and UI sounds"
+                          callback="on_sound_settings_clicked"/>
     </lv_obj>
     <!-- Completion Alert Dropdown (Off/Notification/Alert) -->
     <setting_dropdown_row name="row_completion_alert"
@@ -199,13 +176,11 @@
     <setting_toggle_row name="row_telemetry"
                         label="Share Usage Data" label_tag="Share Usage Data" icon="chart_line"
                         description="Anonymous data to help improve HelixScreen"
-                        description_tag="Anonymous data to help improve HelixScreen"
-                        callback="on_telemetry_changed"/>
+                        description_tag="Anonymous data to help improve HelixScreen" callback="on_telemetry_changed"/>
     <setting_action_row name="row_telemetry_view_data"
                         label="View Telemetry Data" label_tag="View Telemetry Data" icon="list"
                         description="See exactly what data will be sent"
-                        description_tag="See exactly what data will be sent"
-                        callback="on_telemetry_view_data">
+                        description_tag="See exactly what data will be sent" callback="on_telemetry_view_data">
       <bind_flag_if_eq subject="settings_telemetry_enabled" flag="hidden" ref_value="0"/>
     </setting_action_row>
     <!-- Update Channel (gated by beta_features) -->

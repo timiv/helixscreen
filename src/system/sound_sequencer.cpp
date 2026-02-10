@@ -3,6 +3,7 @@
 
 #include "sound_sequencer.h"
 
+#include "settings_manager.h"
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
@@ -196,6 +197,10 @@ void SoundSequencer::tick(float dt_ms) {
             duty += lfo_val;
         }
     }
+
+    // Apply master volume attenuation
+    float volume = SettingsManager::instance().get_volume() / 100.0f;
+    amplitude *= volume;
 
     // Clamp outputs
     freq = std::clamp(freq, 20.0f, 20000.0f);

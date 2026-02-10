@@ -245,6 +245,9 @@ static const IconMapping ICON_MAP[] = {
     {"view_dashboard",     "\xF3\xB0\x95\xAE"},  // F056E view-dashboard
     {"view_grid",          "\xF3\xB0\x95\xB0"},  // F0570 view-grid
     {"view_list",          "\xF3\xB0\x95\xB2"},  // F0572 view-list
+    {"volume_high",        "\xF3\xB0\x95\xBE"},  // F057E volume-high
+    {"volume_low",         "\xF3\xB0\x96\x80"},  // F0580 volume-medium
+    {"volume_off",         "\xF3\xB0\x96\x81"},  // F0581 volume-off
 
     // Water/Weight/WiFi icons
     {"water",              "\xF3\xB0\x96\x8C"},  // F058C water/droplet
