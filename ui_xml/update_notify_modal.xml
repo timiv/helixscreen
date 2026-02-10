@@ -41,7 +41,7 @@
       <!-- View Changelog button (hidden when changelog is visible) -->
       <lv_obj width="100%" height="content"
               style_pad_top="0" style_pad_bottom="#space_md"
-              flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+              flex_flow="row" style_flex_main_place="center"
               scrollable="false">
         <bind_flag_if_eq subject="update_changelog_visible" flag="hidden" ref_value="1"/>
         <ui_button name="btn_toggle_changelog" text="View Changelog" translation_tag="View Changelog"
