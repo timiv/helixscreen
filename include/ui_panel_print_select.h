@@ -159,6 +159,7 @@ class PrintSelectPanel : public PanelBase {
      * This handles the case where set_api() was called before WebSocket connection.
      */
     void on_activate() override;
+    void on_deactivate() override;
 
     //
     // === Public API ===
@@ -469,6 +470,10 @@ class PrintSelectPanel : public PanelBase {
     // Debounce timer for view refresh (prevents rebuilding views for each metadata callback)
     lv_timer_t* refresh_timer_ = nullptr;
     static constexpr uint32_t REFRESH_DEBOUNCE_MS = 50; ///< Debounce delay for view refresh
+
+    // Periodic polling timer for file list (fallback when WebSocket notifications are missed)
+    lv_timer_t* file_poll_timer_ = nullptr;
+    static constexpr uint32_t FILE_POLL_INTERVAL_MS = 15000; ///< 15s polling fallback
 
     // Virtualized view modules (extracted for maintainability)
     std::unique_ptr<helix::ui::PrintSelectCardView> card_view_;

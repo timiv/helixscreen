@@ -199,10 +199,14 @@ PrintSelectPanel::~PrintSelectPanel() {
             lv_obj_remove_event_cb(list_rows_container_, on_scroll_static);
         }
 
-        // Delete pending timer
+        // Delete pending timers
         if (refresh_timer_) {
             lv_timer_delete(refresh_timer_);
             refresh_timer_ = nullptr;
+        }
+        if (file_poll_timer_) {
+            lv_timer_delete(file_poll_timer_);
+            file_poll_timer_ = nullptr;
         }
     }
 
@@ -1257,6 +1261,29 @@ void PrintSelectPanel::set_api(MoonrakerAPI* api) {
             });
         spdlog::debug("[{}] Registered for notify_filelist_changed notifications", get_name());
     }
+
+    // Create periodic polling timer as fallback for missed WebSocket notifications (issue #33)
+    // Some hardware (e.g. CB1) may not reliably deliver notify_filelist_changed.
+    // Timer starts paused — on_activate()/on_deactivate() control its lifecycle.
+    if (api_ && !file_poll_timer_) {
+        auto* self = this;
+        file_poll_timer_ = lv_timer_create(
+            [](lv_timer_t* timer) {
+                auto* panel = static_cast<PrintSelectPanel*>(lv_timer_get_user_data(timer));
+                if (!panel->panel_ || !lv_obj_is_valid(panel->panel_)) {
+                    return;
+                }
+                bool is_usb_active = panel->usb_source_ && panel->usb_source_->is_usb_active();
+                if (!is_usb_active) {
+                    spdlog::trace("[{}] Polling fallback: refreshing file list", panel->get_name());
+                    panel->refresh_files();
+                }
+            },
+            FILE_POLL_INTERVAL_MS, self);
+        lv_timer_pause(file_poll_timer_);
+        spdlog::debug("[{}] Created file list polling timer ({}ms, paused)", get_name(),
+                      FILE_POLL_INTERVAL_MS);
+    }
 }
 
 void PrintSelectPanel::check_moonraker_usb_symlink() {
@@ -1344,6 +1371,21 @@ void PrintSelectPanel::on_activate() {
         if (usb_source_) {
             usb_source_->refresh_files();
         }
+    }
+
+    // Resume file list polling while panel is visible
+    if (file_poll_timer_) {
+        lv_timer_resume(file_poll_timer_);
+        lv_timer_reset(file_poll_timer_); // Reset so first poll is a full interval from now
+        spdlog::trace("[{}] File list polling resumed", get_name());
+    }
+}
+
+void PrintSelectPanel::on_deactivate() {
+    // Pause file list polling while panel is hidden — no point polling when not visible
+    if (file_poll_timer_) {
+        lv_timer_pause(file_poll_timer_);
+        spdlog::trace("[{}] File list polling paused", get_name());
     }
 }
 
