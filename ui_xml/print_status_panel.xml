@@ -8,6 +8,8 @@
     <px name="metadata_clip_height_small" value="95"/>
     <px name="metadata_clip_height_medium" value="105"/>
     <px name="metadata_clip_height_large" value="113"/>
+    <!-- Thumbnail vertical offset to clear metadata overlay at bottom -->
+    <percentage name="thumbnail_offset_y" value="-40%"/>
     <!-- metadata_overlay_height: Inner metadata overlay (slightly taller than clip) -->
     <px name="metadata_overlay_height_small" value="101"/>
     <px name="metadata_overlay_height_medium" value="111"/>
@@ -53,7 +55,7 @@
         <!-- Thumbnail image (shown in thumbnail[0] mode only, hidden in 3D[1] and 2D[2]) -->
         <!-- Image source set programmatically via lv_image_set_src() when thumbnail available -->
         <lv_image name="print_thumbnail"
-                  width="100%" height="100%" align="center" inner_align="contain" style_translate_y="#preview_offset_y">
+                  width="100%" height="100%" align="center" inner_align="contain" style_translate_y="#thumbnail_offset_y">
           <bind_flag_if_gt subject="gcode_viewer_mode" flag="hidden" ref_value="0"/>
         </lv_image>
 
@@ -94,8 +96,8 @@
         <!-- PRINT COMPLETE OVERLAY: Shown when print finishes successfully -->
         <!-- Hidden by default. Binding removes hidden ONLY when outcome == COMPLETE (1) -->
         <lv_obj name="print_complete_overlay"
-                width="100%" height="100%" align="center" style_radius="0" style_pad_all="#space_lg"
-                style_pad_bottom="115" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+                width="100%" height="100%" align="top_mid" style_radius="0" style_pad_all="#space_lg"
+                style_pad_bottom="#metadata_clip_height" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
                 style_flex_track_place="center" style_pad_gap="#space_sm" scrollable="false" hidden="true">
           <bind_flag_if_not_eq subject="print_outcome" flag="hidden" ref_value="1"/>
           <!-- Green success badge with checkmark (animated on appearance) -->
@@ -110,8 +112,8 @@
         <!-- PRINT CANCELLED OVERLAY: Shown when print is cancelled -->
         <!-- Hidden by default. Binding removes hidden ONLY when outcome == CANCELLED (2) -->
         <lv_obj name="print_cancelled_overlay"
-                width="100%" height="100%" align="center" style_radius="0" style_pad_all="#space_lg"
-                style_pad_bottom="115" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+                width="100%" height="100%" align="top_mid" style_radius="0" style_pad_all="#space_lg"
+                style_pad_bottom="#metadata_clip_height" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
                 style_flex_track_place="center" style_pad_gap="#space_sm" scrollable="false" hidden="true">
           <bind_flag_if_not_eq subject="print_outcome" flag="hidden" ref_value="2"/>
           <!-- Orange warning badge with cancel icon (animated on appearance) -->
@@ -126,8 +128,8 @@
         <!-- PRINT ERROR OVERLAY: Shown when print fails with error -->
         <!-- Hidden by default. Binding removes hidden ONLY when outcome == ERROR (3) -->
         <lv_obj name="print_error_overlay"
-                width="100%" height="100%" align="center" style_radius="0" style_pad_all="#space_lg"
-                style_pad_bottom="115" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+                width="100%" height="100%" align="top_mid" style_radius="0" style_pad_all="#space_lg"
+                style_pad_bottom="#metadata_clip_height" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
                 style_flex_track_place="center" style_pad_gap="#space_sm" scrollable="false" hidden="true">
           <bind_flag_if_not_eq subject="print_outcome" flag="hidden" ref_value="3"/>
           <!-- Red danger badge with alert icon (animated on appearance) -->
