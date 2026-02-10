@@ -190,6 +190,10 @@ void SoundSettingsOverlay::init_volume_slider() {
         helix::fmt::format_percent(volume, volume_value_buf_, sizeof(volume_value_buf_));
         lv_subject_copy_string(&volume_value_subject_, volume_value_buf_);
 
+        // Play test beep on release so user hears the new volume level
+        // (XML component only exposes value_changed callback, so we add released here)
+        lv_obj_add_event_cb(slider, on_volume_released, LV_EVENT_RELEASED, nullptr);
+
         spdlog::debug("[{}] Volume slider initialized to {}%", get_name(), volume);
     }
 
@@ -317,6 +321,12 @@ void SoundSettingsOverlay::on_volume_changed(lv_event_t* e) {
     auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
     int value = lv_slider_get_value(slider);
     get_sound_settings_overlay().handle_volume_changed(value);
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void SoundSettingsOverlay::on_volume_released(lv_event_t* /*e*/) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[SoundSettingsOverlay] on_volume_released");
+    SoundManager::instance().play_test_beep();
     LVGL_SAFE_EVENT_CB_END();
 }
 

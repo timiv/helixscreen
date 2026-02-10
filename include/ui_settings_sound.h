@@ -102,6 +102,7 @@ class SoundSettingsOverlay : public OverlayBase {
     static void on_sounds_changed(lv_event_t* e);
     static void on_ui_sounds_changed(lv_event_t* e);
     static void on_volume_changed(lv_event_t* e);
+    static void on_volume_released(lv_event_t* e);
     static void on_sound_theme_changed(lv_event_t* e);
     static void on_test_beep(lv_event_t* e);
 };
