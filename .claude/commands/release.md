@@ -74,12 +74,22 @@ Store the resolved version as `NEW_VERSION` (without `v` prefix) for all subsequ
 
 Run tests. This is mandatory and cannot be skipped.
 
+### C++ tests
 ```bash
 make test-run
 ```
 
 - If tests pass → continue
 - If tests fail → STOP: "Tests failed — fix before releasing." Show the failure output.
+
+### Shell tests
+```bash
+make test-shell
+```
+
+- If tests pass → continue
+- If bats is not installed → STOP: "bats not found — install it before releasing." Show the installation instructions from the make output.
+- If tests fail → STOP: "Shell tests failed — fix before releasing." Show the failure output.
 
 ---
 
