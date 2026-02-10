@@ -174,16 +174,14 @@ static void on_delete(lv_event_t* e) {
         std::unique_ptr<TempDisplayData> data(it->second);
         s_registry.erase(it);
 
-        // Remove observers BEFORE freeing subjects (DELETE event fires before
-        // children are deleted, so observers must be explicitly removed first)
-        if (data->current_text_observer) {
-            lv_observer_remove(data->current_text_observer);
-            data->current_text_observer = nullptr;
-        }
-        if (data->target_text_observer) {
-            lv_observer_remove(data->target_text_observer);
-            data->target_text_observer = nullptr;
-        }
+        // Deinitialize subjects to properly remove all attached observers.
+        // lv_subject_deinit() removes observers from the subject side, which
+        // also removes their unsubscribe_on_delete_cb from child widgets.
+        // This is safe because we own these subjects. Manual lv_observer_remove()
+        // would free the observer, but LVGL's child-delete would then try to
+        // fire unsubscribe_on_delete_cb on the freed observer → crash.
+        lv_subject_deinit(&data->current_text_subject);
+        lv_subject_deinit(&data->target_text_subject);
         // data automatically freed when unique_ptr goes out of scope
     }
 }

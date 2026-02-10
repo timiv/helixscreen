@@ -2003,23 +2003,21 @@ void Application::shutdown() {
     lv_anim_delete_all();
 
     // Destroy ALL static panel/overlay globals via self-registration pattern.
-    // Must happen BEFORE lv_deinit() so ObserverGuards can properly unsubscribe
-    // from subjects that still exist. Safe at this point because m_moonraker is
-    // already reset, preventing async callbacks from recreating panels.
+    // This deinits local subjects (via SubjectManager) and releases ObserverGuards.
+    // Must happen while LVGL is still initialized so lv_observer_remove() can
+    // properly remove unsubscribe_on_delete_cb from widget event lists.
     StaticPanelRegistry::instance().destroy_all();
 
-    // Shutdown display (calls lv_deinit) BEFORE deiniting subjects.
-    // lv_deinit() deletes all widgets, firing LV_EVENT_DELETE which triggers
-    // unsubscribe_on_delete_cb to properly remove widget-bound observers
-    // (from XML bind_text, bind_flag_if_eq, etc.) from subject linked lists.
-    // If subjects are deinited first, those observers get freed, leaving
-    // dangling pointers that crash when widget deletion tries to unsubscribe.
-    m_display.reset();
-
     // Deinitialize core singleton subjects (PrinterState, AmsState, SettingsManager, etc.)
-    // Now safe: widget-bound observers were already removed by lv_deinit() above,
-    // so lv_subject_deinit() only cleans up any remaining non-widget observers.
+    // BEFORE lv_deinit(). lv_subject_deinit() calls lv_observer_remove() for each
+    // observer, which removes unsubscribe_on_delete_cb from widget event lists.
+    // After this, widgets have no observer callbacks, so lv_deinit() deletes them
+    // cleanly without firing stale unsubscribe callbacks on corrupted linked lists.
     StaticSubjectRegistry::instance().deinit_all();
+
+    // Shutdown display (calls lv_deinit). All observer callbacks were already
+    // removed above, so widget deletion is clean — no observer linked list access.
+    m_display.reset();
 
     spdlog::info("[Application] Shutdown complete");
 }

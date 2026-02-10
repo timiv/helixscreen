@@ -125,20 +125,13 @@ static void unregister_slot_data(lv_obj_t* obj) {
         // Take ownership with unique_ptr for automatic cleanup
         std::unique_ptr<AmsSlotData> data(it->second);
         if (data) {
-            // Remove bind_text observers BEFORE freeing subjects (DELETE event fires
-            // before children are deleted, so observers must be explicitly removed)
-            if (data->material_observer) {
-                lv_observer_remove(data->material_observer);
-                data->material_observer = nullptr;
-            }
-            if (data->slot_badge_observer) {
-                lv_observer_remove(data->slot_badge_observer);
-                data->slot_badge_observer = nullptr;
-            }
-            if (data->tool_badge_observer) {
-                lv_observer_remove(data->tool_badge_observer);
-                data->tool_badge_observer = nullptr;
-            }
+            // Deinitialize subjects to properly remove all attached observers.
+            // lv_subject_deinit() removes observers from the subject side, which
+            // also removes their unsubscribe_on_delete_cb from child widgets.
+            // Safe because we own these subjects.
+            lv_subject_deinit(&data->material_subject);
+            lv_subject_deinit(&data->slot_badge_subject);
+            lv_subject_deinit(&data->tool_badge_subject);
 
             // Release ObserverGuard observers before delete to prevent destructors
             // from calling lv_observer_remove() on destroyed subjects
