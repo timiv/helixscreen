@@ -14,9 +14,9 @@
   <a href="https://github.com/prestonbrown/helixscreen/releases"><img src="https://img.shields.io/github/v/release/prestonbrown/helixscreen?label=version" alt="Version"></a>
 </p>
 
-Stock touchscreen UIs barely scratch the surface of what Klipper can do—and the good stuff (bed mesh visualization, input shaper graphs, multi-material control) lives in your browser. HelixScreen brings it all to your fingertips.
+Your printer can do way more than your current touchscreen lets you. Bed mesh visualization, input shaper graphs, multi-material management, print history — it's all trapped in a browser tab. HelixScreen puts it at your fingertips.
 
-Built on LVGL 9's modern declarative XML system, HelixScreen delivers a fast, polished experience across the entire Klipper ecosystem—from resource-constrained machines like the Creality K1, K2 series, and FlashForge AD5M to custom Vorons, RatRigs, and high-end builds.
+Fast, beautiful, and built for every Klipper printer — from a Creality K1 to a tricked-out Voron or RatRig.
 
 ---
 
@@ -24,7 +24,7 @@ Built on LVGL 9's modern declarative XML system, HelixScreen delivers a fast, po
 >
 > Core features are complete and stabilizing. We're looking for testers across different printer setups.
 >
-> **Tested on:** Voron 2.4 (Raspberry Pi 5), Voron 0.2, Doron Velta, FlashForge Adventurer 5M Pro ([Forge-X](https://github.com/DrA1ex/ff5m) firmware)
+> **Tested on:** Voron 2.4 (Raspberry Pi 5), Voron 0.2, Doron Velta, RatRig V-Core, FlashForge Adventurer 5M Pro ([Forge-X](https://github.com/DrA1ex/ff5m) firmware)
 >
 > **Raspberry Pi:** Both 64-bit and 32-bit Raspberry Pi OS are supported.
 >
@@ -42,11 +42,14 @@ Built on LVGL 9's modern declarative XML system, HelixScreen delivers a fast, po
 
 ## Why HelixScreen?
 
-- **Declarative XML UI** — Change layouts without recompiling
-- **Reactive Data Binding** — Subject-Observer pattern for automatic UI updates
-- **Resource Efficient** — ~10MB RAM, runs on constrained hardware
-- **Scales Anywhere** — From a Creality K1 or K2 to a tricked-out Voron
-- **Modern C++17** — Type-safe architecture with RAII memory management
+- **Every feature at your fingertips** — 31 panels, 17 overlays, and growing fast
+- **Runs on anything** — ~10MB RAM, from a Creality K1 to a Raspberry Pi 5
+- **Setup wizard** — Auto-discovers your printer's hardware and configures itself
+- **Multi-material ready** — AFC, Happy Hare, tool changers, ValgACE, Spoolman
+- **Looks great** — Light/dark themes, responsive layouts, smooth animations
+
+<details>
+<summary><strong>Technical comparison</strong></summary>
 
 | Feature | HelixScreen | GuppyScreen | KlipperScreen |
 |---------|-------------|-------------|---------------|
@@ -57,6 +60,8 @@ Built on LVGL 9's modern declarative XML system, HelixScreen delivers a fast, po
 | Reactive Binding | Built-in | Manual | Manual |
 | Status | Beta | Inactive | Mature (maintenance) |
 | Language | C++17 | C | Python 3 |
+
+</details>
 
 ## Screenshots
 
@@ -126,10 +131,10 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for detailed setup, cross-compila
 Beta status. Core features are stable and improving with each release. Suitable for enthusiasts willing to provide feedback.
 
 **How is this different from GuppyScreen/KlipperScreen?**
-HelixScreen uses LVGL 9's declarative XML—change layouts without recompiling. ~10MB RAM vs ~50MB for KlipperScreen. See the [comparison table](#why-helixscreen).
+More features, way less resource usage (~10MB RAM vs ~50MB for KlipperScreen), and actively developed. See the [comparison table](#why-helixscreen).
 
 **Which printers are supported?**
-Any Klipper + Moonraker printer. Tested on Voron 2.4, Voron 0.2, Doron Velta, and FlashForge Adventurer 5M Pro. Both 64-bit and 32-bit Raspberry Pi OS are supported. Creality K1 and K2 series binaries are available but untested. The wizard auto-discovers your printer's capabilities.
+Any Klipper + Moonraker printer. Tested on Voron 2.4, Voron 0.2, Doron Velta, RatRig V-Core, and FlashForge Adventurer 5M Pro. Both 64-bit and 32-bit Raspberry Pi OS are supported. Creality K1 and K2 series binaries are available but untested. The wizard auto-discovers your printer's capabilities.
 
 **What screen sizes are supported?**
 800×480 and up (including 1024×600) work well. Smaller displays like 480×320 are a work-in-progress — they'll run but may have some layout overlap issues.
