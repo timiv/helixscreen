@@ -5,6 +5,36 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.11] - 2026-02-10
+
+Sound system, KIAUH installer, display rotation, PID tuning, and timelapse support — plus a splash screen fix for AD5M.
+
+### Added
+- Sound system with multi-backend synthesizer engine (SDL audio, PWM sysfs, M300 G-code), JSON sound themes (minimal, retro chiptune), toggle sounds, and theme preview
+- Sound settings overlay with volume slider and test beep on release
+- KIAUH installer integration for one-click install from KIAUH menu
+- Display rotation support for all three binaries (main, splash, watchdog)
+- PID tuning calibration with fan control and material presets
+- Timelapse plugin detection, install wizard, and settings UI (beta)
+- Versioned config migration system
+- Shadow support and consistent borders across widgets
+- Platform-aware cache directory resolution for embedded targets
+- Telemetry analytics pipeline with admin API, pull script, and analyzer
+
+### Fixed
+- Splash process not killed on AD5M when pre-started by init script (display flashing)
+- Layer count tracking with G-code response fallback
+- Print file list 15-second polling fallback for missed WebSocket updates
+- Display wake from sleep on SDL click
+- Translation sync with extractor false-positive cleanup
+- Cross-compiled binaries now auto-stripped after linking
+- Build system tracks lv_conf.h as LVGL compile prerequisite
+- LayerTracker debug log spam reduced to change-only logging
+
+### Changed
+- Sound system and timelapse gated behind beta features flag
+- Bug report and feature request GitHub issue templates added
+
 ## [0.9.10] - 2026-02-10
 
 Hotfix release — gradient and flag images were broken for all users due to a missing decoder setting, and WiFi initialization caused a 5-second startup delay on NetworkManager-based systems.
@@ -310,6 +340,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.9.11]: https://github.com/prestonbrown/helixscreen/compare/v0.9.10...v0.9.11
 [0.9.10]: https://github.com/prestonbrown/helixscreen/compare/v0.9.9...v0.9.10
 [0.9.9]: https://github.com/prestonbrown/helixscreen/compare/v0.9.8...v0.9.9
 [0.9.8]: https://github.com/prestonbrown/helixscreen/compare/v0.9.7...v0.9.8
