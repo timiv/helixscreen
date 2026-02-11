@@ -31,8 +31,8 @@
     <header_bar name="overlay_header" title="Bed Screw Adjustment" title_tag="Bed Screw Adjustment"/>
     <!-- Content Area -->
     <lv_obj name="overlay_content"
-            width="100%" flex_grow="1" style_pad_left="#space_lg" style_pad_right="#space_lg" style_pad_top="#space_md"
-            style_pad_bottom="#space_md" flex_flow="column" style_pad_gap="#space_md" scrollable="false">
+            width="100%" flex_grow="1" style_pad_all="#space_lg"
+            flex_flow="column" style_pad_gap="#space_md" scrollable="false">
       <!-- ================================================================== -->
       <!-- STATE: IDLE - Instructions and Start Button -->
       <!-- ================================================================== -->
