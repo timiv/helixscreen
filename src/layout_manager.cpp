@@ -60,6 +60,14 @@ std::string LayoutManager::resolve_xml_path(const std::string& filename) const {
     return "ui_xml/" + filename;
 }
 
+bool LayoutManager::has_override(const std::string& filename) const {
+    if (is_standard()) {
+        return false;
+    }
+    std::string variant_path = "ui_xml/" + name_ + "/" + filename;
+    return access(variant_path.c_str(), F_OK) == 0;
+}
+
 LayoutType LayoutManager::detect(int width, int height) const {
     float ratio = static_cast<float>(width) / static_cast<float>(height);
     int max_dim = std::max(width, height);

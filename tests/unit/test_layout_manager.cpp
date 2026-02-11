@@ -192,3 +192,37 @@ TEST_CASE_METHOD(LayoutFixture, "resolve_xml_path falls back to base for non-sta
     // No variant file exists on disk, so should fall back
     REQUIRE(lm.resolve_xml_path("nonexistent_panel.xml") == "ui_xml/nonexistent_panel.xml");
 }
+
+// ============================================================================
+// Ultrawide override integration (requires ui_xml/ultrawide/home_panel.xml on disk)
+// ============================================================================
+
+TEST_CASE_METHOD(LayoutFixture,
+                 "resolve_xml_path returns ultrawide override when file exists on disk",
+                 "[layout-manager]") {
+    auto& lm = LayoutManager::instance();
+    lm.init(1920, 480);
+    REQUIRE(lm.type() == LayoutType::ULTRAWIDE);
+
+    // home_panel.xml has an ultrawide override -> should resolve to ultrawide path
+    REQUIRE(lm.resolve_xml_path("home_panel.xml") == "ui_xml/ultrawide/home_panel.xml");
+}
+
+TEST_CASE_METHOD(LayoutFixture, "resolve_xml_path falls back for panels without ultrawide override",
+                 "[layout-manager]") {
+    auto& lm = LayoutManager::instance();
+    lm.init(1920, 480);
+    REQUIRE(lm.type() == LayoutType::ULTRAWIDE);
+
+    // controls_panel.xml has no ultrawide override -> should fall back to standard
+    REQUIRE(lm.resolve_xml_path("controls_panel.xml") == "ui_xml/controls_panel.xml");
+}
+
+TEST_CASE_METHOD(LayoutFixture, "has_override returns true for ultrawide home_panel",
+                 "[layout-manager]") {
+    auto& lm = LayoutManager::instance();
+    lm.init(1920, 480);
+
+    REQUIRE(lm.has_override("home_panel.xml") == true);
+    REQUIRE(lm.has_override("controls_panel.xml") == false);
+}

@@ -22,6 +22,7 @@ class LayoutManager {
     LayoutType type() const;
     const std::string& name() const;
     std::string resolve_xml_path(const std::string& filename) const;
+    bool has_override(const std::string& filename) const;
     bool is_standard() const;
 
     // Testing only: reset state so singleton can be re-initialized

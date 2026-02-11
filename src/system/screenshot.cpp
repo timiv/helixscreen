@@ -5,8 +5,6 @@
 
 #include "ui_error_reporting.h"
 
-#include "app_globals.h"
-
 #include <spdlog/spdlog.h>
 
 #include <cstdio>
@@ -66,14 +64,9 @@ bool write_bmp(const char* filename, const uint8_t* data, int width, int height)
 }
 
 void save_screenshot() {
-    // Generate unique filename with timestamp in cache directory
-    std::string cache_dir = get_helix_cache_dir("screenshots");
-    if (cache_dir.empty()) {
-        spdlog::error("[Screenshot] Failed to resolve cache directory");
-        return;
-    }
-    std::string filename = cache_dir + "/ui-screenshot-" +
-                           std::to_string(static_cast<unsigned long>(time(nullptr))) + ".bmp";
+    // Generate unique filename with timestamp in /tmp
+    std::string filename =
+        "/tmp/ui-screenshot-" + std::to_string(static_cast<unsigned long>(time(nullptr))) + ".bmp";
 
     // Take snapshot using LVGL's native API (platform-independent)
     lv_obj_t* screen = lv_screen_active();
