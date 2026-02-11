@@ -251,9 +251,10 @@ HelixScreen is a **local touchscreen** UI - users are physically present at the 
 **Lower priority for this form factor:**
 - Camera (you can see the printer with your eyes)
 - Job queue (requires manual print removal between jobs)
-- Remote monitoring features
+- System stats (CPU/memory) — not diagnosing remote issues
+- Remote access/monitoring features
 
-See `docs/IDEAS.md` § "Design Philosophy: Local vs Remote UI" for full rationale.
+Don't copy features from web UIs just because "competitors have it" — evaluate whether it makes sense for a local touchscreen.
 
 ---
 

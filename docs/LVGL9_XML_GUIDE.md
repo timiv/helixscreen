@@ -1062,6 +1062,15 @@ lv_obj_update_layout(panel);  // Required for grid layouts
 
 **Note:** SIZE_CONTENT disables flex wrapping - use explicit width if you need `row_wrap`.
 
+#### 6. lv_bar value=0 Bug (Upstream)
+
+Bar shows FULL instead of empty when created with `cur_value=0` and XML sets `value=0`. `lv_bar_set_value()` returns early without invalidation because old == new. Workaround: set to 1 then 0.
+
+```cpp
+lv_bar_set_value(bar, 1, LV_ANIM_OFF);
+lv_bar_set_value(bar, 0, LV_ANIM_OFF);
+```
+
 ### Debugging Checklist
 
 When layouts don't work:
