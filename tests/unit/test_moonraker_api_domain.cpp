@@ -59,7 +59,7 @@ class MoonrakerAPIDomainTestFixture {
   public:
     MoonrakerAPIDomainTestFixture() : mock_client(MoonrakerClientMock::PrinterType::VORON_24) {
         // Initialize printer state
-        state.init_subjects();
+        state.init_subjects(false);
 
         // Connect mock client (required for discovery)
         mock_client.connect("ws://mock/websocket", []() {}, []() {});
@@ -155,7 +155,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture, "PrinterHardware::guess_main_led
 TEST_CASE("PrinterHardware guessing works for multiple printer types",
           "[printer][guessing][printers]") {
     PrinterState state;
-    state.init_subjects();
+    state.init_subjects(false);
 
     SECTION("VORON_24 printer type") {
         MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
@@ -343,7 +343,7 @@ TEST_CASE("BedMeshProfile struct initialization", "[slow][api][bedmesh]") {
 TEST_CASE("PrinterHardware and MoonrakerAPI domain methods work for all printer types",
           "[printer][api][domain][all_printers]") {
     PrinterState state;
-    state.init_subjects();
+    state.init_subjects(false);
 
     std::vector<MoonrakerClientMock::PrinterType> printer_types = {
         MoonrakerClientMock::PrinterType::VORON_24,
@@ -402,7 +402,7 @@ TEST_CASE("PrinterHardware and MoonrakerAPI domain methods work for all printer 
 TEST_CASE("MoonrakerAPI hardware() returns discovery data after discovery completes",
           "[api][hardware]") {
     PrinterState state;
-    state.init_subjects();
+    state.init_subjects(false);
 
     MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::VORON_24);
     mock.connect("ws://mock/websocket", []() {}, []() {});
@@ -435,7 +435,7 @@ TEST_CASE("MoonrakerAPI hardware() returns discovery data after discovery comple
 
 TEST_CASE("MoonrakerAPI hardware() accessor provides const access", "[api][hardware]") {
     PrinterState state;
-    state.init_subjects();
+    state.init_subjects(false);
 
     MoonrakerClientMock mock(MoonrakerClientMock::PrinterType::CREALITY_K1);
     mock.connect("ws://mock/websocket", []() {}, []() {});

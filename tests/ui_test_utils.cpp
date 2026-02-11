@@ -47,25 +47,23 @@ uint32_t lv_timer_handler_safe() {
     // These include lv_async_call (period=0, repeat=1) and scheduled
     // retry timers. Process in a loop since callbacks may create new ones.
     uint32_t now = lv_tick_get();
-    bool processed_any;
-    int safety_counter = 100; // Prevent infinite loops
-    do {
-        processed_any = false;
+    for (int safety = 0; safety < 100; safety++) {
+        bool found = false;
         t = lv_timer_get_next(nullptr);
-        while (t && safety_counter > 0) {
+        while (t) {
             lv_timer_t* next = lv_timer_get_next(t); // Save next before potential deletion
             if (t->repeat_count > 0 && (now - t->last_run >= t->period)) {
-                // Execute this one-shot timer
                 if (t->timer_cb) {
                     t->timer_cb(t);
-                    processed_any = true;
-                    safety_counter--;
+                    found = true;
                     break; // Restart iteration since list may have changed
                 }
             }
             t = next;
         }
-    } while (processed_any && safety_counter > 0);
+        if (!found)
+            break; // No more ready one-shot timers
+    }
 
     // Call lv_timer_handler() with all timers paused (no-op, just updates state)
     uint32_t result = lv_timer_handler();

@@ -22,12 +22,12 @@
 #include "../../include/moonraker_client.h"
 #include "../../include/moonraker_client_mock.h"
 #include "../../lvgl/lvgl.h"
+#include "../ui_test_utils.h"
 
 #include <chrono>
 #include <thread>
 
 #include "../catch_amalgamated.hpp"
-#include "../ui_test_utils.h"
 
 // ============================================================================
 // Global LVGL Initialization (called once)
@@ -64,7 +64,7 @@ class ExcludeObjectTestFixture {
   public:
     ExcludeObjectTestFixture() {
         // Initialize printer state
-        state.init_subjects();
+        state.init_subjects(false);
 
         // Create disconnected client for validation testing
         client = std::make_unique<MoonrakerClient>();
@@ -116,7 +116,7 @@ class ExcludeObjectMockTestFixture {
   public:
     ExcludeObjectMockTestFixture() : mock_client(MoonrakerClientMock::PrinterType::VORON_24) {
         // Initialize printer state
-        state.init_subjects();
+        state.init_subjects(false);
 
         // Connect mock client (required for send_jsonrpc to work)
         mock_client.connect("ws://mock/websocket", []() {}, []() {});

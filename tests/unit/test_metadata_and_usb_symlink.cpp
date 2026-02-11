@@ -16,13 +16,13 @@
 #include "../../include/moonraker_client_mock.h"
 #include "../../include/ui_print_select_usb_source.h"
 #include "../../lvgl/lvgl.h"
+#include "../ui_test_utils.h"
 
 #include <atomic>
 #include <chrono>
 #include <thread>
 
 #include "../catch_amalgamated.hpp"
-#include "../ui_test_utils.h"
 
 // ============================================================================
 // Global LVGL Initialization (called once)
@@ -56,7 +56,7 @@ class MetadataAPITestFixture {
   public:
     MetadataAPITestFixture() : mock_client(MoonrakerClientMock::PrinterType::VORON_24) {
         // Initialize printer state
-        state.init_subjects();
+        state.init_subjects(false);
 
         // Connect mock client
         mock_client.connect("ws://mock/websocket", []() {}, []() {});

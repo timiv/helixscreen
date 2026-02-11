@@ -227,7 +227,8 @@ TEST_CASE_METHOD(LVGLTestFixture, "ThemeManager toggles dark mode", "[theme-mana
     auto& tm = ThemeManager::instance();
     tm.init();
 
-    // Default is dark
+    // Explicitly set to dark mode first (may not be default if other tests ran)
+    tm.set_dark_mode(true);
     REQUIRE(tm.is_dark_mode() == true);
 
     // Toggle to light
@@ -243,6 +244,9 @@ TEST_CASE_METHOD(LVGLTestFixture, "Styles update when mode changes",
                  "[theme-manager][mode-change]") {
     auto& tm = ThemeManager::instance();
     tm.init();
+
+    // Ensure we start in dark mode
+    tm.set_dark_mode(true);
 
     lv_style_t* card = tm.get_style(StyleRole::Card);
     lv_style_value_t dark_bg;

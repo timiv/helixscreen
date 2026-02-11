@@ -5,13 +5,13 @@
 #include "../../include/moonraker_client.h"
 #include "../../include/printer_state.h"
 #include "../../lvgl/lvgl.h"
+#include "../ui_test_utils.h"
 
 #include <atomic>
 #include <chrono>
 #include <thread>
 
 #include "../catch_amalgamated.hpp"
-#include "../ui_test_utils.h"
 
 // ============================================================================
 // Global LVGL Initialization
@@ -39,7 +39,7 @@ static LVGLInitializerHelixPrint lvgl_init_helix;
 class HelixPrintAPITestFixture {
   public:
     HelixPrintAPITestFixture() {
-        state.init_subjects();
+        state.init_subjects(false);
         client = std::make_unique<MoonrakerClient>();
         api = std::make_unique<MoonrakerAPI>(*client, state);
         reset_callbacks();

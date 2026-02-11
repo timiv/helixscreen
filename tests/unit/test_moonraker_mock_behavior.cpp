@@ -861,7 +861,7 @@ TEST_CASE("MoonrakerClientMock hardware discovery", "[connection][slow][hardware
 
         // Set up API for testing bed mesh functionality
         PrinterState state;
-        state.init_subjects();
+        state.init_subjects(false);
         mock.connect("ws://mock/websocket", []() {}, []() {});
         mock.discover_printer([]() {});
         MoonrakerAPIMock api(mock, state);

@@ -42,7 +42,7 @@ static LVGLInitializerProxies lvgl_init;
 class ProxyTestFixture {
   public:
     ProxyTestFixture() : mock_client(MoonrakerClientMock::PrinterType::VORON_24) {
-        state.init_subjects();
+        state.init_subjects(false);
         mock_client.connect("ws://mock:7125/websocket", []() {}, []() {});
         api = std::make_unique<MoonrakerAPI>(mock_client, state);
         mock_client.discover_printer([]() {});

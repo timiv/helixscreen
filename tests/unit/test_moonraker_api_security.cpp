@@ -50,8 +50,8 @@ static LVGLInitializer lvgl_init;
 class MoonrakerAPITestFixture {
   public:
     MoonrakerAPITestFixture() {
-        // Initialize printer state
-        state.init_subjects();
+        // Initialize printer state (no XML registration - local instance, not singleton)
+        state.init_subjects(false);
 
         // Create disconnected client for validation testing
         // Validation happens before any network I/O, so disconnected client is fine
