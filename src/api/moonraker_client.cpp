@@ -135,6 +135,20 @@ MoonrakerClient::~MoonrakerClient() {
         }
     }
     // If try_lock failed, we're likely in static destruction - skip cleanup
+
+    // Clear method callbacks safely. Lambdas in this map may capture shared_ptrs
+    // to objects (e.g. NoiseCheckCollector) whose destructors call
+    // unregister_method_callback(). By moving the map to a local first, the member
+    // is empty when those destructors fire, so unregister finds nothing and returns
+    // harmlessly. The mutex is safe here since we're on the main thread and not
+    // in static destruction (we got here through normal Application::shutdown()).
+    if (callbacks_mutex_.try_lock()) {
+        decltype(method_callbacks_) doomed_callbacks = std::move(method_callbacks_);
+        method_callbacks_.clear();
+        callbacks_mutex_.unlock();
+        // doomed_callbacks destructs here - lambda destructors may call unregister,
+        // but method_callbacks_ is now empty so they'll no-op
+    }
 }
 
 void MoonrakerClient::set_connection_state(ConnectionState new_state) {
@@ -838,6 +852,11 @@ void MoonrakerClient::register_method_callback(const std::string& method,
 
 bool MoonrakerClient::unregister_method_callback(const std::string& method,
                                                  const std::string& handler_name) {
+    // During destruction, method_callbacks_ may already be cleared or mid-destruction.
+    // Skip the erase to avoid use-after-free on the map's internal tree.
+    if (is_destroying_.load()) {
+        return false;
+    }
     std::lock_guard<std::mutex> lock(callbacks_mutex_);
     auto method_it = method_callbacks_.find(method);
     if (method_it == method_callbacks_.end()) {
