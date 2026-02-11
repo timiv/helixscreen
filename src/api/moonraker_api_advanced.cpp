@@ -8,6 +8,8 @@
 #include "moonraker_api_internal.h"
 #include "spdlog/spdlog.h"
 
+#include <algorithm>
+#include <chrono>
 #include <iomanip>
 #include <memory>
 #include <regex>
@@ -658,17 +660,25 @@ class ScrewsTiltCollector : public std::enable_shared_from_this<ScrewsTiltCollec
  * This class collects and parses those lines until the sequence completes.
  *
  * Expected output format:
- *   Fitted shaper 'zv' frequency = 35.8 Hz (vibrations = 22.7%, smoothing ~= 0.100)
- *   Fitted shaper 'mzv' frequency = 36.7 Hz (vibrations = 7.2%, smoothing ~= 0.140)
+ *   Testing frequency 5.00 Hz
  *   ...
- *   Recommended shaper is mzv @ 36.7 Hz
+ *   Testing frequency 100.00 Hz
+ *   Wait for calculations..
+ *   Fitted shaper 'zv' frequency = 35.8 Hz (vibrations = 22.7%, smoothing ~= 0.100)
+ *   suggested max_accel <= 4000 mm/sec^2
+ *   Fitted shaper 'mzv' frequency = 36.7 Hz (vibrations = 7.2%, smoothing ~= 0.140)
+ *   suggested max_accel <= 5400 mm/sec^2
+ *   ...
+ *   Recommended shaper_type_x = mzv, shaper_freq_x = 36.7 Hz
+ *   calibration data written to /tmp/calibration_data_x_*.csv
  */
 class InputShaperCollector : public std::enable_shared_from_this<InputShaperCollector> {
   public:
-    InputShaperCollector(MoonrakerClient& client, char axis, InputShaperCallback on_success,
-                         MoonrakerAPI::ErrorCallback on_error)
-        : client_(client), axis_(axis), on_success_(std::move(on_success)),
-          on_error_(std::move(on_error)) {}
+    InputShaperCollector(MoonrakerClient& client, char axis, AdvancedProgressCallback on_progress,
+                         InputShaperCallback on_success, MoonrakerAPI::ErrorCallback on_error)
+        : client_(client), axis_(axis), on_progress_(std::move(on_progress)),
+          on_success_(std::move(on_success)), on_error_(std::move(on_error)),
+          last_activity_(std::chrono::steady_clock::now()) {}
 
     ~InputShaperCollector() {
         unregister();
@@ -712,6 +722,9 @@ class InputShaperCollector : public std::enable_shared_from_this<InputShaperColl
         const std::string& line = msg["params"][0].get_ref<const std::string&>();
         spdlog::trace("[InputShaperCollector] Received: {}", line);
 
+        // Reset activity watchdog
+        last_activity_ = std::chrono::steady_clock::now();
+
         // Check for unknown command error
         if (line.find("Unknown command") != std::string::npos &&
             line.find("SHAPER_CALIBRATE") != std::string::npos) {
@@ -720,32 +733,84 @@ class InputShaperCollector : public std::enable_shared_from_this<InputShaperColl
             return;
         }
 
-        // Parse shaper fit lines
-        // Format: "Fitted shaper 'mzv' frequency = 36.7 Hz (vibrations = 7.2%, smoothing ~= 0.140)"
-        if (line.find("Fitted shaper") != std::string::npos) {
-            parse_shaper_line(line);
+        // Parse frequency sweep lines: "Testing frequency 62.00 Hz"
+        if (line.find("Testing frequency") != std::string::npos) {
+            parse_sweep_line(line);
+            return;
         }
 
-        // Parse recommendation line
-        // Format: "Recommended shaper is mzv @ 36.7 Hz"
+        // Parse "Wait for calculations.." — transition to CALCULATING
+        if (line.find("Wait for calculations") != std::string::npos) {
+            if (collector_state_ != CollectorState::CALCULATING) {
+                collector_state_ = CollectorState::CALCULATING;
+                emit_progress(55, "Calculating results...");
+            }
+            return;
+        }
+
+        // Parse shaper fit lines
+        if (line.find("Fitted shaper") != std::string::npos) {
+            parse_shaper_line(line);
+            return;
+        }
+
+        // Parse max_accel lines: "suggested max_accel <= 4000 mm/sec^2"
+        if (line.find("suggested max_accel") != std::string::npos) {
+            parse_max_accel_line(line);
+            return;
+        }
+
+        // Parse recommendation line (try new format first, then old)
         if (line.find("Recommended shaper") != std::string::npos) {
             parse_recommendation(line);
-            // Recommendation marks completion
             complete_success();
             return;
         }
 
-        // Error detection - be specific to avoid false positives
-        if (line.rfind("!! ", 0) == 0 ||                // Klipper emergency errors
-            line.rfind("Error: ", 0) == 0 ||            // Standard errors
-            line.find("error:") != std::string::npos) { // Python traceback
+        // Parse CSV path: "calibration data written to /tmp/calibration_data_x_*.csv"
+        if (line.find("calibration data written to") != std::string::npos) {
+            parse_csv_path(line);
+            return;
+        }
+
+        // Error detection
+        if (line.rfind("!! ", 0) == 0 || line.rfind("Error: ", 0) == 0 ||
+            line.find("error:") != std::string::npos) {
             complete_error(line);
         }
     }
 
   private:
+    enum class CollectorState { WAITING_FOR_OUTPUT, SWEEPING, CALCULATING, COMPLETE };
+
+    void parse_sweep_line(const std::string& line) {
+        static const std::regex freq_regex(R"(Testing frequency ([\d.]+) Hz)");
+        std::smatch match;
+        if (std::regex_search(line, match, freq_regex) && match.size() == 2) {
+            try {
+                float freq = std::stof(match[1].str());
+                last_sweep_freq_ = freq;
+
+                if (collector_state_ != CollectorState::SWEEPING) {
+                    collector_state_ = CollectorState::SWEEPING;
+                }
+
+                // Progress: 3-55% range mapped from min_freq to max_freq
+                float range = max_freq_ - min_freq_;
+                float progress_frac = (range > 0) ? (freq - min_freq_) / range : 0.0f;
+                int percent = 3 + static_cast<int>(progress_frac * 52.0f);
+                percent = std::clamp(percent, 3, 55);
+
+                char status[64];
+                snprintf(status, sizeof(status), "Testing frequency %.0f Hz", freq);
+                emit_progress(percent, status);
+            } catch (const std::exception&) {
+                // Ignore parse errors
+            }
+        }
+    }
+
     void parse_shaper_line(const std::string& line) {
-        // Static regex for performance
         static const std::regex shaper_regex(
             R"(Fitted shaper '(\w+)' frequency = ([\d.]+) Hz \(vibrations = ([\d.]+)%, smoothing ~= ([\d.]+)\))");
 
@@ -765,14 +830,49 @@ class InputShaperCollector : public std::enable_shared_from_this<InputShaperColl
             spdlog::debug("[InputShaperCollector] Parsed: {} @ {:.1f} Hz (vib: {:.1f}%)", fit.type,
                           fit.frequency, fit.vibrations);
             shaper_fits_.push_back(fit);
+
+            // Emit progress in CALCULATING phase: 55-95% range, ~8% per shaper (5 shapers)
+            int calc_progress = 55 + static_cast<int>(shaper_fits_.size()) * 8;
+            calc_progress = std::min(calc_progress, 95);
+            char status[64];
+            snprintf(status, sizeof(status), "Fitted %s at %.1f Hz", fit.type.c_str(),
+                     fit.frequency);
+            emit_progress(calc_progress, status);
+        }
+    }
+
+    void parse_max_accel_line(const std::string& line) {
+        static const std::regex accel_regex(R"(suggested max_accel <= (\d+))");
+        std::smatch match;
+        if (std::regex_search(line, match, accel_regex) && match.size() == 2) {
+            try {
+                float max_accel = std::stof(match[1].str());
+                // Attach to the most recently parsed shaper fit
+                if (!shaper_fits_.empty()) {
+                    shaper_fits_.back().max_accel = max_accel;
+                    spdlog::debug("[InputShaperCollector] {} max_accel: {:.0f}",
+                                  shaper_fits_.back().type, max_accel);
+                }
+            } catch (const std::exception&) {
+                // Ignore parse errors
+            }
         }
     }
 
     void parse_recommendation(const std::string& line) {
-        static const std::regex rec_regex(R"(Recommended shaper is (\w+) @ ([\d.]+) Hz)");
+        // Try new Klipper format first: "Recommended shaper_type_x = mzv, shaper_freq_x = 53.8 Hz"
+        static const std::regex rec_new(
+            R"(Recommended shaper_type_\w+ = (\w+), shaper_freq_\w+ = ([\d.]+) Hz)");
+        // Legacy format: "Recommended shaper is mzv @ 36.7 Hz"
+        static const std::regex rec_old(R"(Recommended shaper is (\w+) @ ([\d.]+) Hz)");
 
         std::smatch match;
-        if (std::regex_search(line, match, rec_regex) && match.size() == 3) {
+        bool matched = std::regex_search(line, match, rec_new);
+        if (!matched) {
+            matched = std::regex_search(line, match, rec_old);
+        }
+
+        if (matched && match.size() == 3) {
             recommended_type_ = match[1].str();
             try {
                 recommended_freq_ = std::stof(match[2].str());
@@ -784,36 +884,54 @@ class InputShaperCollector : public std::enable_shared_from_this<InputShaperColl
         }
     }
 
+    void parse_csv_path(const std::string& line) {
+        static const std::regex csv_regex(R"(calibration data written to (\S+\.csv))");
+        std::smatch match;
+        if (std::regex_search(line, match, csv_regex) && match.size() == 2) {
+            csv_path_ = match[1].str();
+            spdlog::info("[InputShaperCollector] CSV path: {}", csv_path_);
+        }
+    }
+
+    void emit_progress(int percent, const std::string& status) {
+        if (on_progress_) {
+            on_progress_(percent);
+        }
+        spdlog::trace("[InputShaperCollector] Progress: {}% - {}", percent, status);
+    }
+
     void complete_success() {
         if (completed_.exchange(true)) {
-            return; // Already completed
+            return;
         }
 
         spdlog::info("[InputShaperCollector] Complete with {} shaper options", shaper_fits_.size());
         unregister();
 
+        // Emit 100% progress
+        emit_progress(100, "Complete");
+
         if (on_success_) {
-            // Build the result
             InputShaperResult result;
             result.axis = axis_;
             result.shaper_type = recommended_type_;
             result.shaper_freq = recommended_freq_;
+            result.csv_path = csv_path_;
 
-            // Find the recommended shaper's details and populate all_shapers
+            // Find recommended shaper's details and populate all_shapers
             for (const auto& fit : shaper_fits_) {
-                // Populate recommended shaper's additional details
                 if (fit.type == recommended_type_) {
                     result.smoothing = fit.smoothing;
                     result.vibrations = fit.vibrations;
+                    result.max_accel = fit.max_accel;
                 }
 
-                // Add to all_shapers vector for comparison display
                 ShaperOption option;
                 option.type = fit.type;
                 option.frequency = fit.frequency;
                 option.vibrations = fit.vibrations;
                 option.smoothing = fit.smoothing;
-                // max_accel not provided by Klipper's standard output
+                option.max_accel = fit.max_accel;
                 result.all_shapers.push_back(option);
             }
 
@@ -844,15 +962,24 @@ class InputShaperCollector : public std::enable_shared_from_this<InputShaperColl
         float frequency = 0.0f;
         float vibrations = 0.0f;
         float smoothing = 0.0f;
+        float max_accel = 0.0f;
     };
 
     MoonrakerClient& client_;
     char axis_;
+    AdvancedProgressCallback on_progress_;
     InputShaperCallback on_success_;
     MoonrakerAPI::ErrorCallback on_error_;
     std::string handler_name_;
     std::atomic<bool> registered_{false};
     std::atomic<bool> completed_{false};
+
+    CollectorState collector_state_ = CollectorState::WAITING_FOR_OUTPUT;
+    float min_freq_ = 5.0f;
+    float max_freq_ = 100.0f;
+    float last_sweep_freq_ = 0.0f;
+    std::string csv_path_;
+    std::chrono::steady_clock::time_point last_activity_;
 
     std::vector<ShaperFitData> shaper_fits_;
     std::string recommended_type_;
@@ -953,11 +1080,28 @@ class NoiseCheckCollector : public std::enable_shared_from_this<NoiseCheckCollec
                 float noise_x = std::stof(match[1].str());
                 float noise_y = std::stof(match[2].str());
                 float noise_z = std::stof(match[3].str());
+
+                spdlog::info("[NoiseCheckCollector] Noise: x={:.2f}, y={:.2f}, z={:.2f}", noise_x,
+                             noise_y, noise_z);
+
+                // Zero reading on X or Y means accelerometer isn't working on that axis
+                constexpr float MIN_NOISE = 0.001f;
+                if (noise_x < MIN_NOISE || noise_y < MIN_NOISE) {
+                    std::string dead_axes;
+                    if (noise_x < MIN_NOISE)
+                        dead_axes += "X";
+                    if (noise_y < MIN_NOISE) {
+                        if (!dead_axes.empty())
+                            dead_axes += " and ";
+                        dead_axes += "Y";
+                    }
+                    complete_error("Accelerometer reading zero on " + dead_axes +
+                                   " axis — check wiring and axes_map configuration");
+                    return;
+                }
+
                 // Report max of x,y as the overall noise level
                 float noise = std::max(noise_x, noise_y);
-                spdlog::info(
-                    "[NoiseCheckCollector] Noise: x={:.2f}, y={:.2f}, z={:.2f} (max={:.2f})",
-                    noise_x, noise_y, noise_z, noise);
                 complete_success(noise);
             } catch (const std::exception& e) {
                 spdlog::warn("[NoiseCheckCollector] Failed to parse noise value: {}", e.what());
@@ -1247,12 +1391,13 @@ void MoonrakerAPI::run_z_tilt_adjust(SuccessCallback /*on_success*/, ErrorCallba
     }
 }
 
-void MoonrakerAPI::start_resonance_test(char axis, AdvancedProgressCallback /*on_progress*/,
+void MoonrakerAPI::start_resonance_test(char axis, AdvancedProgressCallback on_progress,
                                         InputShaperCallback on_complete, ErrorCallback on_error) {
     spdlog::info("[Moonraker API] Starting SHAPER_CALIBRATE AXIS={}", axis);
 
     // Create collector to handle async response parsing
-    auto collector = std::make_shared<InputShaperCollector>(client_, axis, on_complete, on_error);
+    auto collector =
+        std::make_shared<InputShaperCollector>(client_, axis, on_progress, on_complete, on_error);
     collector->start();
 
     // Send the G-code command
@@ -1323,7 +1468,7 @@ void MoonrakerAPI::get_input_shaper_config(InputShaperConfigCallback on_success,
 
     // Query configfile to get saved input_shaper settings from printer.cfg
     // (the input_shaper runtime object is empty — config lives in configfile)
-    json params = {{"objects", {{"configfile", {{"config", true}}}}}};
+    json params = {{"objects", json::object({{"configfile", json::array({"config"})}})}};
 
     client_.send_jsonrpc(
         "printer.objects.query", params,

@@ -75,7 +75,7 @@
         </lv_obj>
         <!-- Calibrate All Button (primary, prominent) -->
         <ui_button name="btn_calibrate_all" width="100%" height="72" icon="play" text="Calibrate All" translation_tag="Calibrate All">
-          <bind_flag_if_eq subject="printer_has_accelerometer" flag="disabled" ref_value="0"/>
+          <bind_state_if_eq subject="printer_has_accelerometer" state="disabled" ref_value="0"/>
           <event_cb trigger="clicked" callback="input_shaper_calibrate_all_cb"/>
         </ui_button>
         <!-- Explanatory text -->
@@ -90,11 +90,11 @@
                 height="content" style_pad_all="0" flex_flow="row" style_pad_gap="#space_md"
                 scrollable="false">
           <ui_button name="btn_calibrate_x" flex_grow="1" variant="secondary" icon="axis_x_arrow" text="Calibrate X" translation_tag="Calibrate X">
-            <bind_flag_if_eq subject="printer_has_accelerometer" flag="disabled" ref_value="0"/>
+            <bind_state_if_eq subject="printer_has_accelerometer" state="disabled" ref_value="0"/>
             <event_cb trigger="clicked" callback="input_shaper_calibrate_x_cb"/>
           </ui_button>
           <ui_button name="btn_calibrate_y" flex_grow="1" variant="secondary" icon="axis_y_arrow" text="Calibrate Y" translation_tag="Calibrate Y">
-            <bind_flag_if_eq subject="printer_has_accelerometer" flag="disabled" ref_value="0"/>
+            <bind_state_if_eq subject="printer_has_accelerometer" state="disabled" ref_value="0"/>
             <event_cb trigger="clicked" callback="input_shaper_calibrate_y_cb"/>
           </ui_button>
         </lv_obj>
@@ -112,8 +112,19 @@
                 style_radius="#border_radius" style_pad_all="#space_xl" flex_flow="column"
                 style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_md"
                 scrollable="false">
-          <!-- Animated spinner -->
-          <spinner size="lg"/>
+          <!-- Animated spinner (shown before sweep starts) -->
+          <spinner size="lg">
+            <bind_flag_if_not_eq subject="is_measuring_progress" flag="hidden" ref_value="0"/>
+          </spinner>
+          <!-- Progress bar (shown once sweep starts) -->
+          <lv_bar name="calibration_progress_bar"
+                  width="80%" height="16"
+                  bind_value="is_measuring_progress"
+                  min_value="0" max_value="100"
+                  style_bg_color="#card_bg"
+                  style_radius="#border_radius">
+            <bind_flag_if_eq subject="is_measuring_progress" flag="hidden" ref_value="0"/>
+          </lv_bar>
           <text_heading name="status_label" bind_text="is_measuring_axis_label" text="Calibrating..." style_text_align="center"/>
           <text_small bind_text="is_measuring_step_label" text="" style_text_align="center"/>
           <text_small text="Do not touch the printer during calibration" translation_tag="Do not touch the printer during calibration" style_text_align="center" style_text_color="#text_muted"/>

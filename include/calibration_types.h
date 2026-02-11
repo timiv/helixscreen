@@ -158,6 +158,9 @@ struct InputShaperResult {
     float smoothing = 0.0f;   ///< Smoothing value (0.0-1.0, lower is better)
     float vibrations = 0.0f;  ///< Remaining vibrations percentage
 
+    /// Path to CSV calibration data file (e.g., /tmp/calibration_data_x_*.csv)
+    std::string csv_path;
+
     /// Frequency response data for graphing (frequency Hz, amplitude)
     std::vector<std::pair<float, float>> freq_response;
 

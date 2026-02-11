@@ -30,25 +30,44 @@ uint32_t lv_timer_handler_safe() {
     // Subject observers fire synchronously during drain, propagating bindings.
     helix::ui::UpdateQueue::instance().drain_queue_for_testing();
 
-    // Pause ALL timers before calling lv_timer_handler().
+    // Pause ALL timers to prevent infinite handler loops, then selectively
+    // execute one-shot timers (lv_async_call, retry timers) manually.
     //
-    // Background: LVGL's test fixture creates leaked display refresh timers
-    // (typically 13+) with stale last_run timestamps, making them all
-    // simultaneously "ready". When lv_timer_handler()'s internal do-while
-    // loop processes them, each timer fire that creates/deletes a timer
-    // causes the loop to restart from the head — an infinite loop.
-    //
-    // By pausing all timers, lv_timer_handler() iterates the list without
-    // firing any, exits quickly, and returns a valid time-until-next value.
-    // We then resume all timers afterward. The actual test processing
-    // (subject propagation, input reads) is handled by drain_queue and
-    // direct lv_indev_read() calls respectively.
+    // Background: LVGL's test fixture leaks display refresh timers with stale
+    // last_run timestamps. When lv_timer_handler()'s do-while loop processes
+    // them all simultaneously, any timer fire that creates/deletes a timer
+    // restarts the loop from the head — infinite loop.
     lv_timer_t* t = lv_timer_get_next(nullptr);
     while (t) {
         lv_timer_pause(t);
         t = lv_timer_get_next(t);
     }
 
+    // Execute one-shot timers (repeat_count >= 1) that are ready.
+    // These include lv_async_call (period=0, repeat=1) and scheduled
+    // retry timers. Process in a loop since callbacks may create new ones.
+    uint32_t now = lv_tick_get();
+    bool processed_any;
+    int safety_counter = 100; // Prevent infinite loops
+    do {
+        processed_any = false;
+        t = lv_timer_get_next(nullptr);
+        while (t && safety_counter > 0) {
+            lv_timer_t* next = lv_timer_get_next(t); // Save next before potential deletion
+            if (t->repeat_count > 0 && (now - t->last_run >= t->period)) {
+                // Execute this one-shot timer
+                if (t->timer_cb) {
+                    t->timer_cb(t);
+                    processed_any = true;
+                    safety_counter--;
+                    break; // Restart iteration since list may have changed
+                }
+            }
+            t = next;
+        }
+    } while (processed_any && safety_counter > 0);
+
+    // Call lv_timer_handler() with all timers paused (no-op, just updates state)
     uint32_t result = lv_timer_handler();
 
     // Resume all timers

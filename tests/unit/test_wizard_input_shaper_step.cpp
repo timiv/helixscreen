@@ -19,6 +19,7 @@
 #include "input_shaper_calibrator.h"
 #include "printer_discovery.h"
 #include "printer_state.h"
+#include "runtime_config.h"
 
 #include <spdlog/spdlog.h>
 
@@ -39,6 +40,9 @@ static lv_subject_t* get_subject_by_name(const char* name) {
 class WizardInputShaperStepTestFixture {
   public:
     WizardInputShaperStepTestFixture() {
+        // Enable test mode so beta features (including input shaper) are available
+        get_runtime_config()->test_mode = true;
+
         // Initialize LVGL (safe version avoids "already initialized" warnings)
         lv_init_safe();
 

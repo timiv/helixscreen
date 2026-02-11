@@ -544,10 +544,9 @@ TEST_CASE_METHOD(InputShaperTestFixture, "measure_axes_noise returns noise level
     }
 
     REQUIRE(complete_called);
-    // Noise level should be a small positive value (typical range 0.001 - 1.0)
-    // Values under 100 are generally considered good
-    CHECK(captured_noise >= 0.0f);
-    CHECK(captured_noise < 1000.0f); // Upper bound sanity check
+    // Mock dispatches: x=12.345678, y=15.678901, z=8.234567
+    // Collector returns max(x, y) = 15.678901
+    CHECK(captured_noise == Catch::Approx(15.678901f).margin(0.01f));
 }
 
 TEST_CASE_METHOD(InputShaperTestFixture, "measure_axes_noise handles no accelerometer error",
@@ -645,4 +644,161 @@ TEST_CASE_METHOD(InputShaperTestFixture, "get_input_shaper_config handles unconf
 
     REQUIRE(complete_called);
     REQUIRE_FALSE(captured_config.is_configured);
+}
+
+// ============================================================================
+// Enhanced Collector: New Recommendation Format + Max Accel + CSV Path
+// ============================================================================
+
+TEST_CASE_METHOD(InputShaperTestFixture, "collector parses new Klipper recommendation format",
+                 "[calibration][input_shaper]") {
+    std::atomic<bool> complete_called{false};
+    InputShaperResult captured_result;
+
+    api_->start_resonance_test(
+        'X', [](int) {},
+        [&](const InputShaperResult& result) {
+            captured_result = result;
+            complete_called = true;
+        },
+        [&](const MoonrakerError& err) {
+            FAIL("Error callback should not be called: " << err.message);
+        });
+
+    for (int i = 0; i < 100 && !complete_called; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    REQUIRE(complete_called);
+    // New mock uses "Recommended shaper_type_x = mzv, shaper_freq_x = 53.8 Hz" format
+    CHECK(captured_result.shaper_type == "mzv");
+    CHECK(captured_result.shaper_freq == Catch::Approx(53.8f).margin(0.1f));
+}
+
+TEST_CASE_METHOD(InputShaperTestFixture, "collector parses max_accel per shaper",
+                 "[calibration][input_shaper]") {
+    std::atomic<bool> complete_called{false};
+    InputShaperResult captured_result;
+
+    api_->start_resonance_test(
+        'X', [](int) {},
+        [&](const InputShaperResult& result) {
+            captured_result = result;
+            complete_called = true;
+        },
+        [&](const MoonrakerError& err) { FAIL("Error: " << err.message); });
+
+    for (int i = 0; i < 100 && !complete_called; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    REQUIRE(complete_called);
+    REQUIRE(captured_result.all_shapers.size() == 5);
+
+    // Verify max_accel is parsed for each shaper
+    auto find_shaper = [&](const std::string& type) -> const ShaperOption* {
+        for (const auto& s : captured_result.all_shapers) {
+            if (s.type == type)
+                return &s;
+        }
+        return nullptr;
+    };
+
+    const ShaperOption* zv = find_shaper("zv");
+    REQUIRE(zv != nullptr);
+    CHECK(zv->max_accel == Catch::Approx(13400.0f).margin(1.0f));
+
+    const ShaperOption* mzv = find_shaper("mzv");
+    REQUIRE(mzv != nullptr);
+    CHECK(mzv->max_accel == Catch::Approx(4000.0f).margin(1.0f));
+
+    const ShaperOption* ei = find_shaper("ei");
+    REQUIRE(ei != nullptr);
+    CHECK(ei->max_accel == Catch::Approx(4600.0f).margin(1.0f));
+
+    // Recommended shaper's max_accel should be on the result itself
+    CHECK(captured_result.max_accel == Catch::Approx(4000.0f).margin(1.0f));
+}
+
+TEST_CASE_METHOD(InputShaperTestFixture, "collector captures CSV path",
+                 "[calibration][input_shaper]") {
+    std::atomic<bool> complete_called{false};
+    InputShaperResult captured_result;
+
+    api_->start_resonance_test(
+        'X', [](int) {},
+        [&](const InputShaperResult& result) {
+            captured_result = result;
+            complete_called = true;
+        },
+        [&](const MoonrakerError& err) { FAIL("Error: " << err.message); });
+
+    for (int i = 0; i < 100 && !complete_called; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    REQUIRE(complete_called);
+    CHECK(captured_result.csv_path == "/tmp/calibration_data_x_mock.csv");
+}
+
+TEST_CASE_METHOD(InputShaperTestFixture, "collector emits progress callbacks during sweep",
+                 "[calibration][input_shaper]") {
+    std::atomic<bool> complete_called{false};
+    std::vector<int> progress_values;
+
+    api_->start_resonance_test(
+        'X', [&](int percent) { progress_values.push_back(percent); },
+        [&](const InputShaperResult&) { complete_called = true; },
+        [&](const MoonrakerError& err) { FAIL("Error: " << err.message); });
+
+    for (int i = 0; i < 100 && !complete_called; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    REQUIRE(complete_called);
+    // Should have received progress callbacks during sweep + calculation + completion
+    CHECK(progress_values.size() > 10); // At least sweep lines + shaper fits + 100%
+
+    // Progress should be monotonically non-decreasing
+    for (size_t i = 1; i < progress_values.size(); ++i) {
+        CHECK(progress_values[i] >= progress_values[i - 1]);
+    }
+
+    // Should start low (sweep) and end at 100
+    CHECK(progress_values.front() <= 55); // Sweep range
+    CHECK(progress_values.back() == 100); // Completion
+}
+
+TEST_CASE_METHOD(InputShaperTestFixture,
+                 "collector returns 5 shaper alternatives with updated mock",
+                 "[calibration][input_shaper]") {
+    std::atomic<bool> complete_called{false};
+    InputShaperResult captured_result;
+
+    api_->start_resonance_test(
+        'Y', [](int) {},
+        [&](const InputShaperResult& result) {
+            captured_result = result;
+            complete_called = true;
+        },
+        [&](const MoonrakerError& err) { FAIL("Error: " << err.message); });
+
+    for (int i = 0; i < 100 && !complete_called; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    REQUIRE(complete_called);
+    REQUIRE(captured_result.axis == 'Y');
+    REQUIRE(captured_result.all_shapers.size() == 5);
+
+    // Verify all 5 shaper types from the updated mock
+    std::vector<std::string> expected_types = {"zv", "mzv", "ei", "2hump_ei", "3hump_ei"};
+    for (size_t i = 0; i < expected_types.size(); ++i) {
+        CHECK(captured_result.all_shapers[i].type == expected_types[i]);
+        CHECK(captured_result.all_shapers[i].frequency > 0.0f);
+        CHECK(captured_result.all_shapers[i].max_accel > 0.0f);
+    }
+
+    // Y axis CSV path should use 'y'
+    CHECK(captured_result.csv_path == "/tmp/calibration_data_y_mock.csv");
 }

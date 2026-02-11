@@ -1,6 +1,8 @@
 // Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include "../ui_test_utils.h"
+#include "settings_manager.h"
 #include "sound_sequencer.h"
 
 #include <chrono>
@@ -277,6 +279,9 @@ TEST_CASE("SoundSequencer: pause step produces silence", "[sound][sequencer]") {
 // ============================================================================
 
 TEST_CASE("SoundSequencer: ADSR attack ramps amplitude up", "[sound][sequencer]") {
+    lv_init_safe();
+    SettingsManager::instance().init_subjects();
+    SettingsManager::instance().set_volume(100);
     auto backend = std::make_shared<MockBackend>();
     SoundSequencer seq(backend);
     seq.start();
@@ -325,6 +330,7 @@ TEST_CASE("SoundSequencer: ADSR attack ramps amplitude up", "[sound][sequencer]"
 // ============================================================================
 
 TEST_CASE("SoundSequencer: ADSR decay drops amplitude toward sustain", "[sound][sequencer]") {
+    SettingsManager::instance().set_volume(100);
     auto backend = std::make_shared<MockBackend>();
     SoundSequencer seq(backend);
     seq.start();
@@ -379,6 +385,7 @@ TEST_CASE("SoundSequencer: ADSR decay drops amplitude toward sustain", "[sound][
 // ============================================================================
 
 TEST_CASE("SoundSequencer: ADSR sustain holds amplitude", "[sound][sequencer]") {
+    SettingsManager::instance().set_volume(100);
     auto backend = std::make_shared<MockBackend>();
     SoundSequencer seq(backend);
     seq.start();
@@ -528,6 +535,9 @@ TEST_CASE("SoundSequencer: LFO modulates frequency", "[sound][sequencer]") {
 // ============================================================================
 
 TEST_CASE("SoundSequencer: LFO modulates amplitude", "[sound][sequencer]") {
+    lv_init_safe();
+    SettingsManager::instance().init_subjects();
+    SettingsManager::instance().set_volume(100);
     auto backend = std::make_shared<MockBackend>();
     SoundSequencer seq(backend);
     seq.start();

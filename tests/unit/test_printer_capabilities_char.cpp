@@ -37,6 +37,7 @@
 #include "app_globals.h"
 #include "printer_discovery.h"
 #include "printer_state.h"
+#include "runtime_config.h"
 
 #include "../catch_amalgamated.hpp"
 
@@ -54,6 +55,8 @@ static lv_subject_t* get_subject_by_name(const char* name) {
 TEST_CASE("Capabilities characterization: set_hardware updates capability subjects",
           "[characterization][capabilities][hardware]") {
     lv_init_safe();
+    // Enable test mode so beta-gated features (timelapse) are available
+    get_runtime_config()->test_mode = true;
 
     PrinterState& state = get_printer_state();
     state.reset_for_testing();

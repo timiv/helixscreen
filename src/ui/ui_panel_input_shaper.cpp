@@ -215,6 +215,7 @@ void InputShaperPanel::init_subjects() {
                               "Calibrating...", "is_measuring_axis_label", subjects_);
     UI_MANAGED_SUBJECT_STRING(is_measuring_step_label_, is_measuring_step_label_buf_, "",
                               "is_measuring_step_label", subjects_);
+    UI_MANAGED_SUBJECT_INT(is_measuring_progress_, 0, "is_measuring_progress", subjects_);
 
     // Per-axis result display subjects
     UI_MANAGED_SUBJECT_INT(is_results_has_x_, 0, "is_results_has_x", subjects_);
@@ -437,6 +438,7 @@ void InputShaperPanel::start_with_preflight(char axis) {
              "Checking accelerometer...");
     lv_subject_copy_string(&is_measuring_axis_label_, is_measuring_axis_label_buf_);
     lv_subject_copy_string(&is_measuring_step_label_, "");
+    lv_subject_set_int(&is_measuring_progress_, 0);
 
     set_state(State::MEASURING);
     spdlog::info("[InputShaper] Starting pre-flight noise check before {} axis calibration", axis);
@@ -518,6 +520,7 @@ void InputShaperPanel::start_calibration(char axis) {
     // Update status label (legacy widget path)
     update_status_label(is_measuring_axis_label_buf_);
 
+    lv_subject_set_int(&is_measuring_progress_, 0);
     set_state(State::MEASURING);
     spdlog::info("[InputShaper] Starting calibration for axis {}", axis);
 
@@ -527,7 +530,23 @@ void InputShaperPanel::start_calibration(char axis) {
     // Delegate to calibrator
     calibrator_->run_calibration(
         axis,
-        nullptr, // on_progress (not used currently)
+        [this, alive](int percent) {
+            if (!alive->load())
+                return;
+            lv_subject_set_int(&is_measuring_progress_, percent);
+            // Update step label with progress text
+            if (percent < 55) {
+                snprintf(is_measuring_step_label_buf_, sizeof(is_measuring_step_label_buf_),
+                         "Measuring vibrations... %d%%", percent);
+            } else if (percent < 100) {
+                snprintf(is_measuring_step_label_buf_, sizeof(is_measuring_step_label_buf_),
+                         "Analyzing data... %d%%", percent);
+            } else {
+                snprintf(is_measuring_step_label_buf_, sizeof(is_measuring_step_label_buf_),
+                         "Complete");
+            }
+            lv_subject_copy_string(&is_measuring_step_label_, is_measuring_step_label_buf_);
+        },
         [this, alive](const InputShaperResult& result) {
             if (!alive->load())
                 return;

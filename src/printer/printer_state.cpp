@@ -159,6 +159,7 @@ void PrinterState::reset_for_testing() {
     print_start_capabilities_ = PrintStartCapabilities{};
     z_offset_calibration_strategy_ = ZOffsetCalibrationStrategy::PROBE_CALIBRATE;
     auto_detected_bed_moves_ = false;
+    last_kinematics_.clear();
 
     subjects_initialized_ = false;
 }

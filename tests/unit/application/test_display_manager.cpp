@@ -22,8 +22,8 @@
 TEST_CASE("DisplayManager::Config has sensible defaults", "[application][display]") {
     DisplayManager::Config config;
 
-    REQUIRE(config.width == 800);
-    REQUIRE(config.height == 480);
+    REQUIRE(config.width == 0);  // 0 = auto-detect
+    REQUIRE(config.height == 0); // 0 = auto-detect
     REQUIRE(config.scroll_throw == 25);
     REQUIRE(config.scroll_limit == 10);
     REQUIRE(config.require_pointer == true);
@@ -142,9 +142,9 @@ TEST_CASE("DisplayManager init creates display with correct dimensions", "[appli
 
     DisplayManager::Config config;
 
-    // Test default dimensions
-    REQUIRE(config.width == 800);
-    REQUIRE(config.height == 480);
+    // Test default dimensions (0 = auto-detect)
+    REQUIRE(config.width == 0);
+    REQUIRE(config.height == 0);
 
     // Test custom dimensions are stored correctly
     config.width = 1024;

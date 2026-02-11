@@ -250,6 +250,7 @@ class InputShaperPanel : public OverlayBase {
     lv_subject_t is_measuring_axis_label_{};
     char is_measuring_step_label_buf_[64] = {};
     lv_subject_t is_measuring_step_label_{};
+    lv_subject_t is_measuring_progress_{};
 
     // Per-axis result subjects
     lv_subject_t is_results_has_x_{};
