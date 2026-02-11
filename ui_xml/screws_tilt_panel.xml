@@ -175,7 +175,7 @@
             <ui_button name="btn_done_results" width="100" height="#button_height_sm" text="Done" translation_tag="Done">
               <event_cb trigger="clicked" callback="screws_tilt_done_cb"/>
             </ui_button>
-            <ui_button name="btn_reprobe" width="120" height="#button_height_sm" text="Re-probe" translation_tag="Re-probe">
+            <ui_button name="btn_reprobe" width="25%" height="#button_height_sm" text="Re-probe" translation_tag="Re-probe">
               <event_cb trigger="clicked" callback="screws_tilt_reprobe_cb"/>
             </ui_button>
           </lv_obj>
