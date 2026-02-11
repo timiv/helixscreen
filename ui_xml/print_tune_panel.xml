@@ -11,8 +11,8 @@
   <view name="print_tune_panel" extends="overlay_panel" title="Print Tuning" title_tag="Print Tuning">
     <!-- Content Area -->
     <lv_obj name="overlay_content"
-            width="100%" flex_grow="1" style_pad_all="#space_lg" scrollable="false" flex_flow="column"
-            style_flex_main_place="start" style_pad_gap="#space_md" flag_overflow_visible="true">
+            width="100%" flex_grow="1" style_pad_left="#space_lg" style_pad_right="#space_lg" style_pad_bottom="#space_lg" style_pad_top="0" flex_flow="column"
+            style_flex_main_place="start" style_pad_gap="#space_md">
       <!-- Speed + Flow Row (side by side) -->
       <lv_obj name="speed_flow_row"
               width="100%" height="content" style_pad_all="0" scrollable="false" flex_flow="row"
@@ -21,8 +21,11 @@
         <lv_obj name="speed_section"
                 height="content" flex_grow="1" style_pad_all="0" flex_flow="column" style_pad_gap="#space_sm"
                 flag_overflow_visible="true" scrollable="false">
-          <text_small text="Print Speed" translation_tag="Print Speed"/>
-          <text_heading name="speed_display" bind_text="tune_speed_display"/>
+          <lv_obj width="100%" height="content" style_pad_all="0" scrollable="false" flex_flow="row"
+                  style_flex_cross_place="center" style_pad_gap="#space_sm">
+            <text_small text="Print Speed" translation_tag="Print Speed"/>
+            <text_heading name="speed_display" bind_text="tune_speed_display"/>
+          </lv_obj>
           <lv_slider name="speed_slider"
                      width="100%" height="#space_lg" min_value="50" max_value="200" value="100"
                      style_bg_color="#elevated_bg" style_radius="#space_md">
@@ -35,8 +38,11 @@
         <lv_obj name="flow_section"
                 height="content" flex_grow="1" style_pad_all="0" flex_flow="column" style_pad_gap="#space_sm"
                 flag_overflow_visible="true" scrollable="false">
-          <text_small text="Flow Rate" translation_tag="Flow Rate"/>
-          <text_heading name="flow_display" bind_text="tune_flow_display"/>
+          <lv_obj width="100%" height="content" style_pad_all="0" scrollable="false" flex_flow="row"
+                  style_flex_cross_place="center" style_pad_gap="#space_sm">
+            <text_small text="Flow Rate" translation_tag="Flow Rate"/>
+            <text_heading name="flow_display" bind_text="tune_flow_display"/>
+          </lv_obj>
           <lv_slider name="flow_slider"
                      width="100%" height="#space_lg" min_value="75" max_value="125" value="100"
                      style_bg_color="#elevated_bg" style_radius="#space_md">
@@ -52,8 +58,8 @@
       </ui_button>
       <!-- Z-Offset Baby Stepping Section (flex_grow claims remaining space, content aligned to bottom) -->
       <lv_obj name="z_offset_section"
-              width="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_pad_gap="#space_xs"
-              style_flex_main_place="end" scrollable="false">
+              width="100%" height="content" style_pad_all="0" flex_flow="column" style_pad_gap="#space_xs"
+              scrollable="false">
         <!-- Header Row -->
         <lv_obj width="100%"
                 height="content" style_pad_all="0" scrollable="false" flex_flow="row"
