@@ -13,8 +13,8 @@
         style_bg_color="#card_bg" style_pad_all="0" style_border_width="0" scrollable="false" flex_flow="column">
     <!-- Header Bar -->
     <header_bar name="overlay_header"
-                title="Automatic PID Calibration" title_tag="Automatic PID Calibration" hide_action_button="false"
-                action_button_text="Start" action_button_callback="on_pid_start"
+                title="Automatic Heater Control Calibration" title_tag="Automatic Heater Control Calibration"
+                hide_action_button="false" action_button_text="Start" action_button_callback="on_pid_start"
                 action_button_disabled_subject="pid_cal_not_idle"/>
     <!-- Content Area -->
     <lv_obj name="overlay_content"
@@ -164,27 +164,32 @@
       <!-- STATE: CALIBRATING - Progress display -->
       <!-- ================================================================== -->
       <lv_obj name="state_calibrating"
-              width="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
-              style_flex_cross_place="center" style_pad_gap="#space_lg" scrollable="false">
+              width="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="space_around"
+              style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_sm"
+              scrollable="false">
         <bind_flag_if_not_eq subject="pid_cal_state" flag="hidden" ref_value="1"/>
         <!-- Top row: spinner+status (left) | graph+temp (right) -->
         <lv_obj width="100%"
-                flex_grow="1" style_pad_all="0" flex_flow="row" style_flex_main_place="center" style_pad_gap="#space_lg"
-                scrollable="false">
-          <!-- Left: spinner + labels -->
-          <lv_obj style_pad_all="0"
-                  flex_flow="column" style_flex_cross_place="center" style_flex_main_place="center"
-                  style_pad_gap="#space_sm" flex_grow="1">
-            <spinner size="lg"/>
+                flex_grow="1" style_pad_all="0" flex_flow="row" style_flex_cross_place="center"
+                style_pad_gap="#space_lg" scrollable="false">
+          <!-- Left: progress + labels -->
+          <lv_obj height="100%"
+                  style_pad_all="#space_md" flex_flow="column" style_flex_cross_place="center"
+                  style_flex_main_place="center" style_flex_track_place="center" style_pad_gap="#space_sm" flex_grow="1">
             <text_heading text="Calibrating..." translation_tag="Calibrating..." style_text_align="center"/>
             <text_muted name="calibrating_heater"
                         text="Extruder PID Tuning" translation_tag="Extruder PID Tuning"
                         bind_text="pid_calibrating_heater"/>
+            <lv_bar name="pid_progress_bar"
+                    width="80%" height="12" bind_value="pid_cal_progress" min_value="0" max_value="100"
+                    style_bg_color="#card_bg" style_radius="#space_xs"/>
+            <text_small name="pid_progress_text"
+                        bind_text="pid_progress_text" text="Starting..." style_text_color="#text_muted"/>
           </lv_obj>
           <!-- Right: temperature graph + live display -->
-          <lv_obj flex_grow="1"
-                  style_bg_color="#section_bg_color" style_radius="#border_radius" style_pad_all="#space_md"
-                  flex_flow="column" style_flex_cross_place="center" style_pad_gap="#space_sm">
+          <lv_obj height="100%"
+                  flex_grow="1" style_bg_color="#section_bg_color" style_radius="#border_radius"
+                  style_pad_all="#space_md" flex_flow="column" style_flex_cross_place="center" style_pad_gap="#space_sm">
             <!-- Temperature graph (populated by C++) -->
             <lv_obj name="pid_temp_graph_container" width="100%" flex_grow="1" style_pad_all="0" scrollable="false"/>
             <!-- Extruder temp (shown when extruder selected) -->
@@ -214,7 +219,8 @@
       <!-- ================================================================== -->
       <lv_obj name="state_saving"
               width="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
-              style_flex_cross_place="center" style_pad_gap="#space_lg" scrollable="false">
+              style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_lg"
+              scrollable="false">
         <bind_flag_if_not_eq subject="pid_cal_state" flag="hidden" ref_value="2"/>
         <spinner size="lg"/>
         <text_heading text="Saving Configuration..." translation_tag="Saving Configuration..." style_text_align="center"/>
@@ -227,37 +233,40 @@
       <!-- ================================================================== -->
       <lv_obj name="state_complete"
               width="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
-              style_flex_cross_place="center" style_pad_gap="#space_lg" scrollable="false">
+              style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_lg"
+              scrollable="false">
         <bind_flag_if_not_eq subject="pid_cal_state" flag="hidden" ref_value="3"/>
         <icon src="check_circle" size="lg" variant="success"/>
         <text_heading text="Calibration Complete!" translation_tag="Calibration Complete!" style_text_align="center"/>
-        <!-- PID Values Display -->
-        <lv_obj width="80%"
+        <text_body name="pid_result_summary"
+                   width="80%" bind_text="pid_result_summary" text="Temperature control has been optimized."
+                   style_text_align="center" style_text_color="#text_muted"/>
+        <!-- Technical details -->
+        <lv_obj width="70%"
                 height="content" style_bg_color="#section_bg_color" style_radius="#border_radius"
-                style_pad_all="#space_lg" flex_flow="column" style_pad_gap="#space_xs">
-          <text_body width="100%" text="New PID Values" translation_tag="New PID Values" style_text_align="center"/>
+                style_pad_all="#space_md" flex_flow="column" style_pad_gap="#space_xs">
           <lv_obj width="100%"
                   height="content" style_pad_all="0" flex_flow="row" style_flex_main_place="space_between"
                   scrollable="false">
-            <text_body text="Kp:" translation_tag="Kp:"/>
-            <text_muted name="pid_kp" text="0.000" bind_text="pid_kp"/>
+            <text_small text="Response (Kp)" translation_tag="Response (Kp)" style_text_color="#text_muted"/>
+            <text_small name="pid_kp" bind_text="pid_kp" text="0.000"/>
           </lv_obj>
           <lv_obj width="100%"
                   height="content" style_pad_all="0" flex_flow="row" style_flex_main_place="space_between"
                   scrollable="false">
-            <text_body text="Ki:" translation_tag="Ki:"/>
-            <text_muted name="pid_ki" text="0.000" bind_text="pid_ki"/>
+            <text_small text="Correction (Ki)" translation_tag="Correction (Ki)" style_text_color="#text_muted"/>
+            <text_small name="pid_ki" bind_text="pid_ki" text="0.000"/>
           </lv_obj>
           <lv_obj width="100%"
                   height="content" style_pad_all="0" flex_flow="row" style_flex_main_place="space_between"
                   scrollable="false">
-            <text_body text="Kd:" translation_tag="Kd:"/>
-            <text_muted name="pid_kd" text="0.000" bind_text="pid_kd"/>
+            <text_small text="Damping (Kd)" translation_tag="Damping (Kd)" style_text_color="#text_muted"/>
+            <text_small name="pid_kd" bind_text="pid_kd" text="0.000"/>
           </lv_obj>
         </lv_obj>
         <text_small width="80%"
-                    text="Values have been saved to printer configuration."
-                    translation_tag="Values have been saved to printer configuration." style_text_align="center"/>
+                    text="Saved to printer configuration." translation_tag="Saved to printer configuration."
+                    style_text_align="center" style_text_color="#text_muted"/>
         <ui_button name="btn_done" width="140" height="56" text="Done" translation_tag="Done">
           <event_cb trigger="clicked" callback="on_pid_done"/>
         </ui_button>
@@ -267,7 +276,8 @@
       <!-- ================================================================== -->
       <lv_obj name="state_error"
               width="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
-              style_flex_cross_place="center" style_pad_gap="#space_lg" scrollable="false">
+              style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_lg"
+              scrollable="false">
         <bind_flag_if_not_eq subject="pid_cal_state" flag="hidden" ref_value="4"/>
         <icon src="close_circle" size="lg" variant="danger"/>
         <text_heading text="Calibration Failed" translation_tag="Calibration Failed" style_text_align="center"/>

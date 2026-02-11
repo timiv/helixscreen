@@ -921,7 +921,6 @@ When beta features are enabled, the following appear in the UI with an orange "B
 |---------|----------|-------------|--------|
 | **Input Shaping** | Advanced panel | Resonance compensation tuning via accelerometer | Functional; requires accelerometer hardware |
 | **Z-Offset Calibration** | Advanced panel | Interactive probe-based Z calibration | Functional; requires probe (BLTouch, etc.) |
-| **PID Tuning** | Advanced panel | Automatic heater PID parameter tuning | Functional; needs testing across heater types |
 | **HelixPrint Plugin** | Advanced panel | Install/uninstall the HelixPrint Klipper plugin for advanced print start control | Functional; plugin manages bed mesh, QGL, z-tilt skipping |
 | **Configure PRINT_START** | Advanced panel | Make bed mesh and QGL skippable in your print start macro | Functional; requires HelixPrint plugin installed |
 | **Timelapse** | Advanced panel | Configure Moonraker-Timelapse recording settings | Functional; requires timelapse plugin or webcam |

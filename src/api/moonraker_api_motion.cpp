@@ -486,7 +486,7 @@ std::string annotate_gcode(const std::string& gcode) {
 // ============================================================================
 
 void MoonrakerAPI::execute_gcode(const std::string& gcode, SuccessCallback on_success,
-                                 ErrorCallback on_error, uint32_t timeout_ms) {
+                                 ErrorCallback on_error, uint32_t timeout_ms, bool silent) {
     std::string annotated = annotate_gcode(gcode);
     json params = {{"script", annotated}};
 
@@ -500,7 +500,7 @@ void MoonrakerAPI::execute_gcode(const std::string& gcode, SuccessCallback on_su
         success_wrapper = [on_success](json) { on_success(); };
     }
     client_.send_jsonrpc("printer.gcode.script", params, std::move(success_wrapper), on_error,
-                         timeout_ms);
+                         timeout_ms, silent);
 }
 
 bool MoonrakerAPI::is_safe_gcode_param(const std::string& str) {

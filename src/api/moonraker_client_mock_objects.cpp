@@ -84,8 +84,20 @@ void register_object_handlers(std::unordered_map<std::string, MethodHandler>& re
                         {"position_max", MOCK_BED_Z_MAX},
                         {"position_endstop", 235.0}}},
                       {"extruder",
-                       {{"min_temp", 0.0}, {"max_temp", 300.0}, {"min_extrude_temp", 170.0}}},
-                      {"heater_bed", {{"min_temp", 0.0}, {"max_temp", 120.0}}}}}};
+                       {{"min_temp", 0.0},
+                        {"max_temp", 300.0},
+                        {"min_extrude_temp", 170.0},
+                        {"control", "pid"},
+                        {"pid_kp", 22.865},
+                        {"pid_ki", 1.292},
+                        {"pid_kd", 101.178}}},
+                      {"heater_bed",
+                       {{"min_temp", 0.0},
+                        {"max_temp", 120.0},
+                        {"control", "pid"},
+                        {"pid_kp", 73.517},
+                        {"pid_ki", 1.132},
+                        {"pid_kd", 1194.093}}}}}};
             }
 
             // toolhead (for get_machine_limits)
@@ -347,8 +359,20 @@ void register_object_handlers(std::unordered_map<std::string, MethodHandler>& re
                         {"position_max", MOCK_BED_Z_MAX},
                         {"position_endstop", 235.0}}},
                       {"extruder",
-                       {{"min_temp", 0.0}, {"max_temp", 300.0}, {"min_extrude_temp", 170.0}}},
-                      {"heater_bed", {{"min_temp", 0.0}, {"max_temp", 120.0}}}}},
+                       {{"min_temp", 0.0},
+                        {"max_temp", 300.0},
+                        {"min_extrude_temp", 170.0},
+                        {"control", "pid"},
+                        {"pid_kp", 22.865},
+                        {"pid_ki", 1.292},
+                        {"pid_kd", 101.178}}},
+                      {"heater_bed",
+                       {{"min_temp", 0.0},
+                        {"max_temp", 120.0},
+                        {"control", "pid"},
+                        {"pid_kp", 73.517},
+                        {"pid_ki", 1.132},
+                        {"pid_kd", 1194.093}}}}},
                     // config section contains raw Klipper config keys (used for sensor discovery)
                     {"config",
                      {{"adxl345", json::object()}, {"resonance_tester", json::object()}}}};

@@ -462,7 +462,7 @@ class MoonrakerAPI {
      * @param on_error Error callback
      */
     void execute_gcode(const std::string& gcode, SuccessCallback on_success, ErrorCallback on_error,
-                       uint32_t timeout_ms = 0);
+                       uint32_t timeout_ms = 0, bool silent = false);
 
     /**
      * @brief Check if a string is safe to use as a G-code parameter
@@ -1297,8 +1297,24 @@ class MoonrakerAPI {
     // Advanced Panel Operations - PID Calibration
     // ========================================================================
 
+    /// Callback for PID calibration progress (sample number, tolerance value; -1.0 = n/a)
+    using PIDProgressCallback = std::function<void(int sample, float tolerance)>;
+
     /// Callback for PID calibration result
     using PIDCalibrateCallback = std::function<void(float kp, float ki, float kd)>;
+
+    /**
+     * @brief Fetch current PID values for a heater from printer configuration
+     *
+     * Queries configfile.settings to get the currently active PID parameters.
+     * Used to show old→new deltas after PID calibration.
+     *
+     * @param heater Heater name ("extruder" or "heater_bed")
+     * @param on_complete Called with current Kp, Ki, Kd values
+     * @param on_error Called if values cannot be retrieved
+     */
+    virtual void get_heater_pid_values(const std::string& heater, PIDCalibrateCallback on_complete,
+                                       ErrorCallback on_error);
 
     /**
      * @brief Start PID calibration for a heater
@@ -1312,7 +1328,8 @@ class MoonrakerAPI {
      * @param on_error Called on failure
      */
     virtual void start_pid_calibrate(const std::string& heater, int target_temp,
-                                     PIDCalibrateCallback on_complete, ErrorCallback on_error);
+                                     PIDCalibrateCallback on_complete, ErrorCallback on_error,
+                                     PIDProgressCallback on_progress = nullptr);
 
     // ========================================================================
     // Advanced Panel Operations - Macros

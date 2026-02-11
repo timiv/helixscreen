@@ -68,6 +68,9 @@ class PIDCalibrateTestFixture {
     std::atomic<bool> error_received_{false};
     float captured_kp_ = 0, captured_ki_ = 0, captured_kd_ = 0;
     std::string captured_error_;
+
+    std::vector<int> progress_samples_;
+    std::vector<float> progress_tolerances_;
 };
 
 // ============================================================================
@@ -155,4 +158,207 @@ TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate bed heater", "[pid_cali
 
     REQUIRE(result_received_.load());
     REQUIRE(captured_kp_ == Catch::Approx(73.517f).margin(0.001f));
+}
+
+TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate collector fires progress callback",
+                 "[pid_calibrate]") {
+    api_->start_pid_calibrate(
+        "extruder", 200,
+        [this](float kp, float ki, float kd) {
+            captured_kp_ = kp;
+            captured_ki_ = ki;
+            captured_kd_ = kd;
+            result_received_.store(true);
+        },
+        [this](const MoonrakerError& err) { error_received_.store(true); },
+        [this](int sample, float tolerance) {
+            progress_samples_.push_back(sample);
+            progress_tolerances_.push_back(tolerance);
+        });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    mock_client_.dispatch_gcode_response("sample:1 pwm:0.5 asymmetry:0.2 tolerance:n/a");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    mock_client_.dispatch_gcode_response("sample:2 pwm:0.48 asymmetry:0.15 tolerance:0.045");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    REQUIRE(progress_samples_.size() == 2);
+    REQUIRE(progress_samples_[0] == 1);
+    REQUIRE(progress_samples_[1] == 2);
+    REQUIRE(progress_tolerances_[0] == -1.0f);
+    REQUIRE(progress_tolerances_[1] == Catch::Approx(0.045f));
+
+    // Complete the collector to avoid dangling callback in mock client destruction
+    mock_client_.dispatch_gcode_response(
+        "PID parameters: pid_Kp=22.865 pid_Ki=1.292 pid_Kd=101.178");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+}
+
+TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate progress then result", "[pid_calibrate]") {
+    api_->start_pid_calibrate(
+        "extruder", 200,
+        [this](float kp, float ki, float kd) {
+            captured_kp_ = kp;
+            captured_ki_ = ki;
+            captured_kd_ = kd;
+            result_received_.store(true);
+        },
+        [this](const MoonrakerError& err) { error_received_.store(true); },
+        [this](int sample, float tolerance) {
+            progress_samples_.push_back(sample);
+            progress_tolerances_.push_back(tolerance);
+        });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    mock_client_.dispatch_gcode_response("sample:1 pwm:0.5 asymmetry:0.2 tolerance:n/a");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    mock_client_.dispatch_gcode_response("sample:2 pwm:0.48 asymmetry:0.15 tolerance:0.045");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    mock_client_.dispatch_gcode_response(
+        "PID parameters: pid_Kp=22.865 pid_Ki=1.292 pid_Kd=101.178");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    REQUIRE(progress_samples_.size() == 2);
+    REQUIRE(result_received_.load());
+    REQUIRE(captured_kp_ == Catch::Approx(22.865f).margin(0.001f));
+}
+
+TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate no progress after completion",
+                 "[pid_calibrate]") {
+    api_->start_pid_calibrate(
+        "extruder", 200, [this](float kp, float ki, float kd) { result_received_.store(true); },
+        [this](const MoonrakerError& err) { error_received_.store(true); },
+        [this](int sample, float tolerance) { progress_samples_.push_back(sample); });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    mock_client_.dispatch_gcode_response(
+        "PID parameters: pid_Kp=22.865 pid_Ki=1.292 pid_Kd=101.178");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    mock_client_.dispatch_gcode_response("sample:3 pwm:0.5 asymmetry:0.2 tolerance:0.01");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    REQUIRE(result_received_.load());
+    REQUIRE(progress_samples_.empty());
+}
+
+TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate backward compat without progress",
+                 "[pid_calibrate]") {
+    // Call without progress callback (nullptr default)
+    api_->start_pid_calibrate(
+        "extruder", 200,
+        [this](float kp, float ki, float kd) {
+            captured_kp_ = kp;
+            captured_ki_ = ki;
+            captured_kd_ = kd;
+            result_received_.store(true);
+        },
+        [this](const MoonrakerError& err) { error_received_.store(true); });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    mock_client_.dispatch_gcode_response("sample:1 pwm:0.5 asymmetry:0.2 tolerance:n/a");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    mock_client_.dispatch_gcode_response(
+        "PID parameters: pid_Kp=22.865 pid_Ki=1.292 pid_Kd=101.178");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    REQUIRE(result_received_.load());
+    REQUIRE_FALSE(error_received_.load());
+    REQUIRE(captured_kp_ == Catch::Approx(22.865f).margin(0.001f));
+}
+
+TEST_CASE_METHOD(PIDCalibrateTestFixture, "get_heater_pid_values returns extruder values via API",
+                 "[pid_calibrate]") {
+    std::atomic<bool> cb_fired{false};
+    float kp = 0, ki = 0, kd = 0;
+
+    api_->get_heater_pid_values(
+        "extruder",
+        [&](float p, float i, float d) {
+            kp = p;
+            ki = i;
+            kd = d;
+            cb_fired.store(true);
+        },
+        [&](const MoonrakerError& err) {
+            spdlog::error("get_heater_pid_values failed: {}", err.message);
+            cb_fired.store(true);
+        });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    REQUIRE(cb_fired.load());
+    REQUIRE(kp == Catch::Approx(22.865f).margin(0.001f));
+    REQUIRE(ki == Catch::Approx(1.292f).margin(0.001f));
+    REQUIRE(kd == Catch::Approx(101.178f).margin(0.001f));
+}
+
+TEST_CASE_METHOD(PIDCalibrateTestFixture, "get_heater_pid_values returns bed values via API",
+                 "[pid_calibrate]") {
+    std::atomic<bool> cb_fired{false};
+    float kp = 0;
+
+    api_->get_heater_pid_values(
+        "heater_bed",
+        [&](float p, float, float) {
+            kp = p;
+            cb_fired.store(true);
+        },
+        [&](const MoonrakerError&) { cb_fired.store(true); });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    REQUIRE(cb_fired.load());
+    REQUIRE(kp == Catch::Approx(73.517f).margin(0.001f));
+}
+
+TEST_CASE_METHOD(PIDCalibrateTestFixture, "Mock configfile returns extruder PID values",
+                 "[pid_calibrate]") {
+    json params = {{"objects", json::object({{"configfile", json::array({"settings"})}})}};
+
+    std::atomic<bool> cb_fired{false};
+    float kp = 0, ki = 0, kd = 0;
+
+    mock_client_.send_jsonrpc(
+        "printer.objects.query", params,
+        [&](json response) {
+            const json& settings = response["result"]["status"]["configfile"]["settings"];
+            REQUIRE(settings.contains("extruder"));
+            const json& ext = settings["extruder"];
+            kp = ext["pid_kp"].get<float>();
+            ki = ext["pid_ki"].get<float>();
+            kd = ext["pid_kd"].get<float>();
+            cb_fired.store(true);
+        },
+        [&](const MoonrakerError&) { cb_fired.store(true); });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    REQUIRE(cb_fired.load());
+    REQUIRE(kp == Catch::Approx(22.865f).margin(0.001f));
+    REQUIRE(ki == Catch::Approx(1.292f).margin(0.001f));
+    REQUIRE(kd == Catch::Approx(101.178f).margin(0.001f));
+}
+
+TEST_CASE_METHOD(PIDCalibrateTestFixture, "Mock configfile returns bed PID values",
+                 "[pid_calibrate]") {
+    json params = {{"objects", json::object({{"configfile", json::array({"settings"})}})}};
+
+    std::atomic<bool> cb_fired{false};
+    float kp = 0, ki = 0, kd = 0;
+
+    mock_client_.send_jsonrpc(
+        "printer.objects.query", params,
+        [&](json response) {
+            const json& settings = response["result"]["status"]["configfile"]["settings"];
+            REQUIRE(settings.contains("heater_bed"));
+            const json& bed = settings["heater_bed"];
+            kp = bed["pid_kp"].get<float>();
+            ki = bed["pid_ki"].get<float>();
+            kd = bed["pid_kd"].get<float>();
+            cb_fired.store(true);
+        },
+        [&](const MoonrakerError&) { cb_fired.store(true); });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    REQUIRE(cb_fired.load());
+    REQUIRE(kp == Catch::Approx(73.517f).margin(0.001f));
+    REQUIRE(ki == Catch::Approx(1.132f).margin(0.001f));
+    REQUIRE(kd == Catch::Approx(1194.093f).margin(0.001f));
 }

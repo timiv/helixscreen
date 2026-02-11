@@ -294,10 +294,13 @@ void MoonrakerAPI::get_available_objects(
 class PIDCalibrateCollector : public std::enable_shared_from_this<PIDCalibrateCollector> {
   public:
     using PIDCallback = std::function<void(float kp, float ki, float kd)>;
+    using PIDProgressCallback = std::function<void(int sample, float tolerance)>;
 
     PIDCalibrateCollector(MoonrakerClient& client, PIDCallback on_success,
-                          MoonrakerAPI::ErrorCallback on_error)
-        : client_(client), on_success_(std::move(on_success)), on_error_(std::move(on_error)) {}
+                          MoonrakerAPI::ErrorCallback on_error,
+                          PIDProgressCallback on_progress = nullptr)
+        : client_(client), on_success_(std::move(on_success)), on_error_(std::move(on_error)),
+          on_progress_(std::move(on_progress)) {}
 
     ~PIDCalibrateCollector() {
         unregister();
@@ -333,6 +336,27 @@ class PIDCalibrateCollector : public std::enable_shared_from_this<PIDCalibrateCo
 
         const std::string& line = msg["params"][0].get_ref<const std::string&>();
         spdlog::trace("[PIDCalibrateCollector] Received: {}", line);
+
+        // Check for progress: "sample:1 pwm:0.5 asymmetry:0.2 tolerance:n/a"
+        static const std::regex sample_regex(
+            R"(sample:(\d+)\s+pwm:[\d.]+\s+asymmetry:[\d.]+\s+tolerance:(\S+))");
+        std::smatch progress_match;
+        if (std::regex_search(line, progress_match, sample_regex)) {
+            int sample_num = std::stoi(progress_match[1].str());
+            float tolerance_val = -1.0f;
+            std::string tol_str = progress_match[2].str();
+            if (tol_str != "n/a") {
+                try {
+                    tolerance_val = std::stof(tol_str);
+                } catch (...) {
+                }
+            }
+            spdlog::debug("[PIDCalibrateCollector] Progress: sample={} tolerance={}", sample_num,
+                          tolerance_val);
+            if (on_progress_)
+                on_progress_(sample_num, tolerance_val);
+            return;
+        }
 
         // Check for PID result: "PID parameters: pid_Kp=22.865 pid_Ki=1.292 pid_Kd=101.178"
         static const std::regex pid_regex(R"(pid_Kp=([\d.]+)\s+pid_Ki=([\d.]+)\s+pid_Kd=([\d.]+))");
@@ -388,6 +412,7 @@ class PIDCalibrateCollector : public std::enable_shared_from_this<PIDCalibrateCo
     MoonrakerClient& client_;
     PIDCallback on_success_;
     MoonrakerAPI::ErrorCallback on_error_;
+    PIDProgressCallback on_progress_;
     std::string handler_name_;
     std::atomic<bool> registered_{false};
     std::atomic<bool> completed_{false};
@@ -1740,13 +1765,76 @@ std::vector<MacroInfo> MoonrakerAPI::get_user_macros(bool /*include_system*/) co
 // Advanced Panel Operations - PID Calibration
 // ============================================================================
 
+void MoonrakerAPI::get_heater_pid_values(const std::string& heater,
+                                         MoonrakerAPI::PIDCalibrateCallback on_complete,
+                                         MoonrakerAPI::ErrorCallback on_error) {
+    json params = {{"objects", json::object({{"configfile", json::array({"settings"})}})}};
+
+    client_.send_jsonrpc(
+        "printer.objects.query", params,
+        [heater, on_complete, on_error](json response) {
+            try {
+                if (!response.contains("result") || !response["result"].contains("status") ||
+                    !response["result"]["status"].contains("configfile") ||
+                    !response["result"]["status"]["configfile"].contains("settings")) {
+                    spdlog::debug("[Moonraker API] configfile.settings not available in response");
+                    if (on_error) {
+                        on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN, 0,
+                                                "configfile.settings not available"});
+                    }
+                    return;
+                }
+
+                const json& settings = response["result"]["status"]["configfile"]["settings"];
+
+                if (!settings.contains(heater)) {
+                    if (on_error) {
+                        on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN, 0,
+                                                "Heater '" + heater + "' not in config"});
+                    }
+                    return;
+                }
+
+                const json& h = settings[heater];
+                if (h.contains("pid_kp") && h.contains("pid_ki") && h.contains("pid_kd")) {
+                    float kp = h["pid_kp"].get<float>();
+                    float ki = h["pid_ki"].get<float>();
+                    float kd = h["pid_kd"].get<float>();
+                    spdlog::debug(
+                        "[Moonraker API] Fetched PID values for {}: Kp={:.3f} Ki={:.3f} Kd={:.3f}",
+                        heater, kp, ki, kd);
+                    if (on_complete) {
+                        on_complete(kp, ki, kd);
+                    }
+                } else {
+                    if (on_error) {
+                        on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN, 0,
+                                                "No PID values for heater '" + heater + "'"});
+                    }
+                }
+            } catch (const std::exception& ex) {
+                spdlog::warn("[Moonraker API] Error parsing PID values: {}", ex.what());
+                if (on_error) {
+                    on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN, 0,
+                                            std::string("Parse error: ") + ex.what()});
+                }
+            }
+        },
+        [on_error](const MoonrakerError& err) {
+            spdlog::debug("[Moonraker API] Failed to fetch PID values: {}", err.message);
+            if (on_error) {
+                on_error(err);
+            }
+        });
+}
+
 void MoonrakerAPI::start_pid_calibrate(const std::string& heater, int target_temp,
                                        MoonrakerAPI::PIDCalibrateCallback on_complete,
-                                       ErrorCallback on_error) {
+                                       ErrorCallback on_error, PIDProgressCallback on_progress) {
     spdlog::info("[MoonrakerAPI] Starting PID calibration for {} at {}°C", heater, target_temp);
 
-    auto collector =
-        std::make_shared<PIDCalibrateCollector>(client_, std::move(on_complete), on_error);
+    auto collector = std::make_shared<PIDCalibrateCollector>(client_, std::move(on_complete),
+                                                             on_error, std::move(on_progress));
     collector->start();
 
     char cmd[64];
@@ -1755,6 +1843,7 @@ void MoonrakerAPI::start_pid_calibrate(const std::string& heater, int target_tem
     // PID calibration takes 3-10 minutes — use 15 min timeout
     static constexpr uint32_t PID_TIMEOUT_MS = 15 * 60 * 1000;
 
+    // silent=true: PID errors are handled by the collector and UI panel, not global toast
     execute_gcode(
         cmd, nullptr,
         [collector, on_error](const MoonrakerError& err) {
@@ -1764,7 +1853,7 @@ void MoonrakerAPI::start_pid_calibrate(const std::string& heater, int target_tem
             if (on_error)
                 on_error(err);
         },
-        PID_TIMEOUT_MS);
+        PID_TIMEOUT_MS, true);
 }
 
 // ============================================================================

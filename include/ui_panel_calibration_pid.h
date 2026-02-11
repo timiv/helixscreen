@@ -195,6 +195,12 @@ class PIDCalibrationPanel : public OverlayBase {
     float result_ki_ = 0;
     float result_kd_ = 0;
 
+    // Previous PID values (fetched before calibration starts)
+    float old_kp_ = 0;
+    float old_ki_ = 0;
+    float old_kd_ = 0;
+    bool has_old_values_ = false;
+
     // Subject manager for automatic cleanup
     SubjectManager subjects_;
 
@@ -209,13 +215,16 @@ class PIDCalibrationPanel : public OverlayBase {
     char buf_calibrating_heater_[32];
 
     lv_subject_t subj_pid_kp_;
-    char buf_pid_kp_[16];
+    char buf_pid_kp_[32];
 
     lv_subject_t subj_pid_ki_;
-    char buf_pid_ki_[16];
+    char buf_pid_ki_[32];
 
     lv_subject_t subj_pid_kd_;
-    char buf_pid_kd_[16];
+    char buf_pid_kd_[32];
+
+    lv_subject_t subj_result_summary_;
+    char buf_result_summary_[128];
 
     lv_subject_t subj_error_message_;
     char buf_error_message_[256];
@@ -225,6 +234,23 @@ class PIDCalibrationPanel : public OverlayBase {
 
     // Int subject: 1 when not idle (disables Start button in header)
     lv_subject_t subj_cal_not_idle_;
+
+    // Progress tracking for calibration
+    lv_subject_t subj_pid_progress_; // int 0-100
+    lv_subject_t subj_pid_progress_text_;
+    char buf_pid_progress_text_[32];
+    int pid_estimated_total_ = 3;      // Dynamic estimate, starts at 3
+    bool has_kalico_progress_ = false; // True once first sample callback arrives
+
+    // Fallback progress timer for standard Klipper (no sample callbacks)
+    lv_timer_t* progress_fallback_timer_ = nullptr;
+    int fallback_cycle_ = 0;
+    void start_fallback_progress_timer();
+    void stop_fallback_progress_timer();
+    static void on_fallback_progress_tick(lv_timer_t* timer);
+
+    // Progress handler (called from UI thread via queue)
+    void on_pid_progress(int sample, float tolerance);
 
     // Widget references
     lv_obj_t* fan_slider_ = nullptr;
@@ -256,6 +282,7 @@ class PIDCalibrationPanel : public OverlayBase {
     // G-code commands
     void send_pid_calibrate();
     void send_save_config();
+    void fetch_old_pid_values();
 
     // Event handlers
     void handle_heater_extruder_clicked();

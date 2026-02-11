@@ -43,6 +43,7 @@ PIDCalibrationPanel::PIDCalibrationPanel() {
     std::memset(buf_pid_ki_, 0, sizeof(buf_pid_ki_));
     std::memset(buf_pid_kd_, 0, sizeof(buf_pid_kd_));
     std::memset(buf_error_message_, 0, sizeof(buf_error_message_));
+    std::memset(buf_pid_progress_text_, 0, sizeof(buf_pid_progress_text_));
 
     spdlog::trace("[PIDCal] Instance created");
 }
@@ -93,6 +94,10 @@ void PIDCalibrationPanel::init_subjects() {
 
     UI_MANAGED_SUBJECT_STRING(subj_pid_kd_, buf_pid_kd_, "0.000", "pid_kd", subjects_);
 
+    UI_MANAGED_SUBJECT_STRING(subj_result_summary_, buf_result_summary_,
+                              "Temperature control has been optimized.", "pid_result_summary",
+                              subjects_);
+
     UI_MANAGED_SUBJECT_STRING(subj_error_message_, buf_error_message_,
                               "An error occurred during calibration.", "pid_error_message",
                               subjects_);
@@ -102,6 +107,11 @@ void PIDCalibrationPanel::init_subjects() {
 
     // Int subject: 1 when not idle (disables Start button in header)
     UI_MANAGED_SUBJECT_INT(subj_cal_not_idle_, 0, "pid_cal_not_idle", subjects_);
+
+    // Progress tracking for calibration
+    UI_MANAGED_SUBJECT_INT(subj_pid_progress_, 0, "pid_cal_progress", subjects_);
+    UI_MANAGED_SUBJECT_STRING(subj_pid_progress_text_, buf_pid_progress_text_, "Starting...",
+                              "pid_progress_text", subjects_);
 
     subjects_initialized_ = true;
 
@@ -234,15 +244,22 @@ void PIDCalibrationPanel::on_activate() {
     target_temp_ = EXTRUDER_DEFAULT_TEMP;
     fan_speed_ = 0;
     selected_material_.clear();
+    has_old_values_ = false;
     update_fan_slider(0);
     lv_subject_set_int(&subj_heater_is_extruder_, 1);
 
     update_temp_display();
     update_temp_hint();
+
+    // Fetch current PID values now (while no gcode traffic) for delta display later
+    fetch_old_pid_values();
 }
 
 void PIDCalibrationPanel::on_deactivate() {
     spdlog::debug("[PIDCal] on_deactivate()");
+
+    // Stop fallback timer
+    stop_fallback_progress_timer();
 
     // Teardown graph before deactivating
     teardown_pid_graph();
@@ -264,6 +281,9 @@ void PIDCalibrationPanel::on_deactivate() {
 
 void PIDCalibrationPanel::cleanup() {
     spdlog::debug("[PIDCal] Cleaning up");
+
+    // Stop fallback timer before cleanup
+    stop_fallback_progress_timer();
 
     // Teardown graph before cleanup
     teardown_pid_graph();
@@ -319,6 +339,14 @@ void PIDCalibrationPanel::set_state(State new_state) {
     // Setup graph when entering CALIBRATING state
     if (new_state == State::CALIBRATING) {
         setup_pid_graph();
+        // Reset progress
+        pid_estimated_total_ = 3;
+        has_kalico_progress_ = false;
+        lv_subject_set_int(&subj_pid_progress_, 0);
+        lv_subject_copy_string(&subj_pid_progress_text_, "Starting...");
+        start_fallback_progress_timer();
+    } else {
+        stop_fallback_progress_timer();
     }
 }
 
@@ -475,6 +503,12 @@ void PIDCalibrationPanel::send_pid_calibrate() {
             ui_queue_update([this, kp, ki, kd]() {
                 if (cleanup_called())
                     return;
+                // Ignore results if user already aborted
+                if (state_ != State::CALIBRATING) {
+                    spdlog::info("[PIDCal] Ignoring PID result (state={}, user likely aborted)",
+                                 static_cast<int>(state_));
+                    return;
+                }
                 turn_off_fan();
                 on_calibration_result(true, kp, ki, kd);
             });
@@ -484,8 +518,20 @@ void PIDCalibrationPanel::send_pid_calibrate() {
             ui_queue_update([this, msg]() {
                 if (cleanup_called())
                     return;
+                if (state_ != State::CALIBRATING) {
+                    spdlog::info("[PIDCal] Ignoring PID error (state={}, user likely aborted)",
+                                 static_cast<int>(state_));
+                    return;
+                }
                 turn_off_fan();
                 on_calibration_result(false, 0, 0, 0, msg);
+            });
+        },
+        [this](int sample, float tolerance) {
+            ui_queue_update([this, sample, tolerance]() {
+                if (cleanup_called())
+                    return;
+                on_pid_progress(sample, tolerance);
             });
         });
 }
@@ -526,6 +572,34 @@ void PIDCalibrationPanel::send_save_config() {
 }
 
 // ============================================================================
+// FETCH OLD PID VALUES
+// ============================================================================
+
+void PIDCalibrationPanel::fetch_old_pid_values() {
+    has_old_values_ = false;
+    if (!api_) {
+        spdlog::debug("[PIDCal] fetch_old_pid_values: no API, bailing");
+        return;
+    }
+
+    const char* heater_name = (selected_heater_ == Heater::EXTRUDER) ? "extruder" : "heater_bed";
+    spdlog::debug("[PIDCal] Fetching old PID values for '{}'", heater_name);
+
+    api_->get_heater_pid_values(
+        heater_name,
+        [this](float kp, float ki, float kd) {
+            old_kp_ = kp;
+            old_ki_ = ki;
+            old_kd_ = kd;
+            has_old_values_ = true;
+            spdlog::debug("[PIDCal] Got old PID values: Kp={:.3f} Ki={:.3f} Kd={:.3f}", kp, ki, kd);
+        },
+        [heater_name](const MoonrakerError& err) {
+            spdlog::warn("[PIDCal] Failed to fetch old PID for '{}': {}", heater_name, err.message);
+        });
+}
+
+// ============================================================================
 // EVENT HANDLERS
 // ============================================================================
 
@@ -540,6 +614,7 @@ void PIDCalibrationPanel::handle_heater_extruder_clicked() {
     lv_subject_set_int(&subj_heater_is_extruder_, 1);
     update_temp_display();
     update_temp_hint();
+    fetch_old_pid_values();
 }
 
 void PIDCalibrationPanel::handle_heater_bed_clicked() {
@@ -555,6 +630,7 @@ void PIDCalibrationPanel::handle_heater_bed_clicked() {
     lv_subject_set_int(&subj_heater_is_extruder_, 0);
     update_temp_display();
     update_temp_hint();
+    fetch_old_pid_values();
 }
 
 void PIDCalibrationPanel::handle_temp_up() {
@@ -592,12 +668,33 @@ void PIDCalibrationPanel::handle_start_clicked() {
 }
 
 void PIDCalibrationPanel::handle_abort_clicked() {
-    spdlog::debug("[PIDCal] Abort clicked");
-    turn_off_fan();
-    // Send TURN_OFF_HEATERS to abort
+    spdlog::info("[PIDCal] Abort clicked, sending emergency stop + firmware restart");
+
+    // Suppress shutdown/disconnect modals — E-stop + restart triggers expected reconnect
+    EmergencyStopOverlay::instance().suppress_recovery_dialog(15000);
     if (client_) {
-        client_->gcode_script("TURN_OFF_HEATERS");
+        client_->suppress_disconnect_modal(15000);
     }
+
+    // M112 emergency stop halts immediately at MCU level (bypasses blocked gcode queue),
+    // then firmware restart brings Klipper back online
+    if (api_) {
+        api_->emergency_stop(
+            [this]() {
+                spdlog::debug("[PIDCal] Emergency stop sent, sending firmware restart");
+                if (api_) {
+                    api_->restart_firmware(
+                        []() { spdlog::debug("[PIDCal] Firmware restart initiated"); },
+                        [](const MoonrakerError& err) {
+                            spdlog::warn("[PIDCal] Firmware restart failed: {}", err.message);
+                        });
+                }
+            },
+            [](const MoonrakerError& err) {
+                spdlog::warn("[PIDCal] Emergency stop failed: {}", err.message);
+            });
+    }
+
     set_state(State::IDLE);
 }
 
@@ -630,21 +727,45 @@ void PIDCalibrationPanel::handle_retry_clicked() {
 void PIDCalibrationPanel::on_calibration_result(bool success, float kp, float ki, float kd,
                                                 const std::string& error_message) {
     if (success) {
+        // Set progress to 100% on completion
+        lv_subject_set_int(&subj_pid_progress_, 100);
+        lv_subject_copy_string(&subj_pid_progress_text_, "Complete!");
+
         // Store results
         result_kp_ = kp;
         result_ki_ = ki;
         result_kd_ = kd;
 
-        // Update display using subjects
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%.3f", kp);
-        lv_subject_copy_string(&subj_pid_kp_, buf);
+        // Format values with delta if old values are available
+        auto format_pid_value = [this](char* buf, size_t buf_size, float new_val, float old_val) {
+            if (has_old_values_ && old_val > 0.001f) {
+                float pct = ((new_val - old_val) / old_val) * 100.0f;
+                snprintf(buf, buf_size, "%.3f (%+.0f%%)", new_val, pct);
+            } else {
+                snprintf(buf, buf_size, "%.3f", new_val);
+            }
+        };
 
-        snprintf(buf, sizeof(buf), "%.3f", ki);
-        lv_subject_copy_string(&subj_pid_ki_, buf);
+        spdlog::debug("[PIDCal] on_calibration_result: has_old_values_={} old_kp_={:.3f}",
+                      has_old_values_, old_kp_);
 
-        snprintf(buf, sizeof(buf), "%.3f", kd);
-        lv_subject_copy_string(&subj_pid_kd_, buf);
+        char val_buf[32];
+        format_pid_value(val_buf, sizeof(val_buf), kp, old_kp_);
+        lv_subject_copy_string(&subj_pid_kp_, val_buf);
+
+        format_pid_value(val_buf, sizeof(val_buf), ki, old_ki_);
+        lv_subject_copy_string(&subj_pid_ki_, val_buf);
+
+        format_pid_value(val_buf, sizeof(val_buf), kd, old_kd_);
+        lv_subject_copy_string(&subj_pid_kd_, val_buf);
+
+        // Set human-readable result summary
+        const char* heater_label =
+            (selected_heater_ == Heater::EXTRUDER) ? "extruder" : "heated bed";
+        char summary[128];
+        snprintf(summary, sizeof(summary), "Temperature control optimized for %s at %d°C.",
+                 heater_label, target_temp_);
+        lv_subject_copy_string(&subj_result_summary_, summary);
 
         // Save config (will transition to COMPLETE when done)
         set_state(State::SAVING);
@@ -653,6 +774,99 @@ void PIDCalibrationPanel::on_calibration_result(bool success, float kp, float ki
         lv_subject_copy_string(&subj_error_message_, error_message.c_str());
         set_state(State::ERROR);
     }
+}
+
+// ============================================================================
+// PROGRESS HANDLER
+// ============================================================================
+
+void PIDCalibrationPanel::on_pid_progress(int sample, float tolerance) {
+    // First sample callback: switch from fallback to Kalico progress mode
+    if (!has_kalico_progress_) {
+        has_kalico_progress_ = true;
+        stop_fallback_progress_timer();
+        spdlog::info("[PIDCal] Kalico sample progress detected, switching to precise mode");
+    }
+
+    // Dynamically adjust estimated total
+    if (sample >= pid_estimated_total_) {
+        pid_estimated_total_ = sample + 1;
+    }
+
+    // Calculate progress percentage, cap at 95% (100% only on completion)
+    int progress = (sample * 100) / pid_estimated_total_;
+    if (progress > 95)
+        progress = 95;
+
+    lv_subject_set_int(&subj_pid_progress_, progress);
+
+    // Update progress text
+    char buf[32];
+    snprintf(buf, sizeof(buf), "Sample %d/%d", sample, pid_estimated_total_);
+    lv_subject_copy_string(&subj_pid_progress_text_, buf);
+
+    spdlog::debug("[PIDCal] Progress: sample={}/{} tolerance={:.3f} bar={}%", sample,
+                  pid_estimated_total_, tolerance, progress);
+}
+
+// ============================================================================
+// FALLBACK PROGRESS TIMER (for standard Klipper without sample callbacks)
+// ============================================================================
+
+void PIDCalibrationPanel::start_fallback_progress_timer() {
+    stop_fallback_progress_timer();
+    fallback_cycle_ = 0;
+
+    // Tick every 15 seconds — PID calibration takes ~3-10 minutes
+    uint32_t tick_ms = (selected_heater_ == Heater::EXTRUDER) ? 13500 : 15000;
+    progress_fallback_timer_ = lv_timer_create(on_fallback_progress_tick, tick_ms, this);
+
+    // Fire once immediately after a short delay to show "Heating to target..."
+    lv_timer_t* initial = lv_timer_create(
+        [](lv_timer_t* t) {
+            auto* self = static_cast<PIDCalibrationPanel*>(lv_timer_get_user_data(t));
+            if (!self->has_kalico_progress_ && self->state_ == State::CALIBRATING) {
+                lv_subject_set_int(&self->subj_pid_progress_, 5);
+                lv_subject_copy_string(&self->subj_pid_progress_text_, "Heating to target...");
+            }
+            lv_timer_delete(t);
+        },
+        3000, this);
+    lv_timer_set_repeat_count(initial, 1);
+}
+
+void PIDCalibrationPanel::stop_fallback_progress_timer() {
+    if (progress_fallback_timer_) {
+        lv_timer_delete(progress_fallback_timer_);
+        progress_fallback_timer_ = nullptr;
+    }
+}
+
+void PIDCalibrationPanel::on_fallback_progress_tick(lv_timer_t* timer) {
+    auto* self = static_cast<PIDCalibrationPanel*>(lv_timer_get_user_data(timer));
+    if (self->has_kalico_progress_ || self->state_ != State::CALIBRATING)
+        return;
+
+    self->fallback_cycle_++;
+
+    // Slowly advance progress bar: asymptotic approach to 90%
+    // Each tick adds less: 15, 25, 33, 40, 46, 51, 55, ...
+    int progress = 90 - (90 * 100) / (100 + self->fallback_cycle_ * 30);
+    if (progress > 90)
+        progress = 90;
+    lv_subject_set_int(&self->subj_pid_progress_, progress);
+
+    // Cycle through helpful messages
+    const char* messages[] = {
+        "Oscillating around target...",
+        "Measuring thermal response...",
+        "Tuning control parameters...",
+        "Refining stability...",
+    };
+    int msg_idx = (self->fallback_cycle_ - 1) % 4;
+    lv_subject_copy_string(&self->subj_pid_progress_text_, messages[msg_idx]);
+
+    spdlog::debug("[PIDCal] Fallback progress: cycle={} bar={}%", self->fallback_cycle_, progress);
 }
 
 // ============================================================================
