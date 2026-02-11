@@ -5,6 +5,30 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.12] - 2026-02-11
+
+### Added
+- QIDI printer support with detection heuristics and print start profile
+- Snapmaker U1 cross-compile target, printer detection, and platform support
+- Layout manager with auto-detection for alternative screen sizes and CLI override
+- Input shaper panel redesigned with config display, pre-flight checks, per-axis results, and save button
+- PID calibration: live temperature graph, progress tracking, old value deltas, abort support, and 15-minute timeout
+- Multi-LED chip selection in settings replacing single dropdown
+- Macro browser (gated behind beta features)
+
+### Fixed
+- Crash on shutdown from re-entrant Moonraker method callback map destruction
+- Installer: BusyBox echo compatibility for ANSI colors and temp directory auto-detection
+- Missing translations for telemetry, sound, PID, and timelapse strings
+- Unwanted borders on navigation bar and home status card buttons
+- Scroll-on-focus in plugin install modal
+- Beta feature flag conflict hiding hardware check rows in advanced settings
+
+### Changed
+- PID calibration ungated from beta features — now available to all users
+- Moonraker API abstraction boundary enforced — UI no longer accesses WebSocket client directly
+- Test-only methods moved to friend test access pattern (cleaner production API)
+
 ## [0.9.11] - 2026-02-10
 
 Sound system, KIAUH installer, display rotation, PID tuning, and timelapse support — plus a splash screen fix for AD5M.
@@ -340,6 +364,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.9.12]: https://github.com/prestonbrown/helixscreen/compare/v0.9.11...v0.9.12
 [0.9.11]: https://github.com/prestonbrown/helixscreen/compare/v0.9.10...v0.9.11
 [0.9.10]: https://github.com/prestonbrown/helixscreen/compare/v0.9.9...v0.9.10
 [0.9.9]: https://github.com/prestonbrown/helixscreen/compare/v0.9.8...v0.9.9
