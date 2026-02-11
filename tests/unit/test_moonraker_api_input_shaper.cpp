@@ -123,7 +123,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test accepts X axis",
     REQUIRE(captured_result.axis == 'X');
     REQUIRE(captured_result.is_valid());
     REQUIRE(captured_result.shaper_type == "mzv");
-    REQUIRE(captured_result.shaper_freq == Catch::Approx(36.7f).margin(0.1f));
+    REQUIRE(captured_result.shaper_freq == Catch::Approx(53.8f).margin(0.1f));
 }
 
 TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test accepts Y axis",
@@ -159,7 +159,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test sends correct G-c
             complete_called = true;
             // Verify parsed values from mock response
             REQUIRE(result.shaper_type == "mzv");
-            REQUIRE(result.shaper_freq == Catch::Approx(36.7f).margin(0.1f));
+            REQUIRE(result.shaper_freq == Catch::Approx(53.8f).margin(0.1f));
         },
         [&](const MoonrakerError&) { FAIL("Error callback should not be called"); });
 
@@ -482,13 +482,12 @@ TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test returns all shape
     REQUIRE(complete_called);
     REQUIRE(captured_result.is_valid());
 
-    // After enhancement, all_shapers should contain all 3 fitted options from mock
-    REQUIRE(captured_result.all_shapers.size() == 3);
+    // Mock now outputs 5 fitted shapers with realistic values from AD5M
+    REQUIRE(captured_result.all_shapers.size() == 5);
 
     // Verify the mock data matches expected values
-    // Mock outputs: zv@35.8Hz, mzv@36.7Hz, ei@47.6Hz
+    // Mock outputs: zv@59.0, mzv@53.8, ei@56.2, 2hump_ei@71.8, 3hump_ei@89.6
 
-    // Find each shaper type and verify its values
     auto find_shaper = [&](const std::string& type) -> const ShaperOption* {
         for (const auto& s : captured_result.all_shapers) {
             if (s.type == type)
@@ -499,21 +498,34 @@ TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test returns all shape
 
     const ShaperOption* zv = find_shaper("zv");
     REQUIRE(zv != nullptr);
-    CHECK(zv->frequency == Catch::Approx(35.8f).margin(0.1f));
-    CHECK(zv->vibrations == Catch::Approx(22.7f).margin(0.1f));
-    CHECK(zv->smoothing == Catch::Approx(0.100f).margin(0.01f));
+    CHECK(zv->frequency == Catch::Approx(59.0f).margin(0.1f));
+    CHECK(zv->vibrations == Catch::Approx(5.2f).margin(0.1f));
+    CHECK(zv->smoothing == Catch::Approx(0.045f).margin(0.01f));
+    CHECK(zv->max_accel == Catch::Approx(13400.0f).margin(1.0f));
 
     const ShaperOption* mzv = find_shaper("mzv");
     REQUIRE(mzv != nullptr);
-    CHECK(mzv->frequency == Catch::Approx(36.7f).margin(0.1f));
-    CHECK(mzv->vibrations == Catch::Approx(7.2f).margin(0.1f));
-    CHECK(mzv->smoothing == Catch::Approx(0.140f).margin(0.01f));
+    CHECK(mzv->frequency == Catch::Approx(53.8f).margin(0.1f));
+    CHECK(mzv->vibrations == Catch::Approx(1.6f).margin(0.1f));
+    CHECK(mzv->smoothing == Catch::Approx(0.130f).margin(0.01f));
+    CHECK(mzv->max_accel == Catch::Approx(4000.0f).margin(1.0f));
 
     const ShaperOption* ei = find_shaper("ei");
     REQUIRE(ei != nullptr);
-    CHECK(ei->frequency == Catch::Approx(47.6f).margin(0.1f));
-    CHECK(ei->vibrations == Catch::Approx(5.9f).margin(0.1f));
-    CHECK(ei->smoothing == Catch::Approx(0.096f).margin(0.01f));
+    CHECK(ei->frequency == Catch::Approx(56.2f).margin(0.1f));
+    CHECK(ei->vibrations == Catch::Approx(0.7f).margin(0.1f));
+    CHECK(ei->smoothing == Catch::Approx(0.120f).margin(0.01f));
+    CHECK(ei->max_accel == Catch::Approx(4600.0f).margin(1.0f));
+
+    const ShaperOption* two_hump = find_shaper("2hump_ei");
+    REQUIRE(two_hump != nullptr);
+    CHECK(two_hump->frequency == Catch::Approx(71.8f).margin(0.1f));
+    CHECK(two_hump->max_accel == Catch::Approx(8800.0f).margin(1.0f));
+
+    const ShaperOption* three_hump = find_shaper("3hump_ei");
+    REQUIRE(three_hump != nullptr);
+    CHECK(three_hump->frequency == Catch::Approx(89.6f).margin(0.1f));
+    CHECK(three_hump->max_accel == Catch::Approx(8800.0f).margin(1.0f));
 }
 
 // ----------------------------------------------------------------------------

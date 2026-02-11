@@ -761,15 +761,23 @@ class InputShaperCollector : public std::enable_shared_from_this<InputShaperColl
         }
 
         // Parse recommendation line (try new format first, then old)
+        // Don't complete yet — CSV path line follows immediately after
         if (line.find("Recommended shaper") != std::string::npos) {
             parse_recommendation(line);
-            complete_success();
+            collector_state_ = CollectorState::COMPLETE;
             return;
         }
 
         // Parse CSV path: "calibration data written to /tmp/calibration_data_x_*.csv"
         if (line.find("calibration data written to") != std::string::npos) {
             parse_csv_path(line);
+            complete_success();
+            return;
+        }
+
+        // If we already have the recommendation but got a non-CSV line, complete now
+        if (collector_state_ == CollectorState::COMPLETE) {
+            complete_success();
             return;
         }
 
