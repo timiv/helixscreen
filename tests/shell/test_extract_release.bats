@@ -178,6 +178,65 @@ setup_existing_install() {
     [ ! -d "${INSTALL_DIR}.old" ]
 }
 
+# --- Disk space pre-flight ---
+
+@test "extract_release: fails gracefully when TMP_DIR has insufficient space" {
+    # Override log stubs to write to stdout (bats 'run' only captures stdout)
+    log_error()   { echo "ERROR: $*"; }
+    log_info()    { echo "INFO: $*"; }
+    log_success() { echo "OK: $*"; }
+    log_warn()    { echo "WARN: $*"; }
+
+    create_test_tarball "ad5m"
+
+    # Mock df to report very low space on TMP_DIR's filesystem
+    mock_command_script "df" '
+echo "Filesystem  1K-blocks  Used Available Use% Mounted on"
+echo "tmpfs       51200     48640  2560       95% /tmp"
+'
+
+    run extract_release "ad5m"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Not enough space"* ]]
+}
+
+@test "extract_release: succeeds when TMP_DIR has adequate space" {
+    log_error()   { echo "ERROR: $*"; }
+    log_info()    { echo "INFO: $*"; }
+    log_success() { echo "OK: $*"; }
+    log_warn()    { echo "WARN: $*"; }
+
+    create_test_tarball "pi"
+
+    # Mock df to report plenty of space
+    mock_command_script "df" '
+echo "Filesystem  1K-blocks  Used Available Use% Mounted on"
+echo "/dev/sda1   1048576   0     1048576    0% /"
+'
+
+    run extract_release "pi"
+    [ "$status" -eq 0 ]
+    [ -f "$INSTALL_DIR/bin/helix-screen" ]
+}
+
+@test "extract_release: error message suggests TMP_DIR override on space failure" {
+    log_error()   { echo "ERROR: $*"; }
+    log_info()    { echo "INFO: $*"; }
+    log_success() { echo "OK: $*"; }
+    log_warn()    { echo "WARN: $*"; }
+
+    create_test_tarball "ad5m"
+
+    mock_command_script "df" '
+echo "Filesystem  1K-blocks  Used Available Use% Mounted on"
+echo "tmpfs       51200     48640  2560       95% /tmp"
+'
+
+    run extract_release "ad5m"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"TMP_DIR="* ]]
+}
+
 # --- Legacy config migration ---
 
 @test "extract_release: preserves legacy config location" {

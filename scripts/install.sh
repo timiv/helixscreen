@@ -191,7 +191,7 @@ print_post_install_commands() {
 #
 # Default paths (may be overridden by set_install_paths)
 : "${INSTALL_DIR:=/opt/helixscreen}"
-: "${TMP_DIR:=/tmp/helixscreen-install}"
+: "${TMP_DIR:=}"
 
 # Capture user-provided INSTALL_DIR before we potentially override it.
 # If the user explicitly set INSTALL_DIR (and it's not the default),
@@ -460,6 +460,52 @@ detect_pi_install_dir() {
     return 0
 }
 
+# Detect best temp directory for extraction
+# Mirrors get_helix_cache_dir() heuristic from app_globals.cpp:
+# tries candidates in order, picks first writable dir with >= 100MB free.
+# User can override via TMP_DIR env var.
+# Sets: TMP_DIR
+detect_tmp_dir() {
+    # User already set TMP_DIR — respect it
+    if [ -n "${TMP_DIR:-}" ]; then
+        log_info "Temp directory (user override): $TMP_DIR"
+        return 0
+    fi
+
+    local required_mb=100
+    local candidates="/data/helixscreen-install /mnt/data/helixscreen-install /usr/data/helixscreen-install /var/tmp/helixscreen-install /tmp/helixscreen-install"
+
+    for candidate in $candidates; do
+        local check_dir
+        check_dir=$(dirname "$candidate")
+
+        # Must exist (or be creatable) and be writable
+        if [ ! -d "$check_dir" ]; then
+            continue
+        fi
+        if [ ! -w "$check_dir" ] && ! $SUDO test -w "$check_dir" 2>/dev/null; then
+            continue
+        fi
+
+        # Check free space (BusyBox df: KB in $4)
+        local available_mb
+        available_mb=$(df "$check_dir" 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
+        if [ -z "$available_mb" ] || [ "$available_mb" -lt "$required_mb" ]; then
+            continue
+        fi
+
+        TMP_DIR="$candidate"
+        if [ "$check_dir" != "/tmp" ]; then
+            log_info "Temp directory: $TMP_DIR (${available_mb}MB free)"
+        fi
+        return 0
+    done
+
+    # Last resort — /tmp even if small (will fail later at extraction with a clear error)
+    TMP_DIR="/tmp/helixscreen-install"
+    log_warn "No temp directory with ${required_mb}MB+ free found, using /tmp"
+}
+
 # Set installation paths based on platform and firmware
 # Sets: INSTALL_DIR, INIT_SCRIPT_DEST, PREVIOUS_UI_SCRIPT, TMP_DIR
 set_install_paths() {
@@ -472,18 +518,13 @@ set_install_paths() {
                 INSTALL_DIR="/root/printer_software/helixscreen"
                 INIT_SCRIPT_DEST="/etc/init.d/S80helixscreen"
                 PREVIOUS_UI_SCRIPT="/etc/init.d/S80klipperscreen"
-                # Klipper Mod has small tmpfs (~54MB), package is ~70MB
-                # Use /mnt/data which has 4+ GB available
-                TMP_DIR="/mnt/data/helixscreen-install"
                 log_info "AD5M firmware: Klipper Mod"
                 log_info "Install directory: ${INSTALL_DIR}"
-                log_info "Using /mnt/data for temp files (tmpfs too small)"
                 ;;
             forge_x|*)
                 INSTALL_DIR="/opt/helixscreen"
                 INIT_SCRIPT_DEST="/etc/init.d/S90helixscreen"
                 PREVIOUS_UI_SCRIPT="/opt/config/mod/.root/S80guppyscreen"
-                TMP_DIR="/tmp/helixscreen-install"
                 log_info "AD5M firmware: Forge-X"
                 log_info "Install directory: ${INSTALL_DIR}"
                 ;;
@@ -495,7 +536,6 @@ set_install_paths() {
                 INSTALL_DIR="/usr/data/helixscreen"
                 INIT_SCRIPT_DEST="/etc/init.d/S99helixscreen"
                 PREVIOUS_UI_SCRIPT="/etc/init.d/S99guppyscreen"
-                TMP_DIR="/tmp/helixscreen-install"
                 log_info "K1 firmware: Simple AF"
                 log_info "Install directory: ${INSTALL_DIR}"
                 ;;
@@ -504,10 +544,12 @@ set_install_paths() {
         # Pi and other platforms — detect klipper user, then auto-detect install dir
         INIT_SCRIPT_DEST="/etc/init.d/S90helixscreen"
         PREVIOUS_UI_SCRIPT=""
-        TMP_DIR="/tmp/helixscreen-install"
         detect_klipper_user
         detect_pi_install_dir
     fi
+
+    # Auto-detect best temp directory (all platforms)
+    detect_tmp_dir
 }
 
 # Create symlink from printer_data/config/helixscreen → INSTALL_DIR/config
@@ -1697,6 +1739,27 @@ extract_release() {
     local extract_dir="${TMP_DIR}/extract"
     local new_install="${extract_dir}/helixscreen"
 
+    # Pre-flight: check TMP_DIR has enough space for extraction
+    # Tarball expands ~3x, so require 3x tarball size + margin
+    local tarball_mb extract_required_mb tmp_available_mb
+    tarball_mb=$(du -m "$tarball" 2>/dev/null | awk '{print $1}')
+    [ -z "$tarball_mb" ] && tarball_mb=$(ls -l "$tarball" | awk '{print int($5/1048576)}')
+    extract_required_mb=$(( (tarball_mb * 3) + 20 ))
+
+    local tmp_check_dir
+    tmp_check_dir=$(dirname "$TMP_DIR")
+    while [ ! -d "$tmp_check_dir" ] && [ "$tmp_check_dir" != "/" ]; do
+        tmp_check_dir=$(dirname "$tmp_check_dir")
+    done
+    tmp_available_mb=$(df "$tmp_check_dir" 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
+
+    if [ -n "$tmp_available_mb" ] && [ "$tmp_available_mb" -lt "$extract_required_mb" ]; then
+        log_error "Not enough space in temp directory for extraction."
+        log_error "Temp directory: $tmp_check_dir (${tmp_available_mb}MB free, need ${extract_required_mb}MB)"
+        log_error "Try: TMP_DIR=/path/with/space sh install.sh ..."
+        exit 1
+    fi
+
     log_info "Extracting release..."
 
     # Phase 1: Extract to temporary directory
@@ -1706,15 +1769,32 @@ extract_release() {
     if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
         # BusyBox tar doesn't support -z
         if ! gunzip -c "$tarball" | $SUDO tar xf -; then
-            log_error "Failed to extract tarball."
-            log_error "The archive may be corrupted."
+            # Check if it was a space issue vs actual corruption
+            local post_mb
+            post_mb=$(df "$tmp_check_dir" 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
+            if [ -n "$post_mb" ] && [ "$post_mb" -lt 5 ]; then
+                log_error "Failed to extract tarball: no space left on device."
+                log_error "Filesystem $(df "$tmp_check_dir" | tail -1 | awk '{print $1}') is full."
+                log_error "Try: TMP_DIR=/path/with/space sh install.sh ..."
+            else
+                log_error "Failed to extract tarball."
+                log_error "The archive may be corrupted. Try re-downloading."
+            fi
             rm -rf "$extract_dir"
             exit 1
         fi
     else
         if ! $SUDO tar -xzf "$tarball"; then
-            log_error "Failed to extract tarball."
-            log_error "The archive may be corrupted."
+            local post_mb
+            post_mb=$(df "$tmp_check_dir" 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
+            if [ -n "$post_mb" ] && [ "$post_mb" -lt 5 ]; then
+                log_error "Failed to extract tarball: no space left on device."
+                log_error "Filesystem $(df "$tmp_check_dir" | tail -1 | awk '{print $1}') is full."
+                log_error "Try: TMP_DIR=/path/with/space sh install.sh ..."
+            else
+                log_error "Failed to extract tarball."
+                log_error "The archive may be corrupted. Try re-downloading."
+            fi
             rm -rf "$extract_dir"
             exit 1
         fi

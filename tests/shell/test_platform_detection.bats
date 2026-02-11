@@ -17,7 +17,7 @@ setup() {
     AD5M_FIRMWARE=""
     K1_FIRMWARE=""
     INSTALL_DIR="/opt/helixscreen"
-    TMP_DIR="/tmp/helixscreen-install"
+    TMP_DIR=""
 
     # Source platform.sh (skip source guard by unsetting it)
     unset _HELIX_PLATFORM_SOURCED

@@ -398,6 +398,27 @@ extract_release() {
     local extract_dir="${TMP_DIR}/extract"
     local new_install="${extract_dir}/helixscreen"
 
+    # Pre-flight: check TMP_DIR has enough space for extraction
+    # Tarball expands ~3x, so require 3x tarball size + margin
+    local tarball_mb extract_required_mb tmp_available_mb
+    tarball_mb=$(du -m "$tarball" 2>/dev/null | awk '{print $1}')
+    [ -z "$tarball_mb" ] && tarball_mb=$(ls -l "$tarball" | awk '{print int($5/1048576)}')
+    extract_required_mb=$(( (tarball_mb * 3) + 20 ))
+
+    local tmp_check_dir
+    tmp_check_dir=$(dirname "$TMP_DIR")
+    while [ ! -d "$tmp_check_dir" ] && [ "$tmp_check_dir" != "/" ]; do
+        tmp_check_dir=$(dirname "$tmp_check_dir")
+    done
+    tmp_available_mb=$(df "$tmp_check_dir" 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
+
+    if [ -n "$tmp_available_mb" ] && [ "$tmp_available_mb" -lt "$extract_required_mb" ]; then
+        log_error "Not enough space in temp directory for extraction."
+        log_error "Temp directory: $tmp_check_dir (${tmp_available_mb}MB free, need ${extract_required_mb}MB)"
+        log_error "Try: TMP_DIR=/path/with/space sh install.sh ..."
+        exit 1
+    fi
+
     log_info "Extracting release..."
 
     # Phase 1: Extract to temporary directory
@@ -407,15 +428,32 @@ extract_release() {
     if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
         # BusyBox tar doesn't support -z
         if ! gunzip -c "$tarball" | $SUDO tar xf -; then
-            log_error "Failed to extract tarball."
-            log_error "The archive may be corrupted."
+            # Check if it was a space issue vs actual corruption
+            local post_mb
+            post_mb=$(df "$tmp_check_dir" 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
+            if [ -n "$post_mb" ] && [ "$post_mb" -lt 5 ]; then
+                log_error "Failed to extract tarball: no space left on device."
+                log_error "Filesystem $(df "$tmp_check_dir" | tail -1 | awk '{print $1}') is full."
+                log_error "Try: TMP_DIR=/path/with/space sh install.sh ..."
+            else
+                log_error "Failed to extract tarball."
+                log_error "The archive may be corrupted. Try re-downloading."
+            fi
             rm -rf "$extract_dir"
             exit 1
         fi
     else
         if ! $SUDO tar -xzf "$tarball"; then
-            log_error "Failed to extract tarball."
-            log_error "The archive may be corrupted."
+            local post_mb
+            post_mb=$(df "$tmp_check_dir" 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
+            if [ -n "$post_mb" ] && [ "$post_mb" -lt 5 ]; then
+                log_error "Failed to extract tarball: no space left on device."
+                log_error "Filesystem $(df "$tmp_check_dir" | tail -1 | awk '{print $1}') is full."
+                log_error "Try: TMP_DIR=/path/with/space sh install.sh ..."
+            else
+                log_error "Failed to extract tarball."
+                log_error "The archive may be corrupted. Try re-downloading."
+            fi
             rm -rf "$extract_dir"
             exit 1
         fi
