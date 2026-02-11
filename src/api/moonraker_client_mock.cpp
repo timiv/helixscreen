@@ -3393,61 +3393,111 @@ void MoonrakerClientMock::dispatch_gcode_response(const std::string& line) {
 }
 
 void MoonrakerClientMock::dispatch_shaper_calibrate_response(char axis) {
-    // Dispatch realistic calibration response sequence matching real Klipper output
+    // Timer-based dispatch for realistic progress animation
+    // Matches PID_CALIBRATE timer pattern (line 1389)
     char axis_lower = static_cast<char>(std::tolower(static_cast<unsigned char>(axis)));
 
-    // Phase 1: Frequency sweep (subset of 5-100 Hz range, every 5 Hz)
-    for (int freq = 5; freq <= 100; freq += 5) {
-        char buf[64];
-        snprintf(buf, sizeof(buf), "Testing frequency %.2f Hz", static_cast<float>(freq));
-        dispatch_gcode_response(buf);
-    }
+    struct ShaperSimState {
+        MoonrakerClientMock* mock;
+        char axis_lower;
+        int step;       // Overall step counter
+        int sweep_freq; // Current sweep frequency
+    };
 
-    // Phase 2: Calculations - 5 fitted shapers with max_accel lines
-    dispatch_gcode_response("Wait for calculations..");
-    dispatch_gcode_response(
-        "Fitted shaper 'zv' frequency = 59.0 Hz (vibrations = 5.2%, smoothing ~= 0.045)");
-    dispatch_gcode_response(
-        "To avoid too much smoothing with 'zv' (scv: 25), suggested max_accel <= 13400 mm/sec^2");
+    auto* sim = new ShaperSimState{this, axis_lower, 0, 5};
 
-    dispatch_gcode_response("Wait for calculations..");
-    dispatch_gcode_response(
-        "Fitted shaper 'mzv' frequency = 53.8 Hz (vibrations = 1.6%, smoothing ~= 0.130)");
-    dispatch_gcode_response(
-        "To avoid too much smoothing with 'mzv' (scv: 25), suggested max_accel <= 4000 mm/sec^2");
+    // Total steps: 20 sweep (5-100 by 5) + ~15 calc lines + 2 final = ~37
+    // At 100ms per step = ~3.7 seconds total
+    lv_timer_t* timer = lv_timer_create(
+        [](lv_timer_t* t) {
+            auto* s = static_cast<ShaperSimState*>(lv_timer_get_user_data(t));
+            char buf[256];
 
-    dispatch_gcode_response("Wait for calculations..");
-    dispatch_gcode_response(
-        "Fitted shaper 'ei' frequency = 56.2 Hz (vibrations = 0.7%, smoothing ~= 0.120)");
-    dispatch_gcode_response(
-        "To avoid too much smoothing with 'ei' (scv: 25), suggested max_accel <= 4600 mm/sec^2");
+            // Phase 1: Frequency sweep (steps 0-19)
+            if (s->sweep_freq <= 100) {
+                snprintf(buf, sizeof(buf), "Testing frequency %.2f Hz",
+                         static_cast<float>(s->sweep_freq));
+                s->mock->dispatch_gcode_response(buf);
+                s->sweep_freq += 5;
+                s->step++;
+                return;
+            }
 
-    dispatch_gcode_response("Wait for calculations..");
-    dispatch_gcode_response(
-        "Fitted shaper '2hump_ei' frequency = 71.8 Hz (vibrations = 0.0%, smoothing ~= 0.076)");
-    dispatch_gcode_response("To avoid too much smoothing with '2hump_ei' (scv: 25), suggested "
-                            "max_accel <= 8800 mm/sec^2");
+            // Phase 2: Fitted shapers with max_accel
+            // Steps 20+: shaper calculation lines
+            int calc_step = s->step - 20;
 
-    dispatch_gcode_response("Wait for calculations..");
-    dispatch_gcode_response(
-        "Fitted shaper '3hump_ei' frequency = 89.6 Hz (vibrations = 0.0%, smoothing ~= 0.076)");
-    dispatch_gcode_response("To avoid too much smoothing with '3hump_ei' (scv: 25), suggested "
-                            "max_accel <= 8800 mm/sec^2");
+            struct ShaperData {
+                const char* type;
+                float freq;
+                float vibrations;
+                float smoothing;
+                int max_accel;
+            };
 
-    // Phase 3: Recommendation (new Klipper format with axis identifier)
-    char rec_buf[128];
-    snprintf(rec_buf, sizeof(rec_buf), "Recommended shaper_type_%c = mzv, shaper_freq_%c = 53.8 Hz",
-             axis_lower, axis_lower);
-    dispatch_gcode_response(rec_buf);
+            static const ShaperData shapers[] = {
+                {"zv", 59.0f, 5.2f, 0.045f, 13400},      {"mzv", 53.8f, 1.6f, 0.130f, 4000},
+                {"ei", 56.2f, 0.7f, 0.120f, 4600},       {"2hump_ei", 71.8f, 0.0f, 0.076f, 8800},
+                {"3hump_ei", 89.6f, 0.0f, 0.076f, 8800},
+            };
 
-    // CSV path
-    char csv_buf[128];
-    snprintf(csv_buf, sizeof(csv_buf),
-             "Shaper calibration data written to /tmp/calibration_data_%c_mock.csv file",
-             axis_lower);
-    dispatch_gcode_response(csv_buf);
+            // Each shaper has 3 lines: "Wait for calculations..", fitted, max_accel
+            // So calc_step 0-2 = zv, 3-5 = mzv, 6-8 = ei, 9-11 = 2hump, 12-14 = 3hump
+            int shaper_idx = calc_step / 3;
+            int sub_step = calc_step % 3;
 
-    spdlog::info("[MoonrakerClientMock] Dispatched SHAPER_CALIBRATE response for axis {}", axis);
+            if (shaper_idx < 5) {
+                const auto& sh = shapers[shaper_idx];
+                if (sub_step == 0) {
+                    s->mock->dispatch_gcode_response("Wait for calculations..");
+                } else if (sub_step == 1) {
+                    snprintf(buf, sizeof(buf),
+                             "Fitted shaper '%s' frequency = %.1f Hz (vibrations = %.1f%%, "
+                             "smoothing ~= %.3f)",
+                             sh.type, sh.freq, sh.vibrations, sh.smoothing);
+                    s->mock->dispatch_gcode_response(buf);
+                } else {
+                    snprintf(buf, sizeof(buf),
+                             "To avoid too much smoothing with '%s' (scv: 25), suggested max_accel "
+                             "<= %d mm/sec^2",
+                             sh.type, sh.max_accel);
+                    s->mock->dispatch_gcode_response(buf);
+                }
+                s->step++;
+                return;
+            }
+
+            // Phase 3: Recommendation + CSV path
+            int final_step = calc_step - 15; // 5 shapers * 3 lines = 15
+            if (final_step == 0) {
+                snprintf(buf, sizeof(buf),
+                         "Recommended shaper_type_%c = mzv, shaper_freq_%c = 53.8 Hz",
+                         s->axis_lower, s->axis_lower);
+                s->mock->dispatch_gcode_response(buf);
+                s->step++;
+                return;
+            }
+
+            if (final_step == 1) {
+                snprintf(
+                    buf, sizeof(buf),
+                    "Shaper calibration data written to /tmp/calibration_data_%c_mock.csv file",
+                    s->axis_lower);
+                s->mock->dispatch_gcode_response(buf);
+            }
+
+            spdlog::info(
+                "[MoonrakerClientMock] Dispatched SHAPER_CALIBRATE response for axis {}",
+                static_cast<char>(std::toupper(static_cast<unsigned char>(s->axis_lower))));
+            delete s;
+            lv_timer_delete(t);
+        },
+        100, sim); // 100ms between lines for snappy animation
+
+    // Total: 20 sweep + 15 calc + 2 final = 37 steps
+    lv_timer_set_repeat_count(timer, 37);
+
+    spdlog::info("[MoonrakerClientMock] Started SHAPER_CALIBRATE timer for axis {}", axis);
 }
 
 void MoonrakerClientMock::dispatch_measure_axes_noise_response() {

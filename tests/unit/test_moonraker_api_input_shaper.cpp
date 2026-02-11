@@ -115,8 +115,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test accepts X axis",
         [&](const MoonrakerError&) { FAIL("Error callback should not be called"); });
 
     // Wait for async callback (mock dispatches synchronously)
-    for (int i = 0; i < 100 && !complete_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !complete_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(complete_called);
@@ -140,8 +142,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test accepts Y axis",
         [&](const MoonrakerError&) { FAIL("Error callback should not be called"); });
 
     // Wait for async callback
-    for (int i = 0; i < 100 && !complete_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !complete_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(complete_called);
@@ -164,8 +168,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test sends correct G-c
         [&](const MoonrakerError&) { FAIL("Error callback should not be called"); });
 
     // Wait for async callback
-    for (int i = 0; i < 100 && !complete_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !complete_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(complete_called);
@@ -184,8 +190,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "set_input_shaper sends command for X a
         [&](const MoonrakerError&) { FAIL("Error callback should not be called"); });
 
     // Wait for async callback
-    for (int i = 0; i < 100 && !success_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !success_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(success_called);
@@ -200,8 +208,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "set_input_shaper sends command for Y a
         [&](const MoonrakerError&) { FAIL("Error callback should not be called"); });
 
     // Wait for async callback
-    for (int i = 0; i < 100 && !success_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !success_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(success_called);
@@ -223,8 +233,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "set_input_shaper accepts all valid sha
             });
 
         // Wait for async callback
-        for (int i = 0; i < 100 && !success_called; ++i) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        for (int i = 0; i < 200 && !success_called; ++i) {
+            lv_tick_inc(100);
+            lv_timer_handler_safe();
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
 
         REQUIRE(success_called);
@@ -334,8 +346,12 @@ TEST_CASE_METHOD(InputShaperTestFixture, "API handles null callbacks gracefully"
     // Note: The InputShaperCollector handles null callbacks internally
     REQUIRE_NOTHROW(api_->start_resonance_test('X', nullptr, nullptr, nullptr));
 
-    // Give it time to process
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    // Pump LVGL timers to let the timer-based mock dispatch complete
+    for (int i = 0; i < 50; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
 
     // set_input_shaper requires valid callbacks (by design), so we test with valid ones
     std::atomic<bool> success_called{false};
@@ -343,8 +359,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "API handles null callbacks gracefully"
         api_->set_input_shaper('X', "mzv", 36.7, [&]() { success_called = true; }, nullptr));
 
     // Wait for async callback
-    for (int i = 0; i < 100 && !success_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !success_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     REQUIRE(success_called);
 }
@@ -475,8 +493,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test returns all shape
         });
 
     // Wait for async callback
-    for (int i = 0; i < 100 && !complete_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !complete_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(complete_called);
@@ -551,8 +571,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "measure_axes_noise returns noise level
         });
 
     // Wait for async callback
-    for (int i = 0; i < 100 && !complete_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !complete_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(complete_called);
@@ -581,8 +603,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "measure_axes_noise handles no accelero
         });
 
     // Wait for async callback
-    for (int i = 0; i < 100 && !error_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !error_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(error_called);
@@ -614,8 +638,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "get_input_shaper_config returns curren
         });
 
     // Wait for async callback
-    for (int i = 0; i < 100 && !complete_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !complete_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(complete_called);
@@ -650,8 +676,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "get_input_shaper_config handles unconf
         });
 
     // Wait for async callback
-    for (int i = 0; i < 100 && !complete_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !complete_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(complete_called);
@@ -677,8 +705,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "collector parses new Klipper recommend
             FAIL("Error callback should not be called: " << err.message);
         });
 
-    for (int i = 0; i < 100 && !complete_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !complete_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(complete_called);
@@ -700,8 +730,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "collector parses max_accel per shaper"
         },
         [&](const MoonrakerError& err) { FAIL("Error: " << err.message); });
 
-    for (int i = 0; i < 100 && !complete_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !complete_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(complete_called);
@@ -745,8 +777,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "collector captures CSV path",
         },
         [&](const MoonrakerError& err) { FAIL("Error: " << err.message); });
 
-    for (int i = 0; i < 100 && !complete_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !complete_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(complete_called);
@@ -763,8 +797,10 @@ TEST_CASE_METHOD(InputShaperTestFixture, "collector emits progress callbacks dur
         [&](const InputShaperResult&) { complete_called = true; },
         [&](const MoonrakerError& err) { FAIL("Error: " << err.message); });
 
-    for (int i = 0; i < 100 && !complete_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !complete_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(complete_called);
@@ -795,8 +831,10 @@ TEST_CASE_METHOD(InputShaperTestFixture,
         },
         [&](const MoonrakerError& err) { FAIL("Error: " << err.message); });
 
-    for (int i = 0; i < 100 && !complete_called; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (int i = 0; i < 200 && !complete_called; ++i) {
+        lv_tick_inc(100);
+        lv_timer_handler_safe();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     REQUIRE(complete_called);

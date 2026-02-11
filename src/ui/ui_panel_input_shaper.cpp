@@ -143,6 +143,10 @@ void ui_panel_input_shaper_register_callbacks() {
         get_global_input_shaper_panel().handle_save_config_clicked();
     });
 
+    lv_xml_register_event_cb(nullptr, "input_shaper_save_cb", [](lv_event_t* /*e*/) {
+        get_global_input_shaper_panel().handle_save_clicked();
+    });
+
     lv_xml_register_event_cb(nullptr, "input_shaper_print_test_cb", [](lv_event_t* /*e*/) {
         get_global_input_shaper_panel().handle_print_test_pattern_clicked();
     });
@@ -961,7 +965,7 @@ void InputShaperPanel::populate_axis_result(char axis, const InputShaperResult& 
     if (axis == 'X') {
         lv_subject_set_int(&is_results_has_x_, 1);
 
-        snprintf(is_result_x_shaper_buf_, sizeof(is_result_x_shaper_buf_), "%s at %s",
+        snprintf(is_result_x_shaper_buf_, sizeof(is_result_x_shaper_buf_), "%s @ %s",
                  type_upper.c_str(), freq_buf);
         lv_subject_copy_string(&is_result_x_shaper_, is_result_x_shaper_buf_);
 
@@ -969,20 +973,19 @@ void InputShaperPanel::populate_axis_result(char axis, const InputShaperResult& 
                  get_shaper_explanation(result.shaper_type));
         lv_subject_copy_string(&is_result_x_explanation_, is_result_x_explanation_buf_);
 
-        snprintf(is_result_x_vibration_buf_, sizeof(is_result_x_vibration_buf_),
-                 "Remaining vibration: %.1f%% — %s", result.vibrations,
-                 get_quality_description(result.vibrations));
+        snprintf(is_result_x_vibration_buf_, sizeof(is_result_x_vibration_buf_), "%.1f%%",
+                 result.vibrations);
         lv_subject_copy_string(&is_result_x_vibration_, is_result_x_vibration_buf_);
 
         snprintf(is_result_x_max_accel_buf_, sizeof(is_result_x_max_accel_buf_),
-                 "Max accel: %.0f mm/s²", result.max_accel);
+                 "%.0f mm/s\xC2\xB2", result.max_accel);
         lv_subject_copy_string(&is_result_x_max_accel_, is_result_x_max_accel_buf_);
 
         lv_subject_set_int(&is_result_x_quality_, get_vibration_quality(result.vibrations));
     } else {
         lv_subject_set_int(&is_results_has_y_, 1);
 
-        snprintf(is_result_y_shaper_buf_, sizeof(is_result_y_shaper_buf_), "%s at %s",
+        snprintf(is_result_y_shaper_buf_, sizeof(is_result_y_shaper_buf_), "%s @ %s",
                  type_upper.c_str(), freq_buf);
         lv_subject_copy_string(&is_result_y_shaper_, is_result_y_shaper_buf_);
 
@@ -990,13 +993,12 @@ void InputShaperPanel::populate_axis_result(char axis, const InputShaperResult& 
                  get_shaper_explanation(result.shaper_type));
         lv_subject_copy_string(&is_result_y_explanation_, is_result_y_explanation_buf_);
 
-        snprintf(is_result_y_vibration_buf_, sizeof(is_result_y_vibration_buf_),
-                 "Remaining vibration: %.1f%% — %s", result.vibrations,
-                 get_quality_description(result.vibrations));
+        snprintf(is_result_y_vibration_buf_, sizeof(is_result_y_vibration_buf_), "%.1f%%",
+                 result.vibrations);
         lv_subject_copy_string(&is_result_y_vibration_, is_result_y_vibration_buf_);
 
         snprintf(is_result_y_max_accel_buf_, sizeof(is_result_y_max_accel_buf_),
-                 "Max accel: %.0f mm/s²", result.max_accel);
+                 "%.0f mm/s\xC2\xB2", result.max_accel);
         lv_subject_copy_string(&is_result_y_max_accel_, is_result_y_max_accel_buf_);
 
         lv_subject_set_int(&is_result_y_quality_, get_vibration_quality(result.vibrations));
@@ -1063,6 +1065,12 @@ void InputShaperPanel::handle_retry_clicked() {
 
 void InputShaperPanel::handle_save_config_clicked() {
     spdlog::debug("[InputShaper] Save Config clicked");
+    save_configuration();
+}
+
+void InputShaperPanel::handle_save_clicked() {
+    spdlog::debug("[InputShaper] Save clicked — applying and saving to config");
+    apply_recommendation();
     save_configuration();
 }
 

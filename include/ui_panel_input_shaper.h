@@ -162,6 +162,7 @@ class InputShaperPanel : public OverlayBase {
     void handle_close_clicked();
     void handle_retry_clicked();
     void handle_save_config_clicked();
+    void handle_save_clicked();
     void handle_print_test_pattern_clicked();
     void handle_help_clicked();
 
