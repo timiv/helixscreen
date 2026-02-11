@@ -25,8 +25,52 @@
 
 #include "../catch_amalgamated.hpp"
 
-using namespace helix;
 using json = nlohmann::json;
+
+// Test access helper — avoids polluting production API with test methods
+namespace helix {
+class FilamentSensorManagerTestAccess {
+  public:
+    static void reset(FilamentSensorManager& mgr) {
+        std::lock_guard<std::recursive_mutex> lock(mgr.mutex_);
+
+        // Clear all sensors and states
+        mgr.sensors_.clear();
+        mgr.states_.clear();
+
+        // Reset master enabled
+        mgr.master_enabled_ = true;
+
+        // Clear callback
+        mgr.state_change_callback_ = nullptr;
+
+        // Enable sync mode for testing (avoids lv_async_call)
+        mgr.sync_mode_ = true;
+
+        // Reset startup time to 10 seconds in the past so the 2-second grace period
+        // is already expired in tests (avoids flaky timing-dependent failures)
+        mgr.startup_time_ = std::chrono::steady_clock::now() - std::chrono::seconds(10);
+
+        // Reset subjects if initialized
+        if (mgr.subjects_initialized_) {
+            lv_subject_set_int(&mgr.runout_detected_, -1);
+            lv_subject_set_int(&mgr.toolhead_detected_, -1);
+            lv_subject_set_int(&mgr.entry_detected_, -1);
+            lv_subject_set_int(&mgr.probe_triggered_, -1);
+            lv_subject_set_int(&mgr.any_runout_, 0);
+            lv_subject_set_int(&mgr.motion_active_, 0);
+            lv_subject_set_int(&mgr.master_enabled_subject_, 1);
+            lv_subject_set_int(&mgr.sensor_count_, 0);
+        }
+    }
+
+    static void clear_startup_grace_period(FilamentSensorManager& mgr) {
+        mgr.startup_time_ = std::chrono::steady_clock::now() - std::chrono::seconds(10);
+    }
+};
+} // namespace helix
+
+using namespace helix;
 
 // ============================================================================
 // Test Fixture
@@ -52,7 +96,7 @@ class FilamentSensorTestFixture {
         }
 
         // Reset state for test isolation first (clears subjects)
-        mgr().reset_for_testing();
+        FilamentSensorManagerTestAccess::reset(mgr());
 
         // Initialize subjects after reset
         mgr().init_subjects();
@@ -60,7 +104,7 @@ class FilamentSensorTestFixture {
 
     ~FilamentSensorTestFixture() {
         // Reset after each test
-        mgr().reset_for_testing();
+        FilamentSensorManagerTestAccess::reset(mgr());
     }
 
   protected:
@@ -74,6 +118,7 @@ class FilamentSensorTestFixture {
                                             "filament_switch_sensor toolhead",
                                             "filament_motion_sensor encoder"};
         mgr().discover_sensors(sensors);
+        FilamentSensorManagerTestAccess::clear_startup_grace_period(mgr());
     }
 
     // Helper to simulate Moonraker status update

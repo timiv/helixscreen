@@ -344,16 +344,6 @@ class FilamentSensorManager : public helix::sensors::ISensorManager {
     [[nodiscard]] bool is_in_startup_grace_period() const;
 
     /**
-     * @brief Reset all state for testing.
-     *
-     * Clears all sensors, states, and resets flags.
-     * Call this between tests to ensure isolation.
-     *
-     * @note This method is for testing purposes only.
-     */
-    void reset_for_testing();
-
-    /**
      * @brief Enable synchronous mode for testing
      *
      * When enabled, update_from_status() calls update_subjects() synchronously
@@ -372,6 +362,8 @@ class FilamentSensorManager : public helix::sensors::ISensorManager {
     void update_subjects_on_main_thread();
 
   private:
+    friend class FilamentSensorManagerTestAccess;
+
     FilamentSensorManager();
     ~FilamentSensorManager();
 

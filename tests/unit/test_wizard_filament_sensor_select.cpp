@@ -24,6 +24,36 @@
 
 #include "../catch_amalgamated.hpp"
 
+using json = nlohmann::json;
+
+// Test access helper — avoids polluting production API with test methods
+namespace helix {
+class FilamentSensorManagerTestAccess {
+  public:
+    static void reset(FilamentSensorManager& mgr) {
+        std::lock_guard<std::recursive_mutex> lock(mgr.mutex_);
+
+        mgr.sensors_.clear();
+        mgr.states_.clear();
+        mgr.master_enabled_ = true;
+        mgr.state_change_callback_ = nullptr;
+        mgr.sync_mode_ = true;
+        mgr.startup_time_ = std::chrono::steady_clock::now() - std::chrono::seconds(10);
+
+        if (mgr.subjects_initialized_) {
+            lv_subject_set_int(&mgr.runout_detected_, -1);
+            lv_subject_set_int(&mgr.toolhead_detected_, -1);
+            lv_subject_set_int(&mgr.entry_detected_, -1);
+            lv_subject_set_int(&mgr.probe_triggered_, -1);
+            lv_subject_set_int(&mgr.any_runout_, 0);
+            lv_subject_set_int(&mgr.motion_active_, 0);
+            lv_subject_set_int(&mgr.master_enabled_subject_, 1);
+            lv_subject_set_int(&mgr.sensor_count_, 0);
+        }
+    }
+};
+} // namespace helix
+
 using namespace helix;
 
 // ============================================================================
@@ -53,12 +83,12 @@ class WizardFilamentSensorSelectTestFixture {
         sensor_mgr().init_subjects();
 
         // Reset state for test isolation
-        sensor_mgr().reset_for_testing();
+        FilamentSensorManagerTestAccess::reset(sensor_mgr());
     }
 
     ~WizardFilamentSensorSelectTestFixture() {
         // Reset after each test
-        sensor_mgr().reset_for_testing();
+        FilamentSensorManagerTestAccess::reset(sensor_mgr());
     }
 
   protected:
