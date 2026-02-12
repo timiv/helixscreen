@@ -6,7 +6,6 @@
 #include "overlay_base.h"
 
 #include <string>
-#include <vector>
 
 class UsbManager;
 
@@ -83,8 +82,9 @@ class PrinterImageOverlay : public OverlayBase {
     void scan_usb_drives();
     void populate_usb_images(const std::string& mount_path);
     void handle_usb_import(const std::string& source_path);
-    lv_obj_t* create_image_card(lv_obj_t* parent, const std::string& image_id,
-                                const std::string& display_name, const std::string& preview_path);
+    lv_obj_t* create_card_from_xml(lv_obj_t* parent, const std::string& image_id,
+                                   const std::string& display_name, const std::string& preview_path,
+                                   const char* callback_name);
     void update_selection_indicator(const std::string& active_id);
 
     //
@@ -92,6 +92,14 @@ class PrinterImageOverlay : public OverlayBase {
     //
 
     UsbManager* usb_manager_ = nullptr;
+
+    // RAII subject manager for automatic cleanup
+    SubjectManager subjects_;
+
+    // Subjects for declarative USB section bindings
+    lv_subject_t usb_visible_subject_{}; // int: 0=hidden, 1=visible
+    lv_subject_t usb_status_subject_{};  // string: status text
+    char usb_status_buf_[256] = {};
 };
 
 /**

@@ -33,10 +33,11 @@
               width="100%" height="content" scrollable="false" flex_flow="row_wrap" style_pad_all="#space_sm"
               style_pad_gap="#space_sm" style_bg_opa="0" style_border_width="0"/>
 
-      <!-- USB IMPORT SECTION (hidden when no USB drive) -->
+      <!-- USB IMPORT SECTION (hidden when no USB drive via subject binding) -->
       <lv_obj name="usb_import_section"
               width="100%" height="content" scrollable="false" flex_flow="column" style_pad_all="0" style_bg_opa="0"
-              style_border_width="0">
+              style_border_width="0" hidden="true">
+        <bind_flag_if_eq subject="printer_image_usb_visible" flag="hidden" ref_value="0"/>
         <setting_section_header title="IMPORT FROM USB" title_tag="IMPORT FROM USB" icon="usb"/>
 
         <!-- Grid for USB images -->
@@ -44,8 +45,9 @@
                 width="100%" height="content" scrollable="false" flex_flow="row_wrap" style_pad_all="#space_sm"
                 style_pad_gap="#space_sm" style_bg_opa="0" style_border_width="0"/>
 
-        <!-- Import status label -->
-        <text_muted name="usb_status_label" width="100%" text="" style_text_align="center" style_pad_top="#space_sm"/>
+        <!-- Import status label (bound to subject for declarative updates) -->
+        <text_muted name="usb_status_label" width="100%" bind_text="printer_image_usb_status"
+                    style_text_align="center" style_pad_top="#space_sm"/>
       </lv_obj>
 
       <!-- Info note about custom images -->

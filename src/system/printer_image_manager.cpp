@@ -106,32 +106,21 @@ std::vector<PrinterImageManager::ImageInfo> PrinterImageManager::get_shipped_ima
     std::vector<ImageInfo> results;
 
     const std::string printer_dir = "assets/images/printers/";
-    if (!fs::exists(printer_dir)) {
-        spdlog::debug("[PrinterImageManager] Printer images directory not found: {}", printer_dir);
-        return results;
-    }
+    auto paths = scan_for_images(printer_dir);
 
-    for (const auto& entry : fs::directory_iterator(printer_dir)) {
-        if (!entry.is_regular_file())
-            continue;
-
-        std::string ext = entry.path().extension().string();
-        if (ext != ".png" && ext != ".jpg" && ext != ".jpeg")
-            continue;
-
-        std::string stem = entry.path().stem().string();
+    for (const auto& path : paths) {
+        std::string stem = fs::path(path).stem().string();
 
         ImageInfo info;
         info.id = "shipped:" + stem;
         info.display_name = stem;
-        // Replace hyphens with spaces for display
         std::replace(info.display_name.begin(), info.display_name.end(), '-', ' ');
         // Preview uses 150px prerendered variant
         info.preview_path = get_prerendered_printer_path(stem, 480); // 480 -> 150px
         results.push_back(std::move(info));
     }
 
-    // Sort by display name for consistent ordering
+    // Sort by id for consistent ordering
     std::sort(results.begin(), results.end(),
               [](const ImageInfo& a, const ImageInfo& b) { return a.id < b.id; });
 

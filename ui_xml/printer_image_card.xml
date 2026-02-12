@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<!-- Copyright (C) 2025-2026 356C LLC -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Reusable Printer Image Card Component
+     Displays a printer image thumbnail (or placeholder icon) with a label.
+     Used in the printer image overlay for shipped, custom, and USB image grids.
+
+     The show_image prop controls initial visibility of image vs placeholder icon.
+     Set show_image="1" when a .bin preview is available, "0" for placeholder.
+     Visibility is set once at creation time (not reactive). -->
+<component>
+  <api>
+    <prop name="image_src" type="string" default=""/>
+    <prop name="label_text" type="string" default=""/>
+    <prop name="show_image" type="string" default="0"/>
+    <prop name="callback" type="string" default=""/>
+  </api>
+  <consts>
+    <px name="card_width" value="100"/>
+    <px name="card_height" value="120"/>
+    <px name="img_size" value="80"/>
+    <px name="label_width" value="90"/>
+  </consts>
+  <styles>
+    <style name="card_base" bg_color="#card_bg" bg_opa="255" radius="#border_radius"
+           border_width="2" border_opa="0"/>
+  </styles>
+  <view name="card_root" extends="lv_obj" width="#card_width" height="#card_height"
+        clickable="true" flex_flow="column"
+        style_flex_main_place="center" style_flex_cross_place="center"
+        style_pad_all="#space_xs" scrollbar_mode="off" scrollable="false">
+    <style name="card_base"/>
+
+    <!-- Image preview (C++ hides this when show_image=0) -->
+    <lv_image name="card_image" width="#img_size" height="#img_size"
+              src="$image_src" inner_align="contain"
+              clickable="false" event_bubble="true"/>
+
+    <!-- Placeholder icon (C++ hides this when show_image=1) -->
+    <icon name="card_placeholder_icon" src="printer_3d" size="lg" variant="tertiary"
+          clickable="false" event_bubble="true"/>
+
+    <!-- Label -->
+    <text_xs name="card_label" text="$label_text" width="#label_width"
+             style_text_align="center" long_mode="dots"
+             clickable="false" event_bubble="true"/>
+
+    <!-- Click callback -->
+    <event_cb trigger="clicked" callback="$callback"/>
+  </view>
+</component>
