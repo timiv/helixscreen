@@ -1158,6 +1158,9 @@ void Application::create_overlays() {
         auto& overlay = get_global_pid_cal_panel();
         // init_subjects already called by SubjectInitializer
         overlay.set_api(m_moonraker->api());
+        if (get_runtime_config()->test_mode) {
+            overlay.request_demo_inject();
+        }
         if (overlay.create(m_screen)) {
             overlay.show();
         }
@@ -1175,6 +1178,9 @@ void Application::create_overlays() {
     if (m_args.overlays.input_shaper) {
         auto& panel = get_global_input_shaper_panel();
         panel.set_api(m_moonraker->client(), m_moonraker->api());
+        if (get_runtime_config()->test_mode) {
+            panel.request_demo_inject();
+        }
         if (panel.create(m_screen)) {
             panel.show();
         }

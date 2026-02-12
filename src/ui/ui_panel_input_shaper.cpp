@@ -21,7 +21,9 @@
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
+#include <random>
 
 // Shaper overlay colors (distinct, visible on dark bg) — shared by chart and legend
 static constexpr uint32_t SHAPER_OVERLAY_COLORS[] = {
@@ -448,6 +450,12 @@ void InputShaperPanel::on_activate() {
     if (std::getenv("INPUT_SHAPER_AUTO_START")) {
         spdlog::info("[InputShaper] Auto-starting X calibration (INPUT_SHAPER_AUTO_START set)");
         start_with_preflight('X');
+    }
+
+    // Demo mode: inject results after on_activate() finishes its reset
+    if (demo_inject_pending_) {
+        demo_inject_pending_ = false;
+        inject_demo_results();
     }
 }
 
@@ -1347,6 +1355,130 @@ void InputShaperPanel::handle_chip_x_clicked(int index) {
 
 void InputShaperPanel::handle_chip_y_clicked(int index) {
     toggle_shaper_overlay('Y', index);
+}
+
+// ============================================================================
+// DEMO INJECTION
+// ============================================================================
+
+void InputShaperPanel::inject_demo_results() {
+    spdlog::info("[InputShaper] Injecting demo results for screenshot mode");
+
+    // Mock shaper options (from moonraker_client_mock.cpp:3550-3553)
+    auto make_shaper_options = []() -> std::vector<ShaperOption> {
+        return {
+            {"zv", 59.0f, 5.2f, 0.045f, 13400.0f},      {"mzv", 53.8f, 1.6f, 0.130f, 4000.0f},
+            {"ei", 56.2f, 0.7f, 0.120f, 4600.0f},       {"2hump_ei", 71.8f, 0.0f, 0.076f, 8800.0f},
+            {"3hump_ei", 89.6f, 0.0f, 0.076f, 8800.0f},
+        };
+    };
+
+    // Generate frequency response data matching write_mock_shaper_csv()
+    // (moonraker_client_mock.cpp:3424-3503)
+    auto generate_freq_data = [](char axis) {
+        std::vector<std::pair<float, float>> freq_response;
+        std::vector<ShaperResponseCurve> shaper_curves;
+
+        // Shaper fitted frequencies
+        struct ShaperDef {
+            const char* name;
+            float freq;
+        };
+        static const ShaperDef shaper_defs[] = {
+            {"zv", 59.0f}, {"mzv", 53.8f}, {"ei", 56.2f}, {"2hump_ei", 71.8f}, {"3hump_ei", 89.6f},
+        };
+
+        // Initialize shaper curves
+        for (const auto& sd : shaper_defs) {
+            ShaperResponseCurve curve;
+            curve.name = sd.name;
+            curve.frequency = sd.freq;
+            shaper_curves.push_back(curve);
+        }
+
+        // Resonance peak parameters (from mock)
+        const float peak_freq = (axis == 'X') ? 53.8f : 48.2f;
+        const float peak_width = 8.0f;
+        const float peak_amp = 0.02f;
+        const float noise_floor = 5e-4f;
+
+        std::mt19937 rng(42 + static_cast<unsigned>(axis));
+        std::uniform_real_distribution<float> noise_dist(0.8f, 1.2f);
+
+        // Generate ~50 bins from 5-200 Hz (step ~4 Hz)
+        for (float freq = 5.0f; freq <= 200.0f; freq += 4.0f) {
+            float df = freq - peak_freq;
+            float resonance = peak_amp / (1.0f + (df * df) / (peak_width * peak_width));
+            float base_psd = noise_floor * noise_dist(rng) + resonance;
+
+            if (freq > 120.0f) {
+                base_psd *= std::exp(-(freq - 120.0f) / 60.0f);
+            }
+
+            // Combined PSD (main + cross + z)
+            float psd_main = base_psd;
+            float psd_cross = base_psd * 0.15f * noise_dist(rng);
+            float psd_z = base_psd * 0.08f * noise_dist(rng);
+            float psd_xyz = psd_main + psd_cross + psd_z;
+
+            freq_response.push_back({freq, psd_xyz});
+
+            // Shaper attenuation curves
+            for (size_t i = 0; i < 5; i++) {
+                float shaper_freq_val = shaper_defs[i].freq;
+                float dist = std::abs(freq - shaper_freq_val);
+                float attenuation;
+                if (dist < 15.0f) {
+                    attenuation = 0.05f + 0.95f * (dist / 15.0f) * (dist / 15.0f);
+                } else {
+                    attenuation = 1.0f;
+                }
+                shaper_curves[i].values.push_back(psd_xyz * attenuation);
+            }
+        }
+
+        return std::make_pair(freq_response, shaper_curves);
+    };
+
+    // Build X result
+    InputShaperResult x_result;
+    x_result.axis = 'X';
+    x_result.shaper_type = "mzv";
+    x_result.shaper_freq = 53.8f;
+    x_result.max_accel = 4000.0f;
+    x_result.smoothing = 0.130f;
+    x_result.vibrations = 1.6f;
+    x_result.all_shapers = make_shaper_options();
+    auto [x_freq, x_curves] = generate_freq_data('X');
+    x_result.freq_response = std::move(x_freq);
+    x_result.shaper_curves = std::move(x_curves);
+
+    // Build Y result
+    InputShaperResult y_result;
+    y_result.axis = 'Y';
+    y_result.shaper_type = "mzv";
+    y_result.shaper_freq = 53.8f;
+    y_result.max_accel = 4000.0f;
+    y_result.smoothing = 0.130f;
+    y_result.vibrations = 1.6f;
+    y_result.all_shapers = make_shaper_options();
+    auto [y_freq, y_curves] = generate_freq_data('Y');
+    y_result.freq_response = std::move(y_freq);
+    y_result.shaper_curves = std::move(y_curves);
+
+    // Store recommendation for Apply button
+    recommended_type_ = "mzv";
+    recommended_freq_ = 53.8f;
+    x_result_ = x_result;
+
+    // Populate both axes (uses existing private methods)
+    lv_subject_set_int(&is_results_has_x_, 0);
+    lv_subject_set_int(&is_results_has_y_, 0);
+
+    populate_axis_result('X', x_result);
+    populate_axis_result('Y', y_result);
+
+    set_state(State::RESULTS);
 }
 
 // ============================================================================
