@@ -1858,7 +1858,7 @@ extract_release() {
 
     if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
         # BusyBox tar doesn't support -z
-        if ! gunzip -c "$tarball" | $SUDO tar xf -; then
+        if ! gunzip -c "$tarball" | tar xf -; then
             # Check if it was a space issue vs actual corruption
             local post_mb
             post_mb=$(df "$tmp_check_dir" 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
@@ -1874,7 +1874,7 @@ extract_release() {
             exit 1
         fi
     else
-        if ! $SUDO tar -xzf "$tarball"; then
+        if ! tar -xzf "$tarball"; then
             local post_mb
             post_mb=$(df "$tmp_check_dir" 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
             if [ -n "$post_mb" ] && [ "$post_mb" -lt 5 ]; then
