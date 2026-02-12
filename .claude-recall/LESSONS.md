@@ -24,8 +24,8 @@
 - **Uses**: 12 | **Velocity**: 0 | **Learned**: 2025-12-14 | **Last**: 2026-01-08 | **Category**: gotcha | **Type**: constraint
 > Avoid mutex locks in destructors during static destruction phase. Other objects may already be destroyed, causing deadlock or crash on exit
 
-### [L014] [***--|***--] Register all XML components
-- **Uses**: 26 | **Velocity**: 1 | **Learned**: 2025-12-14 | **Last**: 2026-02-05 | **Category**: gotcha | **Type**: constraint
+### [L014] [***--|****-] Register all XML components
+- **Uses**: 27 | **Velocity**: 2 | **Learned**: 2025-12-14 | **Last**: 2026-02-11 | **Category**: gotcha | **Type**: constraint
 > When adding new XML components, must add lv_xml_component_register_from_file() call in main.cpp. Forgetting causes silent failures
 
 ### [L020] [***--|*----] ObserverGuard for cleanup
