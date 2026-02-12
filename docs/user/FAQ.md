@@ -252,6 +252,20 @@ For layout customization, you can edit XML files in `ui_xml/` (no recompilation 
 
 **Yes.** The Macro panel shows your Klipper macros. Access via **Advanced** → **Macros**. You can also configure quick macro buttons in **Settings** → **Macro Buttons**.
 
+### Can I customize the printer image on the home screen?
+
+**Yes.** Tap the printer image on the Home Panel to open the Printer Manager, then tap the image again to open the Printer Image picker. You have three options:
+
+- **Auto-Detect** (default) — HelixScreen picks an image based on your printer type from Klipper
+- **Shipped Images** — Choose from 25+ pre-rendered images (Voron, Creality, FlashForge, Anycubic, RatRig, etc.)
+- **Custom Images** — Drop a PNG or JPEG file into `config/custom_images/` and it appears automatically the next time you open the picker. Files must be under 5MB and 2048x2048 pixels max.
+
+Your selection is saved to the `display.printer_image` config key and persists across restarts.
+
+### Can I rename my printer?
+
+**Yes.** Tap the printer image on the Home Panel to open the Printer Manager. Then tap the printer name (shown with a pencil icon) to enable inline editing. Type the new name and press **Enter** to save, or **Escape** to cancel. The name is stored in the `printer.name` config key.
+
 ---
 
 ## Usage

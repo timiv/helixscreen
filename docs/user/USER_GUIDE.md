@@ -22,6 +22,7 @@ Complete guide to using HelixScreen, the touchscreen UI for Klipper 3D printers.
   - [Temperature Displays](#temperature-displays)
   - [AMS/Filament Status](#amsfilament-status)
   - [Quick Actions](#quick-actions)
+  - [Printer Manager](#printer-manager)
 - [Printing Workflow](#printing-workflow)
   - [Selecting a File](#selecting-a-file)
   - [File Preview](#file-preview)
@@ -244,6 +245,41 @@ Buttons for common operations:
 
 - **LED Toggle**: Turn chamber/printer lights on/off
 - **Emergency Stop**: Halt all motion immediately (confirmation required unless disabled in Safety Settings)
+
+### Printer Manager
+
+**Tap the printer image** on the Home Panel to open the Printer Manager overlay. This is your central place to view and customize your printer's identity.
+
+**Printer Identity Card:**
+
+The top of the overlay displays an identity card with your printer image, name, and model. From here you can:
+
+- **Change the printer image**: Tap the printer image (marked with a pencil badge) to open the Printer Image picker overlay. You can choose from:
+  - **Auto-Detect** (default) — HelixScreen selects an image based on your printer type reported by Klipper
+  - **Shipped Images** — Over 25 pre-rendered images covering Voron, Creality, FlashForge, Anycubic, RatRig, FLSUN, and more
+  - **Custom Images** — Your own PNG or JPEG files (see below)
+
+  The picker shows a list on the left and a live preview on the right. Your selection persists across restarts.
+
+- **Edit the printer name**: Tap the printer name (shown with a pencil icon) to enable inline editing. Type the new name, press **Enter** to save, or **Escape** to cancel.
+
+**Software Versions:**
+
+Below the identity card, the overlay displays current software versions for Klipper, Moonraker, and HelixScreen.
+
+**Hardware Capabilities:**
+
+A row of chips shows detected hardware capabilities: Probe, Bed Mesh, Heated Bed, LEDs, ADXL, QGL, Z-Tilt, and others depending on your Klipper configuration.
+
+**Adding Custom Printer Images:**
+
+To use your own printer image:
+
+1. Place a PNG or JPEG file into `config/custom_images/` in your HelixScreen installation directory
+2. Open the Printer Image picker from the Printer Manager
+3. Your custom images appear automatically — HelixScreen converts them to optimized LVGL binary format on first load
+
+**Custom image requirements:** PNG or JPEG, maximum 5MB file size, maximum 2048x2048 pixels. HelixScreen generates optimized 300px and 150px variants automatically.
 
 ---
 
