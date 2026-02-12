@@ -175,7 +175,7 @@ HelixScreen is an **add-on** to existing Klipper installations. We don't ship cu
 4. **Verify installation:**
    ```bash
    # Binary exists and runs
-   /opt/helixscreen/bin/helix-screen --help | head -1
+   /opt/helixscreen/bin/helix-screen --version
 
    # Service is enabled
    systemctl is-enabled helixscreen
@@ -295,7 +295,7 @@ ps --no-headers -o comm 1
 5. **Verify installation:**
    ```bash
    # Binary exists and runs
-   /opt/helixscreen/bin/helix-screen --help | head -1
+   /opt/helixscreen/bin/helix-screen --version
 
    # Init script installed
    ls -la /etc/init.d/S90helixscreen
@@ -416,7 +416,7 @@ ps --no-headers -o comm 1
 5. **Verify installation:**
    ```bash
    # Binary exists (note different path!)
-   /root/printer_software/helixscreen/bin/helix-screen --help | head -1
+   /root/printer_software/helixscreen/bin/helix-screen --version
 
    # Init script installed (S80, not S90)
    ls -la /etc/init.d/S80helixscreen
@@ -496,7 +496,7 @@ ps --no-headers -o comm 1
 4. **Verify installation:**
    ```bash
    # Binary exists
-   /usr/data/helixscreen/bin/helix-screen --help | head -1
+   /usr/data/helixscreen/bin/helix-screen --version
 
    # Init script installed (S99)
    ls -la /etc/init.d/S99helixscreen
@@ -565,7 +565,7 @@ Run through this checklist after installation on each platform:
 
 ### Basic Functionality
 
-- [ ] **Binary runs:** `/path/to/helix-screen --help` shows version
+- [ ] **Binary runs:** `/path/to/helix-screen --version` shows version
 - [ ] **Service enabled:** systemctl is-enabled (Pi) or init script exists (AD5M)
 - [ ] **Service running:** Active process, no crash loop
 - [ ] **Reboot persists:** After reboot, service starts automatically

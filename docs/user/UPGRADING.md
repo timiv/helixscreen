@@ -107,16 +107,16 @@ curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/script
 **Via SSH:**
 ```bash
 # Pi:
-/opt/helixscreen/bin/helix-screen --help | head -1
+/opt/helixscreen/bin/helix-screen --version
 
 # K1:
-/usr/data/helixscreen/bin/helix-screen --help | head -1
+/usr/data/helixscreen/bin/helix-screen --version
 
 # AD5M (Forge-X):
-/opt/helixscreen/bin/helix-screen --help | head -1
+/opt/helixscreen/bin/helix-screen --version
 
 # AD5M (Klipper Mod):
-/root/printer_software/helixscreen/bin/helix-screen --help | head -1
+/root/printer_software/helixscreen/bin/helix-screen --version
 ```
 
 ---

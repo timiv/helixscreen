@@ -582,14 +582,14 @@ chmod -x /etc/init.d/S99guppyscreen
 
 On the touchscreen: **Settings** → scroll down to the bottom of the page to find the version number.
 
-Or via SSH, check the help output:
+Or via SSH:
 ```bash
 # Path varies by platform:
 #   Pi: ~/helixscreen/bin/helix-screen (or /opt/helixscreen if no Klipper ecosystem)
 #   K1: /usr/data/helixscreen/bin/helix-screen
 #   K2: /opt/helixscreen/bin/helix-screen (assumed, untested)
 #   AD5M Klipper Mod: /root/printer_software/helixscreen/bin/helix-screen
-~/helixscreen/bin/helix-screen --help | head -1
+~/helixscreen/bin/helix-screen --version
 ```
 
 ### Update from Mainsail/Fluidd Web UI (Pi Only)
