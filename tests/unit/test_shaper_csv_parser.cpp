@@ -42,22 +42,22 @@ struct TempCsvFile {
     }
 };
 
-/// Realistic CSV content matching Klipper's calibrate_shaper.py output
+/// Realistic CSV content matching Klipper's calibrate_shaper.py output (real format, no marker)
 const char* REALISTIC_CSV =
-    "freq, psd_x, psd_y, psd_z, psd_xyz, shapers:, zv(59.0), mzv(53.8), ei(56.2), 2hump_ei(71.8), "
+    "freq, psd_x, psd_y, psd_z, psd_xyz, zv(59.0), mzv(53.8), ei(56.2), 2hump_ei(71.8), "
     "3hump_ei(89.6)\n"
-    "5.0, 1.234e-03, 2.345e-03, 1.123e-03, 4.702e-03, , 0.001, 0.001, 0.001, 0.000, 0.000\n"
-    "10.0, 2.500e-03, 3.100e-03, 1.800e-03, 7.400e-03, , 0.002, 0.002, 0.002, 0.001, 0.001\n"
-    "15.0, 4.100e-03, 5.200e-03, 2.900e-03, 1.220e-02, , 0.004, 0.003, 0.004, 0.002, 0.001\n"
-    "20.0, 8.700e-03, 1.020e-02, 5.600e-03, 2.450e-02, , 0.009, 0.007, 0.008, 0.004, 0.003\n"
-    "25.0, 1.500e-02, 1.800e-02, 9.200e-03, 4.220e-02, , 0.016, 0.012, 0.014, 0.008, 0.005\n"
-    "30.0, 3.200e-02, 4.100e-02, 2.100e-02, 9.400e-02, , 0.035, 0.026, 0.030, 0.017, 0.011\n"
-    "35.0, 6.800e-02, 8.500e-02, 4.200e-02, 1.950e-01, , 0.074, 0.055, 0.063, 0.036, 0.024\n"
-    "40.0, 1.200e-01, 1.500e-01, 7.800e-02, 3.480e-01, , 0.130, 0.098, 0.112, 0.065, 0.043\n"
-    "45.0, 2.100e-01, 2.800e-01, 1.400e-01, 6.300e-01, , 0.228, 0.171, 0.196, 0.113, 0.075\n"
-    "50.0, 3.500e-01, 4.200e-01, 2.100e-01, 9.800e-01, , 0.380, 0.285, 0.327, 0.189, 0.126\n"
-    "55.0, 2.800e-01, 3.600e-01, 1.700e-01, 8.100e-01, , 0.304, 0.228, 0.261, 0.151, 0.101\n"
-    "60.0, 1.500e-01, 2.000e-01, 9.500e-02, 4.450e-01, , 0.163, 0.122, 0.140, 0.081, 0.054\n";
+    "5.0, 1.234e-03, 2.345e-03, 1.123e-03, 4.702e-03, 0.001, 0.001, 0.001, 0.000, 0.000\n"
+    "10.0, 2.500e-03, 3.100e-03, 1.800e-03, 7.400e-03, 0.002, 0.002, 0.002, 0.001, 0.001\n"
+    "15.0, 4.100e-03, 5.200e-03, 2.900e-03, 1.220e-02, 0.004, 0.003, 0.004, 0.002, 0.001\n"
+    "20.0, 8.700e-03, 1.020e-02, 5.600e-03, 2.450e-02, 0.009, 0.007, 0.008, 0.004, 0.003\n"
+    "25.0, 1.500e-02, 1.800e-02, 9.200e-03, 4.220e-02, 0.016, 0.012, 0.014, 0.008, 0.005\n"
+    "30.0, 3.200e-02, 4.100e-02, 2.100e-02, 9.400e-02, 0.035, 0.026, 0.030, 0.017, 0.011\n"
+    "35.0, 6.800e-02, 8.500e-02, 4.200e-02, 1.950e-01, 0.074, 0.055, 0.063, 0.036, 0.024\n"
+    "40.0, 1.200e-01, 1.500e-01, 7.800e-02, 3.480e-01, 0.130, 0.098, 0.112, 0.065, 0.043\n"
+    "45.0, 2.100e-01, 2.800e-01, 1.400e-01, 6.300e-01, 0.228, 0.171, 0.196, 0.113, 0.075\n"
+    "50.0, 3.500e-01, 4.200e-01, 2.100e-01, 9.800e-01, 0.380, 0.285, 0.327, 0.189, 0.126\n"
+    "55.0, 2.800e-01, 3.600e-01, 1.700e-01, 8.100e-01, 0.304, 0.228, 0.261, 0.151, 0.101\n"
+    "60.0, 1.500e-01, 2.000e-01, 9.500e-02, 4.450e-01, 0.163, 0.122, 0.140, 0.081, 0.054\n";
 
 /// CSV without shaper columns (raw PSD only)
 const char* RAW_PSD_ONLY_CSV = "freq, psd_x, psd_y, psd_z, psd_xyz\n"
@@ -166,7 +166,7 @@ TEST_CASE("Empty file returns empty data", "[shaper_csv]") {
 }
 
 TEST_CASE("Header only with no data rows", "[shaper_csv]") {
-    TempCsvFile csv("freq, psd_x, psd_y, psd_z, psd_xyz, shapers:, zv(59.0), mzv(53.8)\n");
+    TempCsvFile csv("freq, psd_x, psd_y, psd_z, psd_xyz, zv(59.0), mzv(53.8)\n");
     auto data = parse_shaper_csv(csv.path, 'X');
 
     CHECK(data.frequencies.empty());
@@ -190,8 +190,8 @@ TEST_CASE("CSV without shaper columns parses raw PSD only", "[shaper_csv]") {
 }
 
 TEST_CASE("Shaper header parsing for complex names", "[shaper_csv]") {
-    TempCsvFile csv("freq, psd_x, psd_y, psd_z, psd_xyz, shapers:, 2hump_ei(71.8), 3hump_ei(89.6)\n"
-                    "10.0, 0.001, 0.002, 0.001, 0.004, , 0.005, 0.003\n");
+    TempCsvFile csv("freq, psd_x, psd_y, psd_z, psd_xyz, 2hump_ei(71.8), 3hump_ei(89.6)\n"
+                    "10.0, 0.001, 0.002, 0.001, 0.004, 0.005, 0.003\n");
     auto data = parse_shaper_csv(csv.path, 'X');
 
     REQUIRE(data.shaper_curves.size() == 2);
@@ -205,4 +205,26 @@ TEST_CASE("Shaper header parsing for complex names", "[shaper_csv]") {
     CHECK(data.shaper_curves[1].frequency == Catch::Approx(89.6f));
     CHECK(data.shaper_curves[1].values.size() == 1);
     CHECK(data.shaper_curves[1].values[0] == Catch::Approx(0.003f));
+}
+
+TEST_CASE("Parser detects shaper columns without marker", "[shaper_csv]") {
+    // Real Klipper format has no shapers: marker - shaper columns follow psd_xyz directly
+    TempCsvFile csv("freq,psd_x,psd_y,psd_z,psd_xyz,zv(59.6),mzv(55.0),ei(67.2)\n"
+                    "0.0,0.0,0.0,0.0,0.0,0.123,0.456,0.789\n"
+                    "5.0,0.001,0.002,0.001,0.004,0.100,0.200,0.300\n");
+    auto data = parse_shaper_csv(csv.path, 'X');
+
+    REQUIRE(data.shaper_curves.size() == 3);
+    CHECK(data.shaper_curves[0].name == "zv");
+    CHECK(data.shaper_curves[0].frequency == Catch::Approx(59.6f));
+    CHECK(data.shaper_curves[1].name == "mzv");
+    CHECK(data.shaper_curves[1].frequency == Catch::Approx(55.0f));
+    CHECK(data.shaper_curves[2].name == "ei");
+    CHECK(data.shaper_curves[2].frequency == Catch::Approx(67.2f));
+
+    // Verify shaper values are parsed correctly
+    REQUIRE(data.shaper_curves[0].values.size() == 2);
+    CHECK(data.shaper_curves[0].values[0] == Catch::Approx(0.123f));
+    CHECK(data.shaper_curves[0].values[1] == Catch::Approx(0.100f));
+    CHECK(data.shaper_curves[2].values[0] == Catch::Approx(0.789f));
 }

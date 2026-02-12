@@ -318,11 +318,22 @@ class InputShaperPanel : public OverlayBase {
     std::array<ChipRow, MAX_SHAPERS> x_chips_;
     std::array<ChipRow, MAX_SHAPERS> y_chips_;
 
+    // Legend subjects (shaper name label, updated on chip toggle)
+    char is_x_legend_shaper_label_buf_[CHIP_LABEL_BUF] = {};
+    lv_subject_t is_x_legend_shaper_label_{};
+    char is_y_legend_shaper_label_buf_[CHIP_LABEL_BUF] = {};
+    lv_subject_t is_y_legend_shaper_label_{};
+
+    // Legend dot widget pointers (for programmatic color updates)
+    lv_obj_t* legend_x_shaper_dot_ = nullptr;
+    lv_obj_t* legend_y_shaper_dot_ = nullptr;
+
     // Chart management helpers
     void populate_chart(char axis, const InputShaperResult& result);
     void clear_chart(char axis);
     void toggle_shaper_overlay(char axis, int index);
     void create_chart_widgets();
+    void update_legend(char axis);
 
     // Calibrator for delegating operations
     std::unique_ptr<helix::calibration::InputShaperCalibrator> calibrator_;

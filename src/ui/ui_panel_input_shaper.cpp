@@ -10,6 +10,7 @@
 #include "ui_nav_manager.h"
 #include "ui_toast.h"
 
+#include "async_helpers.h"
 #include "format_utils.h"
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
@@ -21,6 +22,17 @@
 
 #include <algorithm>
 #include <cstdio>
+
+// Shaper overlay colors (distinct, visible on dark bg) — shared by chart and legend
+static constexpr uint32_t SHAPER_OVERLAY_COLORS[] = {
+    0x4FC3F7, // ZV - light blue
+    0x66BB6A, // MZV - green
+    0xFFA726, // EI - orange
+    0xAB47BC, // 2HUMP_EI - purple
+    0xEF5350, // 3HUMP_EI - red
+};
+static constexpr size_t NUM_SHAPER_COLORS =
+    sizeof(SHAPER_OVERLAY_COLORS) / sizeof(SHAPER_OVERLAY_COLORS[0]);
 
 // ============================================================================
 // GLOBAL INSTANCE AND ROW CLICK HANDLER
@@ -285,6 +297,12 @@ void InputShaperPanel::init_subjects() {
     UI_MANAGED_SUBJECT_INT(is_x_has_freq_data_, 0, "is_x_has_freq_data", subjects_);
     UI_MANAGED_SUBJECT_INT(is_y_has_freq_data_, 0, "is_y_has_freq_data", subjects_);
 
+    // Legend shaper label subjects (one per axis, updated on chip toggle)
+    UI_MANAGED_SUBJECT_STRING_N(is_x_legend_shaper_label_, is_x_legend_shaper_label_buf_,
+                                CHIP_LABEL_BUF, "", "is_x_legend_shaper_label", subjects_);
+    UI_MANAGED_SUBJECT_STRING_N(is_y_legend_shaper_label_, is_y_legend_shaper_label_buf_,
+                                CHIP_LABEL_BUF, "", "is_y_legend_shaper_label", subjects_);
+
     // Chip label and active subjects
     auto init_chip = [this](ChipRow& chip, const char* axis, size_t idx) {
         char name[48];
@@ -351,6 +369,10 @@ void InputShaperPanel::setup_widgets() {
     // Create frequency response chart widgets inside containers
     create_chart_widgets();
 
+    // Find legend dot widgets for programmatic color updates
+    legend_x_shaper_dot_ = lv_obj_find_by_name(overlay_root_, "legend_x_shaper_dot");
+    legend_y_shaper_dot_ = lv_obj_find_by_name(overlay_root_, "legend_y_shaper_dot");
+
     spdlog::debug("[InputShaper] Widget setup complete");
 }
 
@@ -404,17 +426,21 @@ void InputShaperPanel::on_activate() {
         auto alive = alive_;
         api_->get_input_shaper_config(
             [this, alive](const InputShaperConfig& config) {
-                if (!alive->load())
-                    return;
-                populate_current_config(config);
+                helix::async::invoke([this, alive, config]() {
+                    if (!alive->load())
+                        return;
+                    populate_current_config(config);
+                });
             },
             [this, alive](const MoonrakerError& err) {
-                if (!alive->load())
-                    return;
-                spdlog::debug("[InputShaper] Could not query config: {}", err.message);
-                // Not an error - just means config not available
-                InputShaperConfig empty;
-                populate_current_config(empty);
+                helix::async::invoke([this, alive, msg = err.message]() {
+                    if (!alive->load())
+                        return;
+                    spdlog::debug("[InputShaper] Could not query config: {}", msg);
+                    // Not an error - just means config not available
+                    InputShaperConfig empty;
+                    populate_current_config(empty);
+                });
             });
     }
 
@@ -781,9 +807,11 @@ void InputShaperPanel::apply_y_after_x() {
             if (api_) {
                 api_->get_input_shaper_config(
                     [this, alive](const InputShaperConfig& config) {
-                        if (!alive->load())
-                            return;
-                        populate_current_config(config);
+                        helix::async::invoke([this, alive, config]() {
+                            if (!alive->load())
+                                return;
+                            populate_current_config(config);
+                        });
                     },
                     [](const MoonrakerError&) {});
             }
@@ -1002,7 +1030,7 @@ void InputShaperPanel::populate_axis_result(char axis, const InputShaperResult& 
     if (axis == 'X') {
         lv_subject_set_int(&is_results_has_x_, 1);
 
-        snprintf(is_result_x_shaper_buf_, sizeof(is_result_x_shaper_buf_), "%s @ %s",
+        snprintf(is_result_x_shaper_buf_, sizeof(is_result_x_shaper_buf_), "Optimal: %s @ %s",
                  type_upper.c_str(), freq_buf);
         lv_subject_copy_string(&is_result_x_shaper_, is_result_x_shaper_buf_);
 
@@ -1022,7 +1050,7 @@ void InputShaperPanel::populate_axis_result(char axis, const InputShaperResult& 
     } else {
         lv_subject_set_int(&is_results_has_y_, 1);
 
-        snprintf(is_result_y_shaper_buf_, sizeof(is_result_y_shaper_buf_), "%s @ %s",
+        snprintf(is_result_y_shaper_buf_, sizeof(is_result_y_shaper_buf_), "Optimal: %s @ %s",
                  type_upper.c_str(), freq_buf);
         lv_subject_copy_string(&is_result_y_shaper_, is_result_y_shaper_buf_);
 
@@ -1176,15 +1204,6 @@ void InputShaperPanel::populate_chart(char axis, const InputShaperResult& result
                                               freqs[peak_idx], *peak_it);
     }
 
-    // Shaper overlay colors (distinct, visible on dark bg)
-    static const uint32_t shaper_colors[] = {
-        0x4FC3F7, // ZV - light blue
-        0x66BB6A, // MZV - green
-        0xFFA726, // EI - orange
-        0xAB47BC, // 2HUMP_EI - purple
-        0xEF5350, // 3HUMP_EI - red
-    };
-
     // Add shaper overlay series
     for (size_t i = 0; i < chart_data.shaper_curves.size() && i < MAX_SHAPERS; i++) {
         const auto& curve = chart_data.shaper_curves[i];
@@ -1197,7 +1216,7 @@ void InputShaperPanel::populate_chart(char axis, const InputShaperResult& result
         lv_subject_copy_string(&chips[i].label, chips[i].label_buf);
 
         // Add chart series (initially hidden except recommended)
-        lv_color_t color = lv_color_hex(shaper_colors[i % 5]);
+        lv_color_t color = lv_color_hex(SHAPER_OVERLAY_COLORS[i % NUM_SHAPER_COLORS]);
         chart_data.shaper_series_ids[i] =
             ui_frequency_response_chart_add_series(chart_data.chart, curve.name.c_str(), color);
 
@@ -1222,6 +1241,9 @@ void InputShaperPanel::populate_chart(char axis, const InputShaperResult& result
         lv_subject_copy_string(&chips[i].label, chips[i].label_buf);
         lv_subject_set_int(&chips[i].active, 0);
     }
+
+    // Update legend to reflect initially selected shaper
+    update_legend(axis);
 
     spdlog::debug("[InputShaper] Chart populated for {} axis: {} freq bins, {} shaper curves", axis,
                   freqs.size(), chart_data.shaper_curves.size());
@@ -1277,8 +1299,46 @@ void InputShaperPanel::toggle_shaper_overlay(char axis, int index) {
                                             chart_data.shaper_visible[index]);
     lv_subject_set_int(&chips[index].active, chart_data.shaper_visible[index] ? 1 : 0);
 
+    // Update legend to reflect new active shaper
+    update_legend(axis);
+
     spdlog::debug("[InputShaper] Toggled {} axis shaper overlay {}: {}", axis, index,
                   chart_data.shaper_visible[index]);
+}
+
+void InputShaperPanel::update_legend(char axis) {
+    auto& chart_data = (axis == 'X') ? x_chart_ : y_chart_;
+    auto& chips = (axis == 'X') ? x_chips_ : y_chips_;
+    auto& legend_label = (axis == 'X') ? is_x_legend_shaper_label_ : is_y_legend_shaper_label_;
+    auto& legend_label_buf =
+        (axis == 'X') ? is_x_legend_shaper_label_buf_ : is_y_legend_shaper_label_buf_;
+    lv_obj_t* legend_dot = (axis == 'X') ? legend_x_shaper_dot_ : legend_y_shaper_dot_;
+
+    // Find the last visible shaper to display in the legend
+    // Prefer the highest-index visible shaper (most recently toggled on)
+    int active_idx = -1;
+    for (int i = static_cast<int>(MAX_SHAPERS) - 1; i >= 0; i--) {
+        if (chart_data.shaper_visible[i] && chart_data.shaper_series_ids[i] >= 0) {
+            active_idx = i;
+            break;
+        }
+    }
+
+    if (active_idx >= 0) {
+        // Copy chip label text (already uppercase) to legend label
+        snprintf(legend_label_buf, CHIP_LABEL_BUF, "%s", chips[active_idx].label_buf);
+        lv_subject_copy_string(&legend_label, legend_label_buf);
+
+        // Update dot color to match the active shaper's series color
+        if (legend_dot) {
+            lv_color_t color = lv_color_hex(SHAPER_OVERLAY_COLORS[active_idx % NUM_SHAPER_COLORS]);
+            lv_obj_set_style_bg_color(legend_dot, color, LV_PART_MAIN);
+        }
+    } else {
+        // No shaper visible — clear legend label
+        snprintf(legend_label_buf, CHIP_LABEL_BUF, "");
+        lv_subject_copy_string(&legend_label, legend_label_buf);
+    }
 }
 
 void InputShaperPanel::handle_chip_x_clicked(int index) {

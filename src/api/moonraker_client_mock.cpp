@@ -3439,7 +3439,7 @@ void write_mock_shaper_csv(const std::string& path, char axis) {
     constexpr int num_shapers = 5;
 
     // Write header line
-    ofs << "freq,psd_x,psd_y,psd_z,psd_xyz,shapers:";
+    ofs << "freq,psd_x,psd_y,psd_z,psd_xyz";
     for (int i = 0; i < num_shapers; ++i) {
         ofs << "," << shapers[i].name << "(" << std::fixed << std::setprecision(1)
             << shapers[i].freq << ")";
@@ -3450,8 +3450,8 @@ void write_mock_shaper_csv(const std::string& path, char axis) {
     std::mt19937 rng(42 + static_cast<unsigned>(axis)); // Deterministic per-axis
     std::uniform_real_distribution<float> noise_dist(0.8f, 1.2f);
 
-    // Resonance peak parameters
-    const float peak_freq = (axis == 'x' || axis == 'X') ? 48.0f : 52.0f;
+    // Resonance peak parameters — should agree with optimal shaper frequencies above
+    const float peak_freq = (axis == 'x' || axis == 'X') ? 53.8f : 48.2f;
     const float peak_width = 8.0f; // Hz bandwidth of resonance
     const float peak_amp = 0.02f;  // Peak amplitude
     const float noise_floor = 5e-4f;
@@ -3478,7 +3478,7 @@ void write_mock_shaper_csv(const std::string& path, char axis) {
         float psd_y = (axis == 'y' || axis == 'Y') ? psd_main : psd_cross;
 
         ofs << std::scientific << std::setprecision(3) << freq << "," << psd_x << "," << psd_y
-            << "," << psd_z << "," << psd_xyz << ",";
+            << "," << psd_z << "," << psd_xyz;
 
         // Shaper response curves: attenuate near their fitted frequencies
         for (int i = 0; i < num_shapers; ++i) {

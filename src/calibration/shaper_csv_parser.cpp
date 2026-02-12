@@ -81,10 +81,21 @@ ShaperCsvData parse_shaper_csv(const std::string& csv_path, char axis) {
     // Find column indices
     int freq_col = -1;
     int psd_col = -1;
-    int shapers_marker_col = -1;
+
+    // Known non-shaper column names
+    static const std::vector<std::string> known_columns = {"freq", "psd_x", "psd_y", "psd_z",
+                                                           "psd_xyz"};
 
     // Target PSD column name based on axis
     std::string target_psd = (axis == 'Y' || axis == 'y') ? "psd_y" : "psd_x";
+
+    // Parse shaper column headers: any column matching name(freq) pattern
+    struct ShaperColumn {
+        int col_index;
+        std::string name;
+        float frequency;
+    };
+    std::vector<ShaperColumn> shaper_columns;
 
     for (int i = 0; i < static_cast<int>(headers.size()); ++i) {
         const auto& h = headers[i];
@@ -93,7 +104,15 @@ ShaperCsvData parse_shaper_csv(const std::string& csv_path, char axis) {
         } else if (h == target_psd) {
             psd_col = i;
         } else if (h == "shapers:") {
-            shapers_marker_col = i;
+            // Legacy marker column - skip it, not an error
+            continue;
+        } else {
+            // Try parsing as a shaper header like "mzv(53.8)"
+            std::string name;
+            float freq = 0.0f;
+            if (parse_shaper_header(h, name, freq)) {
+                shaper_columns.push_back({i, name, freq});
+            }
         }
     }
 
@@ -105,24 +124,6 @@ ShaperCsvData parse_shaper_csv(const std::string& csv_path, char axis) {
     if (psd_col < 0) {
         spdlog::warn("shaper_csv_parser: no '{}' column in: {}", target_psd, csv_path);
         return result;
-    }
-
-    // Parse shaper column headers (columns after "shapers:" marker)
-    struct ShaperColumn {
-        int col_index;
-        std::string name;
-        float frequency;
-    };
-    std::vector<ShaperColumn> shaper_columns;
-
-    if (shapers_marker_col >= 0) {
-        for (int i = shapers_marker_col + 1; i < static_cast<int>(headers.size()); ++i) {
-            std::string name;
-            float freq = 0.0f;
-            if (parse_shaper_header(headers[i], name, freq)) {
-                shaper_columns.push_back({i, name, freq});
-            }
-        }
     }
 
     // Initialize shaper curves
