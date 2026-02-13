@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include "config.h"
 #include "led/led_controller.h"
 #include "printer_discovery.h"
 
 #include "../catch_amalgamated.hpp"
+#include "hv/json.hpp"
 
 TEST_CASE("LedController singleton access", "[led]") {
     auto& ctrl = helix::led::LedController::instance();
@@ -232,6 +234,13 @@ TEST_CASE("LedController: toggle_all turns on all selected native strips", "[led
 }
 
 TEST_CASE("LedController: toggle_all with empty selected_strips is a no-op", "[led][controller]") {
+    // Clear any auto-selected strips persisted by prior tests
+    auto* cfg = Config::get_instance();
+    if (cfg) {
+        cfg->set("/printer/leds/selected_strips", nlohmann::json::array());
+        cfg->save();
+    }
+
     auto& ctrl = helix::led::LedController::instance();
     ctrl.deinit();
     ctrl.init(nullptr, nullptr);
@@ -365,6 +374,13 @@ TEST_CASE("LedController: apply_startup_preference does nothing when disabled",
 
 TEST_CASE("LedController: apply_startup_preference with no strips is a no-op",
           "[led][controller]") {
+    // Clear any auto-selected strips persisted by prior tests
+    auto* cfg = Config::get_instance();
+    if (cfg) {
+        cfg->set("/printer/leds/selected_strips", nlohmann::json::array());
+        cfg->save();
+    }
+
     auto& ctrl = helix::led::LedController::instance();
     ctrl.deinit();
     ctrl.init(nullptr, nullptr);

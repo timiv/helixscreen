@@ -8,7 +8,6 @@
 #include "ui_change_host_modal.h"
 #include "ui_emergency_stop.h"
 #include "ui_event_safety.h"
-#include "ui_led_chip_factory.h"
 #include "ui_modal.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
@@ -531,7 +530,7 @@ void SettingsPanel::setup_toggle_handlers() {
         }
     }
 
-    // LED chips are populated later via populate_led_chips() after hardware discovery
+    // LED chip selection moved to LedSettingsOverlay
 
     // === LED Light Toggle ===
     // Event handler wired via XML <event_cb>, sync toggle with actual printer LED state
@@ -762,52 +761,9 @@ void SettingsPanel::fetch_print_hours() {
 }
 
 void SettingsPanel::populate_led_chips() {
-    if (!panel_ || !subjects_initialized_) {
-        return;
-    }
-
-    lv_obj_t* led_chip_row = lv_obj_find_by_name(panel_, "row_led_select");
-    if (!led_chip_row) {
-        return;
-    }
-
-    lv_obj_t* chip_container = lv_obj_find_by_name(led_chip_row, "chip_container");
-    if (!chip_container) {
-        spdlog::warn("[{}] LED chip row found but no chip_container", get_name());
-        return;
-    }
-
-    // Clear existing chips
-    lv_obj_clean(chip_container);
-
-    // Source LED list from LedController backends (native + WLED)
-    auto& led_ctrl = helix::led::LedController::instance();
-    discovered_leds_.clear();
-    for (const auto& strip : led_ctrl.native().strips()) {
-        discovered_leds_.push_back(strip.id);
-    }
-    for (const auto& strip : led_ctrl.wled().strips()) {
-        discovered_leds_.push_back(strip.id);
-    }
-
-    // Load selected LEDs from LedController
-    selected_leds_.clear();
-    for (const auto& strip_id : led_ctrl.selected_strips()) {
-        selected_leds_.insert(strip_id);
-    }
-
-    // Create chips for each discovered LED
-    for (const auto& led : discovered_leds_) {
-        bool selected = selected_leds_.count(led) > 0;
-        std::string display_name = helix::get_display_name(led, helix::DeviceType::LED);
-
-        helix::ui::create_led_chip(
-            chip_container, led, display_name, selected,
-            [this](const std::string& led_name) { handle_led_chip_clicked(led_name); });
-    }
-
-    spdlog::debug("[{}] LED chips populated ({} LEDs, {} selected)", get_name(),
-                  discovered_leds_.size(), selected_leds_.size());
+    // LED chip selection has been moved to LedSettingsOverlay.
+    // This method is kept as a no-op stub for callers that haven't been updated yet.
+    spdlog::trace("[{}] populate_led_chips() is now handled by LedSettingsOverlay", get_name());
 }
 
 // ============================================================================
@@ -843,24 +799,7 @@ void SettingsPanel::handle_led_light_changed(bool enabled) {
     SettingsManager::instance().set_led_enabled(enabled);
 }
 
-void SettingsPanel::handle_led_chip_clicked(const std::string& led_name) {
-    // Toggle selection
-    if (selected_leds_.count(led_name) > 0) {
-        selected_leds_.erase(led_name);
-        spdlog::info("[{}] LED deselected: {}", get_name(), led_name);
-    } else {
-        selected_leds_.insert(led_name);
-        spdlog::info("[{}] LED selected: {}", get_name(), led_name);
-    }
-
-    // Save via LedController
-    std::vector<std::string> strips_vec(selected_leds_.begin(), selected_leds_.end());
-    helix::led::LedController::instance().set_selected_strips(strips_vec);
-    helix::led::LedController::instance().save_config();
-
-    // Rebuild chips to update visual state
-    populate_led_chips();
-}
+// handle_led_chip_clicked moved to LedSettingsOverlay
 
 void SettingsPanel::handle_estop_confirm_changed(bool enabled) {
     spdlog::info("[{}] E-Stop confirmation toggled: {}", get_name(), enabled ? "ON" : "OFF");

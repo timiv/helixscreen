@@ -254,6 +254,17 @@ void LedController::discover_from_hardware(const helix::PrinterDiscovery& hardwa
                          configured_macros_.size());
         }
     }
+
+    // Auto-select all native strips if nothing is selected yet
+    // This ensures LEDs work out-of-the-box on first run (mock or real)
+    if (selected_strips_.empty() && native_.is_available()) {
+        for (const auto& strip : native_.strips()) {
+            selected_strips_.push_back(strip.id);
+        }
+        save_config();
+        spdlog::info("[LedController] Auto-selected {} native strip(s) (first run)",
+                     selected_strips_.size());
+    }
 }
 
 void LedController::discover_wled_strips() {

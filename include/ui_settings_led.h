@@ -22,6 +22,10 @@
 #include "lvgl/lvgl.h"
 #include "overlay_base.h"
 
+#include <set>
+#include <string>
+#include <vector>
+
 namespace helix::settings {
 
 /**
@@ -84,6 +88,12 @@ class LedSettingsOverlay : public OverlayBase {
     void init_led_on_at_start_toggle();
     void init_auto_state_toggle();
     void populate_macro_devices();
+    void populate_led_chips();
+    void handle_led_chip_clicked(const std::string& led_name);
+
+    // LED chip selection state
+    std::vector<std::string> discovered_leds_;
+    std::set<std::string> selected_leds_;
 
     //
     // === Static Callbacks ===

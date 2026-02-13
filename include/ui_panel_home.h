@@ -117,7 +117,7 @@ class HomePanel : public PanelBase {
     network_type_t current_network_ = NETWORK_WIFI;
     PrintingTip current_tip_;
     PrintingTip pending_tip_; // Tip waiting to be displayed after fade-out
-    std::vector<std::string> configured_leds_;
+    // configured_leds_ removed - read LedController::selected_strips() lazily
     lv_timer_t* tip_rotation_timer_ = nullptr;
     lv_obj_t* tip_label_ = nullptr;                     // Cached for fade animation
     bool tip_animating_ = false;                        // Prevents overlapping animations
@@ -142,6 +142,7 @@ class HomePanel : public PanelBase {
 
     void handle_light_toggle();
     void handle_light_long_press();
+    void ensure_led_observers();
     void handle_print_card_clicked();
     void handle_tip_text_clicked();
     void handle_tip_rotation_timer();

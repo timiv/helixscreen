@@ -13,6 +13,14 @@
             width="100%" flex_grow="1" style_pad_top="0" style_pad_left="#space_lg" style_pad_right="#space_lg"
             style_pad_bottom="#space_lg" scrollable="true" flex_flow="column">
       <!-- ================================================================== -->
+      <!-- LED SELECTION SECTION -->
+      <!-- ================================================================== -->
+      <setting_section_header title="LED SELECTION" title_tag="LED SELECTION" icon="light"/>
+      <setting_led_chip_row name="row_led_select"
+                            label="LEDs" label_tag="LEDs" icon="lightbulb_outline"
+                            description="LEDs controlled by the light button"
+                            description_tag="LEDs controlled by the light button"/>
+      <!-- ================================================================== -->
       <!-- STARTUP SECTION -->
       <!-- ================================================================== -->
       <setting_section_header title="STARTUP" title_tag="STARTUP" icon="power"/>

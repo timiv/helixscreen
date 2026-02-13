@@ -102,34 +102,13 @@ HomePanel::HomePanel(PrinterState& printer_state, MoonrakerAPI* api)
         });
     spdlog::debug("[{}] Subscribed to filament_any_runout subject", get_name());
 
-    // Source LED list from LedController (single source of truth for selected strips)
-    {
-        auto& led_ctrl = helix::led::LedController::instance();
-        const auto& strips = led_ctrl.selected_strips();
-        configured_leds_.clear();
-        for (const auto& strip_id : strips) {
-            configured_leds_.push_back(strip_id);
-        }
-        if (!configured_leds_.empty()) {
-            // Tell PrinterState to track the first LED for state updates
-            printer_state_.set_tracked_led(configured_leds_.front());
-
-            // Subscribe to LED state changes from PrinterState
-            led_state_observer_ = observe_int_sync<HomePanel>(
-                printer_state_.get_led_state_subject(), this,
-                [](HomePanel* self, int state) { self->on_led_state_changed(state); });
-
-            // Subscribe to LED brightness changes for dynamic icon updates
-            led_brightness_observer_ = observe_int_sync<HomePanel>(
-                printer_state_.get_led_brightness_subject(), this,
-                [](HomePanel* self, int /*brightness*/) { self->update_light_icon(); });
-
-            spdlog::debug("[{}] Configured {} LED(s) (observing state)", get_name(),
-                          configured_leds_.size());
-        } else {
-            spdlog::debug("[{}] No LED configured - light control will be hidden", get_name());
-        }
-    }
+    // LED observers are set up lazily via ensure_led_observers() when strips become available.
+    // At construction time, hardware discovery may not have completed yet, so
+    // selected_strips() could be empty. The observers will be created on first
+    // reload_from_config() or handle_light_toggle() when strips are available.
+    //
+    // LED visibility on the home panel is controlled by the printer_has_led subject
+    // (set via set_printer_capabilities after hardware discovery).
 }
 
 HomePanel::~HomePanel() {
@@ -528,15 +507,20 @@ void HomePanel::detect_network_type() {
 void HomePanel::handle_light_toggle() {
     spdlog::info("[{}] Light button clicked", get_name());
 
-    // Check if LED is configured
-    if (configured_leds_.empty()) {
+    // Read selected strips lazily - hardware discovery may have completed since construction
+    auto& led_ctrl = helix::led::LedController::instance();
+    const auto& strips = led_ctrl.selected_strips();
+    if (strips.empty()) {
         spdlog::warn("[{}] Light toggle called but no LED configured", get_name());
         return;
     }
 
+    // Ensure observers are set up now that we know strips exist
+    ensure_led_observers();
+
     // Toggle all LEDs via LedController (handles API calls and error reporting)
     // UI will update when Moonraker notification arrives (via PrinterState observer)
-    helix::led::LedController::instance().toggle_all(!light_on_);
+    led_ctrl.toggle_all(!light_on_);
 }
 
 void HomePanel::handle_light_long_press() {
@@ -686,6 +670,21 @@ void HomePanel::handle_ams_clicked() {
     }
 }
 
+void HomePanel::ensure_led_observers() {
+    using helix::ui::observe_int_sync;
+
+    if (!led_state_observer_) {
+        led_state_observer_ = observe_int_sync<HomePanel>(
+            printer_state_.get_led_state_subject(), this,
+            [](HomePanel* self, int state) { self->on_led_state_changed(state); });
+    }
+    if (!led_brightness_observer_) {
+        led_brightness_observer_ = observe_int_sync<HomePanel>(
+            printer_state_.get_led_brightness_subject(), this,
+            [](HomePanel* self, int /*brightness*/) { self->update_light_icon(); });
+    }
+}
+
 void HomePanel::on_led_state_changed(int state) {
     // Update local light_on_ state from PrinterState's led_state subject
     light_on_ = (state != 0);
@@ -785,36 +784,14 @@ void HomePanel::reload_from_config() {
     // Reload LED configuration from LedController (single source of truth)
     // LED visibility is controlled by printer_has_led subject set via set_printer_capabilities()
     // which is called by the on_discovery_complete_ callback after hardware discovery
-    std::vector<std::string> new_leds;
     {
         auto& led_ctrl = helix::led::LedController::instance();
         const auto& strips = led_ctrl.selected_strips();
-        for (const auto& strip_id : strips) {
-            new_leds.push_back(strip_id);
-        }
-    }
-    if (new_leds != configured_leds_) {
-        configured_leds_ = new_leds;
-        if (!configured_leds_.empty() && configured_leds_.front() != "None") {
-            // Tell PrinterState to track the first LED for state updates
-            printer_state_.set_tracked_led(configured_leds_.front());
-
-            // Subscribe to LED state changes if not already subscribed
-            if (!led_state_observer_) {
-                led_state_observer_ = observe_int_sync<HomePanel>(
-                    printer_state_.get_led_state_subject(), this,
-                    [](HomePanel* self, int state) { self->on_led_state_changed(state); });
-            }
-
-            // Subscribe to LED brightness changes if not already subscribed
-            if (!led_brightness_observer_) {
-                led_brightness_observer_ = observe_int_sync<HomePanel>(
-                    printer_state_.get_led_brightness_subject(), this,
-                    [](HomePanel* self, int /*brightness*/) { self->update_light_icon(); });
-            }
-
-            spdlog::info("[{}] Reloaded LED config: {} LED(s)", get_name(),
-                         configured_leds_.size());
+        if (!strips.empty()) {
+            // Set up tracked LED and observers (idempotent)
+            printer_state_.set_tracked_led(strips.front());
+            ensure_led_observers();
+            spdlog::info("[{}] Reloaded LED config: {} LED(s)", get_name(), strips.size());
         } else {
             // No LED configured - clear tracking
             printer_state_.set_tracked_led("");
