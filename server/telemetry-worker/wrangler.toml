@@ -14,7 +14,7 @@ zone_name = "helixscreen.org"
 # Rate limiting: 10 ingest requests per IP per 60 seconds
 # Each request batches up to 20 events, so 200 events/min per IP is plenty
 [[ratelimits]]
-name = "INGEST_LIMITER"
+binding = "INGEST_LIMITER"
 namespace_id = "1001"
 [ratelimits.simple]
 limit = 10
