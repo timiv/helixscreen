@@ -65,7 +65,8 @@ Welcome to the HelixScreen documentation. Choose your path:
 | [**Sound System**](devel/SOUND_SYSTEM.md) | Audio architecture, JSON themes, backends |
 | [**Printer Manager**](devel/PRINTER_MANAGER.md) | Printer overlay, custom images, inline editing |
 | [**Timelapse**](devel/TIMELAPSE.md) | Moonraker timelapse plugin integration |
-| [**Telemetry**](devel/TELEMETRY.md) | Anonymous telemetry, crash reporting |
+| [**Crash Reporter**](devel/CRASH_REPORTER.md) | Crash detection, delivery pipeline, CF Worker |
+| [**Telemetry**](user/TELEMETRY.md) | Anonymous telemetry, privacy controls |
 | [**HelixPrint Plugin**](../moonraker-plugin/README.md) | Phase tracking Moonraker plugin |
 
 ### Platform Support

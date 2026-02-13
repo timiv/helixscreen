@@ -24,6 +24,8 @@ These docs are **end-user facing**. They must be written for people who are NOT 
 | `UPGRADING.md` | Version upgrade instructions |
 | `PLUGIN_DEVELOPMENT.md` | Plugin creation guide (power users) |
 | `TESTING_INSTALLATION.md` | Post-install verification steps |
+| `TELEMETRY.md` | What telemetry collects, privacy controls, opt-in/out |
+| `PRIVACY_POLICY.md` | Privacy policy for telemetry data |
 
 ## When Updating User Docs
 

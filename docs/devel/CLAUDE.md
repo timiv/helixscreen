@@ -45,7 +45,7 @@ All developer documentation lives here. When working on features, look up the re
 | `SOUND_SETTINGS.md` | Sound settings user guide |
 | `PRINTER_MANAGER.md` | Printer overlay, custom images, inline name editing |
 | `TIMELAPSE.md` | Moonraker timelapse plugin integration |
-| `TELEMETRY.md` | Anonymous telemetry, crash reporting, Cloudflare Worker |
+| `CRASH_REPORTER.md` | Crash reporter: detection, delivery pipeline, CF Worker, modal UI |
 | `CONFIG_MIGRATION.md` | Versioned config migration: adding new migrations, testing |
 | `STANDARD_MACROS_SPEC.md` | Standard macro specifications |
 | `POWER_BUTTON_HANDLING.md` | Power button behavior |
