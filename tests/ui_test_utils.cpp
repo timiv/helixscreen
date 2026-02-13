@@ -411,6 +411,12 @@ void ui_notification_info(const char* title, const char* message) {
                   message ? message : "(null)");
 }
 
+void ui_notification_info_with_action(const char* title, const char* message, const char* action) {
+    spdlog::debug("[Test Stub] ui_notification_info_with_action: {} - {} (action: {})",
+                  title ? title : "(null)", message ? message : "(null)",
+                  action ? action : "(null)");
+}
+
 void ui_notification_success(const char* message) {
     spdlog::debug("[Test Stub] ui_notification_success: {}", message ? message : "(null)");
 }

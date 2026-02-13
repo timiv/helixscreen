@@ -211,6 +211,9 @@ PlatformCapabilities PlatformCapabilities::detect() {
     caps.cpu_cores = get_macos_cpu_cores();
     // bogomips not available on macOS
 #else
+#ifdef __ANDROID__
+    spdlog::debug("Android platform: using /proc for hardware detection");
+#endif
     // Linux: read /proc/meminfo
     std::string meminfo_content = read_file_content("/proc/meminfo");
     if (!meminfo_content.empty()) {

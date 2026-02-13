@@ -144,6 +144,11 @@ class SettingsPanel : public PanelBase {
     // Visibility subjects (controls which settings are shown)
     lv_subject_t show_touch_calibration_subject_;
 
+    // Platform visibility subjects (Android hides these)
+    lv_subject_t show_network_settings_subject_;
+    lv_subject_t show_update_settings_subject_;
+    lv_subject_t show_backlight_settings_subject_;
+
     // Touch calibration status subject
     lv_subject_t touch_cal_status_subject_;
     char touch_cal_status_buf_[48]; // e.g., "Calibrated" or "Not calibrated"

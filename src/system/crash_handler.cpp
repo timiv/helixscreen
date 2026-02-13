@@ -20,9 +20,12 @@
 #include <unistd.h>
 
 // backtrace() is available on glibc (Linux) and macOS
-#if defined(__GLIBC__) || defined(__APPLE__)
+#if (defined(__GLIBC__) || defined(__APPLE__)) && !defined(__ANDROID__)
 #include <execinfo.h>
 #define HAVE_BACKTRACE 1
+#elif defined(__ANDROID__)
+#include <android/log.h>
+#define HAVE_ANDROID_LOG 1
 #endif
 
 using json = nlohmann::json;
@@ -207,6 +210,8 @@ static void crash_signal_handler(int sig) {
                    ptr_to_hex(hex_buf, sizeof(hex_buf), reinterpret_cast<uintptr_t>(frames[i])));
         safe_write(fd, "\n");
     }
+#elif defined(HAVE_ANDROID_LOG)
+    __android_log_print(ANDROID_LOG_FATAL, "HelixScreen", "CRASH: signal %d", sig);
 #endif
 
     close(fd);

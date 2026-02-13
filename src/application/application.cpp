@@ -96,6 +96,7 @@
 
 #include "data_root_resolver.h"
 #include "led/ui_led_control_overlay.h"
+#include "platform_info.h"
 #include "printer_detector.h"
 #include "printer_image_manager.h"
 #include "settings_manager.h"
@@ -281,7 +282,10 @@ int Application::run(int argc, char** argv) {
     }
 
     // Initialize UpdateChecker before panel subjects (subjects must exist for XML binding)
-    UpdateChecker::instance().init();
+    // On Android, updates are managed by the Play Store — skip self-update system
+    if (!helix::is_android_platform()) {
+        UpdateChecker::instance().init();
+    }
 
     // Initialize CrashReporter (independent of telemetry)
     // Write mock crash file first if --mock-crash flag is set (requires --test)

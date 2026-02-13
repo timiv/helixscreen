@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "wizard_step_logic.h"
+
+namespace helix {
+
+// Total steps without any skips: 13 (steps 0-12)
+static constexpr int TOTAL_STEPS = 13;
+
+/// Check if a given internal step is skipped
+static bool is_step_skipped(int step, const WizardSkipFlags& skips) {
+    switch (step) {
+    case 0:
+        return skips.touch_cal;
+    case 1:
+        return skips.language;
+    case 2:
+        return skips.wifi;
+    case 7:
+        return skips.ams;
+    case 8:
+        return skips.led;
+    case 9:
+        return skips.filament;
+    case 10:
+        return skips.probe;
+    case 11:
+        return skips.input_shaper;
+    default:
+        return false;
+    }
+}
+
+int wizard_calculate_display_step(int internal_step, const WizardSkipFlags& skips) {
+    int display = 1; // 1-based
+    for (int i = 0; i < internal_step; ++i) {
+        if (!is_step_skipped(i, skips)) {
+            display++;
+        }
+    }
+    return display;
+}
+
+int wizard_calculate_display_total(const WizardSkipFlags& skips) {
+    int total = 0;
+    for (int i = 0; i < TOTAL_STEPS; ++i) {
+        if (!is_step_skipped(i, skips)) {
+            total++;
+        }
+    }
+    return total;
+}
+
+int wizard_next_step(int current, const WizardSkipFlags& skips) {
+    for (int i = current + 1; i < TOTAL_STEPS; ++i) {
+        if (!is_step_skipped(i, skips)) {
+            return i;
+        }
+    }
+    return -1; // At end
+}
+
+int wizard_prev_step(int current, const WizardSkipFlags& skips) {
+    for (int i = current - 1; i >= 0; --i) {
+        if (!is_step_skipped(i, skips)) {
+            return i;
+        }
+    }
+    return -1; // At beginning
+}
+
+} // namespace helix

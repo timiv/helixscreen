@@ -1,7 +1,7 @@
 // Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 
 #include "usb_backend_linux.h"
 
@@ -517,4 +517,4 @@ std::string UsbBackendLinux::read_mounts_content() {
     return buffer.str();
 }
 
-#endif // __linux__
+#endif // __linux__ && !__ANDROID__

@@ -42,6 +42,7 @@
 #include "moonraker_api.h"
 #include "moonraker_client.h"
 #include "moonraker_manager.h"
+#include "platform_info.h"
 #include "printer_hardware.h"
 #include "printer_state.h"
 #include "runtime_config.h"
@@ -367,6 +368,21 @@ void SettingsPanel::init_subjects() {
     lv_xml_register_subject(nullptr, "show_touch_calibration", &show_touch_calibration_subject_);
 
     // Note: show_beta_features subject is initialized globally in app_globals.cpp
+
+    // Platform visibility subjects — hidden on Android where OS manages these
+    bool on_android = helix::is_android_platform();
+
+    lv_subject_init_int(&show_network_settings_subject_, on_android ? 0 : 1);
+    subjects_.register_subject(&show_network_settings_subject_);
+    lv_xml_register_subject(nullptr, "show_network_settings", &show_network_settings_subject_);
+
+    lv_subject_init_int(&show_update_settings_subject_, on_android ? 0 : 1);
+    subjects_.register_subject(&show_update_settings_subject_);
+    lv_xml_register_subject(nullptr, "show_update_settings", &show_update_settings_subject_);
+
+    lv_subject_init_int(&show_backlight_settings_subject_, on_android ? 0 : 1);
+    subjects_.register_subject(&show_backlight_settings_subject_);
+    lv_xml_register_subject(nullptr, "show_backlight_settings", &show_backlight_settings_subject_);
 
     // Touch calibration status - show "Calibrated" or "Not calibrated" in row description
     Config* config = Config::get_instance();
