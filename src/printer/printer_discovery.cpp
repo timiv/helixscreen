@@ -3,6 +3,7 @@
 #include "printer_discovery.h"
 
 #include "ams_state.h"
+#include "app_globals.h"
 #include "filament_sensor_manager.h"
 #include "led/led_controller.h"
 #include "moonraker_api.h"
@@ -102,6 +103,10 @@ void init_subsystems_from_hardware(const PrinterDiscovery& hardware, ::Moonraker
     // hardware.sensors() returns temperature_sensor and temperature_fan objects
     auto& tsm = helix::sensors::TemperatureSensorManager::instance();
     tsm.discover(hardware.sensors());
+
+    // Initialize multi-extruder temperature tracking
+    auto& printer_state = get_printer_state();
+    printer_state.init_extruders(hardware.heaters());
 
     // Initialize standard macros
     StandardMacros::instance().init(hardware);
