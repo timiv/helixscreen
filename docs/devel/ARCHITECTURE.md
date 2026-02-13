@@ -1182,6 +1182,20 @@ Optional plugin for enhanced print phase tracking. See [moonraker-plugin/README.
 - **helix_print.py** - Tracks print phases (heating, mesh, purge, etc.)
 - **HelixPluginInstaller** - Auto-detects and installs plugin (local) or shows install command (remote)
 
+### LED Control System
+
+Unified LED management across four backends with automatic state-based lighting:
+
+- **LedController** - Singleton orchestrating four backends: `NativeBackend` (Klipper neopixel/dotstar/led), `LedEffectBackend` (led_effect plugin animations), `WledBackend` (WLED network strips via Moonraker HTTP bridge), `MacroBackend` (user-configured macro devices)
+- **LedAutoState** - Observes printer state subjects (print status, klippy state, extruder target) and automatically applies LED actions for six states: idle, heating, printing, paused, error, complete
+- **PrinterLedState** - Domain class tracking one LED strip for home panel display (RGBW subjects)
+- **LedControlOverlay** - Full control overlay with color presets, effects, WLED presets, macro buttons
+- **LedSettingsOverlay** - Configuration overlay for strip selection, auto-state mapping, macro device management
+
+**Files:** `include/led/`, `src/led/`, `include/printer_led_state.h`, `include/ui_settings_led.h`, `ui_xml/led_*.xml`
+
+**See [LED_CONTROL.md](LED_CONTROL.md) for the full developer guide.**
+
 ### Print History Management
 
 Centralized caching shared between history panels:

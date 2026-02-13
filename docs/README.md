@@ -63,6 +63,7 @@ Welcome to the HelixScreen documentation. Choose your path:
 | [**Print Start Integration**](devel/PRINT_START_INTEGRATION.md) | User-facing macro setup guide |
 | [**Update System**](devel/UPDATE_SYSTEM.md) | Channels, R2 CDN, downloads, Moonraker updater |
 | [**Sound System**](devel/SOUND_SYSTEM.md) | Audio architecture, JSON themes, backends |
+| [**LED Control**](devel/LED_CONTROL.md) | LED system: 4 backends, auto-state lighting, overlays |
 | [**Printer Manager**](devel/PRINTER_MANAGER.md) | Printer overlay, custom images, inline editing |
 | [**Timelapse**](devel/TIMELAPSE.md) | Moonraker timelapse plugin integration |
 | [**Crash Reporter**](devel/CRASH_REPORTER.md) | Crash detection, delivery pipeline, CF Worker |
@@ -130,6 +131,7 @@ docs/
 │   ├── MODAL_SYSTEM.md       # Modal architecture
 │   ├── FILAMENT_MANAGEMENT.md # AMS, AFC, Happy Hare, TC
 │   ├── INPUT_SHAPER.md       # Calibration, freq charts
+│   ├── LED_CONTROL.md        # LED system, 4 backends
 │   ├── UPDATE_SYSTEM.md      # Update channels, downloads
 │   ├── ROADMAP.md            # Feature timeline
 │   ├── plans/                # Active implementation plans

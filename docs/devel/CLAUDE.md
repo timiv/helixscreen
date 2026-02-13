@@ -43,6 +43,7 @@ All developer documentation lives here. When working on features, look up the re
 | `UPDATE_SYSTEM.md` | Update channels (stable/beta/dev), R2 CDN, Moonraker updater |
 | `SOUND_SYSTEM.md` | Audio architecture, JSON themes, backends (SDL, PWM, M300) |
 | `SOUND_SETTINGS.md` | Sound settings user guide |
+| `LED_CONTROL.md` | LED control system: 4 backends, auto-state lighting, control/settings overlays |
 | `PRINTER_MANAGER.md` | Printer overlay, custom images, inline name editing |
 | `TIMELAPSE.md` | Moonraker timelapse plugin integration |
 | `CRASH_REPORTER.md` | Crash reporter: detection, delivery pipeline, CF Worker, modal UI |
