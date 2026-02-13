@@ -56,9 +56,6 @@ list_targets() {
         [ -f "$png" ] || continue
         local basename=$(basename "$png" .png)
 
-        # Skip generic fallback
-        [[ "$basename" == "generic-"* ]] && continue
-
         echo -e "  ${GREEN}$basename${NC}"
         for size in "${TARGET_SIZES[@]}"; do
             echo "    → ${basename}-${size}.bin"
@@ -72,8 +69,6 @@ list_targets() {
 render_all() {
     local success=0
     local failed=0
-    local skipped=0
-
     mkdir -p "$OUTPUT_DIR"
 
     echo -e "${CYAN}Pre-rendering printer images...${NC}"
@@ -85,12 +80,6 @@ render_all() {
     for png in "$SOURCE_DIR"/*.png; do
         [ -f "$png" ] || continue
         local basename=$(basename "$png" .png)
-
-        # Skip generic fallbacks (keep as PNG for flexibility)
-        if [[ "$basename" == "generic-"* ]]; then
-            skipped=$((skipped + 1))
-            continue
-        fi
 
         echo -ne "  $basename: "
 
@@ -115,7 +104,6 @@ render_all() {
 
     echo ""
     echo -e "${GREEN}✓ Rendered $success printers${NC}"
-    [ $skipped -gt 0 ] && echo -e "${YELLOW}  Skipped $skipped generic images${NC}"
     [ $failed -gt 0 ] && echo -e "${RED}  Failed: $failed${NC}"
 
     # Show total size
