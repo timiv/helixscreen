@@ -64,4 +64,51 @@ AssetExtractionResult extract_assets_if_needed(const std::string& source_dir,
     return AssetExtractionResult::EXTRACTED;
 }
 
+#ifdef __ANDROID__
+
+#include "helix_version.h"
+
+#include <SDL.h>
+#include <cstdlib>
+
+void android_extract_assets_if_needed() {
+    // Get Android internal storage path via SDL
+    const char* internal_path = SDL_AndroidGetInternalStoragePath();
+    if (!internal_path) {
+        spdlog::error("[AndroidAssets] Could not get internal storage path from SDL");
+        return;
+    }
+
+    std::string target_dir = std::string(internal_path) + "/data";
+    spdlog::info("[AndroidAssets] Target directory: {}", target_dir);
+
+    // On Android, assets are bundled in the APK and accessed via SDL_RWops.
+    // For MVP, we use SDL_AndroidGetInternalStoragePath() as our data root.
+    // The Gradle copyAssets task puts ui_xml/, assets/, config/ into the APK
+    // assets directory. Android's AssetManager can read them, but LVGL and
+    // our code expect filesystem paths. So we extract to internal storage.
+    //
+    // For the initial MVP, assets are extracted by the Gradle build task into
+    // the APK's assets/ directory. We need to copy them from there to the
+    // filesystem using SDL's Android file I/O.
+    //
+    // TODO: Implement SDL-based APK asset reading for full extraction.
+    // For now, set HELIX_DATA_DIR to the internal storage path where
+    // the app can find pre-deployed assets.
+
+    auto result = extract_assets_if_needed(
+        target_dir + "/source", // Placeholder — full APK extraction needs SDL_RWops
+        target_dir, helix_version());
+
+    if (result == AssetExtractionResult::FAILED) {
+        spdlog::warn("[AndroidAssets] Asset extraction failed, app may not have UI resources");
+    }
+
+    // Set HELIX_DATA_DIR so ensure_project_root_cwd() finds it
+    setenv("HELIX_DATA_DIR", target_dir.c_str(), 1);
+    spdlog::info("[AndroidAssets] Set HELIX_DATA_DIR={}", target_dir);
+}
+
+#endif // __ANDROID__
+
 } // namespace helix

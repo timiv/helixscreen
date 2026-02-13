@@ -98,6 +98,7 @@
 #include "ui_wizard_touch_calibration.h"
 #include "ui_wizard_wifi.h"
 
+#include "android_asset_extractor.h"
 #include "data_root_resolver.h"
 #include "led/ui_led_control_overlay.h"
 #include "platform_info.h"
@@ -203,6 +204,11 @@ int Application::run(int argc, char** argv) {
 
     // Store argv early for restart capability
     app_store_argv(argc, argv);
+
+#ifdef __ANDROID__
+    // Extract APK assets to internal storage before data root resolution
+    helix::android_extract_assets_if_needed();
+#endif
 
     // Ensure we're running from the project root
     ensure_project_root_cwd();
