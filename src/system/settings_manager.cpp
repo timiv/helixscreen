@@ -8,9 +8,9 @@
 #include "app_globals.h"
 #include "config.h"
 #include "display_manager.h"
+#include "led/led_controller.h"
 #include "lv_i18n_translations.h"
 #include "lvgl/src/others/translation/lv_translation.h"
-#include "moonraker_api.h"
 #include "moonraker_client.h"
 #include "printer_state.h"
 #include "runtime_config.h"
@@ -272,28 +272,6 @@ void SettingsManager::deinit_subjects() {
 void SettingsManager::set_moonraker_client(MoonrakerClient* client) {
     moonraker_client_ = client;
     spdlog::debug("[SettingsManager] Moonraker client set: {}", client ? "connected" : "nullptr");
-}
-
-void SettingsManager::set_moonraker_api(MoonrakerAPI* api) {
-    moonraker_api_ = api;
-    spdlog::debug("[SettingsManager] MoonrakerAPI set: {}", api ? "connected" : "nullptr");
-}
-
-void SettingsManager::set_configured_led(const std::string& led) {
-    configured_leds_.clear();
-    if (!led.empty()) {
-        configured_leds_.push_back(led);
-    }
-    spdlog::debug("[SettingsManager] Configured LED set (single): {}",
-                  led.empty() ? "(none)" : led);
-}
-
-void SettingsManager::set_configured_leds(const std::vector<std::string>& leds) {
-    configured_leds_ = leds;
-    spdlog::debug("[SettingsManager] Configured LEDs set: {} LED(s)", leds.size());
-    for (const auto& led : leds) {
-        spdlog::debug("[SettingsManager]   - {}", led);
-    }
 }
 
 // =============================================================================
@@ -733,100 +711,15 @@ bool SettingsManager::get_led_enabled() const {
 void SettingsManager::set_led_enabled(bool enabled) {
     spdlog::info("[SettingsManager] set_led_enabled({})", enabled);
 
-    // Guard: Don't update local subject if command can't be sent
-    // This prevents UI/printer state divergence
-    if (!moonraker_api_ || configured_leds_.empty()) {
-        spdlog::warn("[SettingsManager] LED toggle ignored - {}",
-                     !moonraker_api_ ? "no API" : "no LEDs configured");
-        return;
-    }
+    // 1. Delegate to LedController for actual hardware control
+    helix::led::LedController::instance().toggle_all(enabled);
 
-    // 1. Update subject (UI reacts)
+    // 2. Update subject (UI reacts)
     lv_subject_set_int(&led_enabled_subject_, enabled ? 1 : 0);
 
-    // 2. Send command to printer
-    send_led_command(enabled);
-
-    // 3. Persist startup preference to config
-    Config* config = Config::get_instance();
-    config->set<bool>("/output/led_on_at_start", enabled);
-    config->save();
-}
-
-void SettingsManager::apply_led_startup_preference() {
-    Config* config = Config::get_instance();
-    bool led_on_at_start = config->get<bool>("/output/led_on_at_start", false);
-
-    if (!led_on_at_start) {
-        spdlog::debug("[SettingsManager] LED startup preference: OFF (no action needed)");
-        return;
-    }
-
-    // Check if Klipper is ready to accept commands
-    auto* klippy_subject = get_printer_state().get_klippy_state_subject();
-    auto klippy_state = static_cast<KlippyState>(lv_subject_get_int(klippy_subject));
-
-    if (klippy_state == KlippyState::READY) {
-        // Klipper is ready - apply immediately
-        spdlog::info("[SettingsManager] Applying LED startup preference: ON (Klipper ready)");
-        lv_subject_set_int(&led_enabled_subject_, 1);
-        send_led_command(true);
-    } else {
-        // Klipper not ready yet - set up observer to trigger when it becomes ready
-        spdlog::info("[SettingsManager] Deferring LED startup until Klipper is ready "
-                     "(current state: {})",
-                     static_cast<int>(klippy_state));
-
-        // Use static flag to ensure we only apply once
-        static bool led_startup_applied = false;
-        if (led_startup_applied) {
-            return;
-        }
-
-        // Create one-shot observer (using static flag to ensure single execution)
-        lv_observer_t* obs = lv_subject_add_observer(
-            klippy_subject,
-            [](lv_observer_t* /*observer*/, lv_subject_t* subject) {
-                auto state = static_cast<KlippyState>(lv_subject_get_int(subject));
-                if (state == KlippyState::READY) {
-                    static bool led_startup_applied = false;
-                    if (!led_startup_applied) {
-                        led_startup_applied = true;
-                        spdlog::info("[SettingsManager] Klipper now ready - applying LED startup "
-                                     "preference");
-                        SettingsManager::instance().set_led_enabled(true);
-                    }
-                }
-            },
-            nullptr);
-        (void)obs; // Observer will persist until subject is destroyed
-    }
-}
-
-void SettingsManager::send_led_command(bool enabled) {
-    if (!moonraker_api_) {
-        spdlog::warn("[SettingsManager] Cannot send LED command - no MoonrakerAPI");
-        return;
-    }
-
-    if (configured_leds_.empty()) {
-        spdlog::warn("[SettingsManager] Cannot send LED command - no LEDs configured");
-        return;
-    }
-
-    auto on_success = []() { spdlog::debug("[SettingsManager] LED command sent successfully"); };
-
-    auto on_error = [](const MoonrakerError& err) {
-        spdlog::error("[SettingsManager] LED command failed: {}", err.message);
-    };
-
-    for (const auto& led : configured_leds_) {
-        if (enabled) {
-            moonraker_api_->set_led_on(led, on_success, on_error);
-        } else {
-            moonraker_api_->set_led_off(led, on_success, on_error);
-        }
-    }
+    // 3. Persist startup preference via LedController
+    helix::led::LedController::instance().set_led_on_at_start(enabled);
+    helix::led::LedController::instance().save_config();
 }
 
 // =============================================================================

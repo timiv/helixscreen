@@ -234,6 +234,9 @@ void register_xml_components() {
     register_fan_dial_callbacks(); // Register FanDial event callbacks
     register_xml("fan_status_card.xml");
     register_xml("fan_control_overlay.xml");
+    register_xml("led_action_chip.xml");
+    register_xml("led_color_swatch.xml");
+    register_xml("led_control_overlay.xml");
     register_xml("ams_current_tool.xml");
     register_xml("exclude_objects_list_overlay.xml");
     register_xml("print_status_panel.xml");
@@ -271,6 +274,11 @@ void register_xml_components() {
     register_xml("setting_info_row.xml");
     register_xml("setting_slider_row.xml");
     register_xml("setting_led_chip_row.xml");
+    register_xml("setting_state_row.xml");
+    register_xml("setting_detail_panel.xml");
+    register_xml("setting_form_dropdown.xml");
+    register_xml("setting_form_input.xml");
+    register_xml("setting_macro_card.xml");
     register_settings_panel_callbacks(); // Register callbacks before XML parse [L013]
     register_xml("settings_panel.xml");
     register_xml("restart_prompt_dialog.xml");
@@ -293,6 +301,7 @@ void register_xml_components() {
     register_xml("about_overlay.xml");
     register_xml("display_settings_overlay.xml");
     register_xml("sound_settings_overlay.xml");
+    register_xml("led_settings_overlay.xml");
     register_xml("theme_editor_overlay.xml");
     register_xml("theme_preview_overlay.xml");
     register_xml("theme_save_as_modal.xml");

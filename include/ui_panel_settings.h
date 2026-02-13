@@ -9,7 +9,6 @@
 #include "subject_managed_panel.h" // For SubjectManager
 
 #include <memory>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -102,9 +101,7 @@ class SettingsPanel : public PanelBase {
     lv_obj_t* completion_alert_dropdown_ = nullptr;
     lv_obj_t* display_sleep_dropdown_ = nullptr;
     lv_obj_t* language_dropdown_ = nullptr;
-    // LED chip selection state
-    std::vector<std::string> discovered_leds_;
-    std::set<std::string> selected_leds_;
+    // LED chip selection moved to LedSettingsOverlay
 
     // Restart prompt dialog
     lv_obj_t* restart_prompt_dialog_ = nullptr;
@@ -212,12 +209,12 @@ class SettingsPanel : public PanelBase {
     void handle_gcode_3d_changed(bool enabled);
     void handle_display_sleep_changed(int index);
     void handle_led_light_changed(bool enabled);
+    void handle_led_settings_clicked();
     void handle_sound_settings_clicked();
     void handle_estop_confirm_changed(bool enabled);
     void handle_telemetry_changed(bool enabled);
     void handle_telemetry_view_data_clicked();
 
-    void handle_led_chip_clicked(const std::string& led_name);
     void handle_about_clicked();
     void handle_display_settings_clicked();
     void handle_filament_sensors_clicked();
@@ -262,6 +259,7 @@ class SettingsPanel : public PanelBase {
     static void on_animations_changed(lv_event_t* e);
     static void on_gcode_3d_changed(lv_event_t* e);
     static void on_led_light_changed(lv_event_t* e);
+    static void on_led_settings_clicked(lv_event_t* e);
     static void on_sound_settings_clicked(lv_event_t* e);
     static void on_estop_confirm_changed(lv_event_t* e);
     static void on_about_clicked(lv_event_t* e);

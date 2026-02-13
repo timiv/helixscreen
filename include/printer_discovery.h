@@ -120,9 +120,13 @@ class PrinterDiscovery {
                 fans_.push_back(name);
             }
             // ================================================================
-            // LEDs: neopixel, dotstar, led
+            // LEDs: led_effect (must be before "led "), neopixel, dotstar, led
             // ================================================================
-            else if (name.rfind("neopixel ", 0) == 0 || name == "neopixel") {
+            // led_effect MUST be checked before "led " to avoid false match
+            else if (name.rfind("led_effect ", 0) == 0) {
+                led_effects_.push_back(name);
+                has_led_effects_ = true;
+            } else if (name.rfind("neopixel ", 0) == 0 || name == "neopixel") {
                 leds_.push_back(name);
                 has_led_ = true;
             } else if (name.rfind("dotstar ", 0) == 0 || name == "dotstar") {
@@ -278,6 +282,35 @@ class PrinterDiscovery {
                         heat_soak_macro_ = macro_name;
                     }
                 }
+
+                // LED macro auto-detection
+                static const std::vector<std::string> led_keywords = {
+                    "LIGHT", "LED", "LAMP", "ILLUMINAT", "BACKLIGHT", "NEON"};
+                static const std::vector<std::string> led_exclusions = {
+                    "PRINT_START", "PRINT_END",        "M600",       "BED_MESH",
+                    "PAUSE",       "RESUME",           "CANCEL",     "HOME",
+                    "QGL",         "Z_TILT",           "PROBE",      "CALIBRATE",
+                    "PID",         "FIRMWARE_RESTART", "SAVE_CONFIG"};
+
+                bool is_led_candidate = false;
+                for (const auto& kw : led_keywords) {
+                    if (upper_macro.find(kw) != std::string::npos) {
+                        is_led_candidate = true;
+                        break;
+                    }
+                }
+                if (is_led_candidate) {
+                    bool excluded = false;
+                    for (const auto& ex : led_exclusions) {
+                        if (upper_macro.find(ex) != std::string::npos) {
+                            excluded = true;
+                            break;
+                        }
+                    }
+                    if (!excluded) {
+                        led_macros_.push_back(upper_macro);
+                    }
+                }
             }
         }
 
@@ -382,6 +415,9 @@ class PrinterDiscovery {
         has_chamber_sensor_ = false;
         chamber_sensor_name_.clear();
         has_led_ = false;
+        led_effects_.clear();
+        has_led_effects_ = false;
+        led_macros_.clear();
         has_accelerometer_ = false;
         has_firmware_retraction_ = false;
         has_timelapse_ = false;
@@ -474,6 +510,22 @@ class PrinterDiscovery {
 
     [[nodiscard]] bool has_led() const {
         return has_led_;
+    }
+
+    [[nodiscard]] const std::vector<std::string>& led_effects() const {
+        return led_effects_;
+    }
+
+    [[nodiscard]] bool has_led_effects() const {
+        return has_led_effects_;
+    }
+
+    [[nodiscard]] const std::vector<std::string>& led_macros() const {
+        return led_macros_;
+    }
+
+    [[nodiscard]] bool has_led_macros() const {
+        return !led_macros_.empty();
     }
 
     [[nodiscard]] bool has_accelerometer() const {
@@ -839,6 +891,9 @@ class PrinterDiscovery {
     bool has_chamber_sensor_ = false;
     std::string chamber_sensor_name_;
     bool has_led_ = false;
+    std::vector<std::string> led_effects_;
+    bool has_led_effects_ = false;
+    std::vector<std::string> led_macros_;
     bool has_accelerometer_ = false;
     bool has_firmware_retraction_ = false;
     bool has_timelapse_ = false;

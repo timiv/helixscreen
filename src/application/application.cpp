@@ -23,6 +23,7 @@
 #include "helix_version.h"
 #include "keyboard_shortcuts.h"
 #include "layout_manager.h"
+#include "led/led_controller.h"
 #include "moonraker_manager.h"
 #include "panel_factory.h"
 #include "print_history_manager.h"
@@ -94,6 +95,7 @@
 #include "ui_wizard_wifi.h"
 
 #include "data_root_resolver.h"
+#include "led/ui_led_control_overlay.h"
 #include "printer_detector.h"
 #include "printer_image_manager.h"
 #include "settings_manager.h"
@@ -1146,6 +1148,26 @@ void Application::create_overlays() {
         }
     }
 
+    if (m_args.overlays.led) {
+        auto& overlay = get_led_control_overlay();
+
+        // Initialize subjects and callbacks if not already done
+        if (!overlay.are_subjects_initialized()) {
+            overlay.init_subjects();
+        }
+        overlay.register_callbacks();
+
+        // Pass API reference for LED commands
+        overlay.set_api(get_moonraker_api());
+
+        // Create overlay UI
+        auto* p = overlay.create(m_screen);
+        if (p) {
+            NavigationManager::instance().register_overlay_instance(p, &overlay);
+            ui_nav_push_overlay(p);
+        }
+    }
+
     if (m_args.overlays.print_status && m_overlay_panels.print_status) {
         ui_nav_push_overlay(m_overlay_panels.print_status);
     }
@@ -1532,7 +1554,7 @@ void Application::setup_discovery_callbacks() {
             }
 
             // Apply LED startup preference (turn on LED if user preference is enabled)
-            SettingsManager::instance().apply_led_startup_preference();
+            helix::led::LedController::instance().apply_startup_preference();
 
             // Start automatic update checks (15s initial delay, then every 24h)
             UpdateChecker::instance().start_auto_check();

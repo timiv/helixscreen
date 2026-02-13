@@ -251,6 +251,12 @@ void MoonrakerClientMock::populate_capabilities() {
         break;
     }
 
+    // Add LED effects (klipper-led_effect plugin objects)
+    mock_objects.push_back("led_effect breathing");
+    mock_objects.push_back("led_effect fire_comet");
+    mock_objects.push_back("led_effect rainbow");
+    mock_objects.push_back("led_effect static_white");
+
     // Add common macros for all printer types (for testing macro panel)
     mock_objects.push_back("gcode_macro START_PRINT");
     mock_objects.push_back("gcode_macro END_PRINT");
@@ -263,6 +269,13 @@ void MoonrakerClientMock::populate_capabilities() {
     mock_objects.push_back("gcode_macro G28");           // Home all
     mock_objects.push_back("gcode_macro M600");          // Filament change
     mock_objects.push_back("gcode_macro _SYSTEM_MACRO"); // System macro (hidden by default)
+
+    // Add LED-related macros (auto-detected by printer_discovery via LED keywords)
+    mock_objects.push_back("gcode_macro LIGHTS_ON");
+    mock_objects.push_back("gcode_macro LIGHTS_OFF");
+    mock_objects.push_back("gcode_macro LIGHTS_TOGGLE");
+    mock_objects.push_back("gcode_macro LED_PARTY");
+    mock_objects.push_back("gcode_macro LED_NIGHTLIGHT");
 
     // Moonraker plugins
     mock_objects.push_back("timelapse"); // Moonraker-Timelapse plugin
@@ -416,6 +429,12 @@ void MoonrakerClientMock::rebuild_hardware() {
         break;
     }
 
+    // Add LED effects (klipper-led_effect plugin objects)
+    objects.push_back("led_effect breathing");
+    objects.push_back("led_effect fire_comet");
+    objects.push_back("led_effect rainbow");
+    objects.push_back("led_effect static_white");
+
     // Add common macros
     objects.push_back("gcode_macro START_PRINT");
     objects.push_back("gcode_macro END_PRINT");
@@ -428,6 +447,13 @@ void MoonrakerClientMock::rebuild_hardware() {
     objects.push_back("gcode_macro G28");
     objects.push_back("gcode_macro M600");
     objects.push_back("gcode_macro _SYSTEM_MACRO");
+
+    // Add LED-related macros (auto-detected by printer_discovery via LED keywords)
+    objects.push_back("gcode_macro LIGHTS_ON");
+    objects.push_back("gcode_macro LIGHTS_OFF");
+    objects.push_back("gcode_macro LIGHTS_TOGGLE");
+    objects.push_back("gcode_macro LED_PARTY");
+    objects.push_back("gcode_macro LED_NIGHTLIGHT");
 
     // Add default filament sensor
     objects.push_back("filament_switch_sensor runout_sensor");
@@ -1613,8 +1639,17 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
         auto led_pos = gcode.find("LED=");
         if (led_pos != std::string::npos) {
             size_t start = led_pos + 4;
-            size_t end = gcode.find_first_of(" \t\n", start);
-            led_name = gcode.substr(start, end == std::string::npos ? end : end - start);
+            // Handle quoted LED names: LED="name" or LED=name
+            if (start < gcode.size() && gcode[start] == '"') {
+                start++;
+                size_t end = gcode.find('"', start);
+                if (end != std::string::npos) {
+                    led_name = gcode.substr(start, end - start);
+                }
+            } else {
+                size_t end = gcode.find_first_of(" \t\n", start);
+                led_name = gcode.substr(start, end == std::string::npos ? end : end - start);
+            }
         }
 
         // Parse color values (default to 0)
@@ -1880,6 +1915,101 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
                               object_name);
             }
         }
+    }
+
+    // SET_LED_EFFECT EFFECT=<name> - Enable an LED effect
+    if (gcode.find("SET_LED_EFFECT") != std::string::npos) {
+        size_t effect_pos = gcode.find("EFFECT=");
+        if (effect_pos != std::string::npos) {
+            size_t start = effect_pos + 7;
+            size_t end = gcode.find_first_of(" \t\r\n", start);
+            std::string effect_name = gcode.substr(start, end - start);
+
+            spdlog::info("[MoonrakerClientMock] SET_LED_EFFECT: enabling '{}'", effect_name);
+
+            // Build status update: enable the target effect, disable all others
+            json effect_status = json::object();
+            std::string full_name = "led_effect " + effect_name;
+
+            // Known mock effects
+            const std::vector<std::string> known_effects = {
+                "led_effect breathing", "led_effect fire_comet", "led_effect rainbow",
+                "led_effect static_white"};
+
+            for (const auto& name : known_effects) {
+                bool should_enable = (name == full_name);
+                effect_status[name] = {{"enabled", should_enable}};
+            }
+
+            // Simulate LED color output: each effect has a characteristic color
+            // In real Klipper, led_effect continuously updates the neopixel color_data
+            struct EffectColor {
+                double r, g, b, w;
+            };
+            static const std::unordered_map<std::string, EffectColor> effect_colors = {
+                {"breathing", {0.6, 0.6, 1.0, 0.0}},    // Soft blue-white pulse
+                {"fire_comet", {1.0, 0.3, 0.0, 0.0}},   // Orange/fire
+                {"rainbow", {0.5, 0.0, 1.0, 0.0}},      // Purple (mid-rainbow)
+                {"static_white", {1.0, 1.0, 1.0, 0.0}}, // Pure white
+            };
+
+            auto color_it = effect_colors.find(effect_name);
+            if (color_it != effect_colors.end()) {
+                const auto& c = color_it->second;
+                // Update internal LED state and dispatch color_data for all LED strips
+                {
+                    std::lock_guard<std::mutex> lock(led_mutex_);
+                    for (auto& [name, color] : led_states_) {
+                        color = LedColor{c.r, c.g, c.b, c.w};
+                    }
+                }
+                json led_status;
+                {
+                    std::lock_guard<std::mutex> lock(led_mutex_);
+                    for (const auto& [name, color] : led_states_) {
+                        led_status[name] = {
+                            {"color_data", json::array({{color.r, color.g, color.b, color.w}})}};
+                    }
+                }
+                // Merge LED color updates into the effect status dispatch
+                effect_status.update(led_status);
+            }
+
+            dispatch_status_update(effect_status);
+        }
+    }
+
+    // STOP_LED_EFFECTS - Disable all LED effects
+    if (gcode.find("STOP_LED_EFFECTS") != std::string::npos) {
+        spdlog::info("[MoonrakerClientMock] STOP_LED_EFFECTS: disabling all effects");
+
+        json effect_status = json::object();
+        const std::vector<std::string> known_effects = {
+            "led_effect breathing", "led_effect fire_comet", "led_effect rainbow",
+            "led_effect static_white"};
+
+        for (const auto& name : known_effects) {
+            effect_status[name] = {{"enabled", false}};
+        }
+
+        // Turn LEDs off when effects stop
+        {
+            std::lock_guard<std::mutex> lock(led_mutex_);
+            for (auto& [name, color] : led_states_) {
+                color = LedColor{0.0, 0.0, 0.0, 0.0};
+            }
+        }
+        json led_status;
+        {
+            std::lock_guard<std::mutex> lock(led_mutex_);
+            for (const auto& [name, color] : led_states_) {
+                led_status[name] = {
+                    {"color_data", json::array({{color.r, color.g, color.b, color.w}})}};
+            }
+        }
+        effect_status.update(led_status);
+
+        dispatch_status_update(effect_status);
     }
 
     // QGL / Z-tilt (NOT IMPLEMENTED)

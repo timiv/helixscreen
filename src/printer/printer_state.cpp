@@ -23,6 +23,7 @@
 #include "filament_sensor_manager.h"
 #include "hardware_validator.h"
 #include "humidity_sensor_manager.h"
+#include "led/led_controller.h"
 #include "lvgl.h"
 #include "lvgl/src/display/lv_display_private.h" // For rendering_in_progress check
 #include "lvgl_debug_invalidate.h"
@@ -319,6 +320,13 @@ void PrinterState::update_from_status(const json& state) {
 
     // Delegate LED state updates to LED component
     led_state_component_.update_from_status(state);
+
+    // Update LED controller per-strip color cache
+    auto& led_ctrl = helix::led::LedController::instance();
+    if (led_ctrl.is_initialized()) {
+        led_ctrl.native().update_from_status(state);
+        led_ctrl.effects().update_from_status(state);
+    }
 
     // Update exclude_object state (for mid-print object exclusion)
     if (state.contains("exclude_object")) {

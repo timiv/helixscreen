@@ -4,6 +4,7 @@
 
 #include "ams_state.h"
 #include "filament_sensor_manager.h"
+#include "led/led_controller.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
 #include "spdlog/spdlog.h"
@@ -104,6 +105,14 @@ void init_subsystems_from_hardware(const PrinterDiscovery& hardware, ::Moonraker
 
     // Initialize standard macros
     StandardMacros::instance().init(hardware);
+
+    // Initialize LED controller and discover LED backends
+    auto& led_ctrl = helix::led::LedController::instance();
+    if (!led_ctrl.is_initialized()) {
+        led_ctrl.init(api, client);
+    }
+    led_ctrl.discover_from_hardware(hardware);
+    led_ctrl.discover_wled_strips();
 
     spdlog::info("[PrinterDiscovery] Subsystem initialization complete");
 }

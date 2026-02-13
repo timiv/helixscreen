@@ -9,10 +9,8 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <vector>
 
 class MoonrakerClient;
-class MoonrakerAPI;
 
 /** @brief Print completion notification mode (Off=0, Notification=1, Alert=2) */
 enum class CompletionAlertMode { OFF = 0, NOTIFICATION = 1, ALERT = 2 };
@@ -93,44 +91,6 @@ class SettingsManager {
      * @param client Pointer to active MoonrakerClient (can be nullptr to disable)
      */
     void set_moonraker_client(MoonrakerClient* client);
-
-    /**
-     * @brief Set MoonrakerAPI reference for LED control
-     *
-     * Required for DRY LED control using set_led_on/off API (same as Home/PrintStatus panels).
-     * Call after MoonrakerAPI is initialized.
-     *
-     * @param api Pointer to active MoonrakerAPI (can be nullptr to disable)
-     */
-    void set_moonraker_api(MoonrakerAPI* api);
-
-    /**
-     * @brief Set multiple configured LEDs
-     * @param leds Vector of LED names from config
-     */
-    void set_configured_leds(const std::vector<std::string>& leds);
-
-    /**
-     * @brief Get configured LEDs
-     * @return Vector of configured LED names (empty if none)
-     */
-    const std::vector<std::string>& get_configured_leds() const {
-        return configured_leds_;
-    }
-
-    /**
-     * @brief Set a single configured LED (compatibility shim)
-     * @param led LED name, wraps into single-element vector
-     */
-    void set_configured_led(const std::string& led);
-
-    /**
-     * @brief Get the first configured LED name (compatibility)
-     * @return First configured LED name (empty if none)
-     */
-    std::string get_configured_led() const {
-        return configured_leds_.empty() ? std::string() : configured_leds_.front();
-    }
 
     // =========================================================================
     // APPEARANCE SETTINGS
@@ -425,14 +385,6 @@ class SettingsManager {
      * @param enabled true to turn on, false to turn off
      */
     void set_led_enabled(bool enabled);
-
-    /**
-     * @brief Apply LED startup preference from config
-     *
-     * Reads /output/led_on_at_start from config and turns LED on if enabled.
-     * Call this after Moonraker connection is established and LED name is configured.
-     */
-    void apply_led_startup_preference();
 
     // =========================================================================
     // Z MOVEMENT STYLE (override auto-detected bed vs nozzle movement)
@@ -796,9 +748,6 @@ class SettingsManager {
     SettingsManager();
     ~SettingsManager() = default;
 
-    // Apply immediate effects
-    void send_led_command(bool enabled);
-
     // Subject manager for RAII cleanup
     SubjectManager subjects_;
 
@@ -831,10 +780,6 @@ class SettingsManager {
 
     // External references
     MoonrakerClient* moonraker_client_ = nullptr;
-    MoonrakerAPI* moonraker_api_ = nullptr;
-
-    // Configured LED names from wizard (e.g., "caselight", "chamber_light")
-    std::vector<std::string> configured_leds_;
 
     // State
     bool subjects_initialized_ = false;

@@ -86,6 +86,7 @@ class MoonrakerAPI {
     using SpoolListCallback = std::function<void(const std::vector<SpoolInfo>&)>;
     using WebcamListCallback = std::function<void(const std::vector<WebcamInfo>&)>;
     using JsonCallback = std::function<void(const json&)>;
+    using RestCallback = std::function<void(const RestResponse&)>;
 
     /**
      * @brief Progress callback for file transfer operations
@@ -609,9 +610,6 @@ class MoonrakerAPI {
     // Generic REST Endpoint Operations (for Moonraker extensions)
     // ========================================================================
 
-    // RestResponse is defined in moonraker_types.h
-    using RestCallback = std::function<void(const RestResponse&)>;
-
     /**
      * @brief Call a Moonraker extension REST endpoint with GET
      *
@@ -639,6 +637,58 @@ class MoonrakerAPI {
      */
     virtual void call_rest_post(const std::string& endpoint, const json& params,
                                 RestCallback on_complete);
+
+    // ========================================================================
+    // WLED Control Operations (Moonraker WLED Bridge)
+    // ========================================================================
+
+    /**
+     * @brief Get list of discovered WLED strips via Moonraker bridge
+     *
+     * GET /machine/wled/strips - Returns WLED devices configured in moonraker.conf.
+     *
+     * @param on_success Callback with RestResponse containing strip data
+     * @param on_error Error callback
+     */
+    virtual void wled_get_strips(RestCallback on_success, ErrorCallback on_error);
+
+    /**
+     * @brief Control a WLED strip via Moonraker bridge
+     *
+     * POST /machine/wled/strip with JSON body containing strip name and action.
+     * Brightness and preset are optional (-1 means omit from request).
+     *
+     * @param strip WLED strip name (as configured in moonraker.conf)
+     * @param action Action: "on", "off", or "toggle"
+     * @param brightness Brightness 0-255 (-1 to omit)
+     * @param preset WLED preset ID (-1 to omit)
+     * @param on_success Success callback
+     * @param on_error Error callback
+     */
+    virtual void wled_set_strip(const std::string& strip, const std::string& action, int brightness,
+                                int preset, SuccessCallback on_success, ErrorCallback on_error);
+
+    /**
+     * @brief Get WLED strip status via Moonraker bridge
+     *
+     * GET /machine/wled/strips - Returns current state of all WLED strips
+     * including on/off status, brightness, and active preset.
+     *
+     * @param on_success Callback with RestResponse containing status data
+     * @param on_error Error callback
+     */
+    virtual void wled_get_status(RestCallback on_success, ErrorCallback on_error);
+
+    /**
+     * @brief Fetch server configuration from Moonraker
+     *
+     * GET /server/config - Returns the full server configuration including
+     * WLED device addresses configured in moonraker.conf.
+     *
+     * @param on_success Callback with RestResponse containing config data
+     * @param on_error Error callback
+     */
+    virtual void get_server_config(RestCallback on_success, ErrorCallback on_error);
 
     // ========================================================================
     // HTTP File Transfer Operations

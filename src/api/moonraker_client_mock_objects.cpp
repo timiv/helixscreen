@@ -81,6 +81,20 @@ void register_object_handlers(std::unordered_map<std::string, MethodHandler>& re
                         {"damping_ratio_x", "0.1"}, {"damping_ratio_y", "0.1"}};
                 }
 
+                // Add LED effect configs to config section
+                config_section["led_effect breathing"] = {{"leds", "neopixel:chamber_light"},
+                                                          {"autostart", "false"},
+                                                          {"frame_rate", "24"}};
+                config_section["led_effect fire_comet"] = {
+                    {"leds", "neopixel:chamber_light (1-10)"},
+                    {"autostart", "false"},
+                    {"frame_rate", "24"}};
+                config_section["led_effect rainbow"] = {
+                    {"leds", "neopixel:status_led"}, {"autostart", "false"}, {"frame_rate", "24"}};
+                config_section["led_effect static_white"] = {{"leds", "neopixel:chamber_light"},
+                                                             {"autostart", "false"},
+                                                             {"frame_rate", "24"}};
+
                 status_obj["configfile"] = {
                     {"settings",
                      {{"printer", {{"max_velocity", 500.0}, {"max_accel", 10000.0}}},
@@ -337,6 +351,14 @@ void register_object_handlers(std::unordered_map<std::string, MethodHandler>& re
                 status_obj["display_status"] = {{"progress", 0.0}, {"message", nullptr}};
             }
 
+            // LED effect objects (for tracking enabled state)
+            for (auto it = objects.begin(); it != objects.end(); ++it) {
+                if (it.key().rfind("led_effect ", 0) == 0) {
+                    status_obj[it.key()] = {
+                        {"enabled", false}, {"run_complete", false}, {"frame_rate", 24.0}};
+                }
+            }
+
             // configfile (printer configuration)
             if (objects.contains("configfile")) {
                 status_obj["configfile"] = {
@@ -375,6 +397,19 @@ void register_object_handlers(std::unordered_map<std::string, MethodHandler>& re
                                  {"shaper_type_y", "ei"},    {"shaper_freq_y", "47.6"},
                                  {"damping_ratio_x", "0.1"}, {"damping_ratio_y", "0.1"}};
                          }
+                         // LED effect configs for mock testing
+                         cfg["led_effect breathing"] = {{"leds", "neopixel:chamber_light"},
+                                                        {"autostart", "false"},
+                                                        {"frame_rate", "24"}};
+                         cfg["led_effect fire_comet"] = {{"leds", "neopixel:chamber_light (1-10)"},
+                                                         {"autostart", "false"},
+                                                         {"frame_rate", "24"}};
+                         cfg["led_effect rainbow"] = {{"leds", "neopixel:status_led"},
+                                                      {"autostart", "false"},
+                                                      {"frame_rate", "24"}};
+                         cfg["led_effect static_white"] = {{"leds", "neopixel:chamber_light"},
+                                                           {"autostart", "false"},
+                                                           {"frame_rate", "24"}};
                          return cfg;
                      }()}};
             }

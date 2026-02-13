@@ -20,50 +20,49 @@
       <!-- ================================================================== -->
       <!-- SECTION 1: PRINTER IDENTITY -->
       <!-- ================================================================== -->
-      <lv_obj width="100%" height="content" flex_flow="row"
-              style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
-              scrollable="false" style_bg_opa="0" style_border_width="0" style_pad_all="0">
+      <lv_obj width="100%"
+              height="content" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
+              style_flex_track_place="center" scrollable="false" style_bg_opa="0" style_border_width="0"
+              style_pad_all="0">
         <lv_obj width="content"
-              height="content" flex_flow="column" style_flex_cross_place="center" style_pad_top="#space_sm"
-              style_pad_bottom="#space_sm" style_pad_left="#space_lg" style_pad_right="#space_lg"
-              style_pad_gap="#space_xs" scrollable="false"
-              style_bg_color="#elevated_bg" style_bg_opa="255" style_border_width="0"
-              style_radius="#border_radius">
-        <!-- Printer image (clickable to change) + pencil edit badge -->
-        <lv_obj name="pm_image_container"
-                width="#pm_image_size" height="#pm_image_size" scrollable="false" clickable="true"
-                style_bg_opa="0" style_border_width="0" style_pad_all="0">
-          <event_cb trigger="clicked" callback="on_change_printer_image_clicked"/>
-          <lv_image name="pm_printer_image" width="100%" height="100%" inner_align="contain" style_radius="#border_radius"
-                    clickable="false" event_bubble="true"/>
-          <!-- Pencil badge overlaid in lower-right corner of image -->
-          <lv_obj width="#icon_button_size" height="#icon_button_size"
-                  style_bg_color="#card_bg" style_bg_opa="#modal_backdrop_opacity" style_radius="#border_radius"
-                  style_border_width="0" scrollable="false"
-                  align="bottom_right" style_pad_all="0"
-                  style_translate_x="-8" style_translate_y="-8"
-                  clickable="false" event_bubble="true">
-            <icon src="pencil" size="xs" variant="tertiary" align="center"
-                  clickable="false" event_bubble="true"/>
+                height="content" flex_flow="column" style_flex_cross_place="center" style_pad_top="#space_sm"
+                style_pad_bottom="#space_sm" style_pad_left="#space_lg" style_pad_right="#space_lg"
+                style_pad_gap="#space_xs" scrollable="false" style_bg_color="#elevated_bg" style_bg_opa="255"
+                style_border_width="0" style_radius="#border_radius">
+          <!-- Printer image (clickable to change) + pencil edit badge -->
+          <lv_obj name="pm_image_container"
+                  width="#pm_image_size" height="#pm_image_size" scrollable="false" clickable="true" style_bg_opa="0"
+                  style_border_width="0" style_pad_all="0">
+            <event_cb trigger="clicked" callback="on_change_printer_image_clicked"/>
+            <lv_image name="pm_printer_image"
+                      width="100%" height="100%" inner_align="contain" style_radius="#border_radius" clickable="false"
+                      event_bubble="true"/>
+            <!-- Pencil badge overlaid in lower-right corner of image -->
+            <lv_obj width="#icon_button_size"
+                    height="#icon_button_size" style_bg_color="#card_bg" style_bg_opa="#modal_backdrop_opacity"
+                    style_radius="#border_radius" style_border_width="0" scrollable="false" align="bottom_right"
+                    style_pad_all="0" style_translate_x="-8" style_translate_y="-8" clickable="false"
+                    event_bubble="true">
+              <icon src="pencil" size="xs" variant="tertiary" align="center" clickable="false" event_bubble="true"/>
+            </lv_obj>
           </lv_obj>
-        </lv_obj>
-        <!-- Printer name (click to edit) -->
-        <lv_obj width="content" height="content" flex_flow="row" style_pad_gap="#space_xs"
-                style_flex_cross_place="center" scrollable="false"
-                style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                clickable="true">
-          <event_cb trigger="clicked" callback="pm_printer_name_clicked"/>
-          <text_heading name="pm_printer_name" width="content" bind_text="printer_manager_name"
-                        style_text_align="center" clickable="false" event_bubble="true"/>
-          <icon src="pencil" size="xs" variant="tertiary" clickable="false" event_bubble="true"/>
-        </lv_obj>
-        <!-- Hidden text input for name editing (shown when heading is clicked) -->
-        <text_input name="pm_printer_name_input" width="content" height="#input_height"
-                    placeholder_text="Printer name" style_text_align="center"
-                    hidden="true" one_line="true" scrollbar_mode="off"/>
-        <!-- Printer model -->
-        <text_muted name="pm_printer_model"
-                    width="content" bind_text="printer_manager_model" style_text_align="center"/>
+          <!-- Printer name (click to edit) -->
+          <lv_obj width="content"
+                  height="content" flex_flow="row" style_pad_gap="#space_xs" style_flex_cross_place="center"
+                  scrollable="false" style_bg_opa="0" style_border_width="0" style_pad_all="0" clickable="true">
+            <event_cb trigger="clicked" callback="pm_printer_name_clicked"/>
+            <text_heading name="pm_printer_name"
+                          width="content" bind_text="printer_manager_name" style_text_align="center" clickable="false"
+                          event_bubble="true"/>
+            <icon src="pencil" size="xs" variant="tertiary" clickable="false" event_bubble="true"/>
+          </lv_obj>
+          <!-- Hidden text input for name editing (shown when heading is clicked) -->
+          <text_input name="pm_printer_name_input"
+                      width="content" height="#input_height" placeholder_text="Printer name" style_text_align="center"
+                      hidden="true" one_line="true" scrollbar_mode="off"/>
+          <!-- Printer model -->
+          <text_muted name="pm_printer_model"
+                      width="content" bind_text="printer_manager_model" style_text_align="center"/>
         </lv_obj>
       </lv_obj>
 

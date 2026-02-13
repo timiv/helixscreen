@@ -44,6 +44,7 @@
 #include "color_sensor_manager.h"
 #include "filament_sensor_manager.h"
 #include "humidity_sensor_manager.h"
+#include "led/ui_led_control_overlay.h"
 #include "lvgl/lvgl.h"
 #include "print_completion.h"
 #include "print_start_navigation.h"
@@ -224,6 +225,9 @@ void SubjectInitializer::init_panel_subjects(MoonrakerAPI* api) {
     // Fan control overlay (opened from Controls panel secondary fans list)
     init_fan_control_overlay(get_printer_state());
     get_fan_control_overlay().init_subjects();
+
+    // LED control overlay (opened from Home panel light long-press)
+    init_led_control_overlay(get_printer_state());
 
     // ConsolePanel is now lazy-initialized by AdvancedPanel (OverlayBase pattern)
 

@@ -48,6 +48,7 @@ struct OverlayFlags {
     bool history_dashboard = false;
     bool ams = false;
     bool spoolman = false;
+    bool led = false;
     bool wizard_ams_identify = false;
     bool theme = false;      // Theme preview overlay (for testing/screenshots)
     bool theme_edit = false; // Theme editor overlay

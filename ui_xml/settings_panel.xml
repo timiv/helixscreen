@@ -62,13 +62,10 @@
     <lv_obj name="container_led_light"
             width="100%" style_pad_all="0" style_layout="flex" style_flex_flow="column" scrollable="false">
       <bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
-      <setting_led_chip_row name="row_led_select"
-                            label="LEDs" label_tag="LEDs" icon="light" description="LEDs controlled by the light button"
-                            description_tag="LEDs controlled by the light button"/>
-      <setting_toggle_row name="row_led_light"
-                          label="LED on at Start" label_tag="LED on at Start" icon="light"
-                          description="Turn on LED when printer starts"
-                          description_tag="Turn on LED when printer starts" callback="on_led_light_changed"/>
+      <setting_action_row name="row_led_settings"
+                          label="LED Settings" label_tag="LED Settings" icon="tune"
+                          description="Startup, auto-control, and macro devices"
+                          description_tag="Startup, auto-control, and macro devices" callback="on_led_settings_clicked"/>
     </lv_obj>
     <!-- Firmware Retraction Settings (hidden if no firmware_retraction capability) -->
     <lv_obj name="container_firmware_retraction" width="100%" style_pad_all="0" scrollable="false">

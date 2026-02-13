@@ -265,6 +265,13 @@ class MoonrakerAPIMock : public MoonrakerAPI {
     void set_device_power(const std::string& device, const std::string& action,
                           SuccessCallback on_success, ErrorCallback on_error) override;
 
+    // WLED control (mock: logs and calls on_success)
+    void wled_get_strips(RestCallback on_success, ErrorCallback on_error) override;
+    void wled_set_strip(const std::string& strip, const std::string& action, int brightness,
+                        int preset, SuccessCallback on_success, ErrorCallback on_error) override;
+    void wled_get_status(RestCallback on_success, ErrorCallback on_error) override;
+    void get_server_config(RestCallback on_success, ErrorCallback on_error) override;
+
     // ========================================================================
     // Shared State Methods
     // ========================================================================
@@ -504,6 +511,13 @@ class MoonrakerAPIMock : public MoonrakerAPI {
 
     /// Mock bed state for screws tilt simulation
     MockScrewsTiltState mock_bed_state_;
+
+    /// Mock WLED strip on/off states (strip_id -> is_on)
+    std::map<std::string, bool> mock_wled_states_;
+    /// Mock WLED active presets (strip_id -> preset_id, -1 = none)
+    std::map<std::string, int> mock_wled_presets_;
+    /// Mock WLED brightness per strip (strip_id -> 0-255)
+    std::map<std::string, int> mock_wled_brightness_;
 
     // Mock subscription ID counter
     SubscriptionId mock_next_subscription_id_ = 100;

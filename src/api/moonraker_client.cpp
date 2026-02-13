@@ -1485,6 +1485,11 @@ void MoonrakerClient::complete_discovery_subscription(std::function<void()> on_c
         subscription_objects[led] = nullptr;
     }
 
+    // All discovered LED effects (for tracking active/enabled state)
+    for (const auto& effect : hardware_.led_effects()) {
+        subscription_objects[effect] = nullptr;
+    }
+
     // Bed mesh (for 3D visualization)
     subscription_objects["bed_mesh"] = nullptr;
 

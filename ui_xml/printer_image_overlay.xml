@@ -61,16 +61,15 @@
       <!-- RIGHT: Preview area -->
       <lv_obj name="preview_container"
               height="100%" flex_grow="4" flex_flow="column" style_pad_all="#space_sm" scrollable="false"
-              style_bg_color="#elevated_bg" style_bg_opa="255" style_radius="#border_radius" style_flex_main_place="center"
-              style_flex_cross_place="center">
+              style_bg_color="#elevated_bg" style_bg_opa="255" style_radius="#border_radius"
+              style_flex_main_place="center" style_flex_cross_place="center">
         <!-- Preview image bound to subject -->
         <lv_image name="preview_image"
                   width="100%" flex_grow="1" bind_src="printer_image_preview_src" inner_align="contain" hidden="true">
           <bind_flag_if_eq subject="printer_image_has_preview" flag="hidden" ref_value="0"/>
         </lv_image>
         <!-- Placeholder when no preview -->
-        <icon name="preview_placeholder" src="printer_3d" size="xl" variant="tertiary" hidden="true"
-              align="center">
+        <icon name="preview_placeholder" src="printer_3d" size="xl" variant="tertiary" hidden="true" align="center">
           <bind_flag_if_eq subject="printer_image_has_preview" flag="hidden" ref_value="1"/>
         </icon>
         <!-- Selected image name -->

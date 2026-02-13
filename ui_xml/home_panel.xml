@@ -309,6 +309,7 @@
             <!-- Dynamic icon - source and color set by C++ based on LED brightness/color -->
             <icon name="light_icon" src="lightbulb_outline" size="#icon_size_card" align="center" variant="muted"/>
             <event_cb trigger="clicked" callback="light_toggle_cb"/>
+            <event_cb trigger="long_pressed" callback="light_long_press_cb"/>
           </ui_button>
 
           <!-- Divider before AMS - visibility bound to ams_slot_count subject -->

@@ -4,16 +4,15 @@
 <!-- Test/Development Panel - Only accessible via -p test or -panel test flag -->
 <component>
   <view extends="lv_obj"
-        width="100%" height="100%" style_pad_all="#space_lg" style_border_width="0"
-        flex_flow="column" style_pad_gap="#space_md" scrollable="true"
-        style_bg_opa="255" style_bg_color="#screen_bg">
+        width="100%" height="100%" style_pad_all="#space_lg" style_border_width="0" flex_flow="column"
+        style_pad_gap="#space_md" scrollable="true" style_bg_opa="255" style_bg_color="#screen_bg">
     <!-- ============================================================ -->
     <!-- MARKDOWN VIEWER TEST                                         -->
     <!-- ============================================================ -->
     <text_heading text="Markdown Viewer" translation_tag="Markdown Viewer"/>
     <ui_card width="100%" height="400" style_radius="#border_radius" style_pad_all="#space_lg">
-      <lv_obj width="100%" height="100%" scrollable="true"
-              style_pad_all="0" style_border_width="0" style_bg_opa="0" style_radius="0">
+      <lv_obj width="100%"
+              height="100%" scrollable="true" style_pad_all="0" style_border_width="0" style_bg_opa="0" style_radius="0">
         <ui_markdown name="markdown_test" width="100%"/>
       </lv_obj>
     </ui_card>
@@ -25,23 +24,27 @@
     <ui_card width="100%"
              height="120" style_radius="#border_radius" style_pad_all="#space_lg" flex_flow="row"
              style_flex_main_place="space_evenly" style_flex_cross_place="center">
-      <lv_obj flex_flow="column" style_flex_cross_place="center" style_pad_gap="8"
-              style_bg_opa="0" style_border_width="0" style_pad_all="0">
+      <lv_obj flex_flow="column"
+              style_flex_cross_place="center" style_pad_gap="8" style_bg_opa="0" style_border_width="0"
+              style_pad_all="0">
         <spinner size="lg"/>
         <text_small text="lg" translation_tag="lg"/>
       </lv_obj>
-      <lv_obj flex_flow="column" style_flex_cross_place="center" style_pad_gap="8"
-              style_bg_opa="0" style_border_width="0" style_pad_all="0">
+      <lv_obj flex_flow="column"
+              style_flex_cross_place="center" style_pad_gap="8" style_bg_opa="0" style_border_width="0"
+              style_pad_all="0">
         <spinner size="md"/>
         <text_small text="md" translation_tag="md"/>
       </lv_obj>
-      <lv_obj flex_flow="column" style_flex_cross_place="center" style_pad_gap="8"
-              style_bg_opa="0" style_border_width="0" style_pad_all="0">
+      <lv_obj flex_flow="column"
+              style_flex_cross_place="center" style_pad_gap="8" style_bg_opa="0" style_border_width="0"
+              style_pad_all="0">
         <spinner size="sm"/>
         <text_small text="sm" translation_tag="sm"/>
       </lv_obj>
-      <lv_obj flex_flow="column" style_flex_cross_place="center" style_pad_gap="8"
-              style_bg_opa="0" style_border_width="0" style_pad_all="0">
+      <lv_obj flex_flow="column"
+              style_flex_cross_place="center" style_pad_gap="8" style_bg_opa="0" style_border_width="0"
+              style_pad_all="0">
         <spinner size="xs"/>
         <text_small text="xs" translation_tag="xs"/>
       </lv_obj>
@@ -60,7 +63,8 @@
       <spool_canvas color="0xFDD835" fill_level="0.10" size="64"/>
     </ui_card>
     <text_small text="Fill: 100% / 75% / 40% / 10%" translation_tag="Fill: 100% / 75% / 40% / 10%"/>
-    <text_heading text="Flat Concentric Rings (existing ams_slot)" translation_tag="Flat Concentric Rings (existing ams_slot)"/>
+    <text_heading text="Flat Concentric Rings (existing ams_slot)"
+                  translation_tag="Flat Concentric Rings (existing ams_slot)"/>
     <ui_card width="100%"
              height="100" style_radius="#border_radius" style_pad_all="#space_lg" flex_flow="row"
              style_flex_main_place="space_evenly" style_flex_cross_place="center">
@@ -174,7 +178,8 @@
     <ui_card width="100%"
              height="70" style_radius="#border_radius" style_pad_all="#space_lg" flex_flow="row"
              style_flex_main_place="space_between" style_flex_cross_place="center">
-      <text_body text="size=&quot;medium&quot; width=&quot;100&quot;" translation_tag="size=&quot;medium&quot; width=&quot;100&quot;"/>
+      <text_body text="size=&quot;medium&quot; width=&quot;100&quot;"
+                 translation_tag="size=&quot;medium&quot; width=&quot;100&quot;"/>
       <ui_switch name="test_switch_override" width="100" size="medium"/>
     </ui_card>
     <divider_horizontal/>
@@ -185,8 +190,7 @@
     <ui_card width="100%" height="120" style_pad_all="#space_lg">
       <lv_textarea name="keyboard_test_textarea"
                    width="100%" height="100%" placeholder_text="Tap to show keyboard..."
-                   placeholder_tag="Tap to show keyboard..." translation_tag="Tap to show keyboard..."
-                   one_line="false"/>
+                   placeholder_tag="Tap to show keyboard..." translation_tag="Tap to show keyboard..." one_line="false"/>
     </ui_card>
     <!-- Bottom spacer for scroll clearance -->
     <lv_obj height="#space_lg" style_bg_opa="0" style_border_width="0" style_pad_all="0"/>

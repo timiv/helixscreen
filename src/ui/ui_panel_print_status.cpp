@@ -28,6 +28,7 @@
 #include "filament_sensor_manager.h"
 #include "format_utils.h"
 #include "injection_point_manager.h"
+#include "led/led_controller.h"
 #include "memory_utils.h"
 #include "moonraker_api.h"
 #include "observer_factory.h"
@@ -167,35 +168,13 @@ PrintStatusPanel::PrintStatusPanel(PrinterState& printer_state, MoonrakerAPI* ap
 
     spdlog::debug("[{}] Subscribed to PrinterState subjects", get_name());
 
-    // Load configured LEDs from wizard settings and pass to light controls
-    Config* config = Config::get_instance();
-    if (config) {
-        // Load configured LEDs (multi-LED support)
-        std::vector<std::string> configured_leds;
-        auto& leds_json = config->get_json(helix::wizard::LED_SELECTED);
-        if (leds_json.is_array()) {
-            for (const auto& led : leds_json) {
-                if (led.is_string() && !led.get<std::string>().empty()) {
-                    configured_leds.push_back(led.get<std::string>());
-                }
-            }
-        }
-        // Fallback: legacy single LED path
-        if (configured_leds.empty()) {
-            std::string single_led = config->get<std::string>(helix::wizard::LED_STRIP, "");
-            if (!single_led.empty()) {
-                configured_leds.push_back(single_led);
-            }
-        }
-        if (!configured_leds.empty()) {
-            light_timelapse_controls_.set_configured_leds(configured_leds);
-            led_state_observer_ = observe_int_sync<PrintStatusPanel>(
-                printer_state_.get_led_state_subject(), this,
-                [](PrintStatusPanel* self, int state) { self->on_led_state_changed(state); });
-            spdlog::debug("[{}] Configured {} LED(s) (observing state)", get_name(),
-                          configured_leds.size());
-        }
-    }
+    // LED configuration is read lazily by PrintLightTimelapseControls::handle_light_button()
+    // At construction time, hardware discovery may not have completed yet.
+    // LED state observer is set up on first on_activate() when strips are available.
+    led_state_observer_ = observe_int_sync<PrintStatusPanel>(
+        printer_state_.get_led_state_subject(), this,
+        [](PrintStatusPanel* self, int state) { self->on_led_state_changed(state); });
+    spdlog::debug("[{}] LED state observer registered (strips read lazily)", get_name());
 
     // Create filament runout handler (extracted from PrintStatusPanel)
     runout_handler_ = std::make_unique<helix::ui::FilamentRunoutHandler>(api_);

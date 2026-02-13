@@ -3,15 +3,16 @@
 
 /**
  * @file test_settings_led_char.cpp
- * @brief Characterization tests for Settings LED toggle control
+ * @brief Characterization tests for LED toggle control logic
  *
- * Tests document the behavior of LED control in SettingsManager
- * and verify the DRY pattern with Home/PrintStatus panels.
+ * Tests document the behavioral patterns of multi-LED control
+ * (now unified in LedController) and verify the DRY pattern
+ * across Home/PrintStatus/Settings panels.
  *
  * Tests the LOGIC only, not LVGL widgets (no UI creation).
  *
- * @see settings_manager.cpp - SettingsManager::send_led_command()
- * @see ui_panel_settings.cpp - LED chip row
+ * @see led_controller.cpp - LedController::toggle_all(), send_color()
+ * @see ui_settings_led.cpp - LED settings overlay
  */
 
 #include <set>
@@ -79,13 +80,13 @@ TEST_CASE("Settings LED: configured_leds getter/setter", "[settings][led]") {
 // ============================================================================
 
 /**
- * @brief Simulates the guard logic in send_led_command()
+ * @brief Simulates the guard logic in LedController::toggle_all()
  *
  * The actual method checks:
  * 1. moonraker_api_ != nullptr
- * 2. configured_leds_ is not empty
+ * 2. selected_strips_ is not empty
  *
- * Commands are sent to ALL configured LEDs.
+ * Commands are sent to ALL selected strips.
  */
 struct LedCommandGuard {
     bool has_api = false;
@@ -225,9 +226,9 @@ TEST_CASE("Settings LED: toggle sync with printer state", "[settings][led]") {
 // ============================================================================
 
 /**
- * @brief Simulates send_led_command() broadcasting to all configured LEDs
+ * @brief Simulates LedController::toggle_all() broadcasting to all selected strips
  *
- * When toggling, the command is sent to EVERY configured LED.
+ * When toggling, the command is sent to EVERY selected strip.
  * This is the key behavioral change from single to multi-LED.
  */
 TEST_CASE("Settings LED: multi-LED broadcast", "[settings][led]") {
@@ -306,14 +307,16 @@ TEST_CASE("Settings LED: DRY pattern documentation", "[settings][led][dry]") {
         }
     }
 
-    SECTION("all panels use same LED source") {
-        // Home, PrintStatus, and Settings all read from:
-        // helix::wizard::LED_SELECTED = "/printer/leds/selected" (JSON array)
-        // with fallback to LED_STRIP = "/printer/leds/strip" (string, legacy)
-        std::string config_path = "/printer/leds/selected";
-        std::string legacy_path = "/printer/leds/strip";
-        REQUIRE(config_path == "/printer/leds/selected");
-        REQUIRE(legacy_path == "/printer/leds/strip");
+    SECTION("all panels use LedController as single source of truth") {
+        // Home, PrintStatus, and Settings all use LedController::instance()
+        // which reads from /printer/leds/selected_strips (with migration
+        // from legacy /printer/leds/selected and /printer/leds/strip paths)
+        std::string canonical_path = "/printer/leds/selected_strips";
+        std::string legacy_array_path = "/printer/leds/selected";
+        std::string legacy_string_path = "/printer/leds/strip";
+        REQUIRE(canonical_path == "/printer/leds/selected_strips");
+        REQUIRE(legacy_array_path == "/printer/leds/selected");
+        REQUIRE(legacy_string_path == "/printer/leds/strip");
     }
 }
 
