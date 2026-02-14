@@ -68,6 +68,7 @@ All developer documentation lives here. When working on features, look up the re
 | Doc | When to read |
 |-----|-------------|
 | `MOONRAKER_ARCHITECTURE.md` | Moonraker API abstraction, WebSocket integration |
+| `TELEMETRY_ADMIN.md` | Telemetry pipeline, Analytics Engine, dashboard, scripts, secrets |
 
 ## Planning & Research
 

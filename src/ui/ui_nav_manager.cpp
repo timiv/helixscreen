@@ -120,14 +120,24 @@ void NavigationManager::overlay_slide_out_complete_cb(lv_anim_t* anim) {
     spdlog::trace("[NavigationManager] Overlay slide+fade-out complete, panel {} hidden",
                   (void*)panel);
 
-    // Invoke close callback if registered (AFTER animation completes, before any deletion)
+    // Defer close callback via lv_async_call so any object deletion happens AFTER the
+    // current render cycle completes. Animation callbacks fire from inside
+    // lv_timer_handler() → lv_display_refr_timer(), and deleting objects mid-layout
+    // causes use-after-free in layout_update_core → lv_obj_scrollbar_invalidate.
     auto& mgr = NavigationManager::instance();
     auto it = mgr.overlay_close_callbacks_.find(panel);
     if (it != mgr.overlay_close_callbacks_.end()) {
-        spdlog::trace("[NavigationManager] Invoking close callback for overlay {}", (void*)panel);
-        auto callback = std::move(it->second);
+        spdlog::trace("[NavigationManager] Deferring close callback for overlay {}", (void*)panel);
+        // Move callback to heap — lv_async_call will invoke it on the next LVGL tick
+        auto* deferred = new OverlayCloseCallback(std::move(it->second));
         mgr.overlay_close_callbacks_.erase(it);
-        callback(); // Call after erasing to allow re-registration
+        lv_async_call(
+            [](void* data) {
+                auto* cb = static_cast<OverlayCloseCallback*>(data);
+                (*cb)();
+                delete cb;
+            },
+            deferred);
     }
 
     // Lifecycle: Activate what's now visible after animation completes
