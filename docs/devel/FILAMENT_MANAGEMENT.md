@@ -170,6 +170,36 @@ struct ToolInfo {
 
 ---
 
+## UI Panels
+
+### AMS Panel (`ui_panel_ams`)
+
+The detail panel showing slots, path visualization, hub sensors, and the currently loaded filament for a single backend. Opened as an overlay from the Filament nav panel or from the AMS Overview Panel.
+
+Key features:
+- Slot grid with overlap layout for >4 slots (shared via `ui_ams_slot_layout.h`)
+- Path canvas showing filament routing from slots through hub to toolhead
+- Backend selector (shown when `backend_count > 1`)
+- Unit scoping: can display a subset of slots for a single unit within a multi-unit backend
+
+### AMS Overview Panel (`ui_panel_ams_overview`)
+
+Grid of unit cards showing all units across the system. Each card is a miniature visualization of the unit's slots. Clicking a card transitions inline to a detail view of that unit's slots.
+
+Key files:
+| File | Purpose |
+|------|---------|
+| `include/ui_panel_ams_overview.h` | Class with detail view state |
+| `src/ui/ui_panel_ams_overview.cpp` | Card creation, inline detail view, slot layout |
+| `ui_xml/ams_overview_panel.xml` | Two-column layout: cards/detail left, loaded info right |
+| `ui_xml/ams_unit_card.xml` | Mini unit card with slot bars and hub sensor dot |
+
+**Current scope**: The overview panel queries `get_backend(0)` and displays all units from that single backend's `AmsSystemInfo`. This covers the common case of a single multi-unit AMS system (e.g., AFC with multiple Box Turtle units).
+
+**Future: multi-backend aggregation**: When multiple backends are active simultaneously (e.g., an AFC system on one toolhead + a Happy Hare on another), the overview panel should iterate all backends via `AmsState::get_backend(i)` for `i` in `0..backend_count` and aggregate their units into the card grid. The per-backend slot subject storage (`secondary_slot_subjects_`) and event routing already support this — the UI aggregation is the remaining integration point.
+
+---
+
 ## Supported Backends
 
 ### AmsType Enum

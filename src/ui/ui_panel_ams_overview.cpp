@@ -231,6 +231,8 @@ void AmsOverviewPanel::refresh_units() {
         return;
     }
 
+    // TODO: Iterate all backends (0..backend_count) to aggregate units across
+    // multiple simultaneous AMS systems. Currently only queries backend 0.
     auto* backend = AmsState::instance().get_backend();
     if (!backend) {
         spdlog::debug("[{}] No backend available", get_name());
