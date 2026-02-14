@@ -7,6 +7,7 @@
 #include "ui_ams_dryer_card.h"
 #include "ui_ams_slot.h"
 #include "ui_ams_slot_edit_popup.h"
+#include "ui_ams_slot_layout.h"
 #include "ui_endless_spool_arrows.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
@@ -277,10 +278,14 @@ void AmsPanel::init_subjects() {
     current_slot_observer_ = ObserverGuard(AmsState::instance().get_current_slot_subject(),
                                            on_current_slot_changed, this);
 
-    // Slot count observer for dynamic slot creation
+    // Slot count observer for dynamic slot creation (non-scoped mode only)
     slot_count_observer_ = observe_int_sync<AmsPanel>(
         AmsState::instance().get_slot_count_subject(), this, [](AmsPanel* self, int new_count) {
             if (!self->panel_)
+                return;
+            // When scoped to a unit, on_activate() handles slot creation with correct offsets.
+            // Don't let the global slot count observer override that.
+            if (self->scoped_unit_index_ >= 0)
                 return;
             spdlog::debug("[AmsPanel] Slot count changed to {}", new_count);
             self->create_slots(new_count);
@@ -350,6 +355,53 @@ void AmsPanel::on_activate() {
 
     // Sync state when panel becomes visible
     AmsState::instance().sync_from_backend();
+
+    // Create/recreate slots based on scope
+    if (scoped_unit_index_ >= 0) {
+        // Scoped: show only this unit's slots
+        auto* backend = AmsState::instance().get_backend();
+        if (backend) {
+            AmsSystemInfo info = backend->get_system_info();
+            if (scoped_unit_index_ < static_cast<int>(info.units.size())) {
+                int unit_slots = info.units[scoped_unit_index_].slot_count;
+                spdlog::info("[{}] Scoped to unit {} with {} slots", get_name(), scoped_unit_index_,
+                             unit_slots);
+                create_slots(unit_slots);
+                setup_system_header();
+            }
+        }
+
+        // Hide elements that don't apply to a single-unit scoped view:
+        // path canvas (hub/bypass/toolhead routing), bypass toggle, dryer card
+        lv_obj_t* path_container = lv_obj_find_by_name(panel_, "path_container");
+        if (path_container)
+            lv_obj_add_flag(path_container, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_t* bypass_row = lv_obj_find_by_name(panel_, "bypass_row");
+        if (bypass_row)
+            lv_obj_add_flag(bypass_row, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_t* dryer_card = lv_obj_find_by_name(panel_, "dryer_card");
+        if (dryer_card)
+            lv_obj_add_flag(dryer_card, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        // Non-scoped: show all system slots
+        int slot_count = lv_subject_get_int(AmsState::instance().get_slot_count_subject());
+        if (slot_count != current_slot_count_) {
+            create_slots(slot_count);
+        }
+        setup_system_header();
+
+        // Restore elements hidden by scoped view
+        lv_obj_t* path_container = lv_obj_find_by_name(panel_, "path_container");
+        if (path_container)
+            lv_obj_remove_flag(path_container, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_t* bypass_row = lv_obj_find_by_name(panel_, "bypass_row");
+        if (bypass_row)
+            lv_obj_remove_flag(bypass_row, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_t* dryer_card = lv_obj_find_by_name(panel_, "dryer_card");
+        if (dryer_card)
+            lv_obj_remove_flag(dryer_card, LV_OBJ_FLAG_HIDDEN);
+    }
+
     refresh_slots();
 
     // Sync step progress with current action (in case we reopened mid-operation)
@@ -453,6 +505,16 @@ void AmsPanel::clear_panel_reference() {
     spdlog::debug("[AMS Panel] Cleared all widget references");
 }
 
+void AmsPanel::set_unit_scope(int unit_index) {
+    spdlog::info("[AmsPanel] Setting unit scope to {}", unit_index);
+    scoped_unit_index_ = unit_index;
+}
+
+void AmsPanel::clear_unit_scope() {
+    spdlog::debug("[AmsPanel] Clearing unit scope");
+    scoped_unit_index_ = -1;
+}
+
 // ============================================================================
 // Setup Helpers
 // ============================================================================
@@ -473,21 +535,44 @@ void AmsPanel::setup_system_header() {
         return;
     }
 
-    // Get system name for logo lookup
     const auto& info = backend->get_system_info();
-    const char* logo_path = AmsState::get_logo_path(info.type_name);
 
+    // When scoped to a unit, show unit-specific name and logo
+    if (scoped_unit_index_ >= 0 && scoped_unit_index_ < static_cast<int>(info.units.size())) {
+        const AmsUnit& unit = info.units[scoped_unit_index_];
+
+        // Try unit-specific logo first, fall back to system logo
+        const char* logo_path = AmsState::get_logo_path(unit.name);
+        if (!logo_path || !logo_path[0]) {
+            logo_path = AmsState::get_logo_path(info.type_name);
+        }
+
+        if (logo_path) {
+            lv_image_set_src(system_logo, logo_path);
+            lv_obj_remove_flag(system_logo, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(system_logo, LV_OBJ_FLAG_HIDDEN);
+        }
+
+        // Override the header title with unit name
+        lv_obj_t* title_label = lv_obj_find_by_name(panel_, "system_name");
+        if (title_label) {
+            std::string display_name =
+                unit.name.empty() ? ("Unit " + std::to_string(scoped_unit_index_ + 1)) : unit.name;
+            lv_label_set_text(title_label, display_name.c_str());
+        }
+
+        spdlog::info("[{}] Scoped to unit {}: '{}'", get_name(), scoped_unit_index_, unit.name);
+        return;
+    }
+
+    // Default: show system-level logo (existing behavior)
+    const char* logo_path = AmsState::get_logo_path(info.type_name);
     if (logo_path) {
-        spdlog::info("[{}] Setting logo: '{}' -> {}", get_name(), info.type_name, logo_path);
+        spdlog::debug("[{}] Setting logo: '{}' -> {}", get_name(), info.type_name, logo_path);
         lv_image_set_src(system_logo, logo_path);
         lv_obj_remove_flag(system_logo, LV_OBJ_FLAG_HIDDEN);
-        // Log image dimensions after setting source
-        lv_coord_t w = lv_obj_get_width(system_logo);
-        lv_coord_t h = lv_obj_get_height(system_logo);
-        spdlog::info("[{}] Logo widget size: {}x{}, hidden={}", get_name(), w, h,
-                     lv_obj_has_flag(system_logo, LV_OBJ_FLAG_HIDDEN));
     } else {
-        // Hide logo for unknown systems
         lv_obj_add_flag(system_logo, LV_OBJ_FLAG_HIDDEN);
         spdlog::debug("[{}] No logo for system '{}'", get_name(), info.type_name);
     }
@@ -508,10 +593,10 @@ void AmsPanel::setup_slots() {
             get_name());
     }
 
-    // Get initial slot count and create slots
-    int slot_count = lv_subject_get_int(AmsState::instance().get_slot_count_subject());
-    spdlog::debug("[{}] setup_slots: slot_count={} from subject", get_name(), slot_count);
-    create_slots(slot_count);
+    // Slot creation deferred to on_activate() which knows the correct scope
+    // (scoped vs full). Creating here would cause double-creation waste.
+    spdlog::debug("[{}] setup_slots: grid found, slot creation deferred to on_activate()",
+                  get_name());
 }
 
 void AmsPanel::create_slots(int count) {
@@ -528,17 +613,29 @@ void AmsPanel::create_slots(int count) {
         count = MAX_VISIBLE_SLOTS;
     }
 
-    // Skip if unchanged
-    if (count == current_slot_count_) {
+    // Calculate slot index offset for unit-scoped view
+    int slot_offset = 0;
+    if (scoped_unit_index_ >= 0) {
+        auto* backend = AmsState::instance().get_backend();
+        if (backend) {
+            AmsSystemInfo info = backend->get_system_info();
+            if (scoped_unit_index_ < static_cast<int>(info.units.size())) {
+                slot_offset = info.units[scoped_unit_index_].first_slot_global_index;
+            }
+        }
+    }
+
+    // Skip if unchanged and not scoped (scoped views always recreate for correct offsets)
+    if (count == current_slot_count_ && slot_offset == 0 && scoped_unit_index_ < 0) {
         return;
     }
 
-    spdlog::debug("[{}] Creating {} slots (was {})", get_name(), count, current_slot_count_);
+    spdlog::debug("[{}] Creating {} slots (was {}, offset={})", get_name(), count,
+                  current_slot_count_, slot_offset);
 
     // Delete existing slots
     for (int i = 0; i < current_slot_count_; ++i) {
         lv_obj_safe_delete(slot_widgets_[i]);
-        // Note: label_widgets_ are no longer used - labels are inside slot widgets
         label_widgets_[i] = nullptr;
     }
 
@@ -550,55 +647,32 @@ void AmsPanel::create_slots(int count) {
             continue;
         }
 
-        // Configure slot index (triggers reactive binding setup)
-        ui_ams_slot_set_index(slot, i);
+        // Use global index for subject bindings (offset when scoped to a unit)
+        int global_index = i + slot_offset;
+        ui_ams_slot_set_index(slot, global_index);
 
         // Set layout info for staggered label positioning
-        // Each slot positions its own label based on its index and total count
         ui_ams_slot_set_layout_info(slot, i, count);
 
         // Store reference and setup click handler
         slot_widgets_[i] = slot;
-        lv_obj_set_user_data(slot, reinterpret_cast<void*>(static_cast<intptr_t>(i)));
+        lv_obj_set_user_data(slot, reinterpret_cast<void*>(static_cast<intptr_t>(global_index)));
         lv_obj_add_event_cb(slot, on_slot_clicked, LV_EVENT_CLICKED, this);
     }
 
     current_slot_count_ = count;
 
-    // Get available width from slot_area (parent of slot_grid)
+    // Calculate slot sizing using shared layout helper
     lv_obj_t* slot_area = lv_obj_get_parent(slot_grid_);
-    lv_obj_update_layout(slot_area); // Ensure layout is current
+    lv_obj_update_layout(slot_area);
     int32_t available_width = lv_obj_get_content_width(slot_area);
+    auto layout = calculate_ams_slot_layout(available_width, count);
+    int32_t slot_width = layout.slot_width;
+    int32_t overlap = layout.overlap;
 
-    // Calculate dynamic slot width and overlap to fill available space
-    // Formula: available_width = N * slot_width - (N-1) * overlap
-    // With overlap = 50% of slot_width for 5+ gates:
-    //   slot_width = available_width / (N * 0.5 + 0.5) for N >= 5
-    //   slot_width = available_width / N for N <= 4 (no overlap)
-    int32_t slot_width = 0;
-    int32_t overlap = 0;
-
-    if (count > 4) {
-        // Use 50% overlap ratio for many gates
-        // slot_width = available_width / (N * (1 - overlap_ratio) + overlap_ratio)
-        // With overlap_ratio = 0.5: slot_width = available_width / (0.5*N + 0.5)
-        float overlap_ratio = 0.5f;
-        slot_width = static_cast<int32_t>(available_width /
-                                          (count * (1.0f - overlap_ratio) + overlap_ratio));
-        overlap = static_cast<int32_t>(slot_width * overlap_ratio);
-
-        // Apply negative column padding for overlap effect
-        lv_obj_set_style_pad_column(slot_grid_, -overlap, LV_PART_MAIN);
-        spdlog::debug(
-            "[{}] Dynamic sizing: available={}px, slot_width={}px, overlap={}px for {} gates",
-            get_name(), available_width, slot_width, overlap, count);
-    } else {
-        // No overlap for 4 or fewer gates - evenly distributed
-        slot_width = available_width / count;
-        lv_obj_set_style_pad_column(slot_grid_, 0, LV_PART_MAIN);
-        spdlog::debug("[{}] Even distribution: slot_width={}px for {} gates", get_name(),
-                      slot_width, count);
-    }
+    lv_obj_set_style_pad_column(slot_grid_, overlap > 0 ? -overlap : 0, LV_PART_MAIN);
+    spdlog::debug("[{}] Slot sizing: available={}px, slot_width={}px, overlap={}px for {} gates",
+                  get_name(), available_width, slot_width, overlap, count);
 
     // Apply calculated width to each slot
     for (int i = 0; i < count; ++i) {
@@ -709,28 +783,16 @@ void AmsPanel::setup_path_canvas() {
     // Set slot click callback to trigger filament load
     ui_filament_path_canvas_set_slot_callback(path_canvas_, on_path_slot_clicked, this);
 
-    // Set slot_width and overlap to match current slot configuration
-    // This syncs with the dynamic sizing calculated in create_slots()
+    // Sync path canvas slot sizing with the slot grid layout
     if (slot_grid_) {
         lv_obj_t* slot_area = lv_obj_get_parent(slot_grid_);
         lv_obj_update_layout(slot_area);
         int32_t available_width = lv_obj_get_content_width(slot_area);
         int slot_count = lv_subject_get_int(AmsState::instance().get_slot_count_subject());
+        auto layout = calculate_ams_slot_layout(available_width, slot_count);
 
-        int32_t slot_width = 0;
-        int32_t overlap = 0;
-
-        if (slot_count > 4) {
-            float overlap_ratio = 0.5f;
-            slot_width = static_cast<int32_t>(
-                available_width / (slot_count * (1.0f - overlap_ratio) + overlap_ratio));
-            overlap = static_cast<int32_t>(slot_width * overlap_ratio);
-        } else if (slot_count > 0) {
-            slot_width = available_width / slot_count;
-        }
-
-        ui_filament_path_canvas_set_slot_width(path_canvas_, slot_width);
-        ui_filament_path_canvas_set_slot_overlap(path_canvas_, overlap);
+        ui_filament_path_canvas_set_slot_width(path_canvas_, layout.slot_width);
+        ui_filament_path_canvas_set_slot_overlap(path_canvas_, layout.overlap);
     }
 
     // Initial configuration from backend
@@ -872,14 +934,9 @@ void AmsPanel::update_endless_arrows_from_backend() {
         if (slot_area) {
             lv_obj_update_layout(slot_area);
             int32_t available_width = lv_obj_get_content_width(slot_area);
-            if (slot_count > 4) {
-                float overlap_ratio = 0.5f;
-                slot_width = static_cast<int32_t>(
-                    available_width / (slot_count * (1.0f - overlap_ratio) + overlap_ratio));
-                overlap = static_cast<int32_t>(slot_width * overlap_ratio);
-            } else if (slot_count > 0) {
-                slot_width = available_width / slot_count;
-            }
+            auto layout = calculate_ams_slot_layout(available_width, slot_count);
+            slot_width = layout.slot_width > 0 ? layout.slot_width : DEFAULT_SLOT_WIDTH;
+            overlap = layout.overlap;
         }
     }
 
@@ -2225,9 +2282,13 @@ AmsPanel& get_global_ams_panel() {
             NavigationManager::instance().register_overlay_instance(s_ams_panel_obj,
                                                                     g_ams_panel.get());
 
-            // Register close callback to destroy UI when overlay is closed
-            NavigationManager::instance().register_overlay_close_callback(
-                s_ams_panel_obj, []() { destroy_ams_panel_ui(); });
+            // Register close callback to clear scope when overlay is closed
+            // Panel stays alive for instant re-open (no lazy-load penalty)
+            NavigationManager::instance().register_overlay_close_callback(s_ams_panel_obj, []() {
+                if (g_ams_panel) {
+                    g_ams_panel->clear_unit_scope();
+                }
+            });
 
             spdlog::info("[AMS Panel] Lazy-created panel UI with close callback");
         } else {

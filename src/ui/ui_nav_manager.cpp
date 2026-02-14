@@ -99,6 +99,9 @@ void NavigationManager::clear_overlay_stack() {
         spdlog::trace("[NavigationManager] Cleared overlay {} from stack", (void*)overlay);
     }
 
+    // Clear zoom source rects for any cleared overlays
+    zoom_source_rects_.clear();
+
     // Hide primary backdrop
     if (overlay_backdrop_) {
         set_backdrop_visible(false);
@@ -114,8 +117,11 @@ void NavigationManager::clear_overlay_stack() {
 void NavigationManager::overlay_slide_out_complete_cb(lv_anim_t* anim) {
     lv_obj_t* panel = static_cast<lv_obj_t*>(anim->var);
     lv_obj_add_flag(panel, LV_OBJ_FLAG_HIDDEN);
-    // Reset transform and opacity for potential reuse
+    // Reset all transform and opacity properties for potential reuse
+    // (covers both slide and zoom animation properties)
     lv_obj_set_style_translate_x(panel, 0, LV_PART_MAIN);
+    lv_obj_set_style_translate_y(panel, 0, LV_PART_MAIN);
+    lv_obj_set_style_transform_scale(panel, 256, LV_PART_MAIN);
     lv_obj_set_style_opa(panel, LV_OPA_COVER, LV_PART_MAIN);
     spdlog::trace("[NavigationManager] Overlay slide+fade-out complete, panel {} hidden",
                   (void*)panel);
@@ -205,8 +211,10 @@ void NavigationManager::overlay_animate_slide_out(lv_obj_t* panel) {
     // Skip animation if disabled - hide panel immediately and invoke callback
     if (!SettingsManager::instance().get_animations_enabled()) {
         lv_obj_add_flag(panel, LV_OBJ_FLAG_HIDDEN);
-        // Reset transform and opacity for potential reuse
+        // Reset all transform and opacity properties for potential reuse
         lv_obj_set_style_translate_x(panel, 0, LV_PART_MAIN);
+        lv_obj_set_style_translate_y(panel, 0, LV_PART_MAIN);
+        lv_obj_set_style_transform_scale(panel, 256, LV_PART_MAIN);
         lv_obj_set_style_opa(panel, LV_OPA_COVER, LV_PART_MAIN);
         spdlog::trace("[NavigationManager] Animations disabled - hiding overlay instantly");
 
@@ -272,6 +280,240 @@ void NavigationManager::overlay_animate_slide_out(lv_obj_t* panel) {
 
     spdlog::trace("[NavigationManager] Started slide+fade-out animation for panel {} (width={})",
                   (void*)panel, panel_width);
+}
+
+void NavigationManager::overlay_animate_zoom_in(lv_obj_t* panel, lv_area_t source_rect) {
+    // Skip animation if disabled
+    if (!SettingsManager::instance().get_animations_enabled()) {
+        lv_obj_set_style_translate_x(panel, 0, LV_PART_MAIN);
+        lv_obj_set_style_translate_y(panel, 0, LV_PART_MAIN);
+        lv_obj_set_style_transform_scale(panel, 256, LV_PART_MAIN);
+        lv_obj_set_style_opa(panel, LV_OPA_COVER, LV_PART_MAIN);
+        spdlog::trace("[NavigationManager] Animations disabled - showing zoom overlay instantly");
+        return;
+    }
+
+    // Calculate panel dimensions
+    lv_obj_update_layout(panel);
+    int32_t panel_w = lv_obj_get_width(panel);
+    int32_t panel_h = lv_obj_get_height(panel);
+    if (panel_w <= 0)
+        panel_w = 480;
+    if (panel_h <= 0)
+        panel_h = 800;
+
+    // Get panel screen position
+    lv_area_t panel_coords;
+    lv_obj_get_coords(panel, &panel_coords);
+
+    // Calculate source rect center and panel center
+    int32_t src_cx = (source_rect.x1 + source_rect.x2) / 2;
+    int32_t src_cy = (source_rect.y1 + source_rect.y2) / 2;
+    int32_t panel_cx = (panel_coords.x1 + panel_coords.x2) / 2;
+    int32_t panel_cy = (panel_coords.y1 + panel_coords.y2) / 2;
+
+    // Calculate starting translation (offset from panel center to source center)
+    int32_t start_tx = src_cx - panel_cx;
+    int32_t start_ty = src_cy - panel_cy;
+
+    // Calculate starting scale based on card/panel size ratio
+    // LVGL scale: 256 = 100%
+    int32_t src_w = source_rect.x2 - source_rect.x1;
+    int32_t start_scale = (src_w * 256) / panel_w;
+    if (start_scale < 64)
+        start_scale = 64; // Min 25% scale
+    if (start_scale > 200)
+        start_scale = 200; // Max ~78% scale
+
+    spdlog::debug("[NavigationManager] zoom-in: panel={}x{} src=({},{}-{},{}) "
+                  "start_tx={} start_ty={} start_scale={}",
+                  panel_w, panel_h, source_rect.x1, source_rect.y1, source_rect.x2, source_rect.y2,
+                  start_tx, start_ty, start_scale);
+
+    // Set pivot to center for symmetric scaling
+    lv_obj_set_style_transform_pivot_x(panel, panel_w / 2, LV_PART_MAIN);
+    lv_obj_set_style_transform_pivot_y(panel, panel_h / 2, LV_PART_MAIN);
+
+    // Set initial state
+    lv_obj_set_style_translate_x(panel, start_tx, LV_PART_MAIN);
+    lv_obj_set_style_translate_y(panel, start_ty, LV_PART_MAIN);
+    lv_obj_set_style_transform_scale(panel, static_cast<int16_t>(start_scale), LV_PART_MAIN);
+    lv_obj_set_style_opa(panel, LV_OPA_TRANSP, LV_PART_MAIN);
+
+    // Translate X animation
+    lv_anim_t tx_anim;
+    lv_anim_init(&tx_anim);
+    lv_anim_set_var(&tx_anim, panel);
+    lv_anim_set_values(&tx_anim, start_tx, 0);
+    lv_anim_set_duration(&tx_anim, ZOOM_ANIM_DURATION_MS);
+    lv_anim_set_path_cb(&tx_anim, lv_anim_path_ease_out);
+    lv_anim_set_exec_cb(&tx_anim, [](void* obj, int32_t value) {
+        lv_obj_set_style_translate_x(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
+    });
+    lv_anim_start(&tx_anim);
+
+    // Translate Y animation
+    lv_anim_t ty_anim;
+    lv_anim_init(&ty_anim);
+    lv_anim_set_var(&ty_anim, panel);
+    lv_anim_set_values(&ty_anim, start_ty, 0);
+    lv_anim_set_duration(&ty_anim, ZOOM_ANIM_DURATION_MS);
+    lv_anim_set_path_cb(&ty_anim, lv_anim_path_ease_out);
+    lv_anim_set_exec_cb(&ty_anim, [](void* obj, int32_t value) {
+        lv_obj_set_style_translate_y(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
+    });
+    lv_anim_start(&ty_anim);
+
+    // Scale animation
+    lv_anim_t scale_anim;
+    lv_anim_init(&scale_anim);
+    lv_anim_set_var(&scale_anim, panel);
+    lv_anim_set_values(&scale_anim, start_scale, 256);
+    lv_anim_set_duration(&scale_anim, ZOOM_ANIM_DURATION_MS);
+    lv_anim_set_path_cb(&scale_anim, lv_anim_path_ease_out);
+    lv_anim_set_exec_cb(&scale_anim, [](void* obj, int32_t value) {
+        lv_obj_set_style_transform_scale(static_cast<lv_obj_t*>(obj), static_cast<int16_t>(value),
+                                         LV_PART_MAIN);
+    });
+    lv_anim_start(&scale_anim);
+
+    // Opacity animation
+    lv_anim_t opa_anim;
+    lv_anim_init(&opa_anim);
+    lv_anim_set_var(&opa_anim, panel);
+    lv_anim_set_values(&opa_anim, LV_OPA_TRANSP, LV_OPA_COVER);
+    lv_anim_set_duration(&opa_anim, ZOOM_ANIM_DURATION_MS);
+    lv_anim_set_path_cb(&opa_anim, lv_anim_path_ease_out);
+    lv_anim_set_exec_cb(&opa_anim, [](void* obj, int32_t value) {
+        lv_obj_set_style_opa(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
+    });
+    lv_anim_start(&opa_anim);
+
+    spdlog::trace("[NavigationManager] Started zoom-in animation for panel {} (scale {}->256, "
+                  "tx {}->0, ty {}->0)",
+                  (void*)panel, start_scale, start_tx, start_ty);
+}
+
+void NavigationManager::overlay_animate_zoom_out(lv_obj_t* panel, lv_area_t source_rect) {
+    // Disable clicks during animation
+    lv_obj_remove_flag(panel, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(panel, LV_OBJ_FLAG_EVENT_BUBBLE);
+
+    // Skip animation if disabled
+    if (!SettingsManager::instance().get_animations_enabled()) {
+        lv_obj_add_flag(panel, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_style_translate_x(panel, 0, LV_PART_MAIN);
+        lv_obj_set_style_translate_y(panel, 0, LV_PART_MAIN);
+        lv_obj_set_style_transform_scale(panel, 256, LV_PART_MAIN);
+        lv_obj_set_style_opa(panel, LV_OPA_COVER, LV_PART_MAIN);
+
+        // Invoke close callback
+        auto it = overlay_close_callbacks_.find(panel);
+        if (it != overlay_close_callbacks_.end()) {
+            auto callback = std::move(it->second);
+            overlay_close_callbacks_.erase(it);
+            callback();
+        }
+
+        // Lifecycle: Activate what's now visible
+        if (panel_stack_.size() == 1) {
+            if (panel_instances_[active_panel_]) {
+                panel_instances_[active_panel_]->on_activate();
+            }
+        } else if (panel_stack_.size() > 1) {
+            lv_obj_t* now_visible = panel_stack_.back();
+            auto overlay_it = overlay_instances_.find(now_visible);
+            if (overlay_it != overlay_instances_.end() && overlay_it->second) {
+                overlay_it->second->on_activate();
+            }
+        }
+        return;
+    }
+
+    // Calculate animation targets (reverse of zoom-in)
+    lv_obj_update_layout(panel);
+    int32_t panel_w = lv_obj_get_width(panel);
+    int32_t panel_h = lv_obj_get_height(panel);
+    if (panel_w <= 0)
+        panel_w = 480;
+    if (panel_h <= 0)
+        panel_h = 800;
+
+    lv_area_t panel_coords;
+    lv_obj_get_coords(panel, &panel_coords);
+
+    int32_t src_cx = (source_rect.x1 + source_rect.x2) / 2;
+    int32_t src_cy = (source_rect.y1 + source_rect.y2) / 2;
+    int32_t panel_cx = (panel_coords.x1 + panel_coords.x2) / 2;
+    int32_t panel_cy = (panel_coords.y1 + panel_coords.y2) / 2;
+
+    int32_t end_tx = src_cx - panel_cx;
+    int32_t end_ty = src_cy - panel_cy;
+
+    int32_t src_w = source_rect.x2 - source_rect.x1;
+    int32_t end_scale = (src_w * 256) / panel_w;
+    if (end_scale < 64)
+        end_scale = 64;
+    if (end_scale > 200)
+        end_scale = 200;
+
+    lv_obj_set_style_transform_pivot_x(panel, panel_w / 2, LV_PART_MAIN);
+    lv_obj_set_style_transform_pivot_y(panel, panel_h / 2, LV_PART_MAIN);
+
+    // Translate X
+    lv_anim_t tx_anim;
+    lv_anim_init(&tx_anim);
+    lv_anim_set_var(&tx_anim, panel);
+    lv_anim_set_values(&tx_anim, 0, end_tx);
+    lv_anim_set_duration(&tx_anim, ZOOM_ANIM_DURATION_MS);
+    lv_anim_set_path_cb(&tx_anim, lv_anim_path_ease_in);
+    lv_anim_set_exec_cb(&tx_anim, [](void* obj, int32_t value) {
+        lv_obj_set_style_translate_x(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
+    });
+    lv_anim_start(&tx_anim);
+
+    // Translate Y
+    lv_anim_t ty_anim;
+    lv_anim_init(&ty_anim);
+    lv_anim_set_var(&ty_anim, panel);
+    lv_anim_set_values(&ty_anim, 0, end_ty);
+    lv_anim_set_duration(&ty_anim, ZOOM_ANIM_DURATION_MS);
+    lv_anim_set_path_cb(&ty_anim, lv_anim_path_ease_in);
+    lv_anim_set_exec_cb(&ty_anim, [](void* obj, int32_t value) {
+        lv_obj_set_style_translate_y(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
+    });
+    lv_anim_start(&ty_anim);
+
+    // Scale
+    lv_anim_t scale_anim;
+    lv_anim_init(&scale_anim);
+    lv_anim_set_var(&scale_anim, panel);
+    lv_anim_set_values(&scale_anim, 256, end_scale);
+    lv_anim_set_duration(&scale_anim, ZOOM_ANIM_DURATION_MS);
+    lv_anim_set_path_cb(&scale_anim, lv_anim_path_ease_in);
+    lv_anim_set_exec_cb(&scale_anim, [](void* obj, int32_t value) {
+        lv_obj_set_style_transform_scale(static_cast<lv_obj_t*>(obj), static_cast<int16_t>(value),
+                                         LV_PART_MAIN);
+    });
+    lv_anim_start(&scale_anim);
+
+    // Opacity — use the completed callback to handle post-animation cleanup
+    lv_anim_t opa_anim;
+    lv_anim_init(&opa_anim);
+    lv_anim_set_var(&opa_anim, panel);
+    lv_anim_set_values(&opa_anim, LV_OPA_COVER, LV_OPA_TRANSP);
+    lv_anim_set_duration(&opa_anim, ZOOM_ANIM_DURATION_MS);
+    lv_anim_set_path_cb(&opa_anim, lv_anim_path_ease_in);
+    lv_anim_set_exec_cb(&opa_anim, [](void* obj, int32_t value) {
+        lv_obj_set_style_opa(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
+    });
+    // Reuse the existing slide-out completion callback for post-animation cleanup
+    lv_anim_set_completed_cb(&opa_anim, overlay_slide_out_complete_cb);
+    lv_anim_start(&opa_anim);
+
+    spdlog::trace("[NavigationManager] Started zoom-out animation for panel {} (scale 256->{}, "
+                  "tx 0->{}, ty 0->{})",
+                  (void*)panel, end_scale, end_tx, end_ty);
 }
 
 // ============================================================================
@@ -869,6 +1111,88 @@ void NavigationManager::push_overlay(lv_obj_t* overlay_panel, bool hide_previous
     });
 }
 
+void NavigationManager::push_overlay_zoom_from(lv_obj_t* overlay_panel, lv_area_t source_rect) {
+    if (!overlay_panel) {
+        spdlog::error("[NavigationManager] Cannot push NULL overlay panel");
+        return;
+    }
+
+    // Queue the push operation (same pattern as push_overlay)
+    ui_queue_update([overlay_panel, source_rect]() {
+        auto& mgr = NavigationManager::instance();
+
+        // Store source rect for reverse animation on go_back (must be on UI thread)
+        mgr.zoom_source_rects_[overlay_panel] = source_rect;
+
+        // Check for duplicate push
+        if (std::find(mgr.panel_stack_.begin(), mgr.panel_stack_.end(), overlay_panel) !=
+            mgr.panel_stack_.end()) {
+            spdlog::warn("[NavigationManager] Overlay {} already in stack, ignoring duplicate push",
+                         (void*)overlay_panel);
+            return;
+        }
+
+        bool is_first_overlay = (mgr.panel_stack_.size() == 1);
+
+        // Lifecycle: Deactivate what's currently visible
+        if (is_first_overlay) {
+            if (mgr.panel_instances_[mgr.active_panel_]) {
+                mgr.panel_instances_[mgr.active_panel_]->on_deactivate();
+            }
+        } else {
+            lv_obj_t* prev_overlay = mgr.panel_stack_.back();
+            auto it = mgr.overlay_instances_.find(prev_overlay);
+            if (it != mgr.overlay_instances_.end() && it->second) {
+                it->second->on_deactivate();
+            }
+        }
+
+        // Hide current top panel
+        if (!mgr.panel_stack_.empty()) {
+            lv_obj_t* current_top = mgr.panel_stack_.back();
+            lv_obj_add_flag(current_top, LV_OBJ_FLAG_HIDDEN);
+        }
+
+        // Create backdrop
+        lv_obj_t* screen = lv_obj_get_screen(overlay_panel);
+        if (screen) {
+            if (is_first_overlay && mgr.overlay_backdrop_) {
+                mgr.set_backdrop_visible(true);
+                lv_obj_move_foreground(mgr.overlay_backdrop_);
+            } else if (!is_first_overlay) {
+                lv_obj_t* backdrop =
+                    static_cast<lv_obj_t*>(lv_xml_create(screen, "overlay_backdrop", nullptr));
+                if (backdrop) {
+                    mgr.overlay_backdrops_[overlay_panel] = backdrop;
+                    lv_obj_remove_flag(backdrop, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_move_foreground(backdrop);
+                    lv_obj_add_event_cb(backdrop, backdrop_click_event_cb, LV_EVENT_CLICKED,
+                                        nullptr);
+                }
+            }
+        }
+
+        // Show overlay with zoom animation instead of slide
+        lv_obj_remove_flag(overlay_panel, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(overlay_panel);
+        mgr.panel_stack_.push_back(overlay_panel);
+        mgr.overlay_animate_zoom_in(overlay_panel, source_rect);
+
+        // Lifecycle: Activate new overlay
+        auto it = mgr.overlay_instances_.find(overlay_panel);
+        if (it == mgr.overlay_instances_.end()) {
+            spdlog::warn("[NavigationManager] Overlay {} pushed without lifecycle registration",
+                         (void*)overlay_panel);
+        } else if (it->second) {
+            it->second->on_activate();
+        }
+
+        SoundManager::instance().play("nav_forward");
+        spdlog::trace("[NavigationManager] Pushed overlay {} with zoom (stack: {})",
+                      (void*)overlay_panel, mgr.panel_stack_.size());
+    });
+}
+
 void NavigationManager::register_overlay_close_callback(lv_obj_t* overlay_panel,
                                                         OverlayCloseCallback callback) {
     if (!overlay_panel || !callback) {
@@ -925,9 +1249,16 @@ bool NavigationManager::go_back() {
             }
         }
 
-        // Animate slide-out if overlay
+        // Animate out if overlay (zoom-out for zoomed overlays, slide-out otherwise)
         if (is_overlay && current_top) {
-            mgr.overlay_animate_slide_out(current_top);
+            auto zoom_it = mgr.zoom_source_rects_.find(current_top);
+            if (zoom_it != mgr.zoom_source_rects_.end()) {
+                lv_area_t source_rect = zoom_it->second;
+                mgr.zoom_source_rects_.erase(zoom_it);
+                mgr.overlay_animate_zoom_out(current_top, source_rect);
+            } else {
+                mgr.overlay_animate_slide_out(current_top);
+            }
             SoundManager::instance().play("nav_back");
         }
 
@@ -956,6 +1287,8 @@ bool NavigationManager::go_back() {
                 if (!is_main && !lv_obj_has_flag(child, LV_OBJ_FLAG_HIDDEN)) {
                     lv_obj_add_flag(child, LV_OBJ_FLAG_HIDDEN);
                     lv_obj_set_style_translate_x(child, 0, LV_PART_MAIN);
+                    lv_obj_set_style_translate_y(child, 0, LV_PART_MAIN);
+                    lv_obj_set_style_transform_scale(child, 256, LV_PART_MAIN);
                     lv_obj_set_style_opa(child, LV_OPA_COVER, LV_PART_MAIN);
                 }
             }
@@ -1041,8 +1374,9 @@ void NavigationManager::shutdown() {
         panel = nullptr;
     }
 
-    // Clear panel stack
+    // Clear panel stack and zoom state
     panel_stack_.clear();
+    zoom_source_rects_.clear();
 
     spdlog::trace("[NavigationManager] Shutdown complete");
 }
@@ -1080,6 +1414,7 @@ void NavigationManager::deinit_subjects() {
     overlay_instances_.clear();
     overlay_close_callbacks_.clear();
     overlay_backdrops_.clear();
+    zoom_source_rects_.clear();
     panel_stack_.clear();
     app_layout_widget_ = nullptr;
     overlay_backdrop_ = nullptr;

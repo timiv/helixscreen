@@ -13,11 +13,12 @@
 
 /**
  * @file ui_panel_ams_overview.h
- * @brief Multi-unit AMS system overview panel
+ * @brief Multi-unit AMS system overview panel with inline detail view
  *
  * Shows a zoomed-out view of all AMS units as compact cards.
  * Each card displays slot color bars (reusing ams_mini_status visual pattern).
- * Clicking a unit card opens the detail view scoped to that unit.
+ * Clicking a unit card swaps the left column to show that unit's slot detail
+ * inline (no separate overlay panel needed).
  *
  * Only shown for multi-unit setups (2+ units). Single-unit setups
  * skip this and go directly to the AMS detail panel.
@@ -54,6 +55,23 @@ class AmsOverviewPanel : public PanelBase {
      */
     void clear_panel_reference();
 
+    /**
+     * @brief Show detail view for a specific unit (inline, no overlay)
+     */
+    void show_unit_detail(int unit_index);
+
+    /**
+     * @brief Return from detail view to overview cards
+     */
+    void show_overview();
+
+    /**
+     * @brief Check if currently in detail (zoomed) mode
+     */
+    [[nodiscard]] bool is_in_detail_mode() const {
+        return detail_unit_index_ >= 0;
+    }
+
   private:
     // === Unit Card Management ===
     struct UnitCard {
@@ -68,6 +86,17 @@ class AmsOverviewPanel : public PanelBase {
     std::vector<UnitCard> unit_cards_;
     lv_obj_t* cards_row_ = nullptr;
     lv_obj_t* system_path_ = nullptr;
+    lv_obj_t* system_path_area_ = nullptr;
+
+    // === Detail View State ===
+    static constexpr int MAX_DETAIL_SLOTS = 16;
+    int detail_unit_index_ = -1;              ///< Currently shown unit (-1 = overview mode)
+    lv_obj_t* detail_container_ = nullptr;    ///< Detail view root container
+    lv_obj_t* detail_slot_grid_ = nullptr;    ///< Slot grid in detail view
+    lv_obj_t* detail_labels_layer_ = nullptr; ///< Labels overlay for staggered slots
+    lv_obj_t* detail_slot_tray_ = nullptr;    ///< Tray visual
+    lv_obj_t* detail_slot_widgets_[MAX_DETAIL_SLOTS] = {nullptr};
+    int detail_slot_count_ = 0;
 
     // === Observers ===
     ObserverGuard slots_version_observer_;
@@ -77,6 +106,11 @@ class AmsOverviewPanel : public PanelBase {
     void update_unit_card(UnitCard& card, const AmsUnit& unit, int current_slot);
     void create_mini_bars(UnitCard& card, const AmsUnit& unit, int current_slot);
     void refresh_system_path(const AmsSystemInfo& info, int current_slot);
+
+    // === Detail View Helpers ===
+    void create_detail_slots(const AmsUnit& unit);
+    void destroy_detail_slots();
+    void update_detail_header(const AmsUnit& unit, const AmsSystemInfo& info);
 
     // === Event Handling ===
     static void on_unit_card_clicked(lv_event_t* e);

@@ -2,6 +2,12 @@
 <!-- Copyright (C) 2025-2026 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <component>
+  <consts>
+    <!-- Sidebar width for status/controls column (matches ams_panel right_col_width) -->
+    <percentage name="sidebar_width" value="28%"/>
+    <!-- Swatch size for currently loaded card -->
+    <px name="current_swatch_size" value="40"/>
+  </consts>
   <!-- Overlay panel - right-aligned, uses standard large width -->
   <view name="ams_overview_panel"
         extends="lv_obj" width="#overlay_panel_width" height="100%" align="right_mid" style_pad_all="0"
@@ -12,10 +18,11 @@
     <lv_obj name="overview_content"
             width="100%" flex_grow="1" style_pad_all="#space_sm" style_pad_gap="#space_sm" scrollable="false"
             flex_flow="row" style_flex_main_place="start" style_flex_cross_place="start">
-      <!-- Left column (cards + canvas) -->
+      <!-- Left column (cards + canvas OR detail slot view) -->
       <lv_obj name="left_column"
               height="100%" flex_grow="3" style_pad_all="0" style_pad_gap="#space_sm" flex_flow="column"
               style_flex_main_place="start" style_flex_cross_place="center" scrollable="false">
+        <!-- === Overview Mode (visible by default) === -->
         <!-- Unit Cards Row - horizontal layout for unit summary cards -->
         <lv_obj name="unit_cards_row"
                 width="100%" height="content" style_pad_all="0" style_pad_gap="#space_md" flex_flow="row"
@@ -25,6 +32,53 @@
         <!-- System Path Area - shows unit outputs → hub → toolhead + bypass path -->
         <lv_obj name="system_path_area" width="100%" flex_grow="1" style_pad_all="0" scrollable="false">
           <!-- Path canvas created programmatically with status text drawn to left of nozzle -->
+        </lv_obj>
+        <!-- === Detail Mode (hidden by default, shown when unit card clicked) === -->
+        <lv_obj name="unit_detail_container" hidden="true"
+                width="100%" flex_grow="1" style_pad_all="0" style_pad_gap="#space_xs" flex_flow="column"
+                style_flex_main_place="start" style_flex_cross_place="center" scrollable="false">
+          <!-- Detail header: back arrow + unit logo + unit name -->
+          <lv_obj name="detail_header"
+                  width="100%" height="content" scrollable="false" clickable="false" flex_flow="row"
+                  style_flex_main_place="start" style_flex_cross_place="center"
+                  style_pad_all="0" style_pad_gap="#space_xs">
+            <icon name="detail_back_btn" src="back" size="md" variant="text" clickable="true">
+              <event_cb trigger="clicked" callback="on_ams_overview_back_clicked"/>
+            </icon>
+            <lv_image name="detail_logo" width="#ams_logo_size" height="#ams_logo_size" inner_align="contain"/>
+            <text_body name="detail_unit_name" text=""/>
+          </lv_obj>
+          <!-- Slot grid card (populated dynamically with ams_slot widgets) -->
+          <ui_card name="detail_unit_card"
+                   width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_sm"
+                   style_border_width="0" scrollable="false">
+            <lv_obj name="detail_slot_area"
+                    width="100%" height="content" style_pad_all="0" scrollable="false"
+                    flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center">
+              <!-- Slot Grid Container (filled dynamically by C++) -->
+              <lv_obj name="detail_slot_grid"
+                      width="content" height="content" style_pad_all="0" style_pad_row="0" style_pad_column="0"
+                      flex_flow="row" style_flex_main_place="start" style_flex_cross_place="start" scrollable="false"/>
+              <!-- Labels Layer - renders on top for overlapping slots -->
+              <lv_obj name="detail_labels_layer"
+                      width="100%" height="80" style_pad_all="0" scrollable="false" clickable="false"/>
+              <!-- Tray visual (theme colors for dark/light mode support) -->
+              <lv_obj name="detail_slot_tray"
+                      width="100%" height="30" align="bottom_mid"
+                      style_bg_color="#elevated_bg" style_bg_opa="200"
+                      style_border_width="1" style_border_color="#border" style_border_opa="140"
+                      style_radius="#border_radius" style_pad_all="0" scrollable="false" clickable="false">
+                <lv_obj width="#space_xs" height="80%" align="left_mid"
+                        style_translate_x="#space_xs" style_border_width="#space_xxs"
+                        style_border_color="#text_muted" style_border_opa="180" style_border_side="left"
+                        style_radius="#border_radius" style_pad_all="0" scrollable="false" clickable="false"/>
+                <lv_obj width="#space_xs" height="80%" align="right_mid"
+                        style_translate_x="-#space_xxs" style_border_width="#space_xxs"
+                        style_border_color="#text_muted" style_border_opa="180" style_border_side="right"
+                        style_radius="#border_radius" style_pad_all="0" scrollable="false" clickable="false"/>
+              </lv_obj>
+            </lv_obj>
+          </ui_card>
         </lv_obj>
       </lv_obj>
       <!-- Right column (loaded info + action buttons) -->

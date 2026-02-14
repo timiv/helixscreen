@@ -1573,8 +1573,8 @@ void AmsBackendMock::set_multi_unit_mode(bool enabled) {
             system_info_.units.push_back(unit);
         }
 
-        // Tool-to-slot mapping: T0-T7
-        system_info_.tool_to_slot_map = {0, 1, 2, 3, 4, 5, 6, 7};
+        // Tool-to-slot mapping: T0-T5 (6 tools for 6 slots)
+        system_info_.tool_to_slot_map = {0, 1, 2, 3, 4, 5};
 
         // Start with slot 0 loaded
         system_info_.current_slot = 0;
@@ -1582,17 +1582,17 @@ void AmsBackendMock::set_multi_unit_mode(bool enabled) {
         system_info_.filament_loaded = true;
         filament_segment_ = PathSegment::NOZZLE;
 
-        // Reinitialize endless spool configs for 8 slots
+        // Reinitialize endless spool configs for 6 slots
         endless_spool_configs_.clear();
-        endless_spool_configs_.reserve(8);
-        for (int i = 0; i < 8; ++i) {
+        endless_spool_configs_.reserve(6);
+        for (int i = 0; i < 6; ++i) {
             helix::printer::EndlessSpoolConfig config;
             config.slot_index = i;
             config.backup_slot = -1;
             endless_spool_configs_.push_back(config);
         }
 
-        spdlog::info("[AmsBackendMock] Multi-unit mode enabled (2x Box Turtle, 8 slots total)");
+        spdlog::info("[AmsBackendMock] Multi-unit mode: Box Turtle (4) + Night Owl (2) = 6 slots");
     } else {
         multi_unit_mode_ = false;
         // Revert to Happy Hare defaults

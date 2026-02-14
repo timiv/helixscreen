@@ -103,6 +103,17 @@ class AmsPanel : public PanelBase {
      */
     void clear_panel_reference();
 
+    /**
+     * @brief Scope detail view to show only one unit's slots
+     * @param unit_index Unit index to show (-1 = all units, default)
+     */
+    void set_unit_scope(int unit_index);
+
+    /**
+     * @brief Clear unit scope, showing all slots
+     */
+    void clear_unit_scope();
+
   private:
     // === Slot Management ===
 
@@ -133,6 +144,7 @@ class AmsPanel : public PanelBase {
 
     // === Dynamic Slot State ===
 
+    int scoped_unit_index_ = -1;     ///< Unit scope: -1 = all units, >=0 = specific unit
     int current_slot_count_ = 0;     ///< Number of slots currently created
     lv_obj_t* slot_grid_ = nullptr;  ///< Container for dynamically created slots
     int last_highlighted_slot_ = -1; ///< Previously highlighted slot (for pulse animation)

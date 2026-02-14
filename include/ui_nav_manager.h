@@ -208,6 +208,18 @@ class NavigationManager {
     void push_overlay(lv_obj_t* overlay_panel, bool hide_previous = true);
 
     /**
+     * @brief Push overlay with zoom-from-rect animation
+     *
+     * Shows the overlay panel with a zoom animation originating from the
+     * source rectangle (e.g., a clicked card). Falls back to instant show
+     * if animations are disabled.
+     *
+     * @param overlay_panel Overlay panel widget to show
+     * @param source_rect Screen coordinates of the source element to zoom from
+     */
+    void push_overlay_zoom_from(lv_obj_t* overlay_panel, lv_area_t source_rect);
+
+    /**
      * @brief Register a callback to be called when an overlay is closed
      *
      * The callback is invoked when the overlay is popped from the stack
@@ -302,6 +314,10 @@ class NavigationManager {
     void overlay_animate_slide_out(lv_obj_t* panel);
     static void overlay_slide_out_complete_cb(lv_anim_t* anim);
 
+    // Zoom animation helpers
+    void overlay_animate_zoom_in(lv_obj_t* panel, lv_area_t source_rect);
+    void overlay_animate_zoom_out(lv_obj_t* panel, lv_area_t source_rect);
+
     // Observer handlers (used by factory-created observers)
     void handle_active_panel_change(int32_t new_active_panel);
     void handle_connection_state_change(int state);
@@ -339,6 +355,9 @@ class NavigationManager {
     // Dynamic backdrops for nested overlays (overlay → its backdrop)
     std::unordered_map<lv_obj_t*, lv_obj_t*> overlay_backdrops_;
 
+    // Zoom animation source rects (overlay → source rect for reverse animation)
+    std::unordered_map<lv_obj_t*, lv_area_t> zoom_source_rects_;
+
     // Navbar widget reference (for z-order management)
     lv_obj_t* navbar_widget_ = nullptr;
 
@@ -354,6 +373,7 @@ class NavigationManager {
     // Animation constants
     static constexpr uint32_t OVERLAY_ANIM_DURATION_MS = 200;
     static constexpr int32_t OVERLAY_SLIDE_OFFSET = 400;
+    static constexpr uint32_t ZOOM_ANIM_DURATION_MS = 250;
 
     // Subject management via RAII
     SubjectManager subjects_;

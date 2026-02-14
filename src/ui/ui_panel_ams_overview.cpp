@@ -4,12 +4,15 @@
 #include "ui_panel_ams_overview.h"
 
 #include "ui_ams_device_operations_overlay.h"
+#include "ui_ams_slot.h"
+#include "ui_ams_slot_layout.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
 #include "ui_panel_ams.h"
 #include "ui_panel_common.h"
+#include "ui_spool_canvas.h"
 #include "ui_system_path_canvas.h"
 #include "ui_utils.h"
 
@@ -134,13 +137,18 @@ void AmsOverviewPanel::init_subjects() {
         // Overview panel reuses existing AMS subjects (slots_version, etc.)
         AmsState::instance().init_subjects(true);
 
-        // Observe slots_version to auto-refresh cards when slot data changes
+        // Observe slots_version to auto-refresh when slot data changes
         slots_version_observer_ = ObserverGuard(
             AmsState::instance().get_slots_version_subject(),
             [](lv_observer_t* observer, lv_subject_t* /*subject*/) {
                 auto* self = static_cast<AmsOverviewPanel*>(lv_observer_get_user_data(observer));
                 if (self && self->panel_) {
-                    self->refresh_units();
+                    if (self->detail_unit_index_ >= 0) {
+                        // In detail mode — refresh the detail slot view
+                        self->show_unit_detail(self->detail_unit_index_);
+                    } else {
+                        self->refresh_units();
+                    }
                 }
             },
             this);
@@ -168,14 +176,20 @@ void AmsOverviewPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     }
 
     // Find system path area and create path canvas widget
-    lv_obj_t* path_area = lv_obj_find_by_name(panel_, "system_path_area");
-    if (path_area) {
-        system_path_ = ui_system_path_canvas_create(path_area);
+    system_path_area_ = lv_obj_find_by_name(panel_, "system_path_area");
+    if (system_path_area_) {
+        system_path_ = ui_system_path_canvas_create(system_path_area_);
         if (system_path_) {
             lv_obj_set_size(system_path_, LV_PCT(100), LV_PCT(100));
             spdlog::debug("[{}] Created system path canvas", get_name());
         }
     }
+
+    // Find detail view containers
+    detail_container_ = lv_obj_find_by_name(panel_, "unit_detail_container");
+    detail_slot_grid_ = lv_obj_find_by_name(panel_, "detail_slot_grid");
+    detail_labels_layer_ = lv_obj_find_by_name(panel_, "detail_labels_layer");
+    detail_slot_tray_ = lv_obj_find_by_name(panel_, "detail_slot_tray");
 
     // Store global instance for callback access
     g_overview_panel_instance.store(this);
@@ -190,11 +204,22 @@ void AmsOverviewPanel::on_activate() {
     spdlog::debug("[{}] Activated - syncing from backend", get_name());
 
     AmsState::instance().sync_from_backend();
-    refresh_units();
+
+    if (detail_unit_index_ >= 0) {
+        // Re-entering while in detail mode — refresh the detail slots
+        show_unit_detail(detail_unit_index_);
+    } else {
+        refresh_units();
+    }
 }
 
 void AmsOverviewPanel::on_deactivate() {
     spdlog::debug("[{}] Deactivated", get_name());
+
+    // Reset to overview mode so next open starts at the cards view
+    if (detail_unit_index_ >= 0) {
+        show_overview();
+    }
 }
 
 // ============================================================================
@@ -261,6 +286,8 @@ void AmsOverviewPanel::create_unit_cards(const AmsSystemInfo& info) {
         lv_obj_set_flex_grow(uc.card, 1);
 
         // Store unit index for click handler
+        // NOTE: lv_obj_add_event_cb used here (not XML event_cb) because each dynamically
+        // created card needs per-instance user_data (unit index) that XML bindings can't provide.
         lv_obj_set_user_data(uc.card, reinterpret_cast<void*>(static_cast<intptr_t>(i)));
         lv_obj_add_event_cb(uc.card, on_unit_card_clicked, LV_EVENT_CLICKED, this);
 
@@ -545,6 +572,8 @@ void AmsOverviewPanel::refresh_system_path(const AmsSystemInfo& info, int curren
 // ============================================================================
 
 void AmsOverviewPanel::on_unit_card_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[AMS Overview] on_unit_card_clicked");
+
     auto* self = static_cast<AmsOverviewPanel*>(lv_event_get_user_data(e));
     if (!self) {
         spdlog::warn("[AMS Overview] Card clicked but panel instance is null");
@@ -554,9 +583,161 @@ void AmsOverviewPanel::on_unit_card_clicked(lv_event_t* e) {
     lv_obj_t* target = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
     int unit_index = static_cast<int>(reinterpret_cast<intptr_t>(lv_obj_get_user_data(target)));
 
-    spdlog::info("[AMS Overview] Unit {} clicked", unit_index);
+    spdlog::info("[AMS Overview] Unit {} clicked - showing inline detail", unit_index);
 
-    // Milestone 4: navigate to scoped detail view for this unit
+    // Show detail view inline (swaps left column content, no overlay push)
+    self->show_unit_detail(unit_index);
+
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+// ============================================================================
+// Detail View (inline unit zoom)
+// ============================================================================
+
+void AmsOverviewPanel::show_unit_detail(int unit_index) {
+    if (!panel_ || !detail_container_ || !cards_row_)
+        return;
+
+    auto* backend = AmsState::instance().get_backend();
+    if (!backend)
+        return;
+
+    AmsSystemInfo info = backend->get_system_info();
+    if (unit_index < 0 || unit_index >= static_cast<int>(info.units.size()))
+        return;
+
+    detail_unit_index_ = unit_index;
+    const AmsUnit& unit = info.units[unit_index];
+
+    spdlog::info("[{}] Showing detail for unit {} ({})", get_name(), unit_index, unit.name);
+
+    // Update detail header (logo + name)
+    update_detail_header(unit, info);
+
+    // Create slot widgets for this unit
+    create_detail_slots(unit);
+
+    // Swap visibility: hide overview elements, show detail
+    lv_obj_add_flag(cards_row_, LV_OBJ_FLAG_HIDDEN);
+    if (system_path_area_)
+        lv_obj_add_flag(system_path_area_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(detail_container_, LV_OBJ_FLAG_HIDDEN);
+}
+
+void AmsOverviewPanel::show_overview() {
+    if (!panel_ || !detail_container_ || !cards_row_)
+        return;
+
+    spdlog::info("[{}] Returning to overview mode", get_name());
+
+    detail_unit_index_ = -1;
+
+    // Destroy detail slots
+    destroy_detail_slots();
+
+    // Swap visibility: show overview elements, hide detail
+    lv_obj_remove_flag(cards_row_, LV_OBJ_FLAG_HIDDEN);
+    if (system_path_area_)
+        lv_obj_remove_flag(system_path_area_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(detail_container_, LV_OBJ_FLAG_HIDDEN);
+
+    // Refresh overview to pick up any changes that happened while in detail
+    refresh_units();
+}
+
+void AmsOverviewPanel::update_detail_header(const AmsUnit& unit, const AmsSystemInfo& info) {
+    // Update logo
+    lv_obj_t* logo = lv_obj_find_by_name(panel_, "detail_logo");
+    if (logo) {
+        const char* logo_path = AmsState::get_logo_path(unit.name);
+        if (!logo_path || !logo_path[0]) {
+            logo_path = AmsState::get_logo_path(info.type_name);
+        }
+        if (logo_path && logo_path[0]) {
+            lv_image_set_src(logo, logo_path);
+            lv_obj_remove_flag(logo, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(logo, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
+    // Update name
+    lv_obj_t* name = lv_obj_find_by_name(panel_, "detail_unit_name");
+    if (name) {
+        std::string display_name =
+            unit.name.empty() ? ("Unit " + std::to_string(detail_unit_index_ + 1)) : unit.name;
+        lv_label_set_text(name, display_name.c_str());
+    }
+}
+
+void AmsOverviewPanel::create_detail_slots(const AmsUnit& unit) {
+    if (!detail_slot_grid_)
+        return;
+
+    // Clear any existing detail slots
+    destroy_detail_slots();
+
+    int count = unit.slot_count;
+    if (count <= 0 || count > MAX_DETAIL_SLOTS)
+        return;
+
+    int slot_offset = unit.first_slot_global_index;
+
+    // Create slot widgets via XML
+    for (int i = 0; i < count; ++i) {
+        lv_obj_t* slot =
+            static_cast<lv_obj_t*>(lv_xml_create(detail_slot_grid_, "ams_slot", nullptr));
+        if (!slot) {
+            spdlog::error("[{}] Failed to create ams_slot for detail index {}", get_name(), i);
+            continue;
+        }
+
+        int global_index = i + slot_offset;
+        ui_ams_slot_set_index(slot, global_index);
+        ui_ams_slot_set_layout_info(slot, i, count);
+        detail_slot_widgets_[i] = slot;
+    }
+
+    detail_slot_count_ = count;
+
+    // Calculate slot sizing using shared layout helper
+    lv_obj_t* slot_area = lv_obj_get_parent(detail_slot_grid_);
+    lv_obj_update_layout(slot_area);
+    int32_t available_width = lv_obj_get_content_width(slot_area);
+    auto layout = calculate_ams_slot_layout(available_width, count);
+
+    lv_obj_set_style_pad_column(detail_slot_grid_, layout.overlap > 0 ? -layout.overlap : 0,
+                                LV_PART_MAIN);
+
+    for (int i = 0; i < count; ++i) {
+        if (detail_slot_widgets_[i]) {
+            lv_obj_set_width(detail_slot_widgets_[i], layout.slot_width);
+        }
+    }
+
+    // Update tray height to ~1/3 of slot height
+    if (detail_slot_tray_ && count > 0 && detail_slot_widgets_[0]) {
+        lv_obj_update_layout(detail_slot_widgets_[0]);
+        int32_t slot_height = lv_obj_get_height(detail_slot_widgets_[0]);
+        int32_t tray_height = slot_height / 3;
+        if (tray_height < 20)
+            tray_height = 20;
+        lv_obj_set_height(detail_slot_tray_, tray_height);
+    }
+
+    spdlog::debug("[{}] Created {} detail slots (offset={}, width={})", get_name(), count,
+                  slot_offset, layout.slot_width);
+}
+
+void AmsOverviewPanel::destroy_detail_slots() {
+    if (detail_slot_grid_) {
+        lv_obj_clean(detail_slot_grid_);
+    }
+    for (int i = 0; i < MAX_DETAIL_SLOTS; ++i) {
+        detail_slot_widgets_[i] = nullptr;
+    }
+    detail_slot_count_ = 0;
 }
 
 // ============================================================================
@@ -572,10 +753,22 @@ void AmsOverviewPanel::clear_panel_reference() {
 
     // Clear widget references
     system_path_ = nullptr;
+    system_path_area_ = nullptr;
     panel_ = nullptr;
     parent_screen_ = nullptr;
     cards_row_ = nullptr;
     unit_cards_.clear();
+
+    // Clear detail view state
+    detail_container_ = nullptr;
+    detail_slot_grid_ = nullptr;
+    detail_labels_layer_ = nullptr;
+    detail_slot_tray_ = nullptr;
+    detail_unit_index_ = -1;
+    detail_slot_count_ = 0;
+    for (int i = 0; i < MAX_DETAIL_SLOTS; ++i) {
+        detail_slot_widgets_[i] = nullptr;
+    }
 
     // Reset subjects_initialized_ so observers are recreated on next access
     subjects_initialized_ = false;
@@ -602,9 +795,21 @@ static void ensure_overview_registered() {
     lv_xml_register_event_cb(nullptr, "on_ams_overview_settings_clicked", on_settings_clicked_xml);
     lv_xml_register_event_cb(nullptr, "on_ams_overview_unload_clicked", on_unload_clicked_xml);
     lv_xml_register_event_cb(nullptr, "on_ams_overview_reset_clicked", on_reset_clicked_xml);
+    lv_xml_register_event_cb(nullptr, "on_ams_overview_back_clicked", [](lv_event_t* e) {
+        LV_UNUSED(e);
+        AmsOverviewPanel* panel = g_overview_panel_instance.load();
+        if (panel) {
+            panel->show_overview();
+        }
+    });
 
     // Register the system path canvas widget
     ui_system_path_canvas_register();
+
+    // Register AMS slot widgets for inline detail view
+    // (safe to call multiple times — each register function has an internal guard)
+    ui_spool_canvas_register();
+    ui_ams_slot_register();
 
     // Register the XML components (unit card must be registered before overview panel)
     lv_xml_register_component_from_file("A:ui_xml/ams_unit_card.xml");
