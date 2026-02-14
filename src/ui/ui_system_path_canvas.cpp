@@ -291,32 +291,26 @@ static void system_path_draw_cb(lv_event_t* e) {
         lv_color_t line_color = is_active ? active_color_lv : idle_color;
         int32_t line_w = is_active ? line_active : line_idle;
 
-        // Draw entry dot at unit output position
-        draw_sensor_dot(layer, unit_x, entry_y, line_color, is_active, sensor_r);
+        // Hub sensor dot interrupts the vertical segment
+        bool has_sensor = data->unit_has_hub_sensor[i];
+        int32_t sensor_dot_y = entry_y + (merge_y - entry_y) * 3 / 5;
 
-        if (is_active) {
-            // Active unit: solid thick colored line
-            // Vertical segment from entry dot down
-            draw_vertical_line(layer, unit_x, entry_y + sensor_r, merge_y, line_color, line_w);
-            // Angled segment from unit position to center at merge_y -> hub top
-            draw_line(layer, unit_x, merge_y, center_x, hub_y - hub_h / 2, line_color, line_w);
-        } else {
-            // Inactive unit: thin solid gray line
-            draw_vertical_line(layer, unit_x, entry_y + sensor_r, merge_y, idle_color, line_idle);
-            draw_line(layer, unit_x, merge_y, center_x, hub_y - hub_h / 2, idle_color, line_idle);
-        }
+        if (has_sensor) {
+            // Vertical: entry → dot top, gap for dot, dot bottom → merge
+            draw_vertical_line(layer, unit_x, entry_y, sensor_dot_y - sensor_r, line_color, line_w);
+            draw_vertical_line(layer, unit_x, sensor_dot_y + sensor_r, merge_y, line_color, line_w);
 
-        // Per-unit hub sensor dot: draw on this unit's line near the merge area
-        if (data->unit_has_hub_sensor[i]) {
-            // Position the sensor dot on the angled segment, near the merge/hub area
-            // Interpolate between (unit_x, merge_y) and (center_x, hub_y - hub_h/2) at ~30%
-            float t = 0.3f;
-            int32_t sensor_dot_x = (int32_t)(unit_x + (center_x - unit_x) * t);
-            int32_t sensor_dot_y = (int32_t)(merge_y + ((hub_y - hub_h / 2) - merge_y) * t);
+            // Draw the sensor dot in the gap
             bool filled = data->unit_hub_triggered[i];
             lv_color_t dot_color = filled ? (is_active ? active_color_lv : idle_color) : idle_color;
-            draw_sensor_dot(layer, sensor_dot_x, sensor_dot_y, dot_color, filled, sensor_r);
+            draw_sensor_dot(layer, unit_x, sensor_dot_y, dot_color, filled, sensor_r);
+        } else {
+            // No sensor: uninterrupted vertical line
+            draw_vertical_line(layer, unit_x, entry_y, merge_y, line_color, line_w);
         }
+
+        // Angled segment from unit position at merge_y to hub top
+        draw_line(layer, unit_x, merge_y, center_x, hub_y - hub_h / 2, line_color, line_w);
     }
 
     // ========================================================================
@@ -325,18 +319,19 @@ static void system_path_draw_cb(lv_event_t* e) {
     // Path: label at top → vertical down past hub → angle to meet output below hub
     // ========================================================================
     if (data->has_bypass) {
-        // Position bypass to the right of the hub area
-        int32_t bypass_x = center_x + data->hub_width / 2 + width / 8;
+        // Bypass is a horizontal spur off the hub's right side at hub center level,
+        // then drops down to merge with the output path below
+        int32_t hub_right = center_x + data->hub_width / 2;
+        int32_t bypass_x = hub_right + width / 8; // endpoint of horizontal spur
         bool bp_active = data->bypass_active;
 
         lv_color_t bp_color = bp_active ? lv_color_hex(data->bypass_color) : idle_color;
         int32_t bp_width = bp_active ? line_active : line_idle;
 
-        // Bypass merge point: just below the hub bottom, where it joins the output path
         int32_t hub_bottom = hub_y + hub_h / 2;
         int32_t bypass_merge_y = hub_bottom + (nozzle_y - hub_bottom) / 3;
 
-        // "Bypass" label at top
+        // "Bypass" label above the bypass merge point
         if (data->label_font) {
             lv_draw_label_dsc_t bp_label_dsc;
             lv_draw_label_dsc_init(&bp_label_dsc);
@@ -346,19 +341,16 @@ static void system_path_draw_cb(lv_event_t* e) {
             bp_label_dsc.text = "Bypass";
 
             int32_t font_h = lv_font_get_line_height(data->label_font);
-            int32_t label_top = entry_y - font_h - 2;
+            int32_t label_top = bypass_merge_y - font_h - 4;
             lv_area_t bp_label_area = {bypass_x - 30, label_top, bypass_x + 30, label_top + font_h};
             lv_draw_label(layer, &bp_label_dsc, &bp_label_area);
         }
 
-        // Entry dot at bypass position
-        draw_sensor_dot(layer, bypass_x, entry_y, bp_color, bp_active, sensor_r);
-
-        // Vertical line straight down past the hub (stays at bypass_x — doesn't enter hub)
-        draw_vertical_line(layer, bypass_x, entry_y + sensor_r, bypass_merge_y, bp_color, bp_width);
-
-        // Angled line from bypass_x to center, merging into the output path below the hub
-        draw_line(layer, bypass_x, bypass_merge_y, center_x, bypass_merge_y, bp_color, bp_width);
+        // Bypass path: horizontal line below the hub, never touches the hub
+        // Dot at bypass endpoint, then horizontal to center to merge into output path
+        draw_sensor_dot(layer, bypass_x, bypass_merge_y, bp_color, bp_active, sensor_r);
+        draw_line(layer, bypass_x - sensor_r, bypass_merge_y, center_x, bypass_merge_y, bp_color,
+                  bp_width);
     }
 
     // ========================================================================

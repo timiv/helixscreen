@@ -1511,6 +1511,7 @@ void AmsBackendMock::set_multi_unit_mode(bool enabled) {
                 slot.color_name = slots[i].name;
                 slot.status = slots[i].status;
                 slot.mapped_tool = i;
+                slot.spoolman_id = 100 + i;
                 slot.total_weight_g = 1000.0f;
                 slot.remaining_weight_g = (i == 3) ? 0.0f : (1000.0f - i * 250.0f);
                 auto mat_info = filament::find_material(slots[i].material);
@@ -1558,6 +1559,7 @@ void AmsBackendMock::set_multi_unit_mode(bool enabled) {
                 slot.color_name = slots[i].name;
                 slot.status = slots[i].status;
                 slot.mapped_tool = 4 + i;
+                slot.spoolman_id = 200 + i;
                 slot.total_weight_g = 1000.0f;
                 slot.remaining_weight_g = 1000.0f - i * 200.0f;
                 auto mat_info = filament::find_material(slots[i].material);

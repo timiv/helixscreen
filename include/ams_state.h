@@ -703,7 +703,7 @@ class AmsState {
     lv_subject_t current_material_text_;
     char current_material_text_buf_[48];
     lv_subject_t current_slot_text_;
-    char current_slot_text_buf_[24];
+    char current_slot_text_buf_[64];
     lv_subject_t current_weight_text_;
     char current_weight_text_buf_[16];
     lv_subject_t current_has_weight_;

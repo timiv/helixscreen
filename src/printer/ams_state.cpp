@@ -13,6 +13,7 @@
 
 #include "ams_state.h"
 
+#include "ui_color_picker.h"
 #include "ui_update_queue.h"
 
 #include "app_globals.h"
@@ -683,25 +684,54 @@ void AmsState::sync_current_loaded_from_backend() {
         // Set color
         lv_subject_set_int(&current_color_, static_cast<int>(slot_info.color_rgb));
 
-        // Build material label - combine color name with material when Spoolman linked
-        if (slot_info.spoolman_id > 0 && !slot_info.color_name.empty()) {
-            std::string label = slot_info.color_name;
-            if (!slot_info.material.empty()) {
-                label += " " + slot_info.material;
+        // Build material label - color name + material (e.g., "Red PLA")
+        // Use Spoolman color name if available, otherwise identify from hex
+        {
+            std::string color_label;
+            if (slot_info.spoolman_id > 0 && !slot_info.color_name.empty()) {
+                color_label = slot_info.color_name;
+            } else {
+                color_label = helix::get_color_name_from_hex(slot_info.color_rgb);
+            }
+
+            std::string label;
+            if (!color_label.empty() && !slot_info.material.empty()) {
+                label = color_label + " " + slot_info.material;
+            } else if (!color_label.empty()) {
+                label = color_label;
+            } else if (!slot_info.material.empty()) {
+                label = slot_info.material;
+            } else {
+                label = "Filament";
             }
             lv_subject_copy_string(&current_material_text_, label.c_str());
-        } else if (!slot_info.material.empty()) {
-            lv_subject_copy_string(&current_material_text_, slot_info.material.c_str());
-        } else {
-            lv_subject_copy_string(&current_material_text_, "Filament");
         }
 
-        // Set slot label (1-based for user display)
-        snprintf(current_slot_text_buf_, sizeof(current_slot_text_buf_), "Slot %d", slot_index + 1);
-        lv_subject_copy_string(&current_slot_text_, current_slot_text_buf_);
+        // Set slot label with unit name (e.g., "Box Turtle 1 · Slot 1")
+        {
+            AmsSystemInfo sys = backend_->get_system_info();
+            const char* unit_name = nullptr;
+            int local_slot = slot_index + 1; // 1-based default
+            for (const auto& unit : sys.units) {
+                if (slot_index >= unit.first_slot_global_index &&
+                    slot_index < unit.first_slot_global_index + unit.slot_count) {
+                    unit_name = unit.name.c_str();
+                    local_slot = slot_index - unit.first_slot_global_index + 1;
+                    break;
+                }
+            }
+            if (unit_name && sys.units.size() > 1) {
+                snprintf(current_slot_text_buf_, sizeof(current_slot_text_buf_), "%s · Slot %d",
+                         unit_name, local_slot);
+            } else {
+                snprintf(current_slot_text_buf_, sizeof(current_slot_text_buf_), "Slot %d",
+                         local_slot);
+            }
+            lv_subject_copy_string(&current_slot_text_, current_slot_text_buf_);
+        }
 
-        // Show remaining weight if available (Spoolman linked with weight data)
-        if (slot_info.spoolman_id > 0 && slot_info.total_weight_g > 0.0f) {
+        // Show remaining weight if available (from Spoolman or backend)
+        if (slot_info.total_weight_g > 0.0f && slot_info.remaining_weight_g >= 0.0f) {
             snprintf(current_weight_text_buf_, sizeof(current_weight_text_buf_), "%.0fg",
                      slot_info.remaining_weight_g);
             lv_subject_copy_string(&current_weight_text_, current_weight_text_buf_);

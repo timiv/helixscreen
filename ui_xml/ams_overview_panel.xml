@@ -10,7 +10,7 @@
     <header_bar name="overlay_header" title="Multi Filament System Overview" title_tag="Multi Filament System Overview"/>
     <!-- Content Area: Two-column layout -->
     <lv_obj name="overview_content"
-            width="100%" flex_grow="1" style_pad_all="#space_lg" style_pad_gap="#space_md" scrollable="false"
+            width="100%" flex_grow="1" style_pad_all="#space_sm" style_pad_gap="#space_sm" scrollable="false"
             flex_flow="row" style_flex_main_place="start" style_flex_cross_place="start">
       <!-- Left column (cards + canvas) -->
       <lv_obj name="left_column"
@@ -29,37 +29,53 @@
       </lv_obj>
       <!-- Right column (loaded info + action buttons) -->
       <lv_obj name="right_column"
-              height="100%" flex_grow="1" style_pad_all="#space_md" style_pad_gap="#space_sm" flex_flow="column"
-              style_flex_main_place="start" style_flex_cross_place="center" scrollable="false" style_min_width="140">
-        <!-- Currently Loaded heading -->
-        <text_heading name="loaded_heading" text="Currently Loaded"/>
-        <!-- Loaded filament info (vertical) -->
-        <lv_obj name="loaded_info_col"
-                width="100%" height="content" style_pad_all="0" style_pad_gap="#space_xs" flex_flow="column"
-                style_flex_main_place="start" style_flex_cross_place="start" scrollable="false">
-          <!-- Color swatch + material name row -->
-          <lv_obj name="loaded_swatch_row"
-                  width="100%" height="content" style_pad_all="0" style_pad_gap="#space_sm" flex_flow="row"
-                  style_flex_main_place="start" style_flex_cross_place="center" scrollable="false">
-            <!-- Color swatch -->
-            <lv_obj name="overview_swatch"
-                    width="20" height="20" style_radius="4" style_bg_color="#text_muted" style_bg_opa="255"
-                    style_border_width="1" style_border_color="#text_muted" style_border_opa="80" scrollable="false"
-                    clickable="false"/>
-            <!-- Material name -->
-            <text_body name="overview_material" bind_text="ams_current_material_text"/>
+              height="100%" width="240" style_pad_all="#space_sm" style_pad_gap="#space_sm" flex_flow="column"
+              style_flex_main_place="start" style_flex_cross_place="start" scrollable="false">
+        <!-- Currently Loaded Section Header -->
+        <text_small width="100%" text="Currently Loaded" translation_tag="Currently Loaded"/>
+        <!-- Currently Loaded Card - horizontal layout: swatch left, details stacked right -->
+        <ui_card name="current_loaded_card"
+                 width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_sm" flex_flow="row"
+                 style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_sm">
+          <!-- Color swatch for current filament (left side) -->
+          <lv_obj name="overview_swatch"
+                  width="#current_swatch_size" height="#current_swatch_size" style_radius="#border_radius"
+                  style_bg_color="#text_muted" style_bg_opa="255" style_border_width="#space_xxs"
+                  style_border_color="#text_muted" style_border_opa="80" scrollable="false" clickable="false"/>
+          <!-- Details column (stacked to the right of swatch) -->
+          <lv_obj name="current_details"
+                  height="content" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+                  style_flex_cross_place="start" style_pad_gap="0" scrollable="false" flex_grow="1">
+            <!-- Primary label: material name -->
+            <text_body name="overview_material" width="100%" bind_text="ams_current_material_text" long_mode="wrap"/>
+            <!-- Slot indicator (e.g., "Box Turtle 1 · Slot 1") -->
+            <text_small name="overview_slot" bind_text="ams_current_slot_text"/>
+            <!-- Weight on separate line - hidden when not available -->
+            <text_small name="overview_weight" bind_text="ams_current_weight_text">
+              <bind_flag_if_eq subject="ams_current_has_weight" flag="hidden" ref_value="0"/>
+            </text_small>
           </lv_obj>
-          <!-- Slot label (unit + slot) -->
-          <text_small name="overview_slot" bind_text="ams_current_slot_text" style_text_color="#text_muted"/>
-          <!-- Weight (hidden when no weight data) -->
-          <text_small name="overview_weight" bind_text="ams_current_weight_text" style_text_color="#text_muted">
-            <bind_flag_if_eq subject="ams_current_has_weight" flag="hidden" ref_value="0"/>
-          </text_small>
-          <!-- Status text -->
-          <text_small name="overview_status" bind_text="ams_action_detail" style_text_color="#text_muted"/>
-        </lv_obj>
+        </ui_card>
         <!-- Spacer to push buttons to bottom -->
         <lv_obj width="1" flex_grow="1" style_bg_opa="0" style_border_width="0" scrollable="false"/>
+        <!-- Bypass Toggle Row (only shown if bypass supported) -->
+        <lv_obj name="bypass_row"
+                width="100%" height="#button_height" style_pad_all="0" flex_flow="row"
+                style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
+          <bind_flag_if_eq subject="ams_supports_bypass" flag="hidden" ref_value="0"/>
+          <!-- Left side: icon + label -->
+          <lv_obj height="content"
+                  style_pad_all="0" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_xs"
+                  scrollable="false">
+            <icon src="source_branch" size="sm"/>
+            <text_body text="Bypass" translation_tag="Bypass"/>
+          </lv_obj>
+          <!-- Right side: toggle switch -->
+          <ui_switch name="bypass_switch" size="small" style_margin_bottom="#space_md">
+            <bind_state_if_eq subject="ams_bypass_active" state="checked" ref_value="1"/>
+            <event_cb trigger="value_changed" callback="ams_bypass_toggled_cb"/>
+          </ui_switch>
+        </lv_obj>
         <!-- Action Buttons -->
         <ui_button name="btn_unload"
                    width="100%" variant="secondary" icon="tray_arrow_up" text="Unload" translation_tag="Unload">
