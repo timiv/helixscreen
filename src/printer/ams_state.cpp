@@ -141,6 +141,10 @@ void AmsState::init_subjects(bool register_xml) {
 
     spdlog::trace("[AMS State] Initializing subjects");
 
+    // Backend selector subjects
+    INIT_SUBJECT_INT(backend_count, 0, subjects_, register_xml);
+    INIT_SUBJECT_INT(active_backend, 0, subjects_, register_xml);
+
     // System-level subjects
     INIT_SUBJECT_INT(ams_type, static_cast<int>(AmsType::NONE), subjects_, register_xml);
     INIT_SUBJECT_INT(ams_action, static_cast<int>(AmsAction::IDLE), subjects_, register_xml);
@@ -385,6 +389,9 @@ int AmsState::add_backend(std::unique_ptr<AmsBackend> backend) {
         }
     }
 
+    // Update backend count subject for UI binding
+    lv_subject_set_int(&backend_count_, static_cast<int>(backends_.size()));
+
     return index;
 }
 
@@ -417,10 +424,25 @@ void AmsState::clear_backends() {
         subs.deinit();
     }
     secondary_slot_subjects_.clear();
+
+    // Reset backend selector subjects
+    lv_subject_set_int(&backend_count_, 0);
+    lv_subject_set_int(&active_backend_, 0);
 }
 
 AmsBackend* AmsState::get_backend() const {
     return get_backend(0);
+}
+
+int AmsState::active_backend_index() const {
+    return lv_subject_get_int(const_cast<lv_subject_t*>(&active_backend_));
+}
+
+void AmsState::set_active_backend(int index) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    if (index >= 0 && index < static_cast<int>(backends_.size())) {
+        lv_subject_set_int(&active_backend_, index);
+    }
 }
 
 bool AmsState::is_available() const {

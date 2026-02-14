@@ -191,6 +191,34 @@ class AmsState {
     // ========================================================================
 
     /**
+     * @brief Get backend count subject
+     * @return Subject holding the number of registered backends
+     */
+    lv_subject_t* get_backend_count_subject() {
+        return &backend_count_;
+    }
+
+    /**
+     * @brief Get active backend subject
+     * @return Subject holding index of the currently selected backend
+     */
+    lv_subject_t* get_active_backend_subject() {
+        return &active_backend_;
+    }
+
+    /**
+     * @brief Get the active backend index
+     * @return Currently selected backend index
+     */
+    [[nodiscard]] int active_backend_index() const;
+
+    /**
+     * @brief Set the active backend index
+     * @param index Backend index to make active (bounds-checked)
+     */
+    void set_active_backend(int index);
+
+    /**
      * @brief Get AMS type subject
      * @return Subject holding AmsType enum as int (0=none, 1=happy_hare, 2=afc)
      */
@@ -744,6 +772,10 @@ class AmsState {
 
     // Subject manager for automatic cleanup
     SubjectManager subjects_;
+
+    // Backend selector subjects
+    lv_subject_t backend_count_;
+    lv_subject_t active_backend_;
 
     // System-level subjects
     lv_subject_t ams_type_;
