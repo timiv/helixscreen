@@ -611,10 +611,9 @@ void LedControlOverlay::populate_macro_controls(const LedMacroInfo& macro) {
         break;
 
     case MacroLedType::PRESET:
-        for (const auto& [preset_name, preset_gcode] : macro.presets) {
-            // Fall back to gcode/macro name if preset name is empty
-            const auto chip_label = preset_name.empty() ? preset_gcode : preset_name;
-            add_macro_chip(chip_label, preset_gcode, &LedControlOverlay::handle_macro_custom);
+        for (const auto& preset_macro : macro.presets) {
+            add_macro_chip(pretty_print_macro(preset_macro), preset_macro,
+                           &LedControlOverlay::handle_macro_custom);
         }
         break;
     }

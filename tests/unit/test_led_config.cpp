@@ -90,7 +90,7 @@ TEST_CASE("LedController config: configured macros round-trip", "[led][config]")
     m.off_macro = "LIGHTS_OFF";
     m.toggle_macro = "";
     m.type = helix::led::MacroLedType::PRESET;
-    m.presets = {{"Party", "LED_PARTY"}, {"Dim", "LED_DIM"}};
+    m.presets = {"LED_PARTY", "LED_DIM"};
     macros.push_back(m);
 
     helix::led::LedMacroInfo m2;
@@ -106,8 +106,8 @@ TEST_CASE("LedController config: configured macros round-trip", "[led][config]")
     REQUIRE(ctrl.configured_macros()[0].off_macro == "LIGHTS_OFF");
     REQUIRE(ctrl.configured_macros()[0].type == helix::led::MacroLedType::PRESET);
     REQUIRE(ctrl.configured_macros()[0].presets.size() == 2);
-    REQUIRE(ctrl.configured_macros()[0].presets[0].first == "Party");
-    REQUIRE(ctrl.configured_macros()[0].presets[0].second == "LED_PARTY");
+    REQUIRE(ctrl.configured_macros()[0].presets[0] == "LED_PARTY");
+    REQUIRE(ctrl.configured_macros()[0].presets[1] == "LED_DIM");
     REQUIRE(ctrl.configured_macros()[1].display_name == "Status LED");
     REQUIRE(ctrl.configured_macros()[1].type == helix::led::MacroLedType::TOGGLE);
     REQUIRE(ctrl.configured_macros()[1].toggle_macro == "STATUS_TOGGLE");

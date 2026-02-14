@@ -1322,11 +1322,18 @@ void LedController::load_config() {
                 }
             }
 
-            // Parse presets (new format) or custom_actions (legacy)
+            // Parse presets (new format: macro-only) or legacy (name+macro pairs / custom_actions)
             if (m.contains("presets") && m["presets"].is_array()) {
                 for (const auto& p : m["presets"]) {
                     if (p.is_object()) {
-                        info.presets.emplace_back(p.value("name", ""), p.value("macro", ""));
+                        // Handle both old {name, macro} and new {macro} formats
+                        auto macro_val = p.value("macro", "");
+                        if (!macro_val.empty()) {
+                            info.presets.emplace_back(macro_val);
+                        }
+                    } else if (p.is_string()) {
+                        // Future-proof: bare string array
+                        info.presets.emplace_back(p.get<std::string>());
                     }
                 }
                 if (!info.presets.empty() && type_str.empty()) {
@@ -1336,7 +1343,10 @@ void LedController::load_config() {
                 // Legacy format: custom_actions -> presets
                 for (const auto& a : m["custom_actions"]) {
                     if (a.is_object()) {
-                        info.presets.emplace_back(a.value("label", ""), a.value("macro", ""));
+                        auto macro_val = a.value("macro", "");
+                        if (!macro_val.empty()) {
+                            info.presets.emplace_back(macro_val);
+                        }
                     }
                 }
                 if (!info.presets.empty() && type_str.empty()) {
@@ -1435,8 +1445,8 @@ void LedController::save_config() {
         obj["toggle_macro"] = m.toggle_macro;
 
         nlohmann::json presets_arr_macro = nlohmann::json::array();
-        for (const auto& [name, macro_gcode] : m.presets) {
-            presets_arr_macro.push_back({{"name", name}, {"macro", macro_gcode}});
+        for (const auto& preset_macro : m.presets) {
+            presets_arr_macro.push_back({{"macro", preset_macro}});
         }
         obj["presets"] = presets_arr_macro;
         macros_arr.push_back(obj);

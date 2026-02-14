@@ -153,7 +153,7 @@ TEST_CASE("MacroBackend macro management", "[led]") {
     macro.display_name = "Cabinet Light";
     macro.on_macro = "LIGHTS_ON";
     macro.off_macro = "LIGHTS_OFF";
-    macro.presets = {{"Party Mode", "LED_PARTY"}};
+    macro.presets = {"LED_PARTY"};
 
     backend.add_macro(macro);
     REQUIRE(backend.is_available());
