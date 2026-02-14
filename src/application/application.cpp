@@ -660,6 +660,14 @@ bool Application::init_display() {
     // Initialize splash screen manager for deferred exit
     m_splash_manager.start(get_runtime_config()->splash_pid);
 
+    // Suppress LVGL rendering while splash is alive — prevents framebuffer flicker
+    // from both processes writing to the same framebuffer simultaneously.
+    // Re-enabled in main loop when splash exits.
+    if (!m_splash_manager.has_exited()) {
+        lv_display_enable_invalidation(nullptr, false);
+        spdlog::debug("[Application] Display invalidation suppressed while splash is active");
+    }
+
     return true;
 }
 
@@ -1901,6 +1909,13 @@ int Application::main_loop() {
     uint32_t last_fb_selfheal_tick = start_time;
     static constexpr uint32_t FB_SELFHEAL_INTERVAL_MS = 10000; // 10 seconds
 
+    // Failsafe: track invalidation suppression with a hard deadline.
+    // If splash handoff doesn't complete within this time, force rendering back on
+    // to avoid a permanently black screen.
+    bool invalidation_suppressed = !m_splash_manager.has_exited();
+    static constexpr uint32_t INVALIDATION_FAILSAFE_MS =
+        8000; // Must exceed DISCOVERY_TIMEOUT_MS (5s)
+
     // Configure main loop handler
     helix::application::MainLoopHandler::Config loop_config;
     loop_config.screenshot_enabled = m_args.screenshot_enabled;
@@ -1949,13 +1964,17 @@ int Application::main_loop() {
         lv_timer_handler();
         fflush(stdout);
 
-        // Signal splash to exit after first frame is rendered
-        // This ensures our UI is visible before splash disappears
+        // Signal splash to exit when discovery completes (or timeout)
         m_splash_manager.check_and_signal();
 
-        // Post-splash full screen refresh after splash exits
-        // The splash clears the framebuffer; we need to repaint our UI
-        if (m_splash_manager.needs_post_splash_refresh()) {
+        // Post-splash handoff: re-enable rendering and repaint
+        // Display invalidation was suppressed to prevent framebuffer flicker
+        // while both splash and main app were running simultaneously.
+        if (invalidation_suppressed && m_splash_manager.needs_post_splash_refresh()) {
+            invalidation_suppressed = false;
+            lv_display_enable_invalidation(nullptr, true);
+            spdlog::info("[Application] Display invalidation re-enabled after splash exit");
+
             lv_obj_t* screen = lv_screen_active();
             if (screen) {
                 lv_obj_update_layout(screen);
@@ -1963,6 +1982,16 @@ int Application::main_loop() {
                 lv_refr_now(nullptr);
             }
             m_splash_manager.mark_refresh_done();
+        }
+
+        // Failsafe: if invalidation is still suppressed after hard deadline, force it back on.
+        // Prevents permanent black screen if splash handoff fails for any reason.
+        if (invalidation_suppressed && (current_tick - start_time) >= INVALIDATION_FAILSAFE_MS) {
+            invalidation_suppressed = false;
+            lv_display_enable_invalidation(nullptr, true);
+            spdlog::warn("[Application] Invalidation failsafe triggered after {}ms",
+                         INVALIDATION_FAILSAFE_MS);
+            lv_obj_invalidate(lv_screen_active());
         }
 
         // Benchmark mode - force redraws and report FPS
