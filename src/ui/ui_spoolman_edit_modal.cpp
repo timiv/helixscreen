@@ -95,7 +95,19 @@ bool SpoolEditModal::show_for_spool(lv_obj_t* parent, const SpoolInfo& spool, Mo
 void SpoolEditModal::on_show() {
     active_instance_ = this;
     callback_guard_ = std::make_shared<bool>(true);
+
+    // Suppress field change events during initial population — setting textarea
+    // text fires VALUE_CHANGED which would read formatted values back, and
+    // float→string→float round-trips can drift (e.g. 999.7 → "1000" → 1000.0)
+    populating_ = true;
     populate_fields();
+    populating_ = false;
+
+    // Snap original values to match formatted field values so is_dirty()
+    // compares what the user sees, not raw API doubles
+    read_fields_into(original_spool_);
+    working_spool_ = original_spool_;
+
     register_textareas();
     update_spool_preview();
     update_save_button_text();
@@ -204,6 +216,42 @@ void SpoolEditModal::populate_fields() {
     lv_obj_t* comment_field = find_widget("field_comment");
     if (comment_field) {
         lv_textarea_set_text(comment_field, working_spool_.comment.c_str());
+    }
+}
+
+void SpoolEditModal::read_fields_into(SpoolInfo& spool) {
+    if (!dialog_) {
+        return;
+    }
+
+    lv_obj_t* field = find_widget("field_remaining");
+    if (field) {
+        const char* text = lv_textarea_get_text(field);
+        spool.remaining_weight_g = (text && text[0]) ? std::atof(text) : 0;
+    }
+
+    field = find_widget("field_spool_weight");
+    if (field) {
+        const char* text = lv_textarea_get_text(field);
+        spool.spool_weight_g = (text && text[0]) ? std::atof(text) : 0;
+    }
+
+    field = find_widget("field_price");
+    if (field) {
+        const char* text = lv_textarea_get_text(field);
+        spool.price = (text && text[0]) ? std::atof(text) : 0;
+    }
+
+    field = find_widget("field_lot_nr");
+    if (field) {
+        const char* text = lv_textarea_get_text(field);
+        spool.lot_nr = text ? text : "";
+    }
+
+    field = find_widget("field_comment");
+    if (field) {
+        const char* text = lv_textarea_get_text(field);
+        spool.comment = text ? text : "";
     }
 }
 
@@ -358,41 +406,11 @@ void SpoolEditModal::handle_close() {
 }
 
 void SpoolEditModal::handle_field_changed() {
-    if (!dialog_) {
+    if (!dialog_ || populating_) {
         return;
     }
 
-    // Read current field values into working_spool_
-    lv_obj_t* field = find_widget("field_remaining");
-    if (field) {
-        const char* text = lv_textarea_get_text(field);
-        working_spool_.remaining_weight_g = text ? std::atof(text) : 0;
-    }
-
-    field = find_widget("field_spool_weight");
-    if (field) {
-        const char* text = lv_textarea_get_text(field);
-        working_spool_.spool_weight_g = text ? std::atof(text) : 0;
-    }
-
-    field = find_widget("field_price");
-    if (field) {
-        const char* text = lv_textarea_get_text(field);
-        working_spool_.price = text ? std::atof(text) : 0;
-    }
-
-    field = find_widget("field_lot_nr");
-    if (field) {
-        const char* text = lv_textarea_get_text(field);
-        working_spool_.lot_nr = text ? text : "";
-    }
-
-    field = find_widget("field_comment");
-    if (field) {
-        const char* text = lv_textarea_get_text(field);
-        working_spool_.comment = text ? text : "";
-    }
-
+    read_fields_into(working_spool_);
     validate_fields();
     update_spool_preview();
     update_save_button_text();
@@ -403,7 +421,10 @@ void SpoolEditModal::handle_reset() {
 
     working_spool_ = original_spool_;
 
+    populating_ = true;
     populate_fields();
+    populating_ = false;
+
     validate_fields();
     update_spool_preview();
     update_save_button_text();

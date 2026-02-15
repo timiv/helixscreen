@@ -84,11 +84,13 @@ class SpoolEditModal : public Modal {
     lv_subject_t save_button_text_subject_{};
     char save_button_text_buf_[16]{};
     bool subjects_initialized_ = false;
+    bool populating_ = false;
     void init_subjects();
     void deinit_subjects();
 
     // === Internal Methods ===
     void populate_fields();
+    void read_fields_into(SpoolInfo& spool);
     void register_textareas();
     void update_spool_preview();
     [[nodiscard]] bool is_dirty() const;
