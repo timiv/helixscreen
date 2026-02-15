@@ -86,13 +86,13 @@ load helpers
 # ============================================================================
 
 @test "all release targets include install.sh in package" {
-    # Every release target must copy install.sh into the scripts/ directory.
-    # This is critical: update_checker.cpp extracts install.sh from the tarball
-    # to run the version-matched installer. Without it, updates fail with
-    # "Installer not found".
+    # Every release target must copy install.sh into the tarball root (helixscreen/).
+    # This is critical: update_checker.cpp extracts helixscreen/INSTALLER_FILENAME
+    # from the tarball to run the version-matched installer. Without it, updates
+    # fail with "Installer not found".
     local targets=(release-pi release-pi32 release-ad5m release-k1 release-k1-dynamic release-k2 release-snapmaker-u1)
     local count
-    count=$(grep -c 'cp scripts/install\.sh.*\$(RELEASE_DIR)' mk/cross.mk)
+    count=$(grep -c 'cp scripts/\$(INSTALLER_FILENAME).*\$(RELEASE_DIR)' mk/cross.mk)
     # Must have one cp per release target
     [ "$count" -ge "${#targets[@]}" ]
 }
