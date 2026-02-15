@@ -5,11 +5,13 @@
 
 #include "ui_subscription_guard.h"
 
+#include "afc_config_manager.h"
 #include "ams_backend.h"
 #include "moonraker_client.h"
 
 #include <array>
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -48,6 +50,19 @@ class MoonrakerAPI;
  * - AFC_HOME               - Home the AFC system
  * - T{n}                   - Tool change (unload + load)
  */
+/**
+ * @brief Per-extruder info for toolchanger configurations
+ *
+ * When AFC detects a toolchanger (num_extruders > 1), the webhook status
+ * includes per-extruder data: which lane is loaded and which lanes can
+ * feed each extruder.
+ */
+struct AfcExtruderInfo {
+    std::string name;                         ///< Extruder name ("extruder", "extruder1")
+    std::string lane_loaded;                  ///< Currently loaded lane (or empty)
+    std::vector<std::string> available_lanes; ///< Lanes that can feed this extruder
+};
+
 class AmsBackendAfc : public AmsBackend {
   public:
     /**
@@ -241,6 +256,8 @@ class AmsBackendAfc : public AmsBackend {
     friend class AmsBackendAfcEndlessSpoolHelper;
     friend class AmsBackendAfcMultiUnitHelper;
     friend class HubSensorTestHelper;
+    friend class AmsBackendAfcMultiExtruderHelper;
+    friend class AmsBackendAfcConfigHelper;
 
   private:
     /**
@@ -389,6 +406,20 @@ class AmsBackendAfc : public AmsBackend {
     virtual AmsError execute_gcode(const std::string& gcode);
 
     /**
+     * @brief Execute a G-code command with user-facing toast notifications
+     *
+     * Like execute_gcode() but shows a success or error toast when the
+     * async Moonraker callback fires. Thread-safe (uses ui_async_call).
+     *
+     * @param gcode The G-code command to execute
+     * @param success_msg Toast message on success (empty = no toast)
+     * @param error_prefix Toast prefix on error (shown as "prefix: error details")
+     * @return AmsError indicating success or failure to queue command
+     */
+    AmsError execute_gcode_notify(const std::string& gcode, const std::string& success_msg,
+                                  const std::string& error_prefix);
+
+    /**
      * @brief Check common preconditions before operations
      *
      * Validates:
@@ -460,10 +491,30 @@ class AmsBackendAfc : public AmsBackend {
     std::vector<std::string> buffer_names_; ///< Discovered buffer names
     float bowden_length_{450.0f};           ///< Bowden tube length from hub (default 450mm)
 
+    // Multi-extruder (toolchanger) state
+    int num_extruders_{1}; ///< Number of extruders (1 = standard, 2+ = toolchanger)
+    std::vector<AfcExtruderInfo>
+        extruders_; ///< Per-extruder info (populated from system.extruders)
+
     // Path visualization state
     PathSegment error_segment_{PathSegment::NONE}; ///< Inferred error location
 
     // Endless spool configuration
     std::vector<helix::printer::EndlessSpoolConfig>
         endless_spool_configs_; ///< Per-lane backup config
+
+    // Config file managers (lazy-loaded on first device action access)
+    std::unique_ptr<AfcConfigManager> afc_config_;        ///< AFC/AFC.cfg
+    std::unique_ptr<AfcConfigManager> macro_vars_config_; ///< AFC/AFC_Macro_Vars.cfg
+    std::atomic<bool> configs_loading_{false};            ///< Currently loading config files
+    std::atomic<bool> configs_loaded_{
+        false}; ///< Config files have been loaded (acquire/release barrier)
+
+    /// Load AFC config files from printer
+    void load_afc_configs();
+
+    /// Helper to get macro variable as float
+    float get_macro_var_float(const std::string& key, float default_val) const;
+    /// Helper to get macro variable as bool
+    bool get_macro_var_bool(const std::string& key, bool default_val) const;
 };

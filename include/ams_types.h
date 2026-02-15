@@ -999,10 +999,11 @@ inline const char* action_type_to_string(ActionType type) {
  * Groups related device actions together in the UI.
  */
 struct DeviceSection {
-    std::string id;    ///< Section identifier (e.g., "calibration")
-    std::string label; ///< Display label (e.g., "Calibration")
-    std::string icon;  ///< Icon name for the section header
-    int display_order; ///< Sort order (0 = first)
+    std::string id;          ///< Section identifier (e.g., "calibration")
+    std::string label;       ///< Display label (e.g., "Calibration")
+    std::string icon;        ///< Icon name for the section header
+    int display_order;       ///< Sort order (0 = first)
+    std::string description; ///< Short description for settings row
 };
 
 /**

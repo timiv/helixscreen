@@ -3,6 +3,9 @@
 
 #include "ams_backend_afc.h"
 
+#include "ui_error_reporting.h"
+
+#include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
 
 #include <spdlog/fmt/fmt.h>
@@ -104,6 +107,9 @@ AmsError AmsBackendAfc::start() {
     // created and started BEFORE printer.objects.subscribe is called. The notification
     // handler registered above will naturally receive the initial state when the
     // subscription response arrives. No explicit query_initial_state() needed.
+
+    // Load AFC config files for device settings
+    load_afc_configs();
 
     // Emit initial state event OUTSIDE the lock to avoid deadlock
     if (should_emit) {
@@ -588,6 +594,59 @@ void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data) {
     }
     if (afc_data.contains("led_state") && afc_data["led_state"].is_boolean()) {
         afc_led_state_ = afc_data["led_state"].get<bool>();
+    }
+
+    // Parse system.num_extruders and system.extruders (toolchanger support)
+    if (afc_data.contains("system") && afc_data["system"].is_object()) {
+        const auto& system = afc_data["system"];
+
+        if (system.contains("num_extruders") && system["num_extruders"].is_number_integer()) {
+            num_extruders_ = system["num_extruders"].get<int>();
+            spdlog::debug("[AMS AFC] num_extruders: {}", num_extruders_);
+        }
+
+        if (system.contains("extruders") && system["extruders"].is_object()) {
+            extruders_.clear();
+            const auto& extruders_json = system["extruders"];
+
+            // Collect extruder names and sort for deterministic ordering
+            std::vector<std::string> extruder_names;
+            for (auto it = extruders_json.begin(); it != extruders_json.end(); ++it) {
+                extruder_names.push_back(it.key());
+            }
+            std::sort(extruder_names.begin(), extruder_names.end());
+
+            for (const auto& ext_name : extruder_names) {
+                const auto& ext_data = extruders_json[ext_name];
+                if (!ext_data.is_object()) {
+                    continue;
+                }
+
+                AfcExtruderInfo info;
+                info.name = ext_name;
+
+                // Parse lane_loaded (can be string or null)
+                if (ext_data.contains("lane_loaded")) {
+                    if (ext_data["lane_loaded"].is_string()) {
+                        info.lane_loaded = ext_data["lane_loaded"].get<std::string>();
+                    }
+                    // null or other types result in empty string (default)
+                }
+
+                // Parse lanes array
+                if (ext_data.contains("lanes") && ext_data["lanes"].is_array()) {
+                    for (const auto& lane : ext_data["lanes"]) {
+                        if (lane.is_string()) {
+                            info.available_lanes.push_back(lane.get<std::string>());
+                        }
+                    }
+                }
+
+                spdlog::debug("[AMS AFC] Extruder '{}': lane_loaded='{}', {} lanes", ext_name,
+                              info.lane_loaded, info.available_lanes.size());
+                extruders_.push_back(std::move(info));
+            }
+        }
     }
 
     // Parse error state
@@ -1287,6 +1346,34 @@ AmsError AmsBackendAfc::execute_gcode(const std::string& gcode) {
     return AmsErrorHelper::success();
 }
 
+AmsError AmsBackendAfc::execute_gcode_notify(const std::string& gcode,
+                                             const std::string& success_msg,
+                                             const std::string& error_prefix) {
+    if (!api_) {
+        return AmsErrorHelper::not_connected("MoonrakerAPI not available");
+    }
+
+    spdlog::info("[AMS AFC] Executing G-code: {}", gcode);
+
+    // Capture messages by value for async callbacks (thread-safe via ui_async_call)
+    api_->execute_gcode(
+        gcode,
+        [success_msg]() {
+            if (!success_msg.empty()) {
+                NOTIFY_SUCCESS("{}", success_msg);
+            }
+        },
+        [gcode, error_prefix](const MoonrakerError& err) {
+            if (!error_prefix.empty()) {
+                NOTIFY_ERROR("{}: {}", error_prefix, err.message);
+            } else {
+                spdlog::error("[AMS AFC] G-code failed: {} - {}", gcode, err.message);
+            }
+        });
+
+    return AmsErrorHelper::success();
+}
+
 AmsError AmsBackendAfc::load_filament(int slot_index) {
     std::string lane_name;
     {
@@ -1412,7 +1499,8 @@ AmsError AmsBackendAfc::recover() {
     }
 
     spdlog::info("[AMS AFC] Initiating recovery");
-    return execute_gcode("AFC_RESET");
+    return execute_gcode_notify("AFC_RESET", lv_tr("AFC recovery complete"),
+                                lv_tr("AFC recovery failed"));
 }
 
 AmsError AmsBackendAfc::reset() {
@@ -1426,7 +1514,8 @@ AmsError AmsBackendAfc::reset() {
     }
 
     spdlog::info("[AMS AFC] Homing AFC system");
-    return execute_gcode("AFC_HOME");
+    return execute_gcode_notify("AFC_HOME", lv_tr("AFC homing complete"),
+                                lv_tr("AFC homing failed"));
 }
 
 AmsError AmsBackendAfc::reset_lane(int slot_index) {
@@ -1465,7 +1554,8 @@ AmsError AmsBackendAfc::cancel() {
 
     // AFC may use AFC_ABORT or AFC_CANCEL to stop current operation
     spdlog::info("[AMS AFC] Cancelling current operation");
-    return execute_gcode("AFC_ABORT");
+    return execute_gcode_notify("AFC_ABORT", lv_tr("AFC operation aborted"),
+                                lv_tr("AFC abort failed"));
 }
 
 // ============================================================================
@@ -1793,14 +1883,89 @@ AmsError AmsBackendAfc::reset_endless_spool() {
 }
 
 // ============================================================================
+// AFC Config File Management
+// ============================================================================
+
+void AmsBackendAfc::load_afc_configs() {
+    if (configs_loading_.load() || configs_loaded_.load()) {
+        return;
+    }
+
+    if (!api_) {
+        spdlog::warn("[AMS AFC] Cannot load configs: MoonrakerAPI is null");
+        return;
+    }
+
+    configs_loading_ = true;
+
+    // Create managers if not yet created
+    if (!afc_config_) {
+        afc_config_ = std::make_unique<AfcConfigManager>(api_);
+    }
+    if (!macro_vars_config_) {
+        macro_vars_config_ = std::make_unique<AfcConfigManager>(api_);
+    }
+
+    // Track completion of both loads
+    auto loads_remaining = std::make_shared<std::atomic<int>>(2);
+
+    // Callbacks from download_file run on the libhv background thread.
+    // configs_loaded_ is std::atomic<bool> — the store (release) after both loads complete
+    // synchronizes-with the load (acquire) in get_device_actions() on the main thread,
+    // ensuring all parser writes are visible before the main thread reads them.
+    auto check_done = [this, loads_remaining]() {
+        if (loads_remaining->fetch_sub(1) == 1) {
+            // Both loads complete — release barrier ensures parser state is visible
+            configs_loading_.store(false, std::memory_order_relaxed);
+            configs_loaded_.store(true, std::memory_order_release);
+            spdlog::info("[AMS AFC] Config files loaded");
+            emit_event(EVENT_STATE_CHANGED);
+        }
+    };
+
+    afc_config_->load("AFC/AFC.cfg", [check_done](bool ok, const std::string& err) {
+        if (!ok) {
+            spdlog::warn("[AMS AFC] Failed to load AFC.cfg: {}", err);
+        }
+        check_done();
+    });
+
+    macro_vars_config_->load(
+        "AFC/AFC_Macro_Vars.cfg", [check_done](bool ok, const std::string& err) {
+            if (!ok) {
+                spdlog::warn("[AMS AFC] Failed to load AFC_Macro_Vars.cfg: {}", err);
+            }
+            check_done();
+        });
+}
+
+float AmsBackendAfc::get_macro_var_float(const std::string& key, float default_val) const {
+    if (!macro_vars_config_ || !macro_vars_config_->is_loaded()) {
+        return default_val;
+    }
+    return macro_vars_config_->parser().get_float("gcode_macro AFC_MacroVars", key, default_val);
+}
+
+bool AmsBackendAfc::get_macro_var_bool(const std::string& key, bool default_val) const {
+    if (!macro_vars_config_ || !macro_vars_config_->is_loaded()) {
+        return default_val;
+    }
+    return macro_vars_config_->parser().get_bool("gcode_macro AFC_MacroVars", key, default_val);
+}
+
+// ============================================================================
 // Device Actions (AFC-specific calibration and speed settings)
 // ============================================================================
 
 std::vector<helix::printer::DeviceSection> AmsBackendAfc::get_device_sections() const {
-    return {{"calibration", "Calibration", "wrench", 0},
-            {"speed", "Speed Settings", "speedometer", 1},
-            {"maintenance", "Maintenance", "wrench-outline", 2},
-            {"led", "LED & Modes", "lightbulb-outline", 3}};
+    return {{"calibration", "Calibration", "wrench", 0, "Bowden length and lane calibration"},
+            {"speed", "Speed Settings", "dashboard", 1, "Move speed multipliers"},
+            {"maintenance", "Maintenance", "wrench", 2, "Lane tests and motor resets"},
+            {"led", "LED & Modes", "lightbulb_outline", 3, "LED control and quiet mode"},
+            {"hub", "Hub & Cutter", "filament", 4, "Blade change and parking"},
+            {"tip_forming", "Tip Forming", "thermometer", 5, "Tip shaping configuration"},
+            {"purge", "Purge & Wipe", "water", 6, "Purge tower and brush settings"},
+            {"config", "Configuration", "cog", 7, "System configuration and mapping"}};
 }
 
 std::vector<helix::printer::DeviceAction> AmsBackendAfc::get_device_actions() const {
@@ -1808,166 +1973,436 @@ std::vector<helix::printer::DeviceAction> AmsBackendAfc::get_device_actions() co
     using helix::printer::ActionType;
     using helix::printer::DeviceAction;
 
-    return {// Calibration section
-            DeviceAction{
-                "calibration_wizard",
-                "Run Calibration Wizard",
-                "play",
-                "calibration",
-                "Interactive calibration for all lanes",
-                ActionType::BUTTON,
-                {}, // no value for button
-                {}, // no options
-                0,
-                0,  // min/max not used
-                "", // no unit
-                -1, // system-wide
-                true,
-                "" // enabled
-            },
-            DeviceAction{"bowden_length",
-                         "Bowden Length",
+    std::vector<DeviceAction> actions;
+
+    // Calibration section: wizard
+    actions.push_back(DeviceAction{
+        "calibration_wizard",
+        "Run Calibration Wizard",
+        "play",
+        "calibration",
+        "Interactive calibration for all lanes",
+        ActionType::BUTTON,
+        {}, // no value for button
+        {}, // no options
+        0,
+        0,  // min/max not used
+        "", // no unit
+        -1, // system-wide
+        true,
+        "" // enabled
+    });
+
+    // Calibration section: bowden length
+    // Multi-extruder (toolchanger): per-extruder bowden sliders
+    // Single extruder: single global bowden slider
+    if (num_extruders_ > 1 && !extruders_.empty()) {
+        for (int i = 0; i < static_cast<int>(extruders_.size()); ++i) {
+            std::string id = "bowden_T" + std::to_string(i);
+            std::string label = "Bowden Length (T" + std::to_string(i) + ")";
+            std::string desc = "Bowden tube length for tool " + std::to_string(i);
+            actions.push_back(
+                DeviceAction{id,
+                             label,
+                             "ruler",
+                             "calibration",
+                             desc,
+                             ActionType::SLIDER,
+                             bowden_length_, // shared default until per-extruder tracking
+                             {},
+                             100.0f,
+                             std::max(2000.0f, bowden_length_ * 1.5f),
+                             "mm",
+                             -1,
+                             true,
+                             ""});
+        }
+    } else {
+        actions.push_back(DeviceAction{"bowden_length",
+                                       "Bowden Length",
+                                       "ruler",
+                                       "calibration",
+                                       "Distance from hub to toolhead",
+                                       ActionType::SLIDER,
+                                       bowden_length_,
+                                       {},
+                                       100.0f,
+                                       std::max(2000.0f, bowden_length_ * 1.5f),
+                                       "mm",
+                                       -1,
+                                       true,
+                                       ""});
+    }
+
+    // Speed section
+    actions.push_back(DeviceAction{"speed_fwd",
+                                   "Forward Multiplier",
+                                   "fast-forward",
+                                   "speed",
+                                   "Speed multiplier for forward moves",
+                                   ActionType::SLIDER,
+                                   1.0f,
+                                   {},
+                                   0.5f,
+                                   2.0f,
+                                   "x",
+                                   -1,
+                                   true,
+                                   ""});
+    actions.push_back(DeviceAction{"speed_rev",
+                                   "Reverse Multiplier",
+                                   "rewind",
+                                   "speed",
+                                   "Speed multiplier for reverse moves",
+                                   ActionType::SLIDER,
+                                   1.0f,
+                                   {},
+                                   0.5f,
+                                   2.0f,
+                                   "x",
+                                   -1,
+                                   true,
+                                   ""});
+
+    // Maintenance section
+    actions.push_back(DeviceAction{"test_lanes",
+                                   "Test All Lanes",
+                                   "test-tube",
+                                   "maintenance",
+                                   "Run test sequence on all lanes",
+                                   ActionType::BUTTON,
+                                   {},
+                                   {},
+                                   0,
+                                   0,
+                                   "",
+                                   -1,
+                                   true,
+                                   ""});
+    actions.push_back(DeviceAction{"change_blade",
+                                   "Change Blade",
+                                   "box-cutter",
+                                   "maintenance",
+                                   "Initiate blade change procedure",
+                                   ActionType::BUTTON,
+                                   {},
+                                   {},
+                                   0,
+                                   0,
+                                   "",
+                                   -1,
+                                   true,
+                                   ""});
+    actions.push_back(DeviceAction{"park",
+                                   "Park",
+                                   "parking",
+                                   "maintenance",
+                                   "Park the AFC system",
+                                   ActionType::BUTTON,
+                                   {},
+                                   {},
+                                   0,
+                                   0,
+                                   "",
+                                   -1,
+                                   true,
+                                   ""});
+    actions.push_back(DeviceAction{"brush",
+                                   "Clean Brush",
+                                   "broom",
+                                   "maintenance",
+                                   "Run brush cleaning sequence",
+                                   ActionType::BUTTON,
+                                   {},
+                                   {},
+                                   0,
+                                   0,
+                                   "",
+                                   -1,
+                                   true,
+                                   ""});
+    actions.push_back(DeviceAction{"reset_motor",
+                                   "Reset Motor Timer",
+                                   "timer-refresh",
+                                   "maintenance",
+                                   "Reset motor run-time counter",
+                                   ActionType::BUTTON,
+                                   {},
+                                   {},
+                                   0,
+                                   0,
+                                   "",
+                                   -1,
+                                   true,
+                                   ""});
+
+    // LED & Modes section
+    actions.push_back(DeviceAction{"led_toggle",
+                                   afc_led_state_ ? "Turn Off LEDs" : "Turn On LEDs",
+                                   afc_led_state_ ? "lightbulb-off" : "lightbulb-on",
+                                   "led",
+                                   "Toggle AFC LED strip",
+                                   ActionType::BUTTON,
+                                   {},
+                                   {},
+                                   0,
+                                   0,
+                                   "",
+                                   -1,
+                                   true,
+                                   ""});
+    actions.push_back(DeviceAction{"quiet_mode",
+                                   "Toggle Quiet Mode",
+                                   "volume-off",
+                                   "led",
+                                   "Enable/disable quiet operation mode",
+                                   ActionType::BUTTON,
+                                   {},
+                                   {},
+                                   0,
+                                   0,
+                                   "",
+                                   -1,
+                                   true,
+                                   ""});
+
+    // ---- Config-backed actions (Hub & Cutter, Tip Forming, Purge) ----
+
+    // Acquire barrier pairs with release in load_afc_configs() to ensure
+    // parser state written on bg thread is visible here on the main thread.
+    bool loaded = configs_loaded_.load(std::memory_order_acquire);
+    bool cfg_ready = loaded && afc_config_ && afc_config_->is_loaded();
+    bool macro_ready = loaded && macro_vars_config_ && macro_vars_config_->is_loaded();
+    std::string not_loaded_reason = "Loading configuration...";
+
+    // Hub & Cutter section — reads from afc_config_, first AFC_hub section
+    {
+        std::string hub_section;
+        if (cfg_ready) {
+            auto hubs = afc_config_->parser().get_sections_matching("AFC_hub");
+            if (!hubs.empty()) {
+                hub_section = hubs[0];
+            }
+        }
+
+        bool hub_ready = cfg_ready && !hub_section.empty();
+
+        actions.push_back(DeviceAction{
+            "hub_cut_enabled",
+            "Cutter Enabled",
+            "content-cut",
+            "hub",
+            "Enable or disable the filament cutter",
+            ActionType::TOGGLE,
+            hub_ready ? std::any(afc_config_->parser().get_bool(hub_section, "cut", false))
+                      : std::any(false),
+            {},
+            0,
+            0,
+            "",
+            -1,
+            hub_ready,
+            hub_ready ? "" : not_loaded_reason});
+
+        actions.push_back(DeviceAction{
+            "hub_cut_dist",
+            "Cut Distance",
+            "ruler",
+            "hub",
+            "Distance to advance for filament cut",
+            ActionType::SLIDER,
+            hub_ready ? std::any(afc_config_->parser().get_float(hub_section, "cut_dist", 0.0f))
+                      : std::any(0.0f),
+            {},
+            0.0f,
+            100.0f,
+            "mm",
+            -1,
+            hub_ready,
+            hub_ready ? "" : not_loaded_reason});
+
+        actions.push_back(DeviceAction{"hub_bowden_length",
+                                       "Hub Bowden Length",
+                                       "ruler",
+                                       "hub",
+                                       "Bowden tube length from hub to toolhead",
+                                       ActionType::SLIDER,
+                                       hub_ready ? std::any(afc_config_->parser().get_float(
+                                                       hub_section, "afc_bowden_length", 450.0f))
+                                                 : std::any(450.0f),
+                                       {},
+                                       100.0f,
+                                       2000.0f,
+                                       "mm",
+                                       -1,
+                                       hub_ready,
+                                       hub_ready ? "" : not_loaded_reason});
+
+        actions.push_back(DeviceAction{"assisted_retract",
+                                       "Assisted Retract",
+                                       "arrow-u-left-bottom",
+                                       "hub",
+                                       "Enable assisted retract for filament changes",
+                                       ActionType::TOGGLE,
+                                       hub_ready ? std::any(afc_config_->parser().get_bool(
+                                                       hub_section, "assisted_retract", false))
+                                                 : std::any(false),
+                                       {},
+                                       0,
+                                       0,
+                                       "",
+                                       -1,
+                                       hub_ready,
+                                       hub_ready ? "" : not_loaded_reason});
+    }
+
+    // Tip Forming section — reads from macro_vars_config_
+    {
+        actions.push_back(DeviceAction{
+            "ramming_volume",
+            "Ramming Volume",
+            "hydraulic-oil-level",
+            "tip_forming",
+            "Volume of filament to ram during tip forming",
+            ActionType::SLIDER,
+            macro_ready ? std::any(get_macro_var_float("variable_ramming_volume", 0.0f))
+                        : std::any(0.0f),
+            {},
+            0.0f,
+            100.0f,
+            "",
+            -1,
+            macro_ready,
+            macro_ready ? "" : not_loaded_reason});
+
+        actions.push_back(DeviceAction{
+            "unloading_speed_start",
+            "Unloading Start Speed",
+            "speedometer",
+            "tip_forming",
+            "Initial speed for filament unloading",
+            ActionType::SLIDER,
+            macro_ready ? std::any(get_macro_var_float("variable_unloading_speed_start", 0.0f))
+                        : std::any(0.0f),
+            {},
+            0.0f,
+            200.0f,
+            "mm/s",
+            -1,
+            macro_ready,
+            macro_ready ? "" : not_loaded_reason});
+
+        actions.push_back(DeviceAction{
+            "cooling_tube_length",
+            "Cooling Tube Length",
+            "thermometer",
+            "tip_forming",
+            "Length of the cooling tube zone",
+            ActionType::SLIDER,
+            macro_ready ? std::any(get_macro_var_float("variable_cooling_tube_length", 0.0f))
+                        : std::any(0.0f),
+            {},
+            0.0f,
+            100.0f,
+            "mm",
+            -1,
+            macro_ready,
+            macro_ready ? "" : not_loaded_reason});
+
+        actions.push_back(DeviceAction{
+            "cooling_tube_retraction",
+            "Cooling Tube Retraction",
+            "thermometer",
+            "tip_forming",
+            "Retraction distance in cooling tube",
+            ActionType::SLIDER,
+            macro_ready ? std::any(get_macro_var_float("variable_cooling_tube_retraction", 0.0f))
+                        : std::any(0.0f),
+            {},
+            0.0f,
+            100.0f,
+            "mm",
+            -1,
+            macro_ready,
+            macro_ready ? "" : not_loaded_reason});
+    }
+
+    // Purge & Wipe section — reads from macro_vars_config_
+    {
+        actions.push_back(
+            DeviceAction{"purge_enabled",
+                         "Enable Purge",
+                         "spray",
+                         "purge",
+                         "Enable filament purge after tool change",
+                         ActionType::TOGGLE,
+                         macro_ready ? std::any(get_macro_var_bool("variable_purge_enabled", false))
+                                     : std::any(false),
+                         {},
+                         0,
+                         0,
+                         "",
+                         -1,
+                         macro_ready,
+                         macro_ready ? "" : not_loaded_reason});
+
+        actions.push_back(
+            DeviceAction{"purge_length",
+                         "Purge Length",
                          "ruler",
-                         "calibration",
-                         "Distance from hub to toolhead",
+                         "purge",
+                         "Length of filament to purge",
                          ActionType::SLIDER,
-                         bowden_length_, // current value from hub
-                         {},             // no options
-                         100.0f,
-                         std::max(2000.0f, bowden_length_ * 1.5f), // dynamic max
+                         macro_ready ? std::any(get_macro_var_float("variable_purge_length", 0.0f))
+                                     : std::any(0.0f),
+                         {},
+                         0.0f,
+                         200.0f,
                          "mm",
-                         -1, // system-wide
-                         true,
-                         ""},
-            // Speed section
-            DeviceAction{"speed_fwd",
-                         "Forward Multiplier",
-                         "fast-forward",
-                         "speed",
-                         "Speed multiplier for forward moves",
-                         ActionType::SLIDER,
-                         1.0f, // default
-                         {},
-                         0.5f,
-                         2.0f, // min/max
-                         "x",
                          -1,
-                         true,
-                         ""},
-            DeviceAction{"speed_rev",
-                         "Reverse Multiplier",
-                         "rewind",
-                         "speed",
-                         "Speed multiplier for reverse moves",
-                         ActionType::SLIDER,
-                         1.0f,
-                         {},
-                         0.5f,
-                         2.0f,
-                         "x",
-                         -1,
-                         true,
-                         ""},
-            // Maintenance section
-            DeviceAction{"test_lanes",
-                         "Test All Lanes",
-                         "test-tube",
-                         "maintenance",
-                         "Run test sequence on all lanes",
-                         ActionType::BUTTON,
-                         {},
-                         {},
-                         0,
-                         0,
-                         "",
-                         -1,
-                         true,
-                         ""},
-            DeviceAction{"change_blade",
-                         "Change Blade",
-                         "box-cutter",
-                         "maintenance",
-                         "Initiate blade change procedure",
-                         ActionType::BUTTON,
-                         {},
-                         {},
-                         0,
-                         0,
-                         "",
-                         -1,
-                         true,
-                         ""},
-            DeviceAction{"park",
-                         "Park",
-                         "parking",
-                         "maintenance",
-                         "Park the AFC system",
-                         ActionType::BUTTON,
-                         {},
-                         {},
-                         0,
-                         0,
-                         "",
-                         -1,
-                         true,
-                         ""},
-            DeviceAction{"brush",
-                         "Clean Brush",
+                         macro_ready,
+                         macro_ready ? "" : not_loaded_reason});
+
+        actions.push_back(
+            DeviceAction{"brush_enabled",
+                         "Enable Brush Wipe",
                          "broom",
-                         "maintenance",
-                         "Run brush cleaning sequence",
-                         ActionType::BUTTON,
-                         {},
-                         {},
-                         0,
-                         0,
-                         "",
-                         -1,
-                         true,
-                         ""},
-            DeviceAction{"reset_motor",
-                         "Reset Motor Timer",
-                         "timer-refresh",
-                         "maintenance",
-                         "Reset motor run-time counter",
-                         ActionType::BUTTON,
-                         {},
+                         "purge",
+                         "Enable brush wipe after purge",
+                         ActionType::TOGGLE,
+                         macro_ready ? std::any(get_macro_var_bool("variable_brush_enabled", false))
+                                     : std::any(false),
                          {},
                          0,
                          0,
                          "",
                          -1,
-                         true,
-                         ""},
-            // LED & Modes section
-            DeviceAction{"led_toggle",
-                         afc_led_state_ ? "Turn Off LEDs" : "Turn On LEDs",
-                         afc_led_state_ ? "lightbulb-off" : "lightbulb-on",
-                         "led",
-                         "Toggle AFC LED strip",
-                         ActionType::BUTTON,
-                         {},
-                         {},
-                         0,
-                         0,
-                         "",
-                         -1,
-                         true,
-                         ""},
-            DeviceAction{"quiet_mode",
-                         "Toggle Quiet Mode",
-                         "volume-off",
-                         "led",
-                         "Enable/disable quiet operation mode",
-                         ActionType::BUTTON,
-                         {},
-                         {},
-                         0,
-                         0,
-                         "",
-                         -1,
-                         true,
-                         ""}};
+                         macro_ready,
+                         macro_ready ? "" : not_loaded_reason});
+    }
+
+    // Config save section
+    {
+        bool has_changes = (afc_config_ && afc_config_->has_unsaved_changes()) ||
+                           (macro_vars_config_ && macro_vars_config_->has_unsaved_changes());
+
+        actions.push_back(DeviceAction{"save_restart",
+                                       "Save & Restart",
+                                       "content-save",
+                                       "config",
+                                       "Save config changes and restart Klipper",
+                                       ActionType::BUTTON,
+                                       {},
+                                       {},
+                                       0,
+                                       0,
+                                       "",
+                                       -1,
+                                       has_changes,
+                                       has_changes ? "" : "No unsaved changes"});
+    }
+
+    return actions;
 }
 
 AmsError AmsBackendAfc::execute_device_action(const std::string& action_id, const std::any& value) {
@@ -1998,6 +2433,35 @@ AmsError AmsBackendAfc::execute_device_action(const std::string& action_id, cons
                                      " LENGTH=" + std::to_string(static_cast<int>(length)));
             }
             return AmsErrorHelper::not_supported("No AFC units configured");
+        } catch (const std::bad_any_cast&) {
+            return AmsError(AmsResult::WRONG_STATE, "Invalid bowden length type",
+                            "Invalid value type", "Provide a numeric value");
+        }
+    } else if (action_id.rfind("bowden_T", 0) == 0) {
+        // Per-extruder bowden length (toolchanger): bowden_T0, bowden_T1, etc.
+        if (!value.has_value()) {
+            return AmsError(AmsResult::WRONG_STATE, "Bowden length value required", "Missing value",
+                            "Provide a bowden length value");
+        }
+        try {
+            float length = std::any_cast<float>(value);
+            std::lock_guard<std::recursive_mutex> lock(mutex_);
+            float max_len = std::max(2000.0f, bowden_length_ * 1.5f);
+            if (length < 100.0f || length > max_len) {
+                return AmsError(AmsResult::WRONG_STATE,
+                                fmt::format("Bowden length must be 100-{:.0f}mm", max_len),
+                                "Invalid value",
+                                fmt::format("Enter a length between 100 and {:.0f}mm", max_len));
+            }
+            // Extract tool index from action_id (e.g., "bowden_T0" -> 0)
+            int tool_idx = std::stoi(action_id.substr(8));
+            if (tool_idx >= 0 && tool_idx < static_cast<int>(extruders_.size())) {
+                // Use extruder name for the command
+                return execute_gcode("SET_BOWDEN_LENGTH EXTRUDER=" + extruders_[tool_idx].name +
+                                     " LENGTH=" + std::to_string(static_cast<int>(length)));
+            }
+            return AmsErrorHelper::not_supported("Invalid extruder index: " +
+                                                 std::to_string(tool_idx));
         } catch (const std::bad_any_cast&) {
             return AmsError(AmsResult::WRONG_STATE, "Invalid bowden length type",
                             "Invalid value type", "Provide a numeric value");
@@ -2036,6 +2500,159 @@ AmsError AmsBackendAfc::execute_device_action(const std::string& action_id, cons
         return execute_gcode(afc_led_state_ ? "TURN_OFF_AFC_LED" : "TURN_ON_AFC_LED");
     } else if (action_id == "quiet_mode") {
         return execute_gcode("AFC_QUIET_MODE");
+    }
+
+    // ---- Config-backed hub actions (afc_config_) ----
+    if (action_id == "hub_cut_enabled" || action_id == "hub_cut_dist" ||
+        action_id == "hub_bowden_length" || action_id == "assisted_retract") {
+        if (!afc_config_ || !afc_config_->is_loaded()) {
+            return AmsError(AmsResult::WRONG_STATE, "AFC config not loaded",
+                            "Configuration not available", "Wait for config to load");
+        }
+
+        auto hubs = afc_config_->parser().get_sections_matching("AFC_hub");
+        if (hubs.empty()) {
+            return AmsError(AmsResult::WRONG_STATE, "No hub section found in AFC config",
+                            "No hub configured", "Check AFC configuration");
+        }
+        const std::string& hub_section = hubs[0];
+
+        if (action_id == "hub_cut_enabled") {
+            try {
+                bool val = std::any_cast<bool>(value);
+                afc_config_->parser().set(hub_section, "cut", val ? "True" : "False");
+                afc_config_->mark_dirty();
+                return AmsErrorHelper::success();
+            } catch (const std::bad_any_cast&) {
+                return AmsError(AmsResult::WRONG_STATE, "Invalid value type for toggle",
+                                "Expected boolean", "");
+            }
+        } else if (action_id == "hub_cut_dist") {
+            try {
+                float val = std::any_cast<float>(value);
+                afc_config_->parser().set(hub_section, "cut_dist", fmt::format("{:g}", val));
+                afc_config_->mark_dirty();
+                return AmsErrorHelper::success();
+            } catch (const std::bad_any_cast&) {
+                return AmsError(AmsResult::WRONG_STATE, "Invalid value type for slider",
+                                "Expected float", "");
+            }
+        } else if (action_id == "hub_bowden_length") {
+            try {
+                float val = std::any_cast<float>(value);
+                afc_config_->parser().set(hub_section, "afc_bowden_length",
+                                          fmt::format("{:g}", val));
+                afc_config_->mark_dirty();
+                return AmsErrorHelper::success();
+            } catch (const std::bad_any_cast&) {
+                return AmsError(AmsResult::WRONG_STATE, "Invalid value type for slider",
+                                "Expected float", "");
+            }
+        } else if (action_id == "assisted_retract") {
+            try {
+                bool val = std::any_cast<bool>(value);
+                afc_config_->parser().set(hub_section, "assisted_retract", val ? "True" : "False");
+                afc_config_->mark_dirty();
+                return AmsErrorHelper::success();
+            } catch (const std::bad_any_cast&) {
+                return AmsError(AmsResult::WRONG_STATE, "Invalid value type for toggle",
+                                "Expected boolean", "");
+            }
+        }
+    }
+
+    // ---- Config-backed macro var actions (macro_vars_config_) ----
+    static const std::unordered_map<std::string, std::string> macro_var_slider_keys = {
+        {"ramming_volume", "variable_ramming_volume"},
+        {"unloading_speed_start", "variable_unloading_speed_start"},
+        {"cooling_tube_length", "variable_cooling_tube_length"},
+        {"cooling_tube_retraction", "variable_cooling_tube_retraction"},
+        {"purge_length", "variable_purge_length"},
+    };
+
+    static const std::unordered_map<std::string, std::string> macro_var_toggle_keys = {
+        {"purge_enabled", "variable_purge_enabled"},
+        {"brush_enabled", "variable_brush_enabled"},
+    };
+
+    if (auto it = macro_var_slider_keys.find(action_id); it != macro_var_slider_keys.end()) {
+        if (!macro_vars_config_ || !macro_vars_config_->is_loaded()) {
+            return AmsError(AmsResult::WRONG_STATE, "Macro vars config not loaded",
+                            "Configuration not available", "Wait for config to load");
+        }
+        try {
+            float val = std::any_cast<float>(value);
+            macro_vars_config_->parser().set("gcode_macro AFC_MacroVars", it->second,
+                                             fmt::format("{:g}", val));
+            macro_vars_config_->mark_dirty();
+            return AmsErrorHelper::success();
+        } catch (const std::bad_any_cast&) {
+            return AmsError(AmsResult::WRONG_STATE, "Invalid value type for slider",
+                            "Expected float", "");
+        }
+    }
+
+    if (auto it = macro_var_toggle_keys.find(action_id); it != macro_var_toggle_keys.end()) {
+        if (!macro_vars_config_ || !macro_vars_config_->is_loaded()) {
+            return AmsError(AmsResult::WRONG_STATE, "Macro vars config not loaded",
+                            "Configuration not available", "Wait for config to load");
+        }
+        try {
+            bool val = std::any_cast<bool>(value);
+            macro_vars_config_->parser().set("gcode_macro AFC_MacroVars", it->second,
+                                             val ? "True" : "False");
+            macro_vars_config_->mark_dirty();
+            return AmsErrorHelper::success();
+        } catch (const std::bad_any_cast&) {
+            return AmsError(AmsResult::WRONG_STATE, "Invalid value type for toggle",
+                            "Expected boolean", "");
+        }
+    }
+
+    // ---- Save & Restart action ----
+    if (action_id == "save_restart") {
+        bool has_changes = (afc_config_ && afc_config_->has_unsaved_changes()) ||
+                           (macro_vars_config_ && macro_vars_config_->has_unsaved_changes());
+        if (!has_changes) {
+            return AmsError(AmsResult::WRONG_STATE, "No unsaved changes", "Nothing to save", "");
+        }
+
+        auto saves_remaining = std::make_shared<std::atomic<int>>(0);
+
+        if (afc_config_ && afc_config_->has_unsaved_changes()) {
+            saves_remaining->fetch_add(1);
+        }
+        if (macro_vars_config_ && macro_vars_config_->has_unsaved_changes()) {
+            saves_remaining->fetch_add(1);
+        }
+
+        auto save_errors = std::make_shared<std::vector<std::string>>();
+
+        auto on_save_done = [this, saves_remaining, save_errors](bool ok, const std::string& err) {
+            if (!ok) {
+                spdlog::error("[AMS AFC] Config save failed: {}", err);
+                save_errors->push_back(err);
+            }
+            if (saves_remaining->fetch_sub(1) == 1) {
+                if (save_errors->empty()) {
+                    // All saves succeeded — restart Klipper to apply
+                    spdlog::info("[AMS AFC] All configs saved, sending RESTART");
+                    execute_gcode("RESTART");
+                } else {
+                    spdlog::error("[AMS AFC] {} config save(s) failed, NOT restarting",
+                                  save_errors->size());
+                }
+            }
+        };
+
+        if (afc_config_ && afc_config_->has_unsaved_changes()) {
+            afc_config_->save("AFC/AFC.cfg", on_save_done);
+        }
+        if (macro_vars_config_ && macro_vars_config_->has_unsaved_changes()) {
+            macro_vars_config_->save("AFC/AFC_Macro_Vars.cfg", on_save_done);
+        }
+
+        return AmsErrorHelper::success();
     }
 
     return AmsErrorHelper::not_supported("Unknown action: " + action_id);
