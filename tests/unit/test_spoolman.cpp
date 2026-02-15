@@ -737,6 +737,120 @@ TEST_CASE("Spoolman status - spool_id null handling", "[filament][parsing]") {
     }
 }
 
+// ============================================================================
+// filter_spools Tests
+// ============================================================================
+
+static std::vector<SpoolInfo> make_filter_test_spools() {
+    std::vector<SpoolInfo> spools;
+
+    SpoolInfo s1;
+    s1.id = 1;
+    s1.vendor = "Polymaker";
+    s1.material = "PLA";
+    s1.color_name = "Jet Black";
+    spools.push_back(s1);
+
+    SpoolInfo s2;
+    s2.id = 2;
+    s2.vendor = "eSUN";
+    s2.material = "PETG";
+    s2.color_name = "Blue";
+    spools.push_back(s2);
+
+    SpoolInfo s3;
+    s3.id = 3;
+    s3.vendor = "Polymaker";
+    s3.material = "ASA";
+    s3.color_name = "Red";
+    spools.push_back(s3);
+
+    SpoolInfo s4;
+    s4.id = 42;
+    s4.vendor = "Hatchbox";
+    s4.material = "PLA";
+    s4.color_name = "White";
+    spools.push_back(s4);
+
+    return spools;
+}
+
+TEST_CASE("filter_spools - empty query returns all", "[filament][filter]") {
+    auto spools = make_filter_test_spools();
+    auto result = filter_spools(spools, "");
+    REQUIRE(result.size() == spools.size());
+}
+
+TEST_CASE("filter_spools - whitespace-only query returns all", "[filament][filter]") {
+    auto spools = make_filter_test_spools();
+    auto result = filter_spools(spools, "   ");
+    REQUIRE(result.size() == spools.size());
+}
+
+TEST_CASE("filter_spools - single term matches material", "[filament][filter]") {
+    auto spools = make_filter_test_spools();
+    auto result = filter_spools(spools, "PLA");
+    REQUIRE(result.size() == 2);
+    REQUIRE(result[0].id == 1);
+    REQUIRE(result[1].id == 42);
+}
+
+TEST_CASE("filter_spools - single term matches vendor", "[filament][filter]") {
+    auto spools = make_filter_test_spools();
+    auto result = filter_spools(spools, "polymaker");
+    REQUIRE(result.size() == 2);
+    REQUIRE(result[0].id == 1);
+    REQUIRE(result[1].id == 3);
+}
+
+TEST_CASE("filter_spools - multi-term AND matching", "[filament][filter]") {
+    auto spools = make_filter_test_spools();
+    auto result = filter_spools(spools, "polymaker pla");
+    REQUIRE(result.size() == 1);
+    REQUIRE(result[0].id == 1);
+}
+
+TEST_CASE("filter_spools - case insensitive", "[filament][filter]") {
+    auto spools = make_filter_test_spools();
+    auto result = filter_spools(spools, "ESUN petg");
+    REQUIRE(result.size() == 1);
+    REQUIRE(result[0].id == 2);
+}
+
+TEST_CASE("filter_spools - spool ID search with #", "[filament][filter]") {
+    auto spools = make_filter_test_spools();
+    auto result = filter_spools(spools, "#42");
+    REQUIRE(result.size() == 1);
+    REQUIRE(result[0].id == 42);
+}
+
+TEST_CASE("filter_spools - spool ID search without #", "[filament][filter]") {
+    auto spools = make_filter_test_spools();
+    // "42" matches spool #42's searchable text which contains "#42"
+    auto result = filter_spools(spools, "42");
+    REQUIRE(result.size() == 1);
+    REQUIRE(result[0].id == 42);
+}
+
+TEST_CASE("filter_spools - color name search", "[filament][filter]") {
+    auto spools = make_filter_test_spools();
+    auto result = filter_spools(spools, "blue");
+    REQUIRE(result.size() == 1);
+    REQUIRE(result[0].id == 2);
+}
+
+TEST_CASE("filter_spools - no matches returns empty", "[filament][filter]") {
+    auto spools = make_filter_test_spools();
+    auto result = filter_spools(spools, "nonexistent");
+    REQUIRE(result.empty());
+}
+
+TEST_CASE("filter_spools - empty spool list returns empty", "[filament][filter]") {
+    std::vector<SpoolInfo> empty;
+    auto result = filter_spools(empty, "PLA");
+    REQUIRE(result.empty());
+}
+
 TEST_CASE("SpoolInfo - realistic spool scenarios", "[filament][integration]") {
     SECTION("Typical PLA spool usage") {
         SpoolInfo spool;

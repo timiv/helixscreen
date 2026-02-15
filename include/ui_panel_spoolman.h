@@ -5,11 +5,13 @@
 
 #include "ui_spoolman_context_menu.h"
 #include "ui_spoolman_edit_modal.h"
+#include "ui_spoolman_list_view.h"
 
 #include "overlay_base.h"
 #include "spoolman_types.h" // For SpoolInfo
 #include "subject_managed_panel.h"
 
+#include <string>
 #include <vector>
 
 /**
@@ -70,14 +72,23 @@ class SpoolmanPanel : public OverlayBase {
 
   private:
     // ========== UI Widget Pointers ==========
-    lv_obj_t* spool_list_ = nullptr; // Still needed for populate_spool_list()
+    lv_obj_t* spool_list_ = nullptr;
 
     // ========== Flags ==========
     bool callbacks_registered_ = false;
 
     // ========== State ==========
     std::vector<SpoolInfo> cached_spools_;
+    std::vector<SpoolInfo> filtered_spools_; ///< Filtered view of cached_spools_
     int active_spool_id_ = -1;
+
+    // ========== Search ==========
+    std::string search_query_;
+    lv_timer_t* search_debounce_timer_ = nullptr;
+    static constexpr uint32_t SEARCH_DEBOUNCE_MS = 300;
+
+    // ========== Virtualized List View ==========
+    helix::ui::SpoolmanListView list_view_;
 
     // ========== Subjects ==========
     SubjectManager subjects_;          ///< RAII subject manager
@@ -89,7 +100,7 @@ class SpoolmanPanel : public OverlayBase {
     [[nodiscard]] const SpoolInfo* find_cached_spool(int spool_id) const;
 
     void populate_spool_list();
-    void update_row_visuals(lv_obj_t* row, const SpoolInfo& spool);
+    void apply_filter();
     void update_active_indicators();
     void show_loading_state();
     void show_empty_state();
@@ -110,6 +121,9 @@ class SpoolmanPanel : public OverlayBase {
     // ========== Static Event Callbacks ==========
     static void on_spool_row_clicked(lv_event_t* e);
     static void on_refresh_clicked(lv_event_t* e);
+    static void on_scroll(lv_event_t* e);
+    static void on_search_changed(lv_event_t* e);
+    static void on_search_timer(lv_timer_t* timer);
 };
 
 // ============================================================================

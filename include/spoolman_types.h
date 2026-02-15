@@ -156,6 +156,24 @@ struct FilamentUsageRecord {
 };
 
 // ============================================================================
+// Spool Filtering
+// ============================================================================
+
+/**
+ * @brief Filter spools by a multi-term search query
+ *
+ * Each space-separated term must match somewhere in the spool's combined
+ * searchable text (ID, vendor, material, color_name). Case-insensitive.
+ * Empty query returns all spools.
+ *
+ * @param spools Input spool list
+ * @param query Space-separated search terms
+ * @return Filtered spool list (copies matching spools)
+ */
+std::vector<SpoolInfo> filter_spools(const std::vector<SpoolInfo>& spools,
+                                     const std::string& query);
+
+// ============================================================================
 // Spoolman Callback Types
 // ============================================================================
 

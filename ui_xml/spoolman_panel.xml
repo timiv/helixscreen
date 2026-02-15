@@ -12,6 +12,17 @@
                 hide_action_button_text="true" action_button_callback="on_spoolman_refresh_clicked"
                 action_button_bg_color="#elevated_bg" action_button_width="40" action_button_height="40"
                 action_button_radius="9999"/>
+    <!-- Search Row -->
+    <lv_obj name="search_row"
+            width="100%" height="content" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
+            style_pad_column="#space_md" style_pad_left="#space_lg" style_pad_right="#space_lg"
+            style_pad_top="#space_sm" style_pad_bottom="#space_sm">
+      <text_input name="search_box"
+                  placeholder_text="Search spools..." placeholder_tag="Search spools..." flex_grow="1" style_min_width="120"
+                  style_max_height="#input_height">
+        <event_cb trigger="value_changed" callback="on_spoolman_search_changed"/>
+      </text_input>
+    </lv_obj>
     <!-- Content Area -->
     <lv_obj name="overlay_content"
             width="100%" flex_grow="1" style_pad_all="#space_lg" style_pad_gap="#space_md" scrollable="false"
