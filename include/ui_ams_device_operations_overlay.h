@@ -168,6 +168,9 @@ class AmsDeviceOperationsOverlay : public OverlayBase {
     /// Subject for bypass active state (0=inactive, 1=active)
     lv_subject_t bypass_active_subject_;
 
+    /// Subject for hardware bypass sensor (0=virtual toggle, 1=hardware sensor)
+    lv_subject_t hw_bypass_sensor_subject_;
+
     /// Subject for auto-heat support (0=not supported, 1=supported)
     lv_subject_t supports_auto_heat_subject_;
 

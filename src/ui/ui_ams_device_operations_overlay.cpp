@@ -12,6 +12,7 @@
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_nav_manager.h"
+#include "ui_status_pill.h"
 
 #include "ams_backend.h"
 #include "ams_state.h"
@@ -54,6 +55,7 @@ AmsDeviceOperationsOverlay::~AmsDeviceOperationsOverlay() {
         lv_subject_deinit(&status_subject_);
         lv_subject_deinit(&supports_bypass_subject_);
         lv_subject_deinit(&bypass_active_subject_);
+        lv_subject_deinit(&hw_bypass_sensor_subject_);
         lv_subject_deinit(&supports_auto_heat_subject_);
         lv_subject_deinit(&has_backend_subject_);
     }
@@ -87,6 +89,9 @@ void AmsDeviceOperationsOverlay::init_subjects() {
 
     lv_subject_init_int(&bypass_active_subject_, 0);
     lv_xml_register_subject(nullptr, "ams_device_ops_bypass_active", &bypass_active_subject_);
+
+    lv_subject_init_int(&hw_bypass_sensor_subject_, 0);
+    lv_xml_register_subject(nullptr, "ams_device_ops_hw_bypass_sensor", &hw_bypass_sensor_subject_);
 
     lv_subject_init_int(&supports_auto_heat_subject_, 0);
     lv_xml_register_subject(nullptr, "ams_device_ops_supports_auto_heat",
@@ -184,6 +189,7 @@ void AmsDeviceOperationsOverlay::update_from_backend() {
         lv_subject_set_int(&has_backend_subject_, 0);
         lv_subject_set_int(&supports_bypass_subject_, 0);
         lv_subject_set_int(&bypass_active_subject_, 0);
+        lv_subject_set_int(&hw_bypass_sensor_subject_, 0);
         lv_subject_set_int(&supports_auto_heat_subject_, 0);
         snprintf(system_info_buf_, sizeof(system_info_buf_), "");
         lv_subject_copy_string(&system_info_subject_, system_info_buf_);
@@ -214,6 +220,18 @@ void AmsDeviceOperationsOverlay::update_from_backend() {
     lv_subject_copy_string(&system_info_subject_, system_info_buf_);
     lv_subject_set_int(&supports_bypass_subject_, info.supports_bypass ? 1 : 0);
     lv_subject_set_int(&bypass_active_subject_, backend->is_bypass_active() ? 1 : 0);
+    lv_subject_set_int(&hw_bypass_sensor_subject_, info.has_hardware_bypass_sensor ? 1 : 0);
+
+    // Update hardware bypass status pill if applicable
+    if (info.has_hardware_bypass_sensor && overlay_) {
+        auto* pill = lv_obj_find_by_name(overlay_, "bypass_status_pill");
+        if (pill) {
+            bool active = backend->is_bypass_active();
+            ui_status_pill_set_text(pill, active ? lv_tr("Active") : lv_tr("Inactive"));
+            ui_status_pill_set_variant(pill, active ? "success" : "muted");
+        }
+    }
+
     lv_subject_set_int(&supports_auto_heat_subject_, backend->supports_auto_heat_on_load() ? 1 : 0);
 
     // Update status
@@ -407,6 +425,13 @@ void AmsDeviceOperationsOverlay::on_bypass_toggled(lv_event_t* e) {
     if (!toggle || !lv_obj_is_valid(toggle)) {
         spdlog::warn("[AmsDeviceOperationsOverlay] Stale callback - toggle no longer valid");
     } else {
+        // Guard: hardware sensor controls bypass — toggle should be hidden but check anyway
+        AmsBackend* backend_check = AmsState::instance().get_backend();
+        if (backend_check && backend_check->get_system_info().has_hardware_bypass_sensor) {
+            NOTIFY_WARNING("{}", lv_tr("Bypass controlled by hardware sensor"));
+            return;
+        }
+
         bool is_checked = lv_obj_has_state(toggle, LV_STATE_CHECKED);
 
         spdlog::info("[AmsDeviceOperationsOverlay] Bypass toggle: {}",
