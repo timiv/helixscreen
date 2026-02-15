@@ -26,6 +26,7 @@ Welcome to the HelixScreen documentation. Choose your path:
 | Document | Description |
 |----------|-------------|
 | [**Development Guide**](devel/DEVELOPMENT.md) | Build system, workflow, and contributing |
+| [**UI Contributor Guide**](devel/UI_CONTRIBUTOR_GUIDE.md) | **Start here for UI/layout work** — breakpoints, tokens, widgets, overrides |
 | [**Architecture**](devel/ARCHITECTURE.md) | System design and patterns |
 | [**Build System**](devel/BUILD_SYSTEM.md) | Makefile, cross-compilation, patches |
 | [**Testing**](devel/TESTING.md) | Test infrastructure and Catch2 usage |
@@ -157,6 +158,7 @@ moonraker-plugin/
 | Use HelixScreen | [User Guide](user/USER_GUIDE.md) |
 | Build from source | [Development Guide](devel/DEVELOPMENT.md) |
 | Contribute code | [Development Guide - Contributing](devel/DEVELOPMENT.md#contributing) |
+| Fix layouts / contribute UI | [UI Contributor Guide](devel/UI_CONTRIBUTOR_GUIDE.md) |
 | Create XML layouts | [LVGL 9 XML Guide](devel/LVGL9_XML_GUIDE.md) |
 | Understand the architecture | [Architecture Guide](devel/ARCHITECTURE.md) |
 | Cross-compile for Pi | [Build System - Cross-Compilation](devel/BUILD_SYSTEM.md#cross-compilation-embedded-targets) |
