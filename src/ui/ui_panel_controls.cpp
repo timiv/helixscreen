@@ -1011,7 +1011,7 @@ void ControlsPanel::handle_home_all() {
         return;
     }
     if (api_) {
-        operation_guard_.begin(30000, [] { NOTIFY_WARNING("Homing timed out"); });
+        operation_guard_.begin(300000, [] { NOTIFY_WARNING("Homing timed out"); });
         NOTIFY_INFO("Homing all axes...");
         api_->home_axes(
             "XYZ",
@@ -1036,7 +1036,7 @@ void ControlsPanel::handle_home_xy() {
         return;
     }
     if (api_) {
-        operation_guard_.begin(30000, [] { NOTIFY_WARNING("Homing timed out"); });
+        operation_guard_.begin(300000, [] { NOTIFY_WARNING("Homing timed out"); });
         NOTIFY_INFO("Homing XY...");
         api_->home_axes(
             "XY",
@@ -1061,7 +1061,7 @@ void ControlsPanel::handle_home_z() {
         return;
     }
     if (api_) {
-        operation_guard_.begin(30000, [] { NOTIFY_WARNING("Homing timed out"); });
+        operation_guard_.begin(300000, [] { NOTIFY_WARNING("Homing timed out"); });
         NOTIFY_INFO("Homing Z...");
         api_->home_axes(
             "Z",
@@ -1086,7 +1086,7 @@ void ControlsPanel::handle_qgl() {
         return;
     }
     if (api_) {
-        operation_guard_.begin(180000, [] { NOTIFY_WARNING("QGL timed out"); });
+        operation_guard_.begin(600000, [] { NOTIFY_WARNING("QGL timed out"); });
         NOTIFY_INFO("Quad Gantry Level started...");
         api_->execute_gcode(
             "QUAD_GANTRY_LEVEL",
@@ -1112,7 +1112,7 @@ void ControlsPanel::handle_z_tilt() {
         return;
     }
     if (api_) {
-        operation_guard_.begin(180000, [] { NOTIFY_WARNING("Z-Tilt timed out"); });
+        operation_guard_.begin(600000, [] { NOTIFY_WARNING("Z-Tilt timed out"); });
         NOTIFY_INFO("Z-Tilt Adjust started...");
         api_->execute_gcode(
             "Z_TILT_ADJUST",
