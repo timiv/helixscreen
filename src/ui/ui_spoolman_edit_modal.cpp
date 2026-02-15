@@ -8,6 +8,7 @@
 #include "ui_toast.h"
 #include "ui_update_queue.h"
 
+#include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
 #include "theme_manager.h"
 
@@ -426,7 +427,7 @@ void SpoolEditModal::handle_reset() {
     update_spool_preview();
     update_save_button_text();
 
-    ui_toast_show(ToastSeverity::INFO, "Reset to original values", 2000);
+    ui_toast_show(ToastSeverity::INFO, lv_tr("Reset to original values"), 2000);
 }
 
 void SpoolEditModal::handle_save() {
@@ -443,7 +444,7 @@ void SpoolEditModal::handle_save() {
 
     if (!api_) {
         spdlog::warn("[SpoolEditModal] No API, cannot save");
-        ui_toast_show(ToastSeverity::ERROR, "API not available", 3000);
+        ui_toast_show(ToastSeverity::ERROR, lv_tr("API not available"), 3000);
         return;
     }
 
@@ -488,7 +489,7 @@ void SpoolEditModal::handle_save() {
                 if (!self->callback_guard_) {
                     return;
                 }
-                ui_toast_show(ToastSeverity::SUCCESS, "Spool saved", 2000);
+                ui_toast_show(ToastSeverity::SUCCESS, lv_tr("Spool saved"), 2000);
                 if (self->completion_callback_) {
                     self->completion_callback_(true);
                 }
@@ -500,7 +501,7 @@ void SpoolEditModal::handle_save() {
     auto on_error = [spool_id](const MoonrakerError& err) {
         spdlog::error("[SpoolEditModal] Failed to save spool {}: {}", spool_id, err.message);
         ui_async_call(
-            [](void*) { ui_toast_show(ToastSeverity::ERROR, "Failed to save spool", 3000); },
+            [](void*) { ui_toast_show(ToastSeverity::ERROR, lv_tr("Failed to save spool"), 3000); },
             nullptr);
     };
 

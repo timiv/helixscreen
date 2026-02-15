@@ -421,7 +421,9 @@ void LedSettingsOverlay::rebuild_macro_edit_controls(lv_obj_t* container, int in
     auto* type_row =
         static_cast<lv_obj_t*>(lv_xml_create(container, "setting_form_dropdown", type_attrs));
     auto* type_dd = lv_obj_find_by_name(type_row, "dropdown");
-    lv_dropdown_set_options(type_dd, "On/Off (state-aware)\nToggle (fire-and-forget)\nPreset");
+    std::string type_options = std::string(lv_tr("On/Off (state-aware)")) + "\n" +
+                               lv_tr("Toggle (fire-and-forget)") + "\n" + lv_tr("Preset");
+    lv_dropdown_set_options(type_dd, type_options.c_str());
     lv_obj_set_name(type_dd, "macro_type_dropdown");
 
     // Set current type

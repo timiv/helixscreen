@@ -492,7 +492,7 @@ void SpoolmanPanel::handle_context_action(helix::ui::SpoolmanContextMenu::MenuAc
     case MenuAction::PRINT_LABEL:
         // TODO: Print label (Phase 4)
         spdlog::info("[{}] Print label for spool {} (not yet implemented)", get_name(), spool_id);
-        ui_toast_show(ToastSeverity::INFO, "Label printing coming soon", 2000);
+        ui_toast_show(ToastSeverity::INFO, lv_tr("Label printing coming soon"), 2000);
         break;
 
     case MenuAction::DELETE:
@@ -534,7 +534,8 @@ void SpoolmanPanel::set_active_spool(int spool_id) {
 
                     self->active_spool_id_ = id;
                     self->update_active_indicators();
-                    ui_toast_show(ToastSeverity::SUCCESS, ("Active: " + name).c_str(), 2000);
+                    std::string msg = std::string(lv_tr("Active")) + ": " + name;
+                    ui_toast_show(ToastSeverity::SUCCESS, msg.c_str(), 2000);
                 },
                 new std::pair<SpoolmanPanel*, std::pair<int, std::string>>(
                     this, {spool_id, std::move(spool_name)}));
@@ -587,14 +588,14 @@ void SpoolmanPanel::delete_spool(int spool_id) {
         spool_desc = "Spool #" + std::to_string(spool_id);
     }
 
-    std::string message = spool_desc + "\nThis cannot be undone.";
+    std::string message = spool_desc + "\n" + lv_tr("This cannot be undone.");
 
     // Store spool_id for the confirmation callback via a static (only one delete at a time)
     static int s_pending_delete_id = 0;
     s_pending_delete_id = spool_id;
 
     ui_modal_show_confirmation(
-        "Delete Spool?", message.c_str(), ModalSeverity::Warning, "Delete",
+        lv_tr("Delete Spool?"), message.c_str(), ModalSeverity::Warning, lv_tr("Delete"),
         [](lv_event_t* /*e*/) {
             // Close the confirmation dialog immediately
             lv_obj_t* top = Modal::get_top();
@@ -607,7 +608,7 @@ void SpoolmanPanel::delete_spool(int spool_id) {
 
             MoonrakerAPI* api = get_moonraker_api();
             if (!api) {
-                ui_toast_show(ToastSeverity::ERROR, "API not available", 3000);
+                ui_toast_show(ToastSeverity::ERROR, lv_tr("API not available"), 3000);
                 return;
             }
 
@@ -618,7 +619,7 @@ void SpoolmanPanel::delete_spool(int spool_id) {
                     // Schedule UI work on LVGL thread (API callbacks run on background thread)
                     ui_async_call(
                         [](void*) {
-                            ui_toast_show(ToastSeverity::SUCCESS, "Spool deleted", 2000);
+                            ui_toast_show(ToastSeverity::SUCCESS, lv_tr("Spool deleted"), 2000);
                             get_global_spoolman_panel().refresh_spools();
                         },
                         nullptr);
@@ -627,7 +628,8 @@ void SpoolmanPanel::delete_spool(int spool_id) {
                     spdlog::error("[Spoolman] Failed to delete spool {}: {}", id, err.message);
                     ui_async_call(
                         [](void*) {
-                            ui_toast_show(ToastSeverity::ERROR, "Failed to delete spool", 3000);
+                            ui_toast_show(ToastSeverity::ERROR, lv_tr("Failed to delete spool"),
+                                          3000);
                         },
                         nullptr);
                 });

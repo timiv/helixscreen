@@ -8,6 +8,7 @@
 
 #include "ams_state.h"
 #include "filament_database.h"
+#include "lvgl/src/others/translation/lv_translation.h"
 
 #include <spdlog/spdlog.h>
 
@@ -360,7 +361,7 @@ void AmsDryerCard::populate_preset_dropdown() {
 
     if (cached_presets_.empty()) {
         spdlog::warn("[AmsDryerCard] No drying presets available");
-        lv_dropdown_set_options(dropdown, "No presets");
+        lv_dropdown_set_options(dropdown, lv_tr("No presets"));
         return;
     }
 
