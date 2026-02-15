@@ -207,7 +207,10 @@ int Application::run(int argc, char** argv) {
 
     // Install crash handler early (before other init that could crash)
     // Uses the config directory for the crash file so TelemetryManager can find it on next startup
-    crash_handler::install("config/crash.txt");
+    // Skip in test mode — don't record or report crashes during development
+    if (!get_runtime_config()->is_test_mode()) {
+        crash_handler::install("config/crash.txt");
+    }
 
     // Phase 2: Initialize config system
     if (!init_config()) {
@@ -327,7 +330,11 @@ int Application::run(int argc, char** argv) {
     }
 
     // Check for crash from previous session (after UI exists, before wizard)
-    if (CrashReporter::instance().has_crash_report()) {
+    // Skip in test mode — don't show crash dialog during development
+    // Exception: --mock-crash explicitly requests the dialog for testing
+    bool show_crash_dialog =
+        !get_runtime_config()->is_test_mode() || get_runtime_config()->mock_crash;
+    if (show_crash_dialog && CrashReporter::instance().has_crash_report()) {
         spdlog::info("[Application] Previous crash detected — showing crash report dialog");
         auto report = CrashReporter::instance().collect_report();
         auto* modal = new CrashReportModal();
