@@ -6,9 +6,9 @@ Access via the **More** icon in the navigation bar.
 
 ---
 
-## Console
+## Console *(beta feature)*
 
-View G-code command history and Klipper responses:
+View G-code command history and Klipper responses. Requires [beta features](beta-features.md) to be enabled.
 
 1. Navigate to **Advanced > Console**
 2. Scroll through recent commands

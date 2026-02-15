@@ -42,6 +42,7 @@ When beta features are enabled, the following appear in the UI with an orange "B
 | **Plugins** | Settings panel | View installed plugins and their status | Functional; plugin system is early-stage |
 | **Update Channel** | Settings panel | Switch between Stable, Beta, and Dev update channels | Functional; Beta/Dev channels may have less-tested releases |
 | **Macro Browser** | Advanced panel | Browse and execute custom Klipper macros | Functional; hides system macros, confirms dangerous ones |
+| **G-code Console** | Advanced panel | Send G-code commands directly to the printer and view responses | Functional |
 | **Z Calibration** | Controls panel | Quick-access Z calibration button | Functional; requires probe hardware |
 
 > **Graduated from beta:** PID Calibration and Input Shaper are now available to all users without enabling beta features.
