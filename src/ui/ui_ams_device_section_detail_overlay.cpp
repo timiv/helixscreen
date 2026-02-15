@@ -197,6 +197,7 @@ void AmsDeviceSectionDetailOverlay::create_action_control(
     lv_obj_set_width(row, LV_PCT(100));
     lv_obj_set_height(row, LV_SIZE_CONTENT);
     lv_obj_set_style_pad_all(row, theme_manager_get_spacing("space_xs"), 0);
+    lv_obj_set_style_pad_column(row, theme_manager_get_spacing("space_sm"), 0);
     lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(row, 0, 0);
     lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
@@ -291,10 +292,12 @@ void AmsDeviceSectionDetailOverlay::create_action_control(
     }
 
     case helix::printer::ActionType::SLIDER: {
-        // Label on left
+        // Label on left — fixed width so sliders align across rows
         lv_obj_t* label = lv_label_create(row);
         lv_label_set_text(label, action.label.c_str());
         lv_obj_set_style_text_color(label, theme_manager_get_color("text"), 0);
+        lv_obj_set_width(label, LV_PCT(30));
+        lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);
 
         // Slider in the middle with flex-grow
         lv_obj_t* slider = lv_slider_create(row);
