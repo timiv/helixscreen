@@ -155,9 +155,14 @@ class AmsDeviceSectionDetailOverlay : public OverlayBase {
     static void on_toggle_changed(lv_event_t* e);
 
     /**
-     * @brief Callback for dynamic slider value change
+     * @brief Callback for slider value change — updates label only (no backend call)
      */
     static void on_slider_changed(lv_event_t* e);
+
+    /**
+     * @brief Callback for slider release — executes backend action once
+     */
+    static void on_slider_released(lv_event_t* e);
 
     /**
      * @brief Callback for dynamic dropdown value change

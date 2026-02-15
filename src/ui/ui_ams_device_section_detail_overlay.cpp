@@ -336,8 +336,9 @@ void AmsDeviceSectionDetailOverlay::create_action_control(
         action_ids_.push_back(action.id);
         lv_obj_set_user_data(slider, reinterpret_cast<void*>(action_ids_.size() - 1));
 
-        // Register value changed callback
+        // Update label live during drag, execute action only on release
         lv_obj_add_event_cb(slider, on_slider_changed, LV_EVENT_VALUE_CHANGED, nullptr);
+        lv_obj_add_event_cb(slider, on_slider_released, LV_EVENT_RELEASED, nullptr);
 
         // Handle disabled state
         if (!action.enabled) {
@@ -493,31 +494,24 @@ void AmsDeviceSectionDetailOverlay::on_toggle_changed(lv_event_t* e) {
 void AmsDeviceSectionDetailOverlay::on_slider_changed(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[AmsDeviceSectionDetailOverlay] on_slider_changed");
 
+    // Update the value label live during drag — no backend execution here
     auto* slider = static_cast<lv_obj_t*>(lv_event_get_target(e));
     if (!slider || !lv_obj_is_valid(slider)) {
         spdlog::warn("[AmsDeviceSectionDetailOverlay] on_slider_changed: invalid target");
     } else {
-        // Get action ID from vector using index stored in user_data
         auto& overlay = get_ams_device_section_detail_overlay();
         auto index = reinterpret_cast<size_t>(lv_obj_get_user_data(slider));
-        if (index >= overlay.action_ids_.size()) {
-            spdlog::warn("[AmsDeviceSectionDetailOverlay] Invalid slider action index: {}", index);
-        } else {
+        if (index < overlay.action_ids_.size()) {
             const std::string& action_id = overlay.action_ids_[index];
             int32_t int_val = lv_slider_get_value(slider);
-            float float_val = static_cast<float>(int_val);
-            spdlog::info("[AmsDeviceSectionDetailOverlay] Slider changed: {} = {}", action_id,
-                         float_val);
 
-            // Update the value label (sibling after the slider in the row)
+            // Update the value label (last child of the row: label, slider, value_label)
             lv_obj_t* row = lv_obj_get_parent(slider);
             if (row) {
-                // Value label is the last child of the row (label, slider, value_label)
                 uint32_t child_count = lv_obj_get_child_count(row);
                 if (child_count >= 3) {
                     lv_obj_t* value_label = lv_obj_get_child(row, child_count - 1);
                     if (value_label) {
-                        // Find matching action for unit suffix
                         std::string val_text = std::to_string(int_val);
                         for (const auto& act : overlay.cached_actions_) {
                             if (act.id == action_id && !act.unit.empty()) {
@@ -529,8 +523,32 @@ void AmsDeviceSectionDetailOverlay::on_slider_changed(lv_event_t* e) {
                     }
                 }
             }
+        }
+    }
 
-            // Execute via backend with the float value
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void AmsDeviceSectionDetailOverlay::on_slider_released(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[AmsDeviceSectionDetailOverlay] on_slider_released");
+
+    // Execute the action on release only — avoids spamming G-codes during drag
+    auto* slider = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    if (!slider || !lv_obj_is_valid(slider)) {
+        spdlog::warn("[AmsDeviceSectionDetailOverlay] on_slider_released: invalid target");
+    } else {
+        auto& overlay = get_ams_device_section_detail_overlay();
+        auto index = reinterpret_cast<size_t>(lv_obj_get_user_data(slider));
+        if (index >= overlay.action_ids_.size()) {
+            spdlog::warn("[AmsDeviceSectionDetailOverlay] Invalid slider action index: {}", index);
+        } else {
+            const std::string& action_id = overlay.action_ids_[index];
+            int32_t int_val = lv_slider_get_value(slider);
+            float float_val = static_cast<float>(int_val);
+
+            spdlog::info("[AmsDeviceSectionDetailOverlay] Slider released: {} = {}", action_id,
+                         float_val);
+
             AmsBackend* backend = AmsState::instance().get_backend();
             if (!backend) {
                 spdlog::warn("[AmsDeviceSectionDetailOverlay] No backend available for slider");
