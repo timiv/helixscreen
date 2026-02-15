@@ -120,6 +120,21 @@ void SpoolmanContextMenu::on_created(lv_obj_t* menu_obj) {
         lv_obj_add_flag(vendor_label, LV_OBJ_FLAG_HIDDEN);
     }
 
+    // Prevent context menu buttons from triggering scroll on the underlying list
+    lv_obj_remove_flag(menu_obj, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+    uint32_t child_count = lv_obj_get_child_count(menu_obj);
+    lv_obj_t* card = lv_obj_find_by_name(menu_obj, "context_menu");
+    if (card) {
+        lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+        uint32_t card_children = lv_obj_get_child_count(card);
+        for (uint32_t i = 0; i < card_children; i++) {
+            lv_obj_t* child = lv_obj_get_child(card, static_cast<int32_t>(i));
+            if (child) {
+                lv_obj_remove_flag(child, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+            }
+        }
+    }
+
     spdlog::debug("[SpoolmanContextMenu] Shown for spool {} ({})", pending_spool_.id,
                   pending_spool_.display_name());
 }

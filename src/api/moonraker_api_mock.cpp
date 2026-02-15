@@ -1334,6 +1334,18 @@ void MoonrakerAPIMock::update_spoolman_spool(int spool_id, const nlohmann::json&
     }
 }
 
+void MoonrakerAPIMock::update_spoolman_filament(int filament_id,
+                                                const nlohmann::json& filament_data,
+                                                SuccessCallback on_success,
+                                                ErrorCallback /*on_error*/) {
+    spdlog::info("[MoonrakerAPIMock] update_spoolman_filament({}, {} fields)", filament_id,
+                 filament_data.size());
+
+    if (on_success) {
+        on_success();
+    }
+}
+
 void MoonrakerAPIMock::update_spoolman_filament_color(int filament_id, const std::string& color_hex,
                                                       SuccessCallback on_success,
                                                       ErrorCallback /*on_error*/) {

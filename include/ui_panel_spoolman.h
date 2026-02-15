@@ -88,12 +88,13 @@ class SpoolmanPanel : public OverlayBase {
     // ========== Private Methods ==========
     void populate_spool_list();
     void update_row_visuals(lv_obj_t* row, const SpoolInfo& spool);
+    void update_active_indicators();
     void show_loading_state();
     void show_empty_state();
     void show_spool_list();
     void update_spool_count();
 
-    void handle_spool_clicked(lv_obj_t* row);
+    void handle_spool_clicked(lv_obj_t* row, lv_point_t click_pt);
     void handle_context_action(helix::ui::SpoolmanContextMenu::MenuAction action, int spool_id);
     void set_active_spool(int spool_id);
     void delete_spool(int spool_id);

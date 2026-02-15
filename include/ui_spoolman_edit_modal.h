@@ -95,6 +95,7 @@ class SpoolEditModal : public Modal {
     // === Static Callback Registration ===
     static void register_callbacks();
     static bool callbacks_registered_;
+    static SpoolEditModal* active_instance_;
 
     // === Static Callbacks ===
     static SpoolEditModal* get_instance_from_event(lv_event_t* e);

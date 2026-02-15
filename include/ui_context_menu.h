@@ -58,6 +58,14 @@ class ContextMenu {
     bool show_near_widget(lv_obj_t* parent, int item_index, lv_obj_t* near_widget);
 
     /**
+     * @brief Set the click point for positioning (call before show)
+     * Captures the display-coordinate click point from the triggering event.
+     */
+    void set_click_point(lv_point_t point) {
+        click_point_ = point;
+    }
+
+    /**
      * @brief Hide the context menu
      */
     void hide();
@@ -128,6 +136,7 @@ class ContextMenu {
     lv_obj_t* menu_ = nullptr;
     lv_obj_t* parent_ = nullptr;
     int item_index_ = -1;
+    lv_point_t click_point_ = {0, 0};
     ActionCallback action_callback_;
 
     /**

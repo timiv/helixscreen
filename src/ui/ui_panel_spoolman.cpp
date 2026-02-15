@@ -352,11 +352,44 @@ void SpoolmanPanel::update_row_visuals(lv_obj_t* row, const SpoolInfo& spool) {
     }
 }
 
+void SpoolmanPanel::update_active_indicators() {
+    if (!spool_list_)
+        return;
+
+    uint32_t count = lv_obj_get_child_count(spool_list_);
+    for (uint32_t i = 0; i < count; i++) {
+        lv_obj_t* row = lv_obj_get_child(spool_list_, static_cast<int32_t>(i));
+        if (!row)
+            continue;
+
+        int row_spool_id = static_cast<int>(reinterpret_cast<intptr_t>(lv_obj_get_user_data(row)));
+        bool is_active = (row_spool_id == active_spool_id_);
+
+        // Update checked state (drives the active_style in XML)
+        if (is_active) {
+            lv_obj_add_state(row, LV_STATE_CHECKED);
+        } else {
+            lv_obj_remove_state(row, LV_STATE_CHECKED);
+        }
+
+        // Update active indicator icon visibility
+        lv_obj_t* active_icon = lv_obj_find_by_name(row, "active_indicator");
+        if (active_icon) {
+            if (is_active) {
+                lv_obj_remove_flag(active_icon, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_add_flag(active_icon, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+    }
+    spdlog::debug("[{}] Updated active indicators (active={})", get_name(), active_spool_id_);
+}
+
 // ============================================================================
 // Spool Selection
 // ============================================================================
 
-void SpoolmanPanel::handle_spool_clicked(lv_obj_t* row) {
+void SpoolmanPanel::handle_spool_clicked(lv_obj_t* row, lv_point_t click_pt) {
     if (!row)
         return;
 
@@ -384,7 +417,8 @@ void SpoolmanPanel::handle_spool_clicked(lv_obj_t* row) {
     context_menu_.set_action_callback([this](helix::ui::SpoolmanContextMenu::MenuAction action,
                                              int id) { handle_context_action(action, id); });
 
-    // Show context menu near the clicked row
+    // Show context menu near the click point
+    context_menu_.set_click_point(click_pt);
     context_menu_.show_for_spool(lv_screen_active(), *spool, row);
 }
 
@@ -428,9 +462,8 @@ void SpoolmanPanel::set_active_spool(int spool_id) {
         spool_id,
         [this, spool_id]() {
             spdlog::info("[{}] Set active spool to {}", get_name(), spool_id);
-            active_spool_id_ = spool_id;
 
-            // Find the spool name for toast
+            // Find the spool name for toast (safe on any thread — reads cached data)
             std::string spool_name = "Spool " + std::to_string(spool_id);
             for (const auto& s : cached_spools_) {
                 if (s.id == spool_id) {
@@ -439,15 +472,31 @@ void SpoolmanPanel::set_active_spool(int spool_id) {
                 }
             }
 
-            ui_toast_show(ToastSeverity::SUCCESS, ("Active: " + spool_name).c_str(), 2000);
+            // Update UI on main thread
+            ui_async_call(
+                [](void* ud) {
+                    auto* ctx =
+                        static_cast<std::pair<SpoolmanPanel*, std::pair<int, std::string>>*>(ud);
+                    auto* self = ctx->first;
+                    int id = ctx->second.first;
+                    std::string name = std::move(ctx->second.second);
+                    delete ctx;
 
-            // Refresh to update active indicators
-            populate_spool_list();
+                    self->active_spool_id_ = id;
+                    self->update_active_indicators();
+                    ui_toast_show(ToastSeverity::SUCCESS, ("Active: " + name).c_str(), 2000);
+                },
+                new std::pair<SpoolmanPanel*, std::pair<int, std::string>>(
+                    this, {spool_id, std::move(spool_name)}));
         },
         [this, spool_id](const MoonrakerError& err) {
             spdlog::error("[{}] Failed to set active spool {}: {}", get_name(), spool_id,
                           err.message);
-            ui_toast_show(ToastSeverity::ERROR, lv_tr("Failed to set active spool"), 3000);
+            ui_async_call(
+                [](void*) {
+                    ui_toast_show(ToastSeverity::ERROR, lv_tr("Failed to set active spool"), 3000);
+                },
+                nullptr);
         });
 }
 
@@ -551,6 +600,13 @@ void SpoolmanPanel::delete_spool(int spool_id) {
 void SpoolmanPanel::on_spool_row_clicked(lv_event_t* e) {
     lv_obj_t* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
 
+    // Capture click point from the input device while event is still active
+    lv_point_t click_pt = {0, 0};
+    lv_indev_t* indev = lv_indev_active();
+    if (indev) {
+        lv_indev_get_point(indev, &click_pt);
+    }
+
     // The target might be a child of the row, walk up to find the row
     lv_obj_t* row = target;
     while (row && lv_obj_get_user_data(row) == nullptr) {
@@ -558,7 +614,7 @@ void SpoolmanPanel::on_spool_row_clicked(lv_event_t* e) {
     }
 
     if (row) {
-        get_global_spoolman_panel().handle_spool_clicked(row);
+        get_global_spoolman_panel().handle_spool_clicked(row, click_pt);
     }
 }
 

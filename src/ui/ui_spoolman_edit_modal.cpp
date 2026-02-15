@@ -20,6 +20,7 @@ namespace helix::ui {
 
 // Static member initialization
 bool SpoolEditModal::callbacks_registered_ = false;
+SpoolEditModal* SpoolEditModal::active_instance_ = nullptr;
 
 // ============================================================================
 // Construction / Destruction
@@ -52,8 +53,6 @@ bool SpoolEditModal::show_for_spool(lv_obj_t* parent, const SpoolInfo& spool, Mo
         return false;
     }
 
-    lv_obj_set_user_data(dialog_, this);
-
     spdlog::info("[SpoolEditModal] Shown for spool {} ({})", spool.id, spool.display_name());
     return true;
 }
@@ -63,6 +62,7 @@ bool SpoolEditModal::show_for_spool(lv_obj_t* parent, const SpoolInfo& spool, Mo
 // ============================================================================
 
 void SpoolEditModal::on_show() {
+    active_instance_ = this;
     callback_guard_ = std::make_shared<bool>(true);
     populate_fields();
     update_spool_preview();
@@ -70,6 +70,7 @@ void SpoolEditModal::on_show() {
 }
 
 void SpoolEditModal::on_hide() {
+    active_instance_ = nullptr;
     callback_guard_.reset();
     spdlog::debug("[SpoolEditModal] on_hide()");
 }
@@ -293,57 +294,83 @@ void SpoolEditModal::handle_save() {
 
     spdlog::info("[SpoolEditModal] Saving spool {} edits", working_spool_.id);
 
-    // Build PATCH body with changed fields only
-    nlohmann::json patch;
+    // Split changes into spool-level and filament-level PATCHes
+    nlohmann::json spool_patch;
+    nlohmann::json filament_patch;
 
+    // Spool-level fields
     if (std::abs(working_spool_.remaining_weight_g - original_spool_.remaining_weight_g) > 0.1) {
-        patch["remaining_weight"] = working_spool_.remaining_weight_g;
-    }
-    if (std::abs(working_spool_.spool_weight_g - original_spool_.spool_weight_g) > 0.1) {
-        patch["spool_weight"] = working_spool_.spool_weight_g;
-    }
-    if (std::abs(working_spool_.price - original_spool_.price) > 0.001) {
-        patch["price"] = working_spool_.price;
+        spool_patch["remaining_weight"] = working_spool_.remaining_weight_g;
     }
     if (working_spool_.lot_nr != original_spool_.lot_nr) {
-        patch["lot_nr"] = working_spool_.lot_nr;
+        spool_patch["lot_nr"] = working_spool_.lot_nr;
     }
     if (working_spool_.comment != original_spool_.comment) {
-        patch["comment"] = working_spool_.comment;
+        spool_patch["comment"] = working_spool_.comment;
+    }
+
+    // Filament-level fields (affect all spools using this filament definition)
+    if (std::abs(working_spool_.spool_weight_g - original_spool_.spool_weight_g) > 0.1) {
+        filament_patch["spool_weight"] = working_spool_.spool_weight_g;
+    }
+    if (std::abs(working_spool_.price - original_spool_.price) > 0.001) {
+        filament_patch["price"] = working_spool_.price;
     }
 
     int spool_id = working_spool_.id;
+    int filament_id = working_spool_.filament_id;
     std::weak_ptr<bool> guard = callback_guard_;
 
-    api_->update_spoolman_spool(
-        spool_id, patch,
-        [this, guard, spool_id]() {
-            if (guard.expired()) {
-                return;
-            }
-            spdlog::info("[SpoolEditModal] Spool {} saved successfully", spool_id);
-            // Schedule UI work on LVGL thread (API callbacks run on background thread)
-            ui_async_call(
-                [](void* ud) {
-                    auto* self = static_cast<SpoolEditModal*>(ud);
-                    // Re-check guard — modal may have been hidden since scheduling
-                    if (!self->callback_guard_) {
-                        return;
-                    }
-                    ui_toast_show(ToastSeverity::SUCCESS, "Spool saved", 2000);
-                    if (self->completion_callback_) {
-                        self->completion_callback_(true);
-                    }
-                    self->hide();
-                },
-                this);
-        },
-        [spool_id](const MoonrakerError& err) {
-            spdlog::error("[SpoolEditModal] Failed to save spool {}: {}", spool_id, err.message);
-            ui_async_call(
-                [](void*) { ui_toast_show(ToastSeverity::ERROR, "Failed to save spool", 3000); },
-                nullptr);
-        });
+    // Completion handler — called after all PATCHes succeed
+    auto on_all_saved = [this, guard, spool_id]() {
+        if (guard.expired()) {
+            return;
+        }
+        spdlog::info("[SpoolEditModal] All changes saved for spool {}", spool_id);
+        ui_async_call(
+            [](void* ud) {
+                auto* self = static_cast<SpoolEditModal*>(ud);
+                if (!self->callback_guard_) {
+                    return;
+                }
+                ui_toast_show(ToastSeverity::SUCCESS, "Spool saved", 2000);
+                if (self->completion_callback_) {
+                    self->completion_callback_(true);
+                }
+                self->hide();
+            },
+            this);
+    };
+
+    auto on_error = [spool_id](const MoonrakerError& err) {
+        spdlog::error("[SpoolEditModal] Failed to save spool {}: {}", spool_id, err.message);
+        ui_async_call(
+            [](void*) { ui_toast_show(ToastSeverity::ERROR, "Failed to save spool", 3000); },
+            nullptr);
+    };
+
+    // Send spool PATCH first, then filament PATCH if needed
+    if (!spool_patch.empty()) {
+        api_->update_spoolman_spool(
+            spool_id, spool_patch,
+            [this, guard, filament_id, filament_patch, on_all_saved, on_error]() {
+                if (guard.expired()) {
+                    return;
+                }
+                if (!filament_patch.empty() && filament_id > 0) {
+                    api_->update_spoolman_filament(filament_id, filament_patch, on_all_saved,
+                                                   on_error);
+                } else {
+                    on_all_saved();
+                }
+            },
+            on_error);
+    } else if (!filament_patch.empty() && filament_id > 0) {
+        api_->update_spoolman_filament(filament_id, filament_patch, on_all_saved, on_error);
+    } else {
+        // Nothing to save (shouldn't happen since is_dirty() was true)
+        handle_close();
+    }
 }
 
 // ============================================================================
@@ -369,20 +396,14 @@ void SpoolEditModal::register_callbacks() {
 // ============================================================================
 
 SpoolEditModal* SpoolEditModal::get_instance_from_event(lv_event_t* e) {
-    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
-
-    // Traverse parent chain to find modal root with user_data
-    lv_obj_t* obj = target;
-    while (obj) {
-        void* user_data = lv_obj_get_user_data(obj);
-        if (user_data) {
-            return static_cast<SpoolEditModal*>(user_data);
-        }
-        obj = lv_obj_get_parent(obj);
+    (void)e;
+    // Use static instance — parent chain traversal is unsafe because text_input
+    // widgets store keyboard hint magic values in user_data, which would be
+    // misinterpreted as a SpoolEditModal pointer.
+    if (!active_instance_) {
+        spdlog::warn("[SpoolEditModal] No active instance for event");
     }
-
-    spdlog::warn("[SpoolEditModal] Could not find instance from event target");
-    return nullptr;
+    return active_instance_;
 }
 
 void SpoolEditModal::on_close_cb(lv_event_t* e) {

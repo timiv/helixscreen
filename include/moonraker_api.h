@@ -1368,6 +1368,20 @@ class MoonrakerAPI {
                                        SuccessCallback on_success, ErrorCallback on_error);
 
     /**
+     * @brief Update a filament definition in Spoolman
+     *
+     * Uses Moonraker's Spoolman proxy to PATCH /v1/filament/{id}.
+     * WARNING: This affects ALL spools using this filament definition.
+     *
+     * @param filament_id Spoolman filament ID (not spool ID!)
+     * @param filament_data JSON object with fields to update
+     * @param on_success Called when update succeeds
+     * @param on_error Called on failure
+     */
+    virtual void update_spoolman_filament(int filament_id, const nlohmann::json& filament_data,
+                                          SuccessCallback on_success, ErrorCallback on_error);
+
+    /**
      * @brief Update a filament's color in Spoolman
      *
      * Uses Moonraker's Spoolman proxy to PATCH /v1/filament/{id}.

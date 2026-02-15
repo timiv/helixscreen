@@ -1587,6 +1587,7 @@ static SpoolInfo parse_spool_info(const nlohmann::json& spool_json) {
     if (spool_json.contains("filament") && spool_json["filament"].is_object()) {
         const auto& filament = spool_json["filament"];
 
+        info.filament_id = filament.value("id", 0);
         info.material = filament.value("material", "");
         info.color_name = filament.value("name", "");
         info.color_hex = filament.value("color_hex", "");
@@ -1763,6 +1764,27 @@ void MoonrakerAPI::update_spoolman_spool(int spool_id, const nlohmann::json& spo
         "server.spoolman.proxy", params,
         [on_success, spool_id](json /*response*/) {
             spdlog::debug("[Moonraker API] Spool {} updated successfully", spool_id);
+            if (on_success) {
+                on_success();
+            }
+        },
+        on_error);
+}
+
+void MoonrakerAPI::update_spoolman_filament(int filament_id, const nlohmann::json& filament_data,
+                                            SuccessCallback on_success, ErrorCallback on_error) {
+    spdlog::info("[Moonraker API] Updating filament {} with {} fields", filament_id,
+                 filament_data.size());
+
+    nlohmann::json params;
+    params["request_method"] = "PATCH";
+    params["path"] = "/v1/filament/" + std::to_string(filament_id);
+    params["body"] = filament_data;
+
+    client_.send_jsonrpc(
+        "server.spoolman.proxy", params,
+        [on_success, filament_id](json /*response*/) {
+            spdlog::debug("[Moonraker API] Filament {} updated successfully", filament_id);
             if (on_success) {
                 on_success();
             }

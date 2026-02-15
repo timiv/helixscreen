@@ -448,6 +448,8 @@ class MoonrakerAPIMock : public MoonrakerAPI {
      * @param on_success Success callback (always called)
      * @param on_error Error callback (never called)
      */
+    void update_spoolman_filament(int filament_id, const nlohmann::json& filament_data,
+                                  SuccessCallback on_success, ErrorCallback on_error) override;
     void update_spoolman_filament_color(int filament_id, const std::string& color_hex,
                                         SuccessCallback on_success,
                                         ErrorCallback on_error) override;

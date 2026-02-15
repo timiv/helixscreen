@@ -78,6 +78,7 @@ struct FilamentInfo {
  */
 struct SpoolInfo {
     int id = 0;                    ///< Spoolman spool ID
+    int filament_id = 0;           ///< Spoolman filament definition ID (for filament-level edits)
     std::string vendor;            ///< Filament vendor (e.g., "Hatchbox", "Prusament")
     std::string material;          ///< Material type (e.g., "PLA", "PETG", "ABS", "TPU")
     std::string color_name;        ///< Color name (e.g., "Galaxy Black", "Jet Black")
