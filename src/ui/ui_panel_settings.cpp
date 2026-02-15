@@ -33,6 +33,7 @@
 #include "app_globals.h"
 #include "config.h"
 #include "device_display_name.h"
+#include "display_manager.h"
 #include "filament_sensor_manager.h"
 #include "format_utils.h"
 #include "hardware_validator.h"
@@ -360,7 +361,8 @@ void SettingsPanel::init_subjects() {
 #ifdef HELIX_DISPLAY_SDL
     bool show_touch_cal = get_runtime_config()->is_test_mode();
 #else
-    bool show_touch_cal = true;
+    DisplayManager* dm = DisplayManager::instance();
+    bool show_touch_cal = dm && dm->needs_touch_calibration();
 #endif
     lv_subject_init_int(&show_touch_calibration_subject_, show_touch_cal ? 1 : 0);
     subjects_.register_subject(&show_touch_calibration_subject_);
@@ -982,6 +984,12 @@ void SettingsPanel::handle_network_clicked() {
 }
 
 void SettingsPanel::handle_touch_calibration_clicked() {
+    DisplayManager* dm = DisplayManager::instance();
+    if (dm && !dm->needs_touch_calibration()) {
+        spdlog::debug("[{}] Touch calibration not needed for this device", get_name());
+        return;
+    }
+
     spdlog::debug("[{}] Touch Calibration clicked", get_name());
 
     auto& overlay = helix::ui::get_touch_calibration_overlay();

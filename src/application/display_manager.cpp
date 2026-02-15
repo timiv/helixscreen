@@ -640,7 +640,7 @@ bool DisplayManager::has_backlight_control() const {
 
 bool DisplayManager::apply_touch_calibration(const helix::TouchCalibration& cal) {
     if (!cal.valid) {
-        spdlog::warn("[DisplayManager] Invalid calibration");
+        spdlog::debug("[DisplayManager] Invalid calibration");
         return false;
     }
 
