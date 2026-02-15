@@ -305,6 +305,14 @@ std::string get_helix_cache_dir(const std::string& subdir) {
             return path;
         }
     }
+#elif defined(HELIX_PLATFORM_CC1)
+    {
+        std::string path = "/opt/helixscreen/cache/" + subdir;
+        if (try_create_dir(path)) {
+            spdlog::info("[App Globals] Cache dir (CC1): {}", path);
+            return path;
+        }
+    }
 #elif defined(HELIX_PLATFORM_K1) || defined(HELIX_PLATFORM_K2)
     {
         std::string path = "/usr/data/helixscreen/cache/" + subdir;

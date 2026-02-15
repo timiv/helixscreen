@@ -428,9 +428,12 @@
 /*Enable property name support*/
 #define LV_USE_OBJ_PROPERTY_NAME 1
 
-/* Enable the multi-touch gesture recognition feature */
-/* Gesture recognition requires the use of floats */
-#define LV_USE_GESTURE_RECOGNITION 1
+#if defined(HELIX_PLATFORM_CC1)
+#else
+    /* Enable the multi-touch gesture recognition feature */
+    /* Gesture recognition requires the use of floats */
+    #define LV_USE_GESTURE_RECOGNITION 1
+#endif
 
 /* VG-Lite Simulator */
 /*Requires: LV_USE_THORVG_INTERNAL or LV_USE_THORVG_EXTERNAL */

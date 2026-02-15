@@ -1258,6 +1258,8 @@ UpdateChecker::UpdateChannel UpdateChecker::get_channel() const {
 std::string UpdateChecker::get_platform_key() {
 #ifdef HELIX_PLATFORM_AD5M
     return "ad5m";
+#elif defined(HELIX_PLATFORM_CC1)
+    return "cc1";
 #elif defined(HELIX_PLATFORM_K1)
     return "k1";
 #elif defined(HELIX_PLATFORM_K2)
