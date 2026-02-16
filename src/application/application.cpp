@@ -57,6 +57,7 @@
 #include "ui_notification_manager.h"
 #include "ui_overlay_network_settings.h"
 #include "ui_panel_ams.h"
+#include "ui_panel_ams_overview.h"
 #include "ui_panel_bed_mesh.h"
 #include "ui_panel_calibration_pid.h"
 #include "ui_panel_calibration_zoffset.h"
@@ -84,6 +85,7 @@
 #include "ui_settings_hardware_health.h"
 #include "ui_settings_sensors.h"
 #include "ui_severity_card.h"
+#include "ui_status_pill.h"
 #include "ui_switch.h"
 #include "ui_temp_display.h"
 #include "ui_theme_editor_overlay.h"
@@ -730,6 +732,7 @@ bool Application::init_assets() {
 
 bool Application::register_widgets() {
     ui_icon_register_widget();
+    ui_status_pill_register_widget();
     ui_switch_register();
     ui_card_register();
     ui_temp_display_init();
@@ -1288,15 +1291,9 @@ void Application::create_overlays() {
     }
 
     if (m_args.overlays.ams) {
-        auto& ams_panel = get_global_ams_panel();
-        if (!ams_panel.are_subjects_initialized()) {
-            ams_panel.init_subjects();
-        }
-        lv_obj_t* panel_obj = ams_panel.get_panel();
-        if (panel_obj) {
-            ams_panel.on_activate();
-            ui_nav_push_overlay(panel_obj);
-        }
+        // Use multi-unit-aware navigation: shows overview for multi-unit,
+        // detail panel directly for single-unit
+        navigate_to_ams_panel();
     }
 
     if (m_args.overlays.spoolman) {
@@ -1690,8 +1687,9 @@ void Application::init_action_prompt() {
         return;
     }
 
-    // Create ActionPromptManager
+    // Create ActionPromptManager and register global instance for cross-TU access
     m_action_prompt_manager = std::make_unique<helix::ActionPromptManager>();
+    helix::ActionPromptManager::set_instance(m_action_prompt_manager.get());
 
     // Create ActionPromptModal
     m_action_prompt_modal = std::make_unique<helix::ui::ActionPromptModal>();
@@ -1736,6 +1734,11 @@ void Application::init_action_prompt() {
             ToastManager::instance().show(ToastSeverity::INFO, message.c_str(), 5000);
         });
     });
+
+    // Allow mock AMS backends to inject action_prompt lines (e.g., calibration wizard)
+    auto* prompt_mgr = m_action_prompt_manager.get();
+    AmsState::instance().set_gcode_response_callback(
+        [prompt_mgr](const std::string& line) { prompt_mgr->process_line(line); });
 
     // Register for notify_gcode_response messages from Moonraker
     // All lines from G-code console output come through this notification
@@ -2178,7 +2181,11 @@ void Application::shutdown() {
         m_moonraker->client()->unregister_method_callback("notify_gcode_response",
                                                           "action_prompt_manager");
     }
+    // Clear mock gcode injection callback before destroying ActionPromptManager
+    // (AmsState singleton outlives Application — callback would dangle)
+    AmsState::instance().set_gcode_response_callback(nullptr);
     m_action_prompt_modal.reset();
+    helix::ActionPromptManager::set_instance(nullptr);
     m_action_prompt_manager.reset();
 
     m_moonraker.reset();

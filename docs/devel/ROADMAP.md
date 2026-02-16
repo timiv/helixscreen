@@ -120,6 +120,7 @@ Remaining items for production readiness:
 - **Visual slot configuration:** Tool badges, endless spool arrows, tap-to-edit popup
 - **Material compatibility validation** with toast warnings for incompatible endless spool
 - Spoolman integration (6 API methods: list spools, assign, consume, etc.)
+- **Spool Wizard** (beta) — 3-step creation flow (Vendor → Filament → Spool Details), merged into multi-unit-ams. Visual tests and filamentcolors.xyz enhancement pending.
 - Print color requirements display from G-code metadata
 - External spool bypass support
 - **AFC comprehensive support:** Full data parsing (hub/extruder/buffer/stepper), 11 device actions, per-lane reset, live smoke test, mock AFC mode

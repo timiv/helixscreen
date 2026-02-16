@@ -976,7 +976,7 @@ lv_obj_t* WizardConnectionStep::create(lv_obj_t* parent) {
     // Set initial dropdown text (bind_options doesn't work for dropdowns)
     lv_obj_t* printer_dropdown = lv_obj_find_by_name(screen_root_, "printer_dropdown");
     if (printer_dropdown) {
-        lv_dropdown_set_options(printer_dropdown, "Searching...");
+        lv_dropdown_set_options(printer_dropdown, lv_tr("Searching..."));
     }
 
     // Schedule auto-probe if appropriate (empty config, first visit)

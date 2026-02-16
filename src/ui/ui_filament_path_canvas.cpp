@@ -109,7 +109,8 @@ struct FilamentPathData {
     bool bypass_active = false;       // External spool bypass mode
     uint32_t bypass_color = 0x888888; // Default gray for bypass filament
 
-    // Toolhead renderer style
+    // Rendering mode
+    bool hub_only = false;             // true = stop rendering at hub (skip downstream)
     bool use_faceted_toolhead = false; // false = Bambu-style, true = faceted red style
 
     // Heat glow state
@@ -841,8 +842,9 @@ static void filament_path_draw_cb(lv_event_t* e) {
 
     // ========================================================================
     // Draw bypass entry and path (right side, below spool area, direct to output)
+    // Skipped in hub_only mode (bypass is a system-level path)
     // ========================================================================
-    {
+    if (!data->hub_only) {
         int32_t bypass_x = x_off + (int32_t)(width * BYPASS_X_RATIO);
         int32_t bypass_entry_y = y_off + (int32_t)(height * BYPASS_ENTRY_Y_RATIO);
         int32_t bypass_merge_y = y_off + (int32_t)(height * BYPASS_MERGE_Y_RATIO);
@@ -919,8 +921,9 @@ static void filament_path_draw_cb(lv_event_t* e) {
 
     // ========================================================================
     // Draw output section (hub to toolhead)
+    // Skipped in hub_only mode — system_path_canvas handles downstream routing
     // ========================================================================
-    {
+    if (!data->hub_only) {
         lv_color_t output_color = idle_color;
         int32_t output_width = line_idle;
 
@@ -952,7 +955,7 @@ static void filament_path_draw_cb(lv_event_t* e) {
     // ========================================================================
     // Draw toolhead section
     // ========================================================================
-    {
+    if (!data->hub_only) {
         lv_color_t toolhead_color = idle_color;
         int32_t toolhead_width = line_idle;
 
@@ -984,7 +987,7 @@ static void filament_path_draw_cb(lv_event_t* e) {
     // ========================================================================
     // Draw nozzle
     // ========================================================================
-    {
+    if (!data->hub_only) {
         lv_color_t noz_color = nozzle_color;
 
         // Bypass or normal slot active?
@@ -1022,7 +1025,7 @@ static void filament_path_draw_cb(lv_event_t* e) {
     // ========================================================================
     // Draw animated filament tip (during segment transitions)
     // ========================================================================
-    if (is_animating && data->active_slot >= 0) {
+    if (is_animating && data->active_slot >= 0 && !data->hub_only) {
         // Calculate Y positions for each segment (same as above)
         // Map segment to Y position on the path
         auto get_segment_y = [&](PathSegment seg) -> int32_t {
@@ -1239,6 +1242,9 @@ static void filament_path_xml_apply(lv_xml_parser_state_t* state, const char** a
             needs_redraw = true;
         } else if (strcmp(name, "faceted_toolhead") == 0) {
             data->use_faceted_toolhead = (strcmp(value, "true") == 0 || strcmp(value, "1") == 0);
+            needs_redraw = true;
+        } else if (strcmp(name, "hub_only") == 0) {
+            data->hub_only = (strcmp(value, "true") == 0 || strcmp(value, "1") == 0);
             needs_redraw = true;
         }
     }
@@ -1496,6 +1502,18 @@ void ui_filament_path_canvas_set_bypass_callback(lv_obj_t* obj, filament_path_by
     if (data) {
         data->bypass_callback = cb;
         data->bypass_user_data = user_data;
+    }
+}
+
+void ui_filament_path_canvas_set_hub_only(lv_obj_t* obj, bool hub_only) {
+    auto* data = get_data(obj);
+    if (!data)
+        return;
+
+    if (data->hub_only != hub_only) {
+        data->hub_only = hub_only;
+        spdlog::debug("[FilamentPath] Hub-only mode: {}", hub_only ? "on" : "off");
+        lv_obj_invalidate(obj);
     }
 }
 

@@ -186,6 +186,18 @@ class AmsState {
      */
     void set_moonraker_api(MoonrakerAPI* api);
 
+    /**
+     * @brief Set callback for mock backend gcode response injection
+     *
+     * Stored and applied to any mock backends when they are added.
+     * In production, real backends don't use this (gcode responses come
+     * through the WebSocket). Used to let mock backends simulate
+     * action:prompt dialogs.
+     *
+     * @param callback Function that processes "// action:..." lines
+     */
+    void set_gcode_response_callback(std::function<void(const std::string&)> callback);
+
     // ========================================================================
     // System-level Subject Accessors
     // ========================================================================
@@ -831,7 +843,7 @@ class AmsState {
     lv_subject_t current_material_text_;
     char current_material_text_buf_[48];
     lv_subject_t current_slot_text_;
-    char current_slot_text_buf_[24];
+    char current_slot_text_buf_[64];
     lv_subject_t current_weight_text_;
     char current_weight_text_buf_[16];
     lv_subject_t current_has_weight_;
@@ -843,4 +855,7 @@ class AmsState {
 
     // Observer for print state changes to auto-refresh Spoolman weights
     ObserverGuard print_state_observer_;
+
+    // Stored callback for mock gcode response injection
+    std::function<void(const std::string&)> gcode_response_callback_;
 };

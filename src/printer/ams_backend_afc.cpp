@@ -3,6 +3,12 @@
 
 #include "ams_backend_afc.h"
 
+#include "ui_error_reporting.h"
+#include "ui_notification.h"
+
+#include "action_prompt_manager.h"
+#include "afc_defaults.h"
+#include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
 
 #include <spdlog/fmt/fmt.h>
@@ -26,11 +32,14 @@ AmsBackendAfc::AmsBackendAfc(MoonrakerAPI* api, MoonrakerClient* client)
     system_info_.filament_loaded = false;
     system_info_.action = AmsAction::IDLE;
     system_info_.total_slots = 0;
-    // AFC capabilities - may vary by configuration
-    system_info_.supports_endless_spool = true;
-    system_info_.supports_spoolman = true;
-    system_info_.supports_tool_mapping = true;
-    system_info_.supports_bypass = true; // AFC supports bypass via bypass_state
+    // AFC capabilities from shared defaults
+    auto caps = helix::printer::afc_default_capabilities();
+    system_info_.supports_endless_spool = caps.supports_endless_spool;
+    system_info_.supports_spoolman = caps.supports_spoolman;
+    system_info_.supports_tool_mapping = caps.supports_tool_mapping;
+    system_info_.supports_bypass = caps.supports_bypass;
+    system_info_.supports_purge = caps.supports_purge;
+    system_info_.tip_method = caps.tip_method;
     // Default to hardware sensor - AFC BoxTurtle typically has physical bypass sensor
     // TODO: Detect from AFC configuration whether bypass sensor is virtual or hardware
     system_info_.has_hardware_bypass_sensor = true;
@@ -104,6 +113,9 @@ AmsError AmsBackendAfc::start() {
     // created and started BEFORE printer.objects.subscribe is called. The notification
     // handler registered above will naturally receive the initial state when the
     // subscription response arrives. No explicit query_initial_state() needed.
+
+    // Load AFC config files for device settings
+    load_afc_configs();
 
     // Emit initial state event OUTSIDE the lock to avoid deadlock
     if (should_emit) {
@@ -293,9 +305,11 @@ PathSegment AmsBackendAfc::compute_filament_segment_unlocked() const {
         return PathSegment::TOOLHEAD;
     }
 
-    // Check hub sensor
-    if (hub_sensor_) {
-        return PathSegment::OUTPUT;
+    // Check hub sensors (any hub triggered means filament past hub)
+    for (const auto& [name, triggered] : hub_sensors_) {
+        if (triggered) {
+            return PathSegment::OUTPUT;
+        }
     }
 
     // Check per-lane sensors for the current lane
@@ -400,7 +414,7 @@ void AmsBackendAfc::handle_status_update(const nlohmann::json& notification) {
         for (const auto& hub_name : hub_names_) {
             std::string key = "AFC_hub " + hub_name;
             if (params.contains(key) && params[key].is_object()) {
-                parse_afc_hub(params[key]);
+                parse_afc_hub(hub_name, params[key]);
                 state_changed = true;
             }
         }
@@ -412,12 +426,12 @@ void AmsBackendAfc::handle_status_update(const nlohmann::json& notification) {
             state_changed = true;
         }
 
-        // Parse AFC_buffer objects for buffer state (informational only for now)
+        // Parse AFC_buffer objects for buffer health and fault data
         for (const auto& buf_name : buffer_names_) {
             std::string key = "AFC_buffer " + buf_name;
             if (params.contains(key) && params[key].is_object()) {
-                spdlog::trace("[AMS AFC] Buffer {} update received", buf_name);
-                // Don't set state_changed — no state is actually stored yet
+                parse_afc_buffer(buf_name, params[key]);
+                state_changed = true;
             }
         }
     }
@@ -469,7 +483,7 @@ void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data) {
                       state_str);
     }
 
-    // Parse message object for operation detail and error events
+    // Parse message object for operation detail, error events, and toast notifications
     if (afc_data.contains("message") && afc_data["message"].is_object()) {
         const auto& msg = afc_data["message"];
         if (msg.contains("message") && msg["message"].is_string()) {
@@ -477,12 +491,52 @@ void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data) {
             if (!msg_text.empty()) {
                 system_info_.operation_detail = msg_text;
             }
-            // Check for error type
+
+            // Get message type (error, warning, or empty)
+            std::string msg_type;
             if (msg.contains("type") && msg["type"].is_string()) {
-                std::string msg_type = msg["type"].get<std::string>();
+                msg_type = msg["type"].get<std::string>();
+            }
+
+            // Track message type for per-lane error severity mapping
+            last_message_type_ = msg_type;
+
+            // Handle message text changes for toast/notification dispatch
+            if (msg_text.empty()) {
+                // Error cleared - reset dedup tracking
+                last_seen_message_.clear();
+                last_error_msg_.clear();
+                last_message_type_.clear();
+            } else if (msg_text != last_seen_message_) {
+                // New or changed message - update dedup tracker
+                last_seen_message_ = msg_text;
+
+                // Emit error event for backward compatibility
                 if (msg_type == "error" && msg_text != last_error_msg_) {
                     last_error_msg_ = msg_text;
                     emit_event(EVENT_ERROR, msg_text);
+                }
+
+                // Determine if an AFC action:prompt is currently active
+                // If so, suppress the toast (user already sees the modal) but
+                // still add to notification history
+                bool afc_prompt_active = helix::ActionPromptManager::is_showing() &&
+                                         helix::ActionPromptManager::current_prompt_name().find(
+                                             "AFC") != std::string::npos;
+
+                if (afc_prompt_active) {
+                    // Notification history only (no toast) - user already has the modal
+                    spdlog::debug("[AMS AFC] Toast suppressed (AFC prompt active): {}", msg_text);
+                    ui_notification_info_with_action("AFC", msg_text.c_str(), "afc_message");
+                } else {
+                    // Show toast based on message type
+                    if (msg_type == "error") {
+                        NOTIFY_ERROR_T("AFC", "{}", msg_text);
+                    } else if (msg_type == "warning") {
+                        NOTIFY_WARNING_T("AFC", "{}", msg_text);
+                    } else {
+                        NOTIFY_INFO_T("AFC", "{}", msg_text);
+                    }
                 }
             }
         }
@@ -505,17 +559,56 @@ void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data) {
 
     // Parse unit information if available
     if (afc_data.contains("units") && afc_data["units"].is_array()) {
-        // AFC may report multiple units (Box Turtles)
-        // Update unit names and connection status
-        const auto& units = afc_data["units"];
-        for (size_t i = 0; i < units.size() && i < system_info_.units.size(); ++i) {
-            if (units[i].is_object()) {
-                if (units[i].contains("name") && units[i]["name"].is_string()) {
-                    system_info_.units[i].name = units[i]["name"].get<std::string>();
+        const auto& units_json = afc_data["units"];
+
+        // Capture unit-to-lane mapping for multi-unit reorganization
+        unit_lane_map_.clear();
+        for (const auto& unit_json : units_json) {
+            if (!unit_json.is_object()) {
+                continue;
+            }
+
+            std::string unit_name;
+            if (unit_json.contains("name") && unit_json["name"].is_string()) {
+                unit_name = unit_json["name"].get<std::string>();
+            }
+
+            // Capture per-unit lane list
+            if (unit_json.contains("lanes") && unit_json["lanes"].is_array()) {
+                std::vector<std::string> lanes;
+                for (const auto& lane : unit_json["lanes"]) {
+                    if (lane.is_string()) {
+                        lanes.push_back(lane.get<std::string>());
+                    }
                 }
-                if (units[i].contains("connected") && units[i]["connected"].is_boolean()) {
-                    system_info_.units[i].connected = units[i]["connected"].get<bool>();
+                if (!unit_name.empty() && !lanes.empty()) {
+                    unit_lane_map_[unit_name] = lanes;
                 }
+            }
+        }
+
+        // Update existing unit names and connection status (backward compat)
+        for (size_t i = 0; i < units_json.size() && i < system_info_.units.size(); ++i) {
+            if (units_json[i].is_object()) {
+                if (units_json[i].contains("name") && units_json[i]["name"].is_string()) {
+                    system_info_.units[i].name = units_json[i]["name"].get<std::string>();
+                }
+                if (units_json[i].contains("connected") &&
+                    units_json[i]["connected"].is_boolean()) {
+                    system_info_.units[i].connected = units_json[i]["connected"].get<bool>();
+                }
+            }
+        }
+
+        // If we got unit-lane data, re-organize into multi-unit layout.
+        // NOTE: This runs under mutex_ lock (held by handle_status_update caller),
+        // so system_info_ modifications are safe from concurrent get_system_info() reads.
+        if (!unit_lane_map_.empty()) {
+            if (!lanes_initialized_ && !lane_names_.empty()) {
+                initialize_lanes(lane_names_);
+            }
+            if (lanes_initialized_) {
+                reorganize_units_from_map();
             }
         }
     }
@@ -547,6 +640,59 @@ void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data) {
     }
     if (afc_data.contains("led_state") && afc_data["led_state"].is_boolean()) {
         afc_led_state_ = afc_data["led_state"].get<bool>();
+    }
+
+    // Parse system.num_extruders and system.extruders (toolchanger support)
+    if (afc_data.contains("system") && afc_data["system"].is_object()) {
+        const auto& system = afc_data["system"];
+
+        if (system.contains("num_extruders") && system["num_extruders"].is_number_integer()) {
+            num_extruders_ = system["num_extruders"].get<int>();
+            spdlog::debug("[AMS AFC] num_extruders: {}", num_extruders_);
+        }
+
+        if (system.contains("extruders") && system["extruders"].is_object()) {
+            extruders_.clear();
+            const auto& extruders_json = system["extruders"];
+
+            // Collect extruder names and sort for deterministic ordering
+            std::vector<std::string> extruder_names;
+            for (auto it = extruders_json.begin(); it != extruders_json.end(); ++it) {
+                extruder_names.push_back(it.key());
+            }
+            std::sort(extruder_names.begin(), extruder_names.end());
+
+            for (const auto& ext_name : extruder_names) {
+                const auto& ext_data = extruders_json[ext_name];
+                if (!ext_data.is_object()) {
+                    continue;
+                }
+
+                AfcExtruderInfo info;
+                info.name = ext_name;
+
+                // Parse lane_loaded (can be string or null)
+                if (ext_data.contains("lane_loaded")) {
+                    if (ext_data["lane_loaded"].is_string()) {
+                        info.lane_loaded = ext_data["lane_loaded"].get<std::string>();
+                    }
+                    // null or other types result in empty string (default)
+                }
+
+                // Parse lanes array
+                if (ext_data.contains("lanes") && ext_data["lanes"].is_array()) {
+                    for (const auto& lane : ext_data["lanes"]) {
+                        if (lane.is_string()) {
+                            info.available_lanes.push_back(lane.get<std::string>());
+                        }
+                    }
+                }
+
+                spdlog::debug("[AMS AFC] Extruder '{}': lane_loaded='{}', {} lanes", ext_name,
+                              info.lane_loaded, info.available_lanes.size());
+                extruders_.push_back(std::move(info));
+            }
+        }
     }
 
     // Parse error state
@@ -677,6 +823,32 @@ void AmsBackendAfc::parse_afc_stepper(const std::string& lane_name, const nlohma
         slot->status = SlotStatus::AVAILABLE; // Default for other states like "Ready"
     }
 
+    // Populate or clear per-slot error based on lane status
+    if (status_str == "Error") {
+        SlotError err;
+        // Use system message text if available, otherwise default
+        if (!last_seen_message_.empty()) {
+            err.message = last_seen_message_;
+        } else {
+            err.message = "Lane error";
+        }
+        // Map severity from system message type
+        if (last_message_type_ == "error") {
+            err.severity = SlotError::ERROR;
+        } else if (last_message_type_ == "warning") {
+            err.severity = SlotError::WARNING;
+        } else {
+            err.severity = SlotError::ERROR; // Default to ERROR for lane errors
+        }
+        slot->error = err;
+        spdlog::debug("[AMS AFC] Lane {} (slot {}): error state - {}", lane_name, slot_index,
+                      err.message);
+    } else if (slot->error.has_value()) {
+        // Lane exited error state - clear the error
+        spdlog::debug("[AMS AFC] Lane {} (slot {}): error cleared", lane_name, slot_index);
+        slot->error.reset();
+    }
+
     spdlog::trace("[AMS AFC] Lane {} (slot {}): prep={} load={} hub={} status={}", lane_name,
                   slot_index, sensors.prep, sensors.load, sensors.loaded_to_hub,
                   slot_status_to_string(slot->status));
@@ -731,13 +903,23 @@ void AmsBackendAfc::parse_afc_stepper(const std::string& lane_name, const nlohma
     }
 }
 
-void AmsBackendAfc::parse_afc_hub(const nlohmann::json& data) {
-    // Parse AFC_hub object for hub sensor state
+void AmsBackendAfc::parse_afc_hub(const std::string& hub_name, const nlohmann::json& data) {
+    // Parse AFC_hub object for per-hub sensor state
     // { "state": true }
 
     if (data.contains("state") && data["state"].is_boolean()) {
-        hub_sensor_ = data["state"].get<bool>();
-        spdlog::trace("[AMS AFC] Hub sensor: {}", hub_sensor_);
+        bool state = data["state"].get<bool>();
+        hub_sensors_[hub_name] = state;
+        spdlog::trace("[AMS AFC] Hub sensor {}: {}", hub_name, state);
+
+        // Update the matching AmsUnit's hub_sensor_triggered for real-time state
+        for (auto& unit : system_info_.units) {
+            if (unit.name == hub_name) {
+                unit.has_hub_sensor = true;
+                unit.hub_sensor_triggered = state;
+                break;
+            }
+        }
     }
 
     // Store bowden length from hub — in multi-hub setups, all hubs share the same
@@ -745,6 +927,77 @@ void AmsBackendAfc::parse_afc_hub(const nlohmann::json& data) {
     if (data.contains("afc_bowden_length") && data["afc_bowden_length"].is_number()) {
         bowden_length_ = data["afc_bowden_length"].get<float>();
         spdlog::trace("[AMS AFC] Hub bowden length: {}mm", bowden_length_);
+    }
+}
+
+void AmsBackendAfc::parse_afc_buffer(const std::string& buffer_name, const nlohmann::json& data) {
+    // Parse AFC_buffer object for buffer health and fault detection
+    // {
+    //   "fault_detection_enabled": true,
+    //   "distance_to_fault": 25.5,
+    //   "state": "Advancing",
+    //   "lanes": ["lane1", "lane2", "lane3", "lane4"]
+    // }
+
+    BufferHealth health;
+
+    if (data.contains("fault_detection_enabled") && data["fault_detection_enabled"].is_boolean()) {
+        health.fault_detection_enabled = data["fault_detection_enabled"].get<bool>();
+    }
+
+    if (data.contains("distance_to_fault") && data["distance_to_fault"].is_number()) {
+        health.distance_to_fault = data["distance_to_fault"].get<float>();
+    }
+
+    if (data.contains("state") && data["state"].is_string()) {
+        health.state = data["state"].get<std::string>();
+    }
+
+    spdlog::trace("[AMS AFC] Buffer {}: fault_detect={} dist={} state={}", buffer_name,
+                  health.fault_detection_enabled, health.distance_to_fault, health.state);
+
+    // Map buffer health to its lanes
+    if (data.contains("lanes") && data["lanes"].is_array()) {
+        for (const auto& lane_json : data["lanes"]) {
+            if (!lane_json.is_string()) {
+                continue;
+            }
+            std::string lane_name = lane_json.get<std::string>();
+            auto it = lane_name_to_index_.find(lane_name);
+            if (it == lane_name_to_index_.end()) {
+                continue;
+            }
+
+            SlotInfo* slot = system_info_.get_slot_global(it->second);
+            if (!slot) {
+                continue;
+            }
+
+            slot->buffer_health = health;
+
+            // Create WARNING SlotError when buffer fault is detected
+            // (distance_to_fault > 0 AND fault detection is enabled)
+            if (health.fault_detection_enabled && health.distance_to_fault > 0.0f) {
+                // Only set buffer fault warning if slot doesn't already have an error
+                if (!slot->error.has_value()) {
+                    SlotError err;
+                    err.message = fmt::format("Buffer {} fault approaching ({:.1f}mm)", buffer_name,
+                                              health.distance_to_fault);
+                    err.severity = SlotError::WARNING;
+                    slot->error = err;
+                    spdlog::debug("[AMS AFC] Buffer {} fault warning on lane {} (slot {})",
+                                  buffer_name, lane_name, it->second);
+                }
+            } else {
+                // Clear buffer fault warning when fault condition resolves
+                // Only clear WARNING-level errors from buffer faults, not lane errors
+                if (slot->error.has_value() && slot->error->severity == SlotError::WARNING) {
+                    slot->error.reset();
+                    spdlog::debug("[AMS AFC] Buffer {} fault warning cleared on lane {} (slot {})",
+                                  buffer_name, lane_name, it->second);
+                }
+            }
+        }
     }
 }
 
@@ -975,7 +1228,11 @@ void AmsBackendAfc::parse_lane_data(const nlohmann::json& lane_data) {
         }
 
         const auto& lane = lane_data[lane_name];
-        auto& slot = system_info_.units[0].slots[i];
+        auto* slot_ptr = system_info_.get_slot_global(static_cast<int>(i));
+        if (!slot_ptr) {
+            continue;
+        }
+        auto& slot = *slot_ptr;
 
         // Parse color (AFC uses hex string without 0x prefix)
         if (lane.contains("color") && lane["color"].is_string()) {
@@ -1053,6 +1310,7 @@ void AmsBackendAfc::initialize_lanes(const std::vector<std::string>& lane_names)
     unit.has_encoder = false;        // AFC typically uses optical sensors, not encoders
     unit.has_toolhead_sensor = true; // Most AFC setups have toolhead sensor
     unit.has_slot_sensors = true;    // AFC has per-lane sensors
+    unit.has_hub_sensor = true;      // AFC hubs have filament sensors
 
     // Initialize gates with defaults
     for (int i = 0; i < lane_count; ++i) {
@@ -1087,6 +1345,101 @@ void AmsBackendAfc::initialize_lanes(const std::vector<std::string>& lane_names)
     }
 
     lanes_initialized_ = true;
+}
+
+/**
+ * @brief Reorganize flat slot list into multi-unit structure using unit_lane_map_.
+ *
+ * Called from parse_afc_state() after the "units" JSON array has been parsed.
+ * Rebuilds system_info_.units from unit_lane_map_ (unit_name → [lane_names]),
+ * preserving existing slot data (colors, materials, status) by matching lane names.
+ *
+ * @pre mutex_ must be held by caller (via handle_status_update → parse_afc_state)
+ * @pre lanes_initialized_ must be true (slots exist in system_info_.units[0])
+ */
+void AmsBackendAfc::reorganize_units_from_map() {
+    if (unit_lane_map_.size() <= 1) {
+        // Single unit - just update the name if available
+        if (!unit_lane_map_.empty() && !system_info_.units.empty()) {
+            system_info_.units[0].name = unit_lane_map_.begin()->first;
+        }
+        return;
+    }
+
+    // Multi-unit: rebuild units vector with proper lane grouping
+    // Preserve existing slot data (colors, materials, etc.)
+
+    // Collect all current slot data by lane name for preservation
+    std::unordered_map<std::string, SlotInfo> slot_data_by_lane;
+    for (size_t i = 0; i < lane_names_.size(); ++i) {
+        const SlotInfo* slot = system_info_.get_slot_global(static_cast<int>(i));
+        if (slot) {
+            slot_data_by_lane[lane_names_[i]] = *slot;
+        }
+    }
+
+    // Rebuild units - sort unit names for deterministic ordering
+    std::vector<std::string> sorted_unit_names;
+    sorted_unit_names.reserve(unit_lane_map_.size());
+    for (const auto& [name, lanes] : unit_lane_map_) {
+        sorted_unit_names.push_back(name);
+    }
+    std::sort(sorted_unit_names.begin(), sorted_unit_names.end());
+
+    system_info_.units.clear();
+    int global_slot_offset = 0;
+    int unit_idx = 0;
+
+    for (const auto& unit_name : sorted_unit_names) {
+        const auto& lanes = unit_lane_map_.at(unit_name);
+
+        AmsUnit unit;
+        unit.unit_index = unit_idx;
+        unit.name = unit_name;
+        unit.slot_count = static_cast<int>(lanes.size());
+        unit.first_slot_global_index = global_slot_offset;
+        unit.connected = true;
+        unit.has_toolhead_sensor = true;
+        unit.has_slot_sensors = true;
+        unit.has_hub_sensor = true; // AFC hubs have filament sensors
+
+        // Set hub sensor triggered state from per-hub map
+        auto hub_it = hub_sensors_.find(unit_name);
+        if (hub_it != hub_sensors_.end()) {
+            unit.hub_sensor_triggered = hub_it->second;
+        }
+
+        for (int i = 0; i < unit.slot_count; ++i) {
+            SlotInfo slot;
+            slot.slot_index = i;
+            slot.global_index = global_slot_offset + i;
+
+            // Restore preserved slot data if available
+            const std::string& lane_name = lanes[i];
+            auto it = slot_data_by_lane.find(lane_name);
+            if (it != slot_data_by_lane.end()) {
+                slot = it->second;
+                // Fix up indices for new unit layout
+                slot.slot_index = i;
+                slot.global_index = global_slot_offset + i;
+            } else {
+                slot.status = SlotStatus::UNKNOWN;
+                slot.mapped_tool = global_slot_offset + i;
+                slot.color_rgb = AMS_DEFAULT_SLOT_COLOR;
+            }
+
+            unit.slots.push_back(slot);
+        }
+
+        system_info_.units.push_back(unit);
+        global_slot_offset += unit.slot_count;
+        ++unit_idx;
+    }
+
+    system_info_.total_slots = global_slot_offset;
+
+    spdlog::info("[AMS AFC] Reorganized into {} units, {} total slots", system_info_.units.size(),
+                 system_info_.total_slots);
 }
 
 std::string AmsBackendAfc::get_lane_name(int slot_index) const {
@@ -1131,6 +1484,34 @@ AmsError AmsBackendAfc::execute_gcode(const std::string& gcode) {
         gcode, []() { spdlog::debug("[AMS AFC] G-code executed successfully"); },
         [gcode](const MoonrakerError& err) {
             spdlog::error("[AMS AFC] G-code failed: {} - {}", gcode, err.message);
+        });
+
+    return AmsErrorHelper::success();
+}
+
+AmsError AmsBackendAfc::execute_gcode_notify(const std::string& gcode,
+                                             const std::string& success_msg,
+                                             const std::string& error_prefix) {
+    if (!api_) {
+        return AmsErrorHelper::not_connected("MoonrakerAPI not available");
+    }
+
+    spdlog::info("[AMS AFC] Executing G-code: {}", gcode);
+
+    // Capture messages by value for async callbacks (thread-safe via ui_async_call)
+    api_->execute_gcode(
+        gcode,
+        [success_msg]() {
+            if (!success_msg.empty()) {
+                NOTIFY_SUCCESS("{}", success_msg);
+            }
+        },
+        [gcode, error_prefix](const MoonrakerError& err) {
+            if (!error_prefix.empty()) {
+                NOTIFY_ERROR("{}: {}", error_prefix, err.message);
+            } else {
+                spdlog::error("[AMS AFC] G-code failed: {} - {}", gcode, err.message);
+            }
         });
 
     return AmsErrorHelper::success();
@@ -1261,7 +1642,8 @@ AmsError AmsBackendAfc::recover() {
     }
 
     spdlog::info("[AMS AFC] Initiating recovery");
-    return execute_gcode("AFC_RESET");
+    return execute_gcode_notify("AFC_RESET", lv_tr("AFC recovery complete"),
+                                lv_tr("AFC recovery failed"));
 }
 
 AmsError AmsBackendAfc::reset() {
@@ -1275,7 +1657,8 @@ AmsError AmsBackendAfc::reset() {
     }
 
     spdlog::info("[AMS AFC] Homing AFC system");
-    return execute_gcode("AFC_HOME");
+    return execute_gcode_notify("AFC_HOME", lv_tr("AFC homing complete"),
+                                lv_tr("AFC homing failed"));
 }
 
 AmsError AmsBackendAfc::reset_lane(int slot_index) {
@@ -1314,7 +1697,8 @@ AmsError AmsBackendAfc::cancel() {
 
     // AFC may use AFC_ABORT or AFC_CANCEL to stop current operation
     spdlog::info("[AMS AFC] Cancelling current operation");
-    return execute_gcode("AFC_ABORT");
+    return execute_gcode_notify("AFC_ABORT", lv_tr("AFC operation aborted"),
+                                lv_tr("AFC abort failed"));
 }
 
 // ============================================================================
@@ -1642,14 +2026,82 @@ AmsError AmsBackendAfc::reset_endless_spool() {
 }
 
 // ============================================================================
+// AFC Config File Management
+// ============================================================================
+
+void AmsBackendAfc::load_afc_configs() {
+    if (configs_loading_.load() || configs_loaded_.load()) {
+        return;
+    }
+
+    if (!api_) {
+        spdlog::warn("[AMS AFC] Cannot load configs: MoonrakerAPI is null");
+        return;
+    }
+
+    configs_loading_ = true;
+
+    // Create managers if not yet created
+    if (!afc_config_) {
+        afc_config_ = std::make_unique<AfcConfigManager>(api_);
+    }
+    if (!macro_vars_config_) {
+        macro_vars_config_ = std::make_unique<AfcConfigManager>(api_);
+    }
+
+    // Track completion of both loads
+    auto loads_remaining = std::make_shared<std::atomic<int>>(2);
+
+    // Callbacks from download_file run on the libhv background thread.
+    // configs_loaded_ is std::atomic<bool> — the store (release) after both loads complete
+    // synchronizes-with the load (acquire) in get_device_actions() on the main thread,
+    // ensuring all parser writes are visible before the main thread reads them.
+    auto check_done = [this, loads_remaining]() {
+        if (loads_remaining->fetch_sub(1) == 1) {
+            // Both loads complete — release barrier ensures parser state is visible
+            configs_loading_.store(false, std::memory_order_relaxed);
+            configs_loaded_.store(true, std::memory_order_release);
+            spdlog::info("[AMS AFC] Config files loaded");
+            emit_event(EVENT_STATE_CHANGED);
+        }
+    };
+
+    afc_config_->load("AFC/AFC.cfg", [check_done](bool ok, const std::string& err) {
+        if (!ok) {
+            spdlog::warn("[AMS AFC] Failed to load AFC.cfg: {}", err);
+        }
+        check_done();
+    });
+
+    macro_vars_config_->load(
+        "AFC/AFC_Macro_Vars.cfg", [check_done](bool ok, const std::string& err) {
+            if (!ok) {
+                spdlog::warn("[AMS AFC] Failed to load AFC_Macro_Vars.cfg: {}", err);
+            }
+            check_done();
+        });
+}
+
+float AmsBackendAfc::get_macro_var_float(const std::string& key, float default_val) const {
+    if (!macro_vars_config_ || !macro_vars_config_->is_loaded()) {
+        return default_val;
+    }
+    return macro_vars_config_->parser().get_float("gcode_macro AFC_MacroVars", key, default_val);
+}
+
+bool AmsBackendAfc::get_macro_var_bool(const std::string& key, bool default_val) const {
+    if (!macro_vars_config_ || !macro_vars_config_->is_loaded()) {
+        return default_val;
+    }
+    return macro_vars_config_->parser().get_bool("gcode_macro AFC_MacroVars", key, default_val);
+}
+
+// ============================================================================
 // Device Actions (AFC-specific calibration and speed settings)
 // ============================================================================
 
 std::vector<helix::printer::DeviceSection> AmsBackendAfc::get_device_sections() const {
-    return {{"calibration", "Calibration", "wrench", 0},
-            {"speed", "Speed Settings", "speedometer", 1},
-            {"maintenance", "Maintenance", "wrench-outline", 2},
-            {"led", "LED & Modes", "lightbulb-outline", 3}};
+    return helix::printer::afc_default_sections();
 }
 
 std::vector<helix::printer::DeviceAction> AmsBackendAfc::get_device_actions() const {
@@ -1657,166 +2109,184 @@ std::vector<helix::printer::DeviceAction> AmsBackendAfc::get_device_actions() co
     using helix::printer::ActionType;
     using helix::printer::DeviceAction;
 
-    return {// Calibration section
-            DeviceAction{
-                "calibration_wizard",
-                "Run Calibration Wizard",
-                "play",
-                "calibration",
-                "Interactive calibration for all lanes",
-                ActionType::BUTTON,
-                {}, // no value for button
-                {}, // no options
-                0,
-                0,  // min/max not used
-                "", // no unit
-                -1, // system-wide
-                true,
-                "" // enabled
-            },
-            DeviceAction{"bowden_length",
-                         "Bowden Length",
-                         "ruler",
-                         "calibration",
-                         "Distance from hub to toolhead",
-                         ActionType::SLIDER,
-                         bowden_length_, // current value from hub
-                         {},             // no options
-                         100.0f,
-                         std::max(2000.0f, bowden_length_ * 1.5f), // dynamic max
-                         "mm",
-                         -1, // system-wide
-                         true,
-                         ""},
-            // Speed section
-            DeviceAction{"speed_fwd",
-                         "Forward Multiplier",
-                         "fast-forward",
-                         "speed",
-                         "Speed multiplier for forward moves",
-                         ActionType::SLIDER,
-                         1.0f, // default
-                         {},
-                         0.5f,
-                         2.0f, // min/max
-                         "x",
-                         -1,
-                         true,
-                         ""},
-            DeviceAction{"speed_rev",
-                         "Reverse Multiplier",
-                         "rewind",
-                         "speed",
-                         "Speed multiplier for reverse moves",
-                         ActionType::SLIDER,
-                         1.0f,
-                         {},
-                         0.5f,
-                         2.0f,
-                         "x",
-                         -1,
-                         true,
-                         ""},
-            // Maintenance section
-            DeviceAction{"test_lanes",
-                         "Test All Lanes",
-                         "test-tube",
-                         "maintenance",
-                         "Run test sequence on all lanes",
-                         ActionType::BUTTON,
-                         {},
-                         {},
-                         0,
-                         0,
-                         "",
-                         -1,
-                         true,
-                         ""},
-            DeviceAction{"change_blade",
-                         "Change Blade",
-                         "box-cutter",
-                         "maintenance",
-                         "Initiate blade change procedure",
-                         ActionType::BUTTON,
-                         {},
-                         {},
-                         0,
-                         0,
-                         "",
-                         -1,
-                         true,
-                         ""},
-            DeviceAction{"park",
-                         "Park",
-                         "parking",
-                         "maintenance",
-                         "Park the AFC system",
-                         ActionType::BUTTON,
-                         {},
-                         {},
-                         0,
-                         0,
-                         "",
-                         -1,
-                         true,
-                         ""},
-            DeviceAction{"brush",
-                         "Clean Brush",
-                         "broom",
-                         "maintenance",
-                         "Run brush cleaning sequence",
-                         ActionType::BUTTON,
-                         {},
-                         {},
-                         0,
-                         0,
-                         "",
-                         -1,
-                         true,
-                         ""},
-            DeviceAction{"reset_motor",
-                         "Reset Motor Timer",
-                         "timer-refresh",
-                         "maintenance",
-                         "Reset motor run-time counter",
-                         ActionType::BUTTON,
-                         {},
-                         {},
-                         0,
-                         0,
-                         "",
-                         -1,
-                         true,
-                         ""},
-            // LED & Modes section
-            DeviceAction{"led_toggle",
-                         afc_led_state_ ? "Turn Off LEDs" : "Turn On LEDs",
-                         afc_led_state_ ? "lightbulb-off" : "lightbulb-on",
-                         "led",
-                         "Toggle AFC LED strip",
-                         ActionType::BUTTON,
-                         {},
-                         {},
-                         0,
-                         0,
-                         "",
-                         -1,
-                         true,
-                         ""},
-            DeviceAction{"quiet_mode",
-                         "Toggle Quiet Mode",
-                         "volume-off",
-                         "led",
-                         "Enable/disable quiet operation mode",
-                         ActionType::BUTTON,
-                         {},
-                         {},
-                         0,
-                         0,
-                         "",
-                         -1,
-                         true,
-                         ""}};
+    // Start from shared defaults for static actions
+    auto actions = helix::printer::afc_default_actions();
+
+    // Overlay dynamic values onto default actions
+    for (auto& a : actions) {
+        if (a.id == "bowden_length") {
+            a.current_value = bowden_length_;
+            a.max_value = std::max(2000.0f, bowden_length_ * 1.5f);
+        }
+        if (a.id == "led_toggle") {
+            a.label = afc_led_state_ ? "Turn Off LEDs" : "Turn On LEDs";
+            a.icon = afc_led_state_ ? "lightbulb-off" : "lightbulb-on";
+        }
+    }
+
+    // Multi-extruder: replace single bowden with per-extruder sliders
+    if (num_extruders_ > 1 && !extruders_.empty()) {
+        actions.erase(std::remove_if(actions.begin(), actions.end(),
+                                     [](const DeviceAction& a) { return a.id == "bowden_length"; }),
+                      actions.end());
+        for (int i = 0; i < static_cast<int>(extruders_.size()); ++i) {
+            std::string id = "bowden_T" + std::to_string(i);
+            std::string label = "Bowden Length (T" + std::to_string(i) + ")";
+            std::string desc = "Bowden tube length for tool " + std::to_string(i);
+            actions.push_back(
+                DeviceAction{id,
+                             label,
+                             "ruler",
+                             "setup",
+                             desc,
+                             ActionType::SLIDER,
+                             bowden_length_, // shared default until per-extruder tracking
+                             {},
+                             100.0f,
+                             std::max(2000.0f, bowden_length_ * 1.5f),
+                             "mm",
+                             -1,
+                             true,
+                             ""});
+        }
+    }
+
+    // ---- Overlay dynamic values from config onto default actions ----
+
+    // Acquire barrier pairs with release in load_afc_configs() to ensure
+    // parser state written on bg thread is visible here on the main thread.
+    bool loaded = configs_loaded_.load(std::memory_order_acquire);
+    bool cfg_ready = loaded && afc_config_ && afc_config_->is_loaded();
+    bool macro_ready = loaded && macro_vars_config_ && macro_vars_config_->is_loaded();
+    std::string not_loaded_reason = "Loading configuration...";
+
+    // Find first AFC_hub section from config (for hub actions)
+    std::string hub_section;
+    if (cfg_ready) {
+        auto hubs = afc_config_->parser().get_sections_matching("AFC_hub");
+        if (!hubs.empty()) {
+            hub_section = hubs[0];
+        }
+    }
+    bool hub_ready = cfg_ready && !hub_section.empty();
+
+    // Config save state
+    bool has_changes = (afc_config_ && afc_config_->has_unsaved_changes()) ||
+                       (macro_vars_config_ && macro_vars_config_->has_unsaved_changes());
+
+    for (auto& a : actions) {
+        // Hub & Cutter actions — from afc_config_ hub section
+        if (a.id == "hub_cut_enabled") {
+            if (hub_ready) {
+                a.current_value =
+                    std::any(afc_config_->parser().get_bool(hub_section, "cut", false));
+                a.enabled = true;
+            } else {
+                a.enabled = false;
+                a.disable_reason = not_loaded_reason;
+            }
+        } else if (a.id == "hub_cut_dist") {
+            if (hub_ready) {
+                a.current_value =
+                    std::any(afc_config_->parser().get_float(hub_section, "cut_dist", 0.0f));
+                a.enabled = true;
+            } else {
+                a.enabled = false;
+                a.disable_reason = not_loaded_reason;
+            }
+        } else if (a.id == "hub_bowden_length") {
+            if (hub_ready) {
+                a.current_value = std::any(
+                    afc_config_->parser().get_float(hub_section, "afc_bowden_length", 450.0f));
+                a.enabled = true;
+            } else {
+                a.enabled = false;
+                a.disable_reason = not_loaded_reason;
+            }
+        } else if (a.id == "assisted_retract") {
+            if (hub_ready) {
+                a.current_value = std::any(
+                    afc_config_->parser().get_bool(hub_section, "assisted_retract", false));
+                a.enabled = true;
+            } else {
+                a.enabled = false;
+                a.disable_reason = not_loaded_reason;
+            }
+        }
+
+        // Tip Forming actions — from macro_vars_config_
+        else if (a.id == "ramming_volume") {
+            if (macro_ready) {
+                a.current_value = std::any(get_macro_var_float("variable_ramming_volume", 0.0f));
+                a.enabled = true;
+            } else {
+                a.enabled = false;
+                a.disable_reason = not_loaded_reason;
+            }
+        } else if (a.id == "unloading_speed_start") {
+            if (macro_ready) {
+                a.current_value =
+                    std::any(get_macro_var_float("variable_unloading_speed_start", 0.0f));
+                a.enabled = true;
+            } else {
+                a.enabled = false;
+                a.disable_reason = not_loaded_reason;
+            }
+        } else if (a.id == "cooling_tube_length") {
+            if (macro_ready) {
+                a.current_value =
+                    std::any(get_macro_var_float("variable_cooling_tube_length", 0.0f));
+                a.enabled = true;
+            } else {
+                a.enabled = false;
+                a.disable_reason = not_loaded_reason;
+            }
+        } else if (a.id == "cooling_tube_retraction") {
+            if (macro_ready) {
+                a.current_value =
+                    std::any(get_macro_var_float("variable_cooling_tube_retraction", 0.0f));
+                a.enabled = true;
+            } else {
+                a.enabled = false;
+                a.disable_reason = not_loaded_reason;
+            }
+        }
+
+        // Purge & Wipe actions — from macro_vars_config_
+        else if (a.id == "purge_enabled") {
+            if (macro_ready) {
+                a.current_value = std::any(get_macro_var_bool("variable_purge_enabled", false));
+                a.enabled = true;
+            } else {
+                a.enabled = false;
+                a.disable_reason = not_loaded_reason;
+            }
+        } else if (a.id == "purge_length") {
+            if (macro_ready) {
+                a.current_value = std::any(get_macro_var_float("variable_purge_length", 0.0f));
+                a.enabled = true;
+            } else {
+                a.enabled = false;
+                a.disable_reason = not_loaded_reason;
+            }
+        } else if (a.id == "brush_enabled") {
+            if (macro_ready) {
+                a.current_value = std::any(get_macro_var_bool("variable_brush_enabled", false));
+                a.enabled = true;
+            } else {
+                a.enabled = false;
+                a.disable_reason = not_loaded_reason;
+            }
+        }
+
+        // Config section — save_restart enabled only when there are unsaved changes
+        else if (a.id == "save_restart") {
+            a.enabled = has_changes;
+            a.disable_reason = has_changes ? "" : "No unsaved changes";
+        }
+    }
+
+    return actions;
 }
 
 AmsError AmsBackendAfc::execute_device_action(const std::string& action_id, const std::any& value) {
@@ -1847,6 +2317,35 @@ AmsError AmsBackendAfc::execute_device_action(const std::string& action_id, cons
                                      " LENGTH=" + std::to_string(static_cast<int>(length)));
             }
             return AmsErrorHelper::not_supported("No AFC units configured");
+        } catch (const std::bad_any_cast&) {
+            return AmsError(AmsResult::WRONG_STATE, "Invalid bowden length type",
+                            "Invalid value type", "Provide a numeric value");
+        }
+    } else if (action_id.rfind("bowden_T", 0) == 0) {
+        // Per-extruder bowden length (toolchanger): bowden_T0, bowden_T1, etc.
+        if (!value.has_value()) {
+            return AmsError(AmsResult::WRONG_STATE, "Bowden length value required", "Missing value",
+                            "Provide a bowden length value");
+        }
+        try {
+            float length = std::any_cast<float>(value);
+            std::lock_guard<std::recursive_mutex> lock(mutex_);
+            float max_len = std::max(2000.0f, bowden_length_ * 1.5f);
+            if (length < 100.0f || length > max_len) {
+                return AmsError(AmsResult::WRONG_STATE,
+                                fmt::format("Bowden length must be 100-{:.0f}mm", max_len),
+                                "Invalid value",
+                                fmt::format("Enter a length between 100 and {:.0f}mm", max_len));
+            }
+            // Extract tool index from action_id (e.g., "bowden_T0" -> 0)
+            int tool_idx = std::stoi(action_id.substr(8));
+            if (tool_idx >= 0 && tool_idx < static_cast<int>(extruders_.size())) {
+                // Use extruder name for the command
+                return execute_gcode("SET_BOWDEN_LENGTH EXTRUDER=" + extruders_[tool_idx].name +
+                                     " LENGTH=" + std::to_string(static_cast<int>(length)));
+            }
+            return AmsErrorHelper::not_supported("Invalid extruder index: " +
+                                                 std::to_string(tool_idx));
         } catch (const std::bad_any_cast&) {
             return AmsError(AmsResult::WRONG_STATE, "Invalid bowden length type",
                             "Invalid value type", "Provide a numeric value");
@@ -1885,6 +2384,159 @@ AmsError AmsBackendAfc::execute_device_action(const std::string& action_id, cons
         return execute_gcode(afc_led_state_ ? "TURN_OFF_AFC_LED" : "TURN_ON_AFC_LED");
     } else if (action_id == "quiet_mode") {
         return execute_gcode("AFC_QUIET_MODE");
+    }
+
+    // ---- Config-backed hub actions (afc_config_) ----
+    if (action_id == "hub_cut_enabled" || action_id == "hub_cut_dist" ||
+        action_id == "hub_bowden_length" || action_id == "assisted_retract") {
+        if (!afc_config_ || !afc_config_->is_loaded()) {
+            return AmsError(AmsResult::WRONG_STATE, "AFC config not loaded",
+                            "Configuration not available", "Wait for config to load");
+        }
+
+        auto hubs = afc_config_->parser().get_sections_matching("AFC_hub");
+        if (hubs.empty()) {
+            return AmsError(AmsResult::WRONG_STATE, "No hub section found in AFC config",
+                            "No hub configured", "Check AFC configuration");
+        }
+        const std::string& hub_section = hubs[0];
+
+        if (action_id == "hub_cut_enabled") {
+            try {
+                bool val = std::any_cast<bool>(value);
+                afc_config_->parser().set(hub_section, "cut", val ? "True" : "False");
+                afc_config_->mark_dirty();
+                return AmsErrorHelper::success();
+            } catch (const std::bad_any_cast&) {
+                return AmsError(AmsResult::WRONG_STATE, "Invalid value type for toggle",
+                                "Expected boolean", "");
+            }
+        } else if (action_id == "hub_cut_dist") {
+            try {
+                float val = std::any_cast<float>(value);
+                afc_config_->parser().set(hub_section, "cut_dist", fmt::format("{:g}", val));
+                afc_config_->mark_dirty();
+                return AmsErrorHelper::success();
+            } catch (const std::bad_any_cast&) {
+                return AmsError(AmsResult::WRONG_STATE, "Invalid value type for slider",
+                                "Expected float", "");
+            }
+        } else if (action_id == "hub_bowden_length") {
+            try {
+                float val = std::any_cast<float>(value);
+                afc_config_->parser().set(hub_section, "afc_bowden_length",
+                                          fmt::format("{:g}", val));
+                afc_config_->mark_dirty();
+                return AmsErrorHelper::success();
+            } catch (const std::bad_any_cast&) {
+                return AmsError(AmsResult::WRONG_STATE, "Invalid value type for slider",
+                                "Expected float", "");
+            }
+        } else if (action_id == "assisted_retract") {
+            try {
+                bool val = std::any_cast<bool>(value);
+                afc_config_->parser().set(hub_section, "assisted_retract", val ? "True" : "False");
+                afc_config_->mark_dirty();
+                return AmsErrorHelper::success();
+            } catch (const std::bad_any_cast&) {
+                return AmsError(AmsResult::WRONG_STATE, "Invalid value type for toggle",
+                                "Expected boolean", "");
+            }
+        }
+    }
+
+    // ---- Config-backed macro var actions (macro_vars_config_) ----
+    static const std::unordered_map<std::string, std::string> macro_var_slider_keys = {
+        {"ramming_volume", "variable_ramming_volume"},
+        {"unloading_speed_start", "variable_unloading_speed_start"},
+        {"cooling_tube_length", "variable_cooling_tube_length"},
+        {"cooling_tube_retraction", "variable_cooling_tube_retraction"},
+        {"purge_length", "variable_purge_length"},
+    };
+
+    static const std::unordered_map<std::string, std::string> macro_var_toggle_keys = {
+        {"purge_enabled", "variable_purge_enabled"},
+        {"brush_enabled", "variable_brush_enabled"},
+    };
+
+    if (auto it = macro_var_slider_keys.find(action_id); it != macro_var_slider_keys.end()) {
+        if (!macro_vars_config_ || !macro_vars_config_->is_loaded()) {
+            return AmsError(AmsResult::WRONG_STATE, "Macro vars config not loaded",
+                            "Configuration not available", "Wait for config to load");
+        }
+        try {
+            float val = std::any_cast<float>(value);
+            macro_vars_config_->parser().set("gcode_macro AFC_MacroVars", it->second,
+                                             fmt::format("{:g}", val));
+            macro_vars_config_->mark_dirty();
+            return AmsErrorHelper::success();
+        } catch (const std::bad_any_cast&) {
+            return AmsError(AmsResult::WRONG_STATE, "Invalid value type for slider",
+                            "Expected float", "");
+        }
+    }
+
+    if (auto it = macro_var_toggle_keys.find(action_id); it != macro_var_toggle_keys.end()) {
+        if (!macro_vars_config_ || !macro_vars_config_->is_loaded()) {
+            return AmsError(AmsResult::WRONG_STATE, "Macro vars config not loaded",
+                            "Configuration not available", "Wait for config to load");
+        }
+        try {
+            bool val = std::any_cast<bool>(value);
+            macro_vars_config_->parser().set("gcode_macro AFC_MacroVars", it->second,
+                                             val ? "True" : "False");
+            macro_vars_config_->mark_dirty();
+            return AmsErrorHelper::success();
+        } catch (const std::bad_any_cast&) {
+            return AmsError(AmsResult::WRONG_STATE, "Invalid value type for toggle",
+                            "Expected boolean", "");
+        }
+    }
+
+    // ---- Save & Restart action ----
+    if (action_id == "save_restart") {
+        bool has_changes = (afc_config_ && afc_config_->has_unsaved_changes()) ||
+                           (macro_vars_config_ && macro_vars_config_->has_unsaved_changes());
+        if (!has_changes) {
+            return AmsError(AmsResult::WRONG_STATE, "No unsaved changes", "Nothing to save", "");
+        }
+
+        auto saves_remaining = std::make_shared<std::atomic<int>>(0);
+
+        if (afc_config_ && afc_config_->has_unsaved_changes()) {
+            saves_remaining->fetch_add(1);
+        }
+        if (macro_vars_config_ && macro_vars_config_->has_unsaved_changes()) {
+            saves_remaining->fetch_add(1);
+        }
+
+        auto save_errors = std::make_shared<std::vector<std::string>>();
+
+        auto on_save_done = [this, saves_remaining, save_errors](bool ok, const std::string& err) {
+            if (!ok) {
+                spdlog::error("[AMS AFC] Config save failed: {}", err);
+                save_errors->push_back(err);
+            }
+            if (saves_remaining->fetch_sub(1) == 1) {
+                if (save_errors->empty()) {
+                    // All saves succeeded — restart Klipper to apply
+                    spdlog::info("[AMS AFC] All configs saved, sending RESTART");
+                    execute_gcode("RESTART");
+                } else {
+                    spdlog::error("[AMS AFC] {} config save(s) failed, NOT restarting",
+                                  save_errors->size());
+                }
+            }
+        };
+
+        if (afc_config_ && afc_config_->has_unsaved_changes()) {
+            afc_config_->save("AFC/AFC.cfg", on_save_done);
+        }
+        if (macro_vars_config_ && macro_vars_config_->has_unsaved_changes()) {
+            macro_vars_config_->save("AFC/AFC_Macro_Vars.cfg", on_save_done);
+        }
+
+        return AmsErrorHelper::success();
     }
 
     return AmsErrorHelper::not_supported("Unknown action: " + action_id);

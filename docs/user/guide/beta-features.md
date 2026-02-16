@@ -44,6 +44,7 @@ When beta features are enabled, the following appear in the UI with an orange "B
 | **Macro Browser** | Advanced panel | Browse and execute custom Klipper macros | Functional; hides system macros, confirms dangerous ones |
 | **G-code Console** | Advanced panel | Send G-code commands directly to the printer and view responses | Functional |
 | **Z Calibration** | Controls panel | Quick-access Z calibration button | Functional; requires probe hardware |
+| **New Spool Wizard** | SpoolmanPanel "+" button | Create new spools with guided vendor/filament/details flow | Functional; atomic creation with rollback |
 
 > **Graduated from beta:** PID Calibration and Input Shaper are now available to all users without enabling beta features.
 

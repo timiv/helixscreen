@@ -1155,6 +1155,19 @@ All modal dialogs use the `ui_dialog` XML component for consistent theming and l
 
 **Files:** `include/ui_dialog.h`, `ui_xml/modal_button_row.xml`, `ui_xml/*_modal.xml`, `ui_xml/*_dialog.xml`
 
+### Spoolman Management
+
+Full spool lifecycle management via Spoolman integration:
+
+- **SpoolmanPanel** (`ui_panel_spoolman.cpp`) — Virtualized spool list with search, context menu, edit modal
+- **SpoolWizardOverlay** (`ui_spool_wizard.cpp`) — 3-step creation wizard (Vendor → Filament → Spool Details)
+- **SpoolmanContextMenu** — Right-click/long-press actions per spool row
+- **SpoolEditModal** — Inline editing of spool properties
+
+API calls route through `server.spoolman.proxy` JSON-RPC via Moonraker. The wizard supports dual-source vendor/filament data (server + SpoolmanDB external catalog) with deduplication. Creation is atomic with best-effort rollback.
+
+Gated behind beta features (`show_beta_features` subject).
+
 ### Config Migration System
 
 Versioned schema migration for `helixconfig.json` that automatically upgrades configuration between releases. The `Config` class tracks a `config_version` integer (currently `CURRENT_CONFIG_VERSION = 2`) and applies migrations sequentially on load:

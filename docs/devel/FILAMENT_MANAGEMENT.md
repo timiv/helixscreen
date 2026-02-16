@@ -170,6 +170,59 @@ struct ToolInfo {
 
 ---
 
+## UI Panels
+
+### AMS Panel (`ui_panel_ams`)
+
+The detail panel showing slots, path visualization, hub sensors, and the currently loaded filament for a single backend. Opened as an overlay from the Filament nav panel or from the AMS Overview Panel.
+
+Key features:
+- Slot grid with overlap layout for >4 slots (shared via `ui_ams_slot_layout.h`)
+- Path canvas showing filament routing from slots through hub to toolhead
+- Backend selector (shown when `backend_count > 1`)
+- Unit scoping: can display a subset of slots for a single unit within a multi-unit backend
+
+### AMS Overview Panel (`ui_panel_ams_overview`)
+
+Grid of unit cards showing all units across the system. Each card is a miniature visualization of the unit's slots. Clicking a card transitions inline to a detail view of that unit's slots.
+
+Key files:
+| File | Purpose |
+|------|---------|
+| `include/ui_panel_ams_overview.h` | Class with detail view state |
+| `src/ui/ui_panel_ams_overview.cpp` | Card creation, inline detail view, slot layout |
+| `ui_xml/ams_overview_panel.xml` | Two-column layout: cards/detail left, loaded info right |
+| `ui_xml/ams_unit_card.xml` | Mini unit card with slot bars and hub sensor dot |
+
+**Current scope**: The overview panel queries `get_backend(0)` and displays all units from that single backend's `AmsSystemInfo`. This covers the common case of a single multi-unit AMS system (e.g., AFC with multiple Box Turtle units).
+
+**Future: multi-backend aggregation**: When multiple backends are active simultaneously (e.g., an AFC system on one toolhead + a Happy Hare on another), the overview panel should iterate all backends via `AmsState::get_backend(i)` for `i` in `0..backend_count` and aggregate their units into the card grid. The per-backend slot subject storage (`secondary_slot_subjects_`) and event routing already support this — the UI aggregation is the remaining integration point.
+
+### Error State Visualization
+
+Per-slot error indicators and per-unit error badges, driven by `SlotInfo.error` and `SlotInfo.buffer_health` from the backend layer. See `docs/devel/plans/2026-02-15-error-state-visualization-design.md` for full design.
+
+**Data model** (`ams_types.h`):
+- `SlotError` — message + severity (INFO/WARNING/ERROR), `std::optional` on `SlotInfo`
+- `BufferHealth` — AFC buffer fault proximity data, `std::optional` on `SlotInfo`
+- `AmsUnit::has_any_error()` — rolls up per-slot errors for overview badge
+
+**Detail view** (`ui_ams_slot.cpp`):
+- 14px error badge at top-right of spool (red for ERROR, yellow for WARNING)
+- 8px buffer health dot at bottom-center (green/yellow/red based on fault proximity)
+- Both pulled from `SlotInfo` during refresh (same pattern as material/tool badge)
+
+**Overview view** (`ui_panel_ams_overview.cpp`):
+- 12px error badge at top-right of unit card (worst severity across slots)
+- Mini-bar status lines colored by error severity
+
+**Backend integration**:
+- AFC: per-lane error from `status` field + buffer health from `AFC_buffer` objects
+- Happy Hare: system-level error mapped to `current_slot` via `reason_for_pause`
+- Mock: `set_slot_error()` / `set_slot_buffer_health()` + pre-populated errors in AFC mode
+
+---
+
 ## Supported Backends
 
 ### AmsType Enum
@@ -745,6 +798,21 @@ Write tests for:
 - Path segment computation
 
 See `tests/unit/test_ams_backend_happy_hare.cpp`, `test_ams_tool_mapping.cpp`, `test_ams_endless_spool.cpp`, and `test_ams_device_actions.cpp` for patterns.
+
+---
+
+## Spoolman Management & Spool Wizard
+
+Beyond slot assignment, HelixScreen provides full Spoolman spool management:
+
+- **SpoolmanPanel overlay** — Browse, search, edit, and delete spools
+- **New Spool Wizard** (beta) — 3-step guided creation: Vendor → Filament → Spool Details
+- **Context menu** — Per-spool actions: Set Active, Edit, Delete
+- **Edit modal** — Update weight, price, lot number, notes via PATCH
+
+The wizard merges data from the user's Spoolman server and SpoolmanDB external catalog, with atomic creation (vendor → filament → spool) and best-effort rollback on failure.
+
+See `docs/devel/plans/2026-02-15-spool-wizard-status.md` for full implementation status and visual test plan.
 
 ---
 

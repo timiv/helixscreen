@@ -13,8 +13,10 @@
 
 #include "ams_state.h"
 
+#include "ui_color_picker.h"
 #include "ui_update_queue.h"
 
+#include "ams_backend_mock.h"
 #include "app_globals.h"
 #include "format_utils.h"
 #include "moonraker_api.h"
@@ -64,6 +66,17 @@ const char* AmsState::get_logo_path(const std::string& type_name) {
     size_t paren_pos = lower_name.find(" (");
     if (paren_pos != std::string::npos) {
         lower_name = lower_name.substr(0, paren_pos);
+    }
+
+    // Strip trailing unit numbers like "box turtle 1" → "box turtle"
+    while (!lower_name.empty() && lower_name.back() == ' ') {
+        lower_name.pop_back();
+    }
+    while (!lower_name.empty() && std::isdigit(static_cast<unsigned char>(lower_name.back()))) {
+        lower_name.pop_back();
+    }
+    while (!lower_name.empty() && lower_name.back() == ' ') {
+        lower_name.pop_back();
     }
 
     // Map system names to logo paths
@@ -381,6 +394,13 @@ int AmsState::add_backend(std::unique_ptr<AmsBackend> backend) {
                 on_backend_event(index, event, data);
             });
 
+        // Apply stored gcode response callback to mock backends
+        if (gcode_response_callback_) {
+            if (auto* mock = dynamic_cast<AmsBackendMock*>(backends_[index].get())) {
+                mock->set_gcode_response_callback(gcode_response_callback_);
+            }
+        }
+
         // Allocate per-backend slot subjects for secondary backends
         if (index > 0) {
             auto info = backends_[index]->get_system_info();
@@ -457,6 +477,21 @@ void AmsState::set_moonraker_api(MoonrakerAPI* api) {
     api_ = api;
     last_synced_spoolman_id_ = 0; // Reset tracking on API change
     spdlog::debug("[AMS State] Moonraker API {} for Spoolman integration", api ? "set" : "cleared");
+}
+
+void AmsState::set_gcode_response_callback(std::function<void(const std::string&)> callback) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    gcode_response_callback_ = std::move(callback);
+
+    // Apply to any existing mock backends
+    for (auto& backend : backends_) {
+        if (auto* mock = dynamic_cast<AmsBackendMock*>(backend.get())) {
+            mock->set_gcode_response_callback(gcode_response_callback_);
+        }
+    }
+
+    spdlog::debug("[AMS State] Gcode response callback {}",
+                  gcode_response_callback_ ? "set" : "cleared");
 }
 
 lv_subject_t* AmsState::get_slot_color_subject(int slot_index) {
@@ -832,7 +867,7 @@ void AmsState::sync_current_loaded_from_backend() {
     if (!backend) {
         // No backend - show empty state
         lv_subject_copy_string(&current_material_text_, "---");
-        lv_subject_copy_string(&current_slot_text_, "None");
+        lv_subject_copy_string(&current_slot_text_, "Currently Loaded");
         lv_subject_copy_string(&current_weight_text_, "");
         lv_subject_set_int(&current_has_weight_, 0);
         lv_subject_set_int(&current_color_, 0x505050);
@@ -845,7 +880,7 @@ void AmsState::sync_current_loaded_from_backend() {
     // Check for bypass mode (slot_index == -2)
     if (slot_index == -2 && backend->is_bypass_active()) {
         lv_subject_copy_string(&current_material_text_, "External");
-        lv_subject_copy_string(&current_slot_text_, "Bypass");
+        lv_subject_copy_string(&current_slot_text_, "Current: Bypass");
         lv_subject_copy_string(&current_weight_text_, "");
         lv_subject_set_int(&current_has_weight_, 0);
         lv_subject_set_int(&current_color_, 0x888888);
@@ -865,25 +900,54 @@ void AmsState::sync_current_loaded_from_backend() {
         // Set color
         lv_subject_set_int(&current_color_, static_cast<int>(slot_info.color_rgb));
 
-        // Build material label - combine color name with material when Spoolman linked
-        if (slot_info.spoolman_id > 0 && !slot_info.color_name.empty()) {
-            std::string label = slot_info.color_name;
-            if (!slot_info.material.empty()) {
-                label += " " + slot_info.material;
+        // Build material label - color name + material (e.g., "Red PLA")
+        // Use Spoolman color name if available, otherwise identify from hex
+        {
+            std::string color_label;
+            if (slot_info.spoolman_id > 0 && !slot_info.color_name.empty()) {
+                color_label = slot_info.color_name;
+            } else {
+                color_label = helix::get_color_name_from_hex(slot_info.color_rgb);
+            }
+
+            std::string label;
+            if (!color_label.empty() && !slot_info.material.empty()) {
+                label = color_label + " " + slot_info.material;
+            } else if (!color_label.empty()) {
+                label = color_label;
+            } else if (!slot_info.material.empty()) {
+                label = slot_info.material;
+            } else {
+                label = "Filament";
             }
             lv_subject_copy_string(&current_material_text_, label.c_str());
-        } else if (!slot_info.material.empty()) {
-            lv_subject_copy_string(&current_material_text_, slot_info.material.c_str());
-        } else {
-            lv_subject_copy_string(&current_material_text_, "Filament");
         }
 
-        // Set slot label (1-based for user display)
-        snprintf(current_slot_text_buf_, sizeof(current_slot_text_buf_), "Slot %d", slot_index + 1);
-        lv_subject_copy_string(&current_slot_text_, current_slot_text_buf_);
+        // Set slot label with unit name (e.g., "Box Turtle 1 · Slot 1")
+        {
+            AmsSystemInfo sys = backend->get_system_info();
+            const char* unit_name = nullptr;
+            int local_slot = slot_index + 1; // 1-based default
+            for (const auto& unit : sys.units) {
+                if (slot_index >= unit.first_slot_global_index &&
+                    slot_index < unit.first_slot_global_index + unit.slot_count) {
+                    unit_name = unit.name.c_str();
+                    local_slot = slot_index - unit.first_slot_global_index + 1;
+                    break;
+                }
+            }
+            if (unit_name && sys.units.size() > 1) {
+                snprintf(current_slot_text_buf_, sizeof(current_slot_text_buf_),
+                         "Current: %s · Slot %d", unit_name, local_slot);
+            } else {
+                snprintf(current_slot_text_buf_, sizeof(current_slot_text_buf_), "Current: Slot %d",
+                         local_slot);
+            }
+            lv_subject_copy_string(&current_slot_text_, current_slot_text_buf_);
+        }
 
-        // Show remaining weight if available (Spoolman linked with weight data)
-        if (slot_info.spoolman_id > 0 && slot_info.total_weight_g > 0.0f) {
+        // Show remaining weight if available (from Spoolman or backend)
+        if (slot_info.total_weight_g > 0.0f && slot_info.remaining_weight_g >= 0.0f) {
             snprintf(current_weight_text_buf_, sizeof(current_weight_text_buf_), "%.0fg",
                      slot_info.remaining_weight_g);
             lv_subject_copy_string(&current_weight_text_, current_weight_text_buf_);
@@ -895,7 +959,7 @@ void AmsState::sync_current_loaded_from_backend() {
     } else {
         // No filament loaded - show empty state
         lv_subject_copy_string(&current_material_text_, "---");
-        lv_subject_copy_string(&current_slot_text_, "None");
+        lv_subject_copy_string(&current_slot_text_, "Currently Loaded");
         lv_subject_copy_string(&current_weight_text_, "");
         lv_subject_set_int(&current_has_weight_, 0);
         lv_subject_set_int(&current_color_, 0x505050);
@@ -976,6 +1040,11 @@ void AmsState::update_modal_text_subjects() {
 
 void AmsState::refresh_spoolman_weights() {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
+
+    // Mock backends use fake spoolman IDs that don't exist in real Spoolman
+    if (get_runtime_config()->should_mock_ams()) {
+        return;
+    }
 
     if (!api_) {
         return;

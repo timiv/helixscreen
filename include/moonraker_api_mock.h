@@ -435,6 +435,19 @@ class MoonrakerAPIMock : public MoonrakerAPI {
                                       SuccessCallback on_success, ErrorCallback on_error) override;
 
     /**
+     * @brief General-purpose spool update in mock storage
+     *
+     * Updates spool fields from JSON (remaining_weight, price, lot_nr, comment).
+     *
+     * @param spool_id Spool ID to update
+     * @param spool_data JSON with fields to update
+     * @param on_success Success callback (always called)
+     * @param on_error Error callback (never called)
+     */
+    void update_spoolman_spool(int spool_id, const nlohmann::json& spool_data,
+                               SuccessCallback on_success, ErrorCallback on_error) override;
+
+    /**
      * @brief Update filament color in mock storage
      *
      * Logs the color update (mock doesn't track filament definitions separately).
@@ -444,9 +457,44 @@ class MoonrakerAPIMock : public MoonrakerAPI {
      * @param on_success Success callback (always called)
      * @param on_error Error callback (never called)
      */
+    void update_spoolman_filament(int filament_id, const nlohmann::json& filament_data,
+                                  SuccessCallback on_success, ErrorCallback on_error) override;
     void update_spoolman_filament_color(int filament_id, const std::string& color_hex,
                                         SuccessCallback on_success,
                                         ErrorCallback on_error) override;
+
+    void get_spoolman_vendors(VendorListCallback on_success, ErrorCallback on_error) override;
+
+    void get_spoolman_filaments(FilamentListCallback on_success, ErrorCallback on_error) override;
+
+    void create_spoolman_vendor(const nlohmann::json& vendor_data, VendorCreateCallback on_success,
+                                ErrorCallback on_error) override;
+
+    void create_spoolman_filament(const nlohmann::json& filament_data,
+                                  FilamentCreateCallback on_success,
+                                  ErrorCallback on_error) override;
+
+    void create_spoolman_spool(const nlohmann::json& spool_data, SpoolCreateCallback on_success,
+                               ErrorCallback on_error) override;
+
+    void delete_spoolman_spool(int spool_id, SuccessCallback on_success,
+                               ErrorCallback on_error) override;
+
+    void get_spoolman_external_vendors(VendorListCallback on_success,
+                                       ErrorCallback on_error) override;
+
+    void get_spoolman_external_filaments(const std::string& vendor_name,
+                                         FilamentListCallback on_success,
+                                         ErrorCallback on_error) override;
+
+    void get_spoolman_filaments(int vendor_id, FilamentListCallback on_success,
+                                ErrorCallback on_error) override;
+
+    void delete_spoolman_vendor(int vendor_id, SuccessCallback on_success,
+                                ErrorCallback on_error) override;
+
+    void delete_spoolman_filament(int filament_id, SuccessCallback on_success,
+                                  ErrorCallback on_error) override;
 
     /**
      * @brief Enable or disable mock Spoolman integration

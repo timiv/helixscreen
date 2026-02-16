@@ -19,7 +19,7 @@ scripts/setup-worktree.sh feature/my-branch  # Symlinks deps, builds fast
 ```
 
 **Nav panels:** home, print-select, controls, filament, settings, advanced
-**Overlays:** motion, print-status, console, bed-mesh, input-shaper, macros, spoolman, ams, pid-calibration, zoffset-calibration, screws-tilt, history-dashboard, history-list, power, notification-history
+**Overlays:** motion, print-status, console, bed-mesh, input-shaper, macros, spoolman, spool-wizard, ams, pid-calibration, zoffset-calibration, screws-tilt, history-dashboard, history-list, power, notification-history
 **Screenshots:** Press 'S' in UI, or `./scripts/screenshot.sh helix-screen output-name [panel]`
 
 ---

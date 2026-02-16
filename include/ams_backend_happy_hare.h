@@ -144,10 +144,18 @@ class AmsBackendHappyHare : public AmsBackend {
      */
     [[nodiscard]] std::vector<int> get_tool_mapping() const override;
 
+    // Device Management
+    [[nodiscard]] std::vector<helix::printer::DeviceSection> get_device_sections() const override;
+    [[nodiscard]] std::vector<helix::printer::DeviceAction> get_device_actions() const override;
+    AmsError execute_device_action(const std::string& action_id,
+                                   const std::any& value = {}) override;
+
   protected:
     // Allow test helper access to private members
     friend class AmsBackendHappyHareTestHelper;
     friend class AmsBackendHappyHareEndlessSpoolHelper;
+    friend class AmsBackendHHMultiUnitHelper;
+    friend class HappyHareErrorStateHelper;
 
   private:
     /**
@@ -228,8 +236,13 @@ class AmsBackendHappyHare : public AmsBackend {
     // Cached MMU state
     AmsSystemInfo system_info_;     ///< Current system state
     bool gates_initialized_{false}; ///< Have we seen gate_status yet?
+    int num_units_{1};              ///< Number of physical units (default 1)
 
     // Path visualization state
     int filament_pos_{0};                          ///< Happy Hare filament_pos value
     PathSegment error_segment_{PathSegment::NONE}; ///< Inferred error location
+
+    // Error state tracking
+    std::string reason_for_pause_; ///< Last reason_for_pause from MMU (descriptive error text)
+    int errored_slot_{-1};         ///< Slot that was in error state (-1 = none)
 };

@@ -57,6 +57,7 @@ Welcome to the HelixScreen documentation. Choose your path:
 | Document | Description |
 |----------|-------------|
 | [**Filament Management**](devel/FILAMENT_MANAGEMENT.md) | AMS, AFC, Happy Hare, ValgACE, Tool Changer |
+| [**Spoolman Spool Wizard**](devel/plans/2026-02-15-spool-wizard-status.md) | 3-step spool creation wizard, API methods, visual test plan |
 | [**Input Shaper & PID**](devel/INPUT_SHAPER.md) | Calibration, frequency response charts, CSV parser |
 | [**Preprint Prediction**](devel/PREPRINT_PREDICTION.md) | ETA prediction engine, phase timing, history |
 | [**Exclude Objects**](devel/EXCLUDE_OBJECTS.md) | Object exclusion, thumbnails, slicer setup |

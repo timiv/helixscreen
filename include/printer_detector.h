@@ -344,4 +344,15 @@ class PrinterDetector {
      * @return true if detection ran and found a match, false if skipped or no match
      */
     static bool auto_detect_and_save(const helix::PrinterDiscovery& discovery, Config* config);
+
+    /**
+     * @brief Check if the configured printer type is a Voron variant
+     *
+     * Reads the printer type from config and does a case-insensitive check
+     * for "voron". Used to select Stealthburner toolhead rendering in the
+     * filament path canvas.
+     *
+     * @return true if printer type contains "Voron" (case-insensitive)
+     */
+    static bool is_voron_printer();
 };

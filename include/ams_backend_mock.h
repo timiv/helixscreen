@@ -140,6 +140,20 @@ class AmsBackendMock : public AmsBackend {
     void force_slot_status(int slot_index, SlotStatus status);
 
     /**
+     * @brief Set per-slot error state (for testing error visualization)
+     * @param slot_index Slot to modify
+     * @param error Error to set, or nullopt to clear
+     */
+    void set_slot_error(int slot_index, std::optional<SlotError> error);
+
+    /**
+     * @brief Set per-slot buffer health (for testing buffer health visualization)
+     * @param slot_index Slot to modify
+     * @param health Buffer health to set, or nullopt to clear
+     */
+    void set_slot_buffer_health(int slot_index, std::optional<BufferHealth> health);
+
+    /**
      * @brief Set whether this mock simulates a hardware bypass sensor
      * @param has_sensor true=hardware sensor (auto-detect), false=virtual (manual toggle)
      *
@@ -230,6 +244,21 @@ class AmsBackendMock : public AmsBackend {
     [[nodiscard]] bool is_afc_mode() const;
 
     /**
+     * @brief Enable multi-unit mode for testing overview panel
+     *
+     * Creates 2 Box Turtle units with 4 slots each (8 total).
+     * Simulates a realistic multi-unit AFC setup.
+     *
+     * @param enabled true to enable multi-unit, false to revert to single unit
+     */
+    void set_multi_unit_mode(bool enabled);
+
+    /**
+     * @brief Check if multi-unit mode is active
+     */
+    [[nodiscard]] bool is_multi_unit_mode() const;
+
+    /**
      * @brief Set whether endless spool is supported
      * @param supported true to enable endless spool support
      *
@@ -267,6 +296,17 @@ class AmsBackendMock : public AmsBackend {
      * @brief Clear the last executed action state
      */
     void clear_last_executed_action();
+
+    /**
+     * @brief Set callback for injecting gcode response lines
+     *
+     * Used by the mock to simulate Klipper gcode responses (e.g., action:prompt
+     * messages) without a real WebSocket connection. The callback feeds lines
+     * into ActionPromptManager::process_line() via AmsState.
+     *
+     * @param callback Function that receives "// action:..." lines
+     */
+    void set_gcode_response_callback(std::function<void(const std::string&)> callback);
 
   private:
     /**
@@ -396,7 +436,8 @@ class AmsBackendMock : public AmsBackend {
     bool tool_changer_mode_ = false; ///< Simulate tool changer instead of filament system
 
     // AFC mode (alternative to Happy Hare simulation)
-    bool afc_mode_ = false; ///< Simulate AFC Box Turtle instead of Happy Hare
+    bool afc_mode_ = false;        ///< Simulate AFC Box Turtle instead of Happy Hare
+    bool multi_unit_mode_ = false; ///< Simulate multi-unit AFC (2x Box Turtle)
 
     // Endless spool simulation state
     bool endless_spool_supported_ = true; ///< Whether endless spool is supported
@@ -409,4 +450,7 @@ class AmsBackendMock : public AmsBackend {
     std::vector<helix::printer::DeviceAction> mock_device_actions_;
     std::string last_action_id_;
     std::any last_action_value_;
+
+    // Gcode response injection (for simulating action:prompt from mock)
+    std::function<void(const std::string&)> gcode_response_callback_;
 };

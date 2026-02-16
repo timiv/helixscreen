@@ -221,6 +221,18 @@ lv_subject_init_string(&subject, buffer, ...);
 
 ### 3. Data Binding
 
+#### Sigil Conventions
+
+LVGL XML uses prefix sigils to distinguish different value types:
+
+| Sigil | Meaning | Example | Context |
+|-------|---------|---------|---------|
+| `#` | Design token / const | `style_pad_all="#space_md"` | Spacing, colors, sizes |
+| `$` | Component prop | `text="$primary_text"` | Inside component templates |
+| `@` | Subject binding | `bind_text="@my_subject"` | Reactive data on `ui_button` |
+
+The `@` prefix is used on `ui_button`'s `bind_text` attribute to explicitly mark a value as a subject reference (reactive) vs. a literal string (static). Without `@`, the value is always treated as literal text. See [ui_button](#ui_button) for details.
+
 #### Simple Attribute Bindings
 
 ```xml
@@ -236,6 +248,8 @@ lv_subject_init_string(&subject, buffer, ...);
 <!-- Bind color to subject -->
 <lv_label bind_style_text_color="icon_color" text="#icon_home"/>
 ```
+
+> **Note:** Standard LVGL widgets (`lv_label`, `lv_slider`) resolve `bind_text` directly as a subject name. The `@` prefix convention is specific to `ui_button`, which needs to disambiguate between literal button labels and subject references.
 
 #### Conditional Flag Bindings (Show/Hide)
 
@@ -592,6 +606,31 @@ Semantic button with variant-based styling and auto-contrast text.
 **Variants:** `primary`, `secondary`, `ghost`, `destructive`
 
 **Built-in defaults:** Responsive `button_height` (48/52/72px), `border_radius`, auto-contrast text color
+
+**Reactive text with `bind_text`:**
+
+`ui_button` supports a `bind_text` attribute that can be either a literal string or a subject reference. Use the `@` prefix to indicate a subject binding:
+
+```xml
+<!-- Literal text (static) -->
+<ui_button bind_text="Save"/>
+
+<!-- Subject binding (reactive — updates when subject changes) -->
+<ui_button bind_text="@my_button_text_subject"/>
+```
+
+The `@` prefix is required to distinguish subject references from literal strings. Without `@`, the value is always treated as literal text. This convention works through component props:
+
+```xml
+<!-- Parent passes subject reference as prop -->
+<modal_button_row primary_text="@save_button_subject" .../>
+
+<!-- modal_button_row.xml template uses $prop substitution -->
+<ui_button bind_text="$primary_text"/>
+<!-- Resolves to bind_text="@save_button_subject" → reactive binding -->
+```
+
+When bound to a subject, the button label updates automatically, and a deferred invalidation ensures the button background repaints correctly (avoids partial-redraw artifacts).
 
 #### divider_vertical / divider_horizontal
 

@@ -91,6 +91,10 @@ struct AmsSlotData {
     // Fill level for Spoolman integration (0.0 = empty, 1.0 = full)
     float fill_level = 1.0f;
 
+    // Error/health indicators (dynamic overlays on spool_container)
+    lv_obj_t* error_indicator = nullptr;   // Error icon badge at top-right of spool
+    lv_obj_t* buffer_health_dot = nullptr; // Buffer health dot below spool
+
     // Pulsing state - when true, highlight updates are skipped to preserve animation
     bool is_pulsing = false;
 };
@@ -399,6 +403,67 @@ static void apply_tool_badge(AmsSlotData* data, int mapped_tool) {
     }
 }
 
+/**
+ * @brief Update error indicator based on SlotInfo.error
+ *
+ * Shows a small colored dot at top-right of spool_container when the slot
+ * has an error. Color varies by severity: red for ERROR, amber for WARNING.
+ */
+static void apply_slot_error(AmsSlotData* data, const SlotInfo& slot) {
+    if (!data || !data->error_indicator) {
+        return;
+    }
+
+    if (slot.error.has_value()) {
+        lv_color_t badge_color;
+        if (slot.error->severity == SlotError::ERROR) {
+            badge_color = theme_manager_get_color("danger");
+        } else if (slot.error->severity == SlotError::WARNING) {
+            badge_color = theme_manager_get_color("warning");
+        } else {
+            badge_color = theme_manager_get_color("text_muted");
+        }
+        lv_obj_set_style_bg_color(data->error_indicator, badge_color, LV_PART_MAIN);
+        lv_obj_remove_flag(data->error_indicator, LV_OBJ_FLAG_HIDDEN);
+        spdlog::trace("[AmsSlot] Slot {} error indicator: severity={}, msg='{}'", data->slot_index,
+                      static_cast<int>(slot.error->severity), slot.error->message);
+    } else {
+        lv_obj_add_flag(data->error_indicator, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+/**
+ * @brief Update buffer health dot based on SlotInfo.buffer_health
+ *
+ * Shows a small colored dot below the spool for AFC systems with fault detection.
+ * Green = healthy, yellow = approaching fault, red = fault detected.
+ */
+static void apply_buffer_health(AmsSlotData* data, const SlotInfo& slot) {
+    if (!data || !data->buffer_health_dot) {
+        return;
+    }
+
+    if (slot.buffer_health.has_value() && slot.buffer_health->fault_detection_enabled) {
+        lv_color_t dot_color;
+        if (slot.buffer_health->distance_to_fault < 0.01f) {
+            // No fault proximity — healthy
+            dot_color = theme_manager_get_color("success");
+        } else if (slot.error.has_value()) {
+            // Has error — fault detected
+            dot_color = theme_manager_get_color("danger");
+        } else {
+            // Approaching fault but no error yet
+            dot_color = theme_manager_get_color("warning");
+        }
+        lv_obj_set_style_bg_color(data->buffer_health_dot, dot_color, LV_PART_MAIN);
+        lv_obj_remove_flag(data->buffer_health_dot, LV_OBJ_FLAG_HIDDEN);
+        spdlog::trace("[AmsSlot] Slot {} buffer health: dist={:.1f}, state='{}'", data->slot_index,
+                      slot.buffer_health->distance_to_fault, slot.buffer_health->state);
+    } else {
+        lv_obj_add_flag(data->buffer_health_dot, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 // ============================================================================
 // Widget Event Handler (for cleanup)
 // ============================================================================
@@ -524,13 +589,52 @@ static void create_spool_visualization(AmsSlotData* data) {
         spdlog::debug("[AmsSlot] Created flat spool rings ({}x{})", spool_size, spool_size);
     }
 
-    // Move badges to front so they render on top of the spool visualization
+    // Create error indicator dot (top-right of spool_container, initially hidden)
+    {
+        lv_obj_t* err = lv_obj_create(data->spool_container);
+        lv_obj_set_size(err, 14, 14);
+        lv_obj_set_style_radius(err, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(err, theme_manager_get_color("danger"), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(err, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_set_style_border_width(err, 0, LV_PART_MAIN);
+        lv_obj_set_align(err, LV_ALIGN_TOP_RIGHT);
+        lv_obj_set_style_translate_x(err, 2, LV_PART_MAIN);
+        lv_obj_set_style_translate_y(err, -2, LV_PART_MAIN);
+        lv_obj_remove_flag(err, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(err, LV_OBJ_FLAG_EVENT_BUBBLE);
+        lv_obj_add_flag(err, LV_OBJ_FLAG_HIDDEN);
+        data->error_indicator = err;
+    }
+
+    // Create buffer health dot (bottom-center of spool_container, initially hidden)
+    {
+        lv_obj_t* dot = lv_obj_create(data->spool_container);
+        lv_obj_set_size(dot, 8, 8);
+        lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(dot, theme_manager_get_color("success"), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_set_style_border_width(dot, 0, LV_PART_MAIN);
+        lv_obj_set_align(dot, LV_ALIGN_BOTTOM_MID);
+        lv_obj_set_style_translate_y(dot, -2, LV_PART_MAIN);
+        lv_obj_remove_flag(dot, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(dot, LV_OBJ_FLAG_EVENT_BUBBLE);
+        lv_obj_add_flag(dot, LV_OBJ_FLAG_HIDDEN);
+        data->buffer_health_dot = dot;
+    }
+
+    // Move badges and indicators to front so they render on top of the spool visualization
     // (badges are created by XML before spool canvas/rings are added in C++)
     if (data->status_badge_bg) {
         lv_obj_move_to_index(data->status_badge_bg, -1); // -1 = move to end (front)
     }
     if (data->tool_badge_bg) {
         lv_obj_move_to_index(data->tool_badge_bg, -1);
+    }
+    if (data->error_indicator) {
+        lv_obj_move_to_index(data->error_indicator, -1);
+    }
+    if (data->buffer_health_dot) {
+        lv_obj_move_to_index(data->buffer_health_dot, -1);
     }
 }
 
@@ -637,7 +741,7 @@ static void setup_slot_observers(AmsSlotData* data) {
         apply_current_slot_highlight(data, lv_subject_get_int(current_slot_subject));
     }
 
-    // Update material label and tool badge from backend if available
+    // Update material label, tool badge, error indicator, and buffer health from backend
     AmsBackend* backend = state.get_backend();
     if (backend) {
         SlotInfo slot = backend->get_slot_info(data->slot_index);
@@ -646,6 +750,9 @@ static void setup_slot_observers(AmsSlotData* data) {
         }
         // Update tool badge based on slot's mapped_tool
         apply_tool_badge(data, slot.mapped_tool);
+        // Update error indicator and buffer health from slot data
+        apply_slot_error(data, slot);
+        apply_buffer_health(data, slot);
     }
 
     spdlog::trace("[AmsSlot] Created observers for slot {}", data->slot_index);
@@ -853,7 +960,7 @@ void ui_ams_slot_refresh(lv_obj_t* obj) {
         apply_current_slot_highlight(data, lv_subject_get_int(current_slot_subject));
     }
 
-    // Update material and tool badge from backend
+    // Update material, tool badge, error indicator, and buffer health from backend
     AmsBackend* backend = state.get_backend();
     if (backend) {
         SlotInfo slot = backend->get_slot_info(data->slot_index);
@@ -866,6 +973,9 @@ void ui_ams_slot_refresh(lv_obj_t* obj) {
         }
         // Update tool badge based on slot's mapped_tool
         apply_tool_badge(data, slot.mapped_tool);
+        // Update error indicator and buffer health from slot data
+        apply_slot_error(data, slot);
+        apply_buffer_health(data, slot);
     }
 
     spdlog::trace("[AmsSlot] Refreshed slot {}", data->slot_index);

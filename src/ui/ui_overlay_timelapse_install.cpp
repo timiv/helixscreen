@@ -3,6 +3,7 @@
 
 #include "ui_overlay_timelapse_install.h"
 
+#include "ui_button.h"
 #include "ui_emergency_stop.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
@@ -11,6 +12,7 @@
 #include "ui_update_queue.h"
 
 #include "app_globals.h"
+#include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
 #include "moonraker_types.h"
@@ -102,10 +104,7 @@ lv_obj_t* TimelapseInstallOverlay::create(lv_obj_t* parent) {
     action_btn_ = lv_obj_find_by_name(overlay_root_, "action_button");
     ssh_container_ = lv_obj_find_by_name(overlay_root_, "ssh_instructions_container");
 
-    if (action_btn_) {
-        // ui_button stores its label as the first child
-        action_btn_label_ = lv_obj_get_child(action_btn_, 0);
-    }
+    // action_btn_ is a ui_button — use ui_button_set_text() to update its label
 
     // Create step progress widget programmatically (dynamic content)
     lv_obj_t* step_container = lv_obj_find_by_name(overlay_root_, "step_container");
@@ -186,9 +185,7 @@ void TimelapseInstallOverlay::show_action_button(const char* label,
     action_callback_ = std::move(callback);
     if (action_btn_) {
         lv_obj_remove_flag(action_btn_, LV_OBJ_FLAG_HIDDEN);
-        if (action_btn_label_) {
-            lv_label_set_text(action_btn_label_, label);
-        }
+        ui_button_set_text(action_btn_, label);
     }
 }
 
@@ -208,7 +205,7 @@ void TimelapseInstallOverlay::step_check_webcam() {
     set_status("Checking for webcam...");
 
     if (!api_) {
-        set_status("Not connected to printer");
+        set_status(lv_tr("Not connected to printer"));
         return;
     }
 
@@ -223,8 +220,8 @@ void TimelapseInstallOverlay::step_check_webcam() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
                 if (empty) {
-                    set_status("No webcam detected.\nA webcam is required for timelapse.");
-                    show_action_button("Close", []() { ui_nav_go_back(); });
+                    set_status(lv_tr("No webcam detected.\nA webcam is required for timelapse."));
+                    show_action_button(lv_tr("Close"), []() { ui_nav_go_back(); });
                     return;
                 }
                 spdlog::info("[{}] Found {} webcam(s)", get_name(), count);
@@ -238,8 +235,8 @@ void TimelapseInstallOverlay::step_check_webcam() {
             ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
-                set_status("Could not check webcam status.\nCheck printer connection.");
-                show_action_button("Retry", [this]() { step_check_webcam(); });
+                set_status(lv_tr("Could not check webcam status.\nCheck printer connection."));
+                show_action_button(lv_tr("Retry"), [this]() { step_check_webcam(); });
             });
         });
 }
@@ -250,7 +247,7 @@ void TimelapseInstallOverlay::step_check_webcam() {
 
 void TimelapseInstallOverlay::step_check_plugin() {
     set_step(Step::CHECKING_PLUGIN);
-    set_status("Checking timelapse plugin...");
+    set_status(lv_tr("Checking timelapse plugin..."));
 
     if (!api_)
         return;
@@ -264,13 +261,13 @@ void TimelapseInstallOverlay::step_check_plugin() {
             ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
-                set_status("Timelapse plugin is already installed!");
+                set_status(lv_tr("Timelapse plugin is already installed!"));
                 if (step_progress_) {
                     for (int i = 0; i < STEP_COUNT; i++) {
                         ui_step_progress_set_completed(step_progress_, i);
                     }
                 }
-                show_action_button("Close", []() { ui_nav_go_back(); });
+                show_action_button(lv_tr("Close"), []() { ui_nav_go_back(); });
             });
         },
         [this, alive](const MoonrakerError& /*err*/) {
@@ -291,14 +288,14 @@ void TimelapseInstallOverlay::step_check_plugin() {
 
 void TimelapseInstallOverlay::step_show_install_instructions() {
     set_step(Step::INSTALL_PLUGIN);
-    set_status("Install the timelapse plugin via SSH,\nthen tap \"Check Again\".");
+    set_status(lv_tr("Install the timelapse plugin via SSH,\nthen tap \"Check Again\"."));
 
     // Show SSH instructions container
     if (ssh_container_) {
         lv_obj_remove_flag(ssh_container_, LV_OBJ_FLAG_HIDDEN);
     }
 
-    show_action_button("Check Again", [this]() { recheck_after_install(); });
+    show_action_button(lv_tr("Check Again"), [this]() { recheck_after_install(); });
 }
 
 // ============================================================================
@@ -307,7 +304,7 @@ void TimelapseInstallOverlay::step_show_install_instructions() {
 
 void TimelapseInstallOverlay::recheck_after_install() {
     set_step(Step::CHECKING_PLUGIN);
-    set_status("Checking for plugin...");
+    set_status(lv_tr("Checking for plugin..."));
     hide_action_button();
     if (ssh_container_)
         lv_obj_add_flag(ssh_container_, LV_OBJ_FLAG_HIDDEN);
@@ -324,13 +321,13 @@ void TimelapseInstallOverlay::recheck_after_install() {
             ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
-                set_status("Timelapse plugin is installed!");
+                set_status(lv_tr("Timelapse plugin is installed!"));
                 if (step_progress_) {
                     for (int i = 0; i < STEP_COUNT; i++) {
                         ui_step_progress_set_completed(step_progress_, i);
                     }
                 }
-                show_action_button("Done", []() { ui_nav_go_back(); });
+                show_action_button(lv_tr("Done"), []() { ui_nav_go_back(); });
             });
         },
         [this, alive](const MoonrakerError& /*err*/) {
@@ -351,7 +348,7 @@ void TimelapseInstallOverlay::recheck_after_install() {
 
 void TimelapseInstallOverlay::step_configure_moonraker() {
     set_step(Step::CONFIGURE_MOONRAKER);
-    set_status("Configuring Moonraker...");
+    set_status(lv_tr("Configuring Moonraker..."));
     hide_action_button();
     if (ssh_container_)
         lv_obj_add_flag(ssh_container_, LV_OBJ_FLAG_HIDDEN);
@@ -361,7 +358,7 @@ void TimelapseInstallOverlay::step_configure_moonraker() {
 
 void TimelapseInstallOverlay::download_and_modify_config() {
     if (!api_) {
-        set_status("Not connected to printer");
+        set_status(lv_tr("Not connected to printer"));
         return;
     }
 
@@ -380,7 +377,7 @@ void TimelapseInstallOverlay::download_and_modify_config() {
                 ui_queue_update([this, alive]() {
                     if (!alive || !*alive || !wizard_active_)
                         return;
-                    set_status("Configuration already present.");
+                    set_status(lv_tr("Configuration already present."));
                     step_restart_moonraker();
                 });
                 return;
@@ -399,7 +396,7 @@ void TimelapseInstallOverlay::download_and_modify_config() {
                     ui_queue_update([this, alive]() {
                         if (!alive || !*alive || !wizard_active_)
                             return;
-                        set_status("Configuration added successfully.");
+                        set_status(lv_tr("Configuration added successfully."));
                         step_restart_moonraker();
                     });
                 },
@@ -410,8 +407,10 @@ void TimelapseInstallOverlay::download_and_modify_config() {
                     ui_queue_update([this, alive]() {
                         if (!alive || !*alive || !wizard_active_)
                             return;
-                        set_status("Failed to update configuration.\nCheck printer connection.");
-                        show_action_button("Retry", [this]() { download_and_modify_config(); });
+                        set_status(
+                            lv_tr("Failed to update configuration.\nCheck printer connection."));
+                        show_action_button(lv_tr("Retry"),
+                                           [this]() { download_and_modify_config(); });
                     });
                 });
         },
@@ -422,8 +421,8 @@ void TimelapseInstallOverlay::download_and_modify_config() {
             ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
-                set_status("Failed to download moonraker.conf.\nCheck printer connection.");
-                show_action_button("Retry", [this]() { download_and_modify_config(); });
+                set_status(lv_tr("Failed to download moonraker.conf.\nCheck printer connection."));
+                show_action_button(lv_tr("Retry"), [this]() { download_and_modify_config(); });
             });
         });
 }
@@ -475,7 +474,7 @@ std::string TimelapseInstallOverlay::append_timelapse_config(const std::string& 
 
 void TimelapseInstallOverlay::step_restart_moonraker() {
     set_step(Step::RESTART_MOONRAKER);
-    set_status("Restarting Moonraker...");
+    set_status(lv_tr("Restarting Moonraker..."));
     hide_action_button();
 
     if (!api_)
@@ -494,7 +493,7 @@ void TimelapseInstallOverlay::step_restart_moonraker() {
             ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
-                set_status("Moonraker restarting...\nWaiting for reconnection...");
+                set_status(lv_tr("Moonraker restarting...\nWaiting for reconnection..."));
 
                 // Wait 8 seconds then try to verify
                 lv_timer_create(
@@ -514,8 +513,8 @@ void TimelapseInstallOverlay::step_restart_moonraker() {
             ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
-                set_status("Failed to restart Moonraker.");
-                show_action_button("Retry", [this]() { step_restart_moonraker(); });
+                set_status(lv_tr("Failed to restart Moonraker."));
+                show_action_button(lv_tr("Retry"), [this]() { step_restart_moonraker(); });
             });
         });
 }
@@ -526,7 +525,7 @@ void TimelapseInstallOverlay::step_restart_moonraker() {
 
 void TimelapseInstallOverlay::step_verify() {
     set_step(Step::VERIFY);
-    set_status("Verifying timelapse plugin...");
+    set_status(lv_tr("Verifying timelapse plugin..."));
 
     if (!api_)
         return;
@@ -540,14 +539,14 @@ void TimelapseInstallOverlay::step_verify() {
             ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
-                set_status("Timelapse plugin installed successfully!");
+                set_status(lv_tr("Timelapse plugin installed successfully!"));
                 if (step_progress_) {
                     ui_step_progress_set_completed(step_progress_, static_cast<int>(Step::VERIFY));
                 }
                 // Update capability state so UI reflects timelapse availability
                 get_printer_state().set_timelapse_available(true);
-                show_action_button("Done", []() { ui_nav_go_back(); });
-                ui_toast_show(ToastSeverity::SUCCESS, "Timelapse plugin installed!", 3000);
+                show_action_button(lv_tr("Done"), []() { ui_nav_go_back(); });
+                ui_toast_show(ToastSeverity::SUCCESS, lv_tr("Timelapse plugin installed!"), 3000);
             });
         },
         [this, alive](const MoonrakerError& /*err*/) {
@@ -557,8 +556,9 @@ void TimelapseInstallOverlay::step_verify() {
             ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
-                set_status("Plugin not responding after restart.\nIt may need more time to load.");
-                show_action_button("Check Again", [this]() { step_verify(); });
+                set_status(
+                    lv_tr("Plugin not responding after restart.\nIt may need more time to load."));
+                show_action_button(lv_tr("Check Again"), [this]() { step_verify(); });
             });
         });
 }

@@ -532,29 +532,65 @@ void ui_button_apply(lv_xml_parser_state_t* state, const char** attrs) {
     lv_obj_t* btn = static_cast<lv_obj_t*>(item);
     UiButtonData* data = static_cast<UiButtonData*>(lv_obj_get_user_data(btn));
 
-    // Handle bind_text - bind the internal label to a subject
+    // Handle bind_text — text binding with explicit subject convention:
+    //   bind_text="@subject_name" → strips '@', resolves subject, binds reactively
+    //   bind_text="literal text"  → no '@' prefix, sets as static text
+    // The '@' prefix makes it visually clear at the call site whether a value
+    // is a subject reference or a literal string.
     const char* bind_text = lv_xml_get_value_of(attrs, "bind_text");
-    if (bind_text && data && data->magic == UiButtonData::MAGIC) {
-        lv_subject_t* subject = lv_xml_get_subject(&state->scope, bind_text);
-        if (subject) {
-            // If button has no label yet (text was empty), create one now
-            if (!data->label) {
-                data->label = lv_label_create(btn);
-                lv_obj_center(data->label);
+    if (bind_text && bind_text[0] != '\0' && data && data->magic == UiButtonData::MAGIC) {
+        if (!data->label) {
+            data->label = lv_label_create(btn);
+            lv_obj_center(data->label);
+        }
+
+        if (bind_text[0] == '@') {
+            // '@' prefix = subject binding — strip prefix and resolve
+            const char* subject_name = bind_text + 1;
+            lv_subject_t* subject = lv_xml_get_subject(&state->scope, subject_name);
+            if (subject) {
+                const char* fmt = lv_xml_get_value_of(attrs, "bind_text-fmt");
+                if (fmt) {
+                    fmt = lv_strdup(fmt);
+                    lv_obj_add_event_cb(data->label, lv_event_free_user_data_cb, LV_EVENT_DELETE,
+                                        const_cast<char*>(fmt));
+                }
+                lv_label_bind_text(data->label, subject, fmt);
+
+                // When subject changes, LVGL only redraws the label area — the
+                // button background needs a full repaint. Defer invalidation via
+                // lv_async_call so it runs after the observer chain completes
+                // (invalidating mid-observer causes wrong style state).
+                lv_subject_add_observer_obj(
+                    subject,
+                    [](lv_observer_t* obs, lv_subject_t*) {
+                        lv_obj_t* parent_btn =
+                            static_cast<lv_obj_t*>(lv_observer_get_target_obj(obs));
+                        if (parent_btn && lv_obj_is_valid(parent_btn)) {
+                            lv_async_call(
+                                [](void* ud) {
+                                    auto* b = static_cast<lv_obj_t*>(ud);
+                                    if (lv_obj_is_valid(b)) {
+                                        lv_obj_invalidate(b);
+                                    }
+                                },
+                                parent_btn);
+                        }
+                    },
+                    btn, nullptr);
+
+                update_button_text_contrast(btn);
+                spdlog::trace("[ui_button] Bound label to subject '{}'", subject_name);
+            } else {
+                spdlog::warn("[ui_button] Subject '{}' not found for bind_text", subject_name);
+                lv_label_set_text(data->label, subject_name);
+                update_button_text_contrast(btn);
             }
-            // Get optional format string
-            const char* fmt = lv_xml_get_value_of(attrs, "bind_text-fmt");
-            if (fmt) {
-                fmt = lv_strdup(fmt);
-                lv_obj_add_event_cb(data->label, lv_event_free_user_data_cb, LV_EVENT_DELETE,
-                                    const_cast<char*>(fmt));
-            }
-            lv_label_bind_text(data->label, subject, fmt);
-            // Re-apply contrast after binding updates text
-            update_button_text_contrast(btn);
-            spdlog::trace("[ui_button] Bound label to subject '{}'", bind_text);
         } else {
-            spdlog::warn("[ui_button] Subject '{}' not found for bind_text", bind_text);
+            // No '@' prefix = literal text
+            lv_label_set_text(data->label, bind_text);
+            update_button_text_contrast(btn);
+            spdlog::trace("[ui_button] Set label to literal text '{}'", bind_text);
         }
     }
 
@@ -643,4 +679,18 @@ void ui_button_apply(lv_xml_parser_state_t* state, const char** attrs) {
 void ui_button_init() {
     lv_xml_register_widget("ui_button", ui_button_create, ui_button_apply);
     spdlog::trace("[ui_button] Registered semantic button widget");
+}
+
+void ui_button_set_text(lv_obj_t* btn, const char* text) {
+    if (!btn || !text) {
+        return;
+    }
+    auto* data = static_cast<UiButtonData*>(lv_obj_get_user_data(btn));
+    if (!data || data->magic != UiButtonData::MAGIC || !data->label) {
+        return;
+    }
+    lv_label_set_text(data->label, text);
+    // Label invalidation only redraws the label area — force the whole button
+    // to repaint so the background behind the label is consistent
+    lv_obj_invalidate(btn);
 }

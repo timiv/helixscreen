@@ -4,6 +4,7 @@
 #pragma once
 
 #include "ui_ams_context_menu.h"
+#include "ui_ams_detail.h"
 #include "ui_ams_dryer_card.h"
 #include "ui_ams_edit_modal.h"
 #include "ui_ams_loading_error_modal.h"
@@ -103,6 +104,17 @@ class AmsPanel : public PanelBase {
      */
     void clear_panel_reference();
 
+    /**
+     * @brief Scope detail view to show only one unit's slots
+     * @param unit_index Unit index to show (-1 = all units, default)
+     */
+    void set_unit_scope(int unit_index);
+
+    /**
+     * @brief Clear unit scope, showing all slots
+     */
+    void clear_unit_scope();
+
   private:
     // === Slot Management ===
 
@@ -110,7 +122,7 @@ class AmsPanel : public PanelBase {
         16; ///< Max slots displayed (increased for 8+ gate systems)
     lv_obj_t* slot_widgets_[MAX_VISIBLE_SLOTS] = {nullptr};
     lv_obj_t* label_widgets_[MAX_VISIBLE_SLOTS] = {nullptr}; ///< Separate label layer for z-order
-    lv_obj_t* labels_layer_ = nullptr; ///< Container for labels (drawn on top of all spools)
+    AmsDetailWidgets detail_widgets_;                        ///< Shared component widget pointers
 
     // === Extracted UI Modules ===
 
@@ -134,6 +146,7 @@ class AmsPanel : public PanelBase {
 
     // === Dynamic Slot State ===
 
+    int scoped_unit_index_ = -1;     ///< Unit scope: -1 = all units, >=0 = specific unit
     int current_slot_count_ = 0;     ///< Number of slots currently created
     lv_obj_t* slot_grid_ = nullptr;  ///< Container for dynamically created slots
     int last_highlighted_slot_ = -1; ///< Previously highlighted slot (for pulse animation)
@@ -227,7 +240,6 @@ class AmsPanel : public PanelBase {
     void update_action_display(AmsAction action);
     void update_current_slot_highlight(int slot_index);
     void update_current_loaded_display(int slot_index);
-    void update_tray_size();
 
     /**
      * @brief Start or stop continuous border pulse animation on a slot

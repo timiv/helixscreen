@@ -19,7 +19,7 @@
             height="content" style_pad_all="0" flex_flow="row" style_flex_main_place="space_between"
             style_flex_cross_place="center" scrollable="false">
       <text_heading text="Select Filament" translation_tag="Select Filament"/>
-      <ui_button name="btn_close" width="32" height="32" icon="close" variant="ghost">
+      <ui_button name="btn_close" width="32" height="32" icon="close" variant="ghost" focusable="false">
         <event_cb trigger="clicked" callback="spoolman_picker_close_cb"/>
       </ui_button>
     </lv_obj>

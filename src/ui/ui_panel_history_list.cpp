@@ -123,6 +123,9 @@ void HistoryListPanel::register_callbacks() {
     lv_xml_register_event_cb(nullptr, "history_search_changed", [](lv_event_t* /*e*/) {
         get_global_history_list_panel().on_search_changed();
     });
+    lv_xml_register_event_cb(nullptr, "history_search_clear", [](lv_event_t* /*e*/) {
+        get_global_history_list_panel().on_search_clear();
+    });
     lv_xml_register_event_cb(nullptr, "history_filter_status_changed", [](lv_event_t* e) {
         lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
         if (dropdown) {
@@ -336,6 +339,7 @@ void HistoryListPanel::on_deactivate() {
     sort_direction_ = HistorySortDirection::DESC;
 
     // Reset filter control widgets if available
+    // (text_input handles clear button visibility internally via lv_textarea_set_text)
     if (search_box_) {
         lv_textarea_set_text(search_box_, "");
     }
@@ -850,6 +854,14 @@ void HistoryListPanel::on_search_changed() {
     // Create debounce timer (300ms)
     search_timer_ = lv_timer_create(on_search_timer_static, 300, this);
     lv_timer_set_repeat_count(search_timer_, 1); // Fire once
+}
+
+void HistoryListPanel::on_search_clear() {
+    // Text is already cleared by text_input's internal clear button handler.
+    // We just need to update the search state and apply immediately.
+    search_query_.clear();
+    helix::ui::safe_delete_timer(search_timer_);
+    apply_filters_and_sort();
 }
 
 void HistoryListPanel::on_search_timer_static(lv_timer_t* timer) {
