@@ -15,6 +15,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include <string>
+
 // Static member initialization
 bool ChangeHostModal::callbacks_registered_ = false;
 ChangeHostModal* ChangeHostModal::active_instance_ = nullptr;
@@ -149,10 +151,9 @@ void ChangeHostModal::deinit_subjects() {
 
 void ChangeHostModal::handle_test_connection() {
     const char* ip = lv_subject_get_string(&host_ip_subject_);
-    const char* port_str = lv_subject_get_string(&host_port_subject_);
+    std::string port_clean = sanitize_port(lv_subject_get_string(&host_port_subject_));
 
-    spdlog::debug("[ChangeHostModal] Test connection: {}:{}", ip ? ip : "",
-                  port_str ? port_str : "");
+    spdlog::debug("[ChangeHostModal] Test connection: {}:{}", ip ? ip : "", port_clean);
 
     // Reset validation state
     lv_subject_set_int(&validated_subject_, 0);
@@ -168,7 +169,7 @@ void ChangeHostModal::handle_test_connection() {
         return;
     }
 
-    if (!is_valid_port(port_str)) {
+    if (!is_valid_port(port_clean)) {
         set_status("icon_xmark_circle", "danger", "Invalid port (must be 1-65535)");
         return;
     }
@@ -191,7 +192,7 @@ void ChangeHostModal::handle_test_connection() {
     {
         std::lock_guard<std::mutex> lock(saved_values_mutex_);
         saved_ip_ = ip;
-        saved_port_ = port_str;
+        saved_port_ = port_clean;
     }
 
     // Set UI to testing state
@@ -202,7 +203,7 @@ void ChangeHostModal::handle_test_connection() {
     client->set_connection_timeout(5000);
 
     // Construct WebSocket URL
-    std::string ws_url = "ws://" + std::string(ip) + ":" + std::string(port_str) + "/websocket";
+    std::string ws_url = "ws://" + std::string(ip) + ":" + port_clean + "/websocket";
 
     ChangeHostModal* self = this;
     int result = client->connect(
@@ -271,19 +272,19 @@ void ChangeHostModal::handle_save() {
     spdlog::debug("[ChangeHostModal] Save clicked");
 
     const char* ip = lv_subject_get_string(&host_ip_subject_);
-    const char* port_str = lv_subject_get_string(&host_port_subject_);
+    std::string port_clean = sanitize_port(lv_subject_get_string(&host_port_subject_));
 
-    if (!ip || !port_str) {
-        spdlog::error("[ChangeHostModal] Cannot save - null subjects");
+    if (!ip || port_clean.empty()) {
+        spdlog::error("[ChangeHostModal] Cannot save - null/empty subjects");
         return;
     }
 
     // Validate port before saving (defensive — should already be validated)
     int port = 7125;
     try {
-        port = std::stoi(port_str);
+        port = std::stoi(port_clean);
     } catch (const std::exception& e) {
-        spdlog::error("[ChangeHostModal] Invalid port '{}': {}", port_str, e.what());
+        spdlog::error("[ChangeHostModal] Invalid port '{}': {}", port_clean, e.what());
         return;
     }
 
