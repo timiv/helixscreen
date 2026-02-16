@@ -13,7 +13,7 @@
 | **Moonraker API** | 116 methods, abstraction boundary enforced |
 | **Multi-Material (AMS)** | 5 backends, multi-unit, multi-backend, error visualization |
 | **Tool Abstraction** | ToolState with tool-backend mapping, multi-extruder temps |
-| **Spoolman** | 23 API methods, full CRUD, Spool Wizard (beta-gated) |
+| **Spoolman** | 23 API methods, full CRUD, Spool Wizard, virtualized list with search |
 | **Plugin System** | Core infrastructure complete |
 | **Test Suite** | 131 test files (99 C++, 32 shell), ~3,400 test cases, 17,600+ assertions |
 | **Platforms** | Pi, AD5M, K1, QIDI, Snapmaker U1, macOS, Linux |
@@ -163,7 +163,7 @@ Remaining items for production readiness:
 - **AMS Overview Panel** — Multi-unit grid with inline detail
 - **Device Operations Overlay** — Dynamic backend-specific sections (AFC: 4 sections, HH: 3 sections)
 - **Context Menu** — Per-slot actions: load, unload, edit, Spoolman assign, tool mapping, endless spool backup
-- **Spool Wizard** (beta-gated) — 3-step creation: Vendor → Filament → Spool Details, merges local Spoolman + SpoolmanDB catalog
+- **Spool Wizard** — 3-step creation: Vendor → Filament → Spool Details with modal forms for new vendors/filaments
 - **Spoolman Panel** — Browse, search, edit, delete with virtualized list and context menus
 - **AMS Mini Status** — Home panel widget, click to open
 - Modals: AMS Edit (color/material/brand), Loading Error, Dryer (temp/duration presets)

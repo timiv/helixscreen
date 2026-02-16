@@ -92,6 +92,24 @@ When Spoolman is configured:
 - Remaining filament weight shown
 - Tap a slot to open **Spool Picker** and assign a different spool
 
+### Spoolman Panel
+
+Access via the **Filament** nav tab. Browse, search, and manage your entire spool inventory:
+
+- **Search** — Filter spools by vendor, material, or color name
+- **Context menu** — Tap a spool to set active, edit, or delete
+- **3D spool visualization** — Color-coded fill level at a glance
+
+### New Spool Wizard
+
+Tap **+ Add** in the Spoolman panel to create a new spool in 3 steps:
+
+1. **Select Vendor** — Search existing vendors or tap **+ New** to add one
+2. **Select Filament** — Pick an existing filament or tap **+ New** to create one with material, color, temperature ranges, and weight
+3. **Spool Details** — Set remaining weight, price, lot number, and notes
+
+The wizard creates all records (vendor, filament, spool) atomically in Spoolman.
+
 ---
 
 ## Dryer Control

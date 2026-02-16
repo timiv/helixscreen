@@ -805,14 +805,40 @@ See `tests/unit/test_ams_backend_happy_hare.cpp`, `test_ams_tool_mapping.cpp`, `
 
 Beyond slot assignment, HelixScreen provides full Spoolman spool management:
 
-- **SpoolmanPanel overlay** — Browse, search, edit, and delete spools
-- **New Spool Wizard** (beta) — 3-step guided creation: Vendor → Filament → Spool Details
+- **SpoolmanPanel overlay** — Browse, search, edit, and delete spools with virtualized list (20-row pool)
+- **New Spool Wizard** — 3-step guided creation: Vendor → Filament → Spool Details
 - **Context menu** — Per-spool actions: Set Active, Edit, Delete
 - **Edit modal** — Update weight, price, lot number, notes via PATCH
 
-The wizard merges data from the user's Spoolman server and SpoolmanDB external catalog, with atomic creation (vendor → filament → spool) and best-effort rollback on failure.
+### Spool Wizard Architecture
 
-See `docs/devel/plans/2026-02-15-spool-wizard-status.md` for full implementation status and visual test plan.
+The wizard (`SpoolWizardOverlay`) is a 3-step overlay:
+
+1. **Step 0 — Select Vendor**: Search/filter vendors from Spoolman server, or create a new one via modal (`create_vendor_modal.xml`)
+2. **Step 1 — Select Filament**: Filter filaments by selected vendor (`vendor.id` API param), or create a new one via modal (`create_filament_modal.xml`) with material from `filament::MATERIALS[]` database, color picker, temp ranges, weight
+3. **Step 2 — Spool Details**: Remaining weight, price, lot number, notes — compact 2-column layout
+
+Key patterns:
+- **Modal forms** for vendor/filament creation (not inline) — keeps list scroll area maximized
+- **Vendor filtering**: Filament API uses `vendor.id=X` (Spoolman's dot-notation filter syntax)
+- **Color picker**: HSV picker + preset swatches, launched from filament creation modal
+- **Atomic creation**: Creates vendor → filament → spool in sequence with best-effort rollback on failure
+- **Row selection**: `LV_STATE_CHECKED` with `selected_style` (primary left border + elevated bg)
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `include/ui_spool_wizard.h` | Wizard overlay class declaration |
+| `src/ui/ui_spool_wizard.cpp` | Wizard logic, API calls, callbacks |
+| `ui_xml/spool_wizard.xml` | 3-step wizard layout |
+| `ui_xml/create_vendor_modal.xml` | New vendor modal form |
+| `ui_xml/create_filament_modal.xml` | New filament modal form |
+| `ui_xml/wizard_vendor_row.xml` | Selectable vendor row (lv_button with checked style) |
+| `ui_xml/wizard_filament_row.xml` | Selectable filament row (lv_button with checked style) |
+| `src/ui/ui_color_picker.cpp` | Color picker modal (used by filament creation) |
+
+See `docs/devel/plans/2026-02-15-spool-wizard-status.md` for visual test plan.
 
 ---
 

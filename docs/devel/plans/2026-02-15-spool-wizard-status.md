@@ -1,7 +1,7 @@
 # Spool Wizard — Implementation Status
 
-**Date**: 2026-02-15 (updated after merge)
-**Branch**: `feature/multi-unit-ams` (merged from `feature/spool-wizard-v2`)
+**Date**: 2026-02-16 (updated: graduated from beta, modal refactor complete)
+**Branch**: `main` (graduated from beta)
 **Phase**: Phase 3 of Spoolman Management design (`2026-02-09-spoolman-management-design.md`)
 
 ---
@@ -43,27 +43,38 @@ The wizard was originally built on `feature/spool-wizard` branched from `main` (
 | `src/api/moonraker_api_advanced.cpp` | +146 lines: implementations via `server.spoolman.proxy` RPC |
 | `src/api/moonraker_api_mock.cpp` | +147 lines: mock data for Hatchbox/Polymaker/eSUN/Prusament vendors + PLA/PETG filaments |
 | `include/ui_panel_spoolman.h` | +SpoolWizardOverlay include, `wizard_panel_` member, `on_add_spool_clicked` callback |
-| `src/ui/ui_panel_spoolman.cpp` | +`on_add_spool_clicked` → lazy_create_and_push_overlay with completion callback for refresh; beta feature gating |
-| `ui_xml/spoolman_panel.xml` | +action_button_2 ("+" button with primary bg) alongside refresh button |
-| `src/xml_registration.cpp` | +3 component registrations (wizard_vendor_row, wizard_filament_row, spool_wizard) |
+| `src/ui/ui_panel_spoolman.cpp` | +`on_add_spool_clicked` → lazy_create_and_push_overlay with completion callback for refresh |
+| `ui_xml/spoolman_panel.xml` | +action_button_2 ("+ Add" button with primary bg) alongside refresh button |
+| `src/xml_registration.cpp` | +5 component registrations (wizard_vendor_row, wizard_filament_row, spool_wizard, create_vendor_modal, create_filament_modal) |
+
+### Files Added (post-merge modal refactor)
+| File | Purpose |
+|------|---------|
+| `ui_xml/create_vendor_modal.xml` | Modal form for creating new vendors (name + URL) |
+| `ui_xml/create_filament_modal.xml` | Modal form for creating new filaments (material, name, color, temps, weight) |
+| `include/json_utils.h` | Null-safe JSON extraction helpers for Spoolman API responses |
+| `tests/unit/test_json_utils.cpp` | 20 test cases for JSON null safety |
 
 ### Architecture
 - **SpoolWizardOverlay** extends `OverlayBase`, uses `DEFINE_GLOBAL_PANEL` singleton pattern
 - **3-step flow**: Vendor (Step 0) → Filament (Step 1) → Spool Details (Step 2)
+- **Modal forms**: Vendor/filament creation in modal dialogs (not inline) to maximize list scroll area
 - **14 LVGL subjects** drive all UI state (step visibility, button states, labels, counts, loading states)
 - **Declarative UI**: Step visibility via `bind_flag_if_not_eq`, button gating via subjects, text via `bind_text`
 - **Imperative exceptions**: Dynamic list row population, color swatch styling (both accepted exceptions per CLAUDE.md)
-- **Async data loading**: Dual-source merge (Spoolman server + SpoolmanDB external API) with `std::atomic<int>` coordination
+- **Vendor-filtered filaments**: API uses `vendor.id=X` (Spoolman dot-notation) — no client-side filtering
+- **Material database**: Filament creation populates dropdown from `filament::MATERIALS[]` (~48 materials)
+- **Color picker**: HSV picker + preset swatches, integrated with filament creation modal
 - **Atomic creation chain**: vendor → filament → spool with best-effort rollback on failure
 - **Thread safety**: All async callbacks wrapped in `ui_queue_update()` for LVGL thread marshaling
-- **Beta gating**: "+" button bound to `show_beta_features` subject + defense-in-depth check in click handler
+- **No beta gating**: Available to all users (graduated 2026-02-16)
 
 ### New API Methods
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
 | `get_spoolman_external_vendors()` | GET `/v1/external/vendor` | SpoolmanDB vendor catalog |
 | `get_spoolman_external_filaments(vendor_name)` | GET `/v1/external/filament?vendor_name=...` | SpoolmanDB filaments by vendor |
-| `get_spoolman_filaments(vendor_id)` | GET `/v1/filament?vendor_id=...` | Server filaments filtered by vendor |
+| `get_spoolman_filaments(vendor_id)` | GET `/v1/filament?vendor.id=...` | Server filaments filtered by vendor |
 | `delete_spoolman_vendor(id)` | DELETE `/v1/vendor/{id}` | Rollback support |
 | `delete_spoolman_filament(id)` | DELETE `/v1/filament/{id}` | Rollback support |
 
@@ -117,27 +128,26 @@ All 10 visual tests require running `./build/bin/helix-screen --test -vv` and ma
 
 #### VT-1: Launch Wizard from SpoolmanPanel
 1. Navigate to Spoolman panel overlay
-2. **With beta features enabled:** Verify "+" button visible in header bar (alongside refresh button)
-3. **With beta features disabled:** Verify "+" button is NOT visible
-4. Tap "+" button (beta enabled)
-5. Verify wizard overlay slides in showing Step 1 (Vendor)
-6. Verify step indicator shows "Step 1 of 3"
-7. Verify Next button is disabled (no vendor selected)
-8. Verify Back button is visible
+2. Verify "+ Add" button visible in header bar (alongside refresh button)
+3. Tap "+ Add" button
+4. Verify wizard overlay slides in showing "New Spool: Step 1 of 3" in header
+5. Verify Next button is disabled (no vendor selected)
+6. Verify Back button is hidden on step 1
 
 #### VT-2: Vendor Search and Selection
 1. On Step 1, verify vendor list populates (mock: Hatchbox, Polymaker, eSUN, Prusament from external + server vendors merged)
 2. Type "hatch" in search box — verify list filters to matching vendors
 3. Tap a vendor row — verify highlight/selection, Next button enables
 4. Clear search — verify full list returns
-5. Try "Create New Vendor" toggle — verify form expands with name and URL fields
+5. Tap "+ New" — verify vendor creation modal opens
 
 #### VT-3: Create New Vendor Flow
-1. Toggle "Create New Vendor"
-2. Fill in vendor name (e.g., "Test Vendor Co")
-3. Verify "Use" button enables when name non-empty
-4. Tap "Use" — verify form collapses, Next enables, selected vendor name displayed
-5. Tap Next to proceed to Step 2
+1. Tap "+ New" button next to search box
+2. Verify modal dialog opens with name and URL fields
+3. Fill in vendor name (e.g., "Test Vendor Co")
+4. Verify "Add Vendor" button enables when name non-empty
+5. Tap "Add Vendor" — verify modal closes, vendor appears in list highlighted
+6. Tap Next to proceed to Step 2
 
 #### VT-4: Filament Step with Existing Vendor
 1. After selecting existing vendor with filaments
@@ -146,12 +156,13 @@ All 10 visual tests require running `./build/bin/helix-screen --test -vv` and ma
 4. Verify Back goes to Step 1 (vendor selection preserved)
 
 #### VT-5: Create New Filament with Material Auto-Fill
-1. On Step 2, toggle "Create New Filament"
-2. Select material from dropdown (e.g., PLA)
-3. Verify temperature fields auto-fill (190-220 nozzle, 50-60 bed)
-4. Tap color picker button — verify ColorPicker modal opens
-5. Pick a color — verify swatch updates
-6. Verify "Confirm" enables when material + color set
+1. On Step 2, tap "+ New" button next to vendor name
+2. Verify modal opens with material dropdown (~48 materials), name, color, temp ranges, weight fields
+3. Select material from dropdown (e.g., ABS) — verify temp fields auto-fill from filament database
+4. Tap "Pick" color button — verify ColorPicker modal opens (stacked on top of filament modal)
+5. Pick a color — verify swatch updates in filament modal
+6. Tap "Add Filament" — verify modal closes, filament appears in list highlighted
+7. Verify validation: tapping "Add Filament" without material/color shows error highlighting on labels
 
 #### VT-6: Spool Details Step and Pre-Fill
 1. After selecting filament, tap Next to Step 3
