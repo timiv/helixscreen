@@ -254,6 +254,7 @@ class SpoolWizardOverlay : public OverlayBase {
     lv_subject_t vendor_count_subject_;
     lv_subject_t filament_count_subject_;
     lv_subject_t vendors_loading_subject_;
+    lv_subject_t filaments_loading_subject_;
     lv_subject_t can_create_vendor_subject_;
 
     // ========== String buffers for subjects ==========
@@ -293,6 +294,12 @@ class SpoolWizardOverlay : public OverlayBase {
     std::string spool_lot_nr_;
     std::string spool_notes_;
 
+    // ========== Create vendor modal ==========
+    lv_obj_t* create_vendor_dialog_ = nullptr;
+
+    // ========== Create filament modal ==========
+    lv_obj_t* create_filament_dialog_ = nullptr;
+
     // ========== Creation flow tracking ==========
     int created_vendor_id_ = -1;
     int created_filament_id_ = -1;
@@ -319,13 +326,15 @@ class SpoolWizardOverlay : public OverlayBase {
     static void on_wizard_back(lv_event_t* e);
     static void on_wizard_next(lv_event_t* e);
     static void on_wizard_create(lv_event_t* e);
-    static void on_wizard_toggle_create_vendor(lv_event_t* e);
+    static void on_wizard_show_create_vendor_modal(lv_event_t* e);
+    static void on_wizard_cancel_create_vendor(lv_event_t* e);
     static void on_wizard_vendor_search_changed(lv_event_t* e);
     static void on_wizard_new_vendor_name_changed(lv_event_t* e);
     static void on_wizard_new_vendor_url_changed(lv_event_t* e);
     static void on_wizard_confirm_create_vendor(lv_event_t* e);
     static void on_wizard_filament_selected(lv_event_t* e);
-    static void on_wizard_toggle_create_filament(lv_event_t* e);
+    static void on_wizard_show_create_filament_modal(lv_event_t* e);
+    static void on_wizard_cancel_create_filament(lv_event_t* e);
     static void on_wizard_material_changed(lv_event_t* e);
     static void on_wizard_new_filament_name_changed(lv_event_t* e);
     static void on_wizard_pick_filament_color(lv_event_t* e);
