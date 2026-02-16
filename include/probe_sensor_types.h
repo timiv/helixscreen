@@ -112,6 +112,32 @@ struct ProbeSensorState {
     }
 }
 
+/// @brief Convert type to display string
+/// @param type The type to convert
+/// @return Human-readable type name for UI display
+[[nodiscard]] inline std::string probe_type_to_display_string(ProbeSensorType type) {
+    switch (type) {
+    case ProbeSensorType::STANDARD:
+        return "Probe";
+    case ProbeSensorType::BLTOUCH:
+        return "BLTouch";
+    case ProbeSensorType::SMART_EFFECTOR:
+        return "Smart Effector";
+    case ProbeSensorType::EDDY_CURRENT:
+        return "Eddy Current";
+    case ProbeSensorType::CARTOGRAPHER:
+        return "Cartographer";
+    case ProbeSensorType::BEACON:
+        return "Beacon";
+    case ProbeSensorType::TAP:
+        return "Voron Tap";
+    case ProbeSensorType::KLICKY:
+        return "Klicky";
+    default:
+        return "Unknown Probe";
+    }
+}
+
 /// @brief Parse type string to enum
 /// @param str The config string to parse
 /// @return Parsed type, defaults to STANDARD if unrecognized

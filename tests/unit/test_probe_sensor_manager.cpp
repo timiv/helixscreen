@@ -631,3 +631,57 @@ TEST_CASE_METHOD(ProbeSensorTestFixture, "ProbeSensorManager - discovery of new 
         REQUIRE(eddy_upgraded);
     }
 }
+
+// ============================================================================
+// Macro-based Probe Detection Tests
+// ============================================================================
+
+TEST_CASE_METHOD(ProbeSensorTestFixture, "ProbeSensorManager - macro-based probe detection",
+                 "[probe][discovery][macros]") {
+    SECTION("Detects Klicky from ATTACH_PROBE/DOCK_PROBE macros") {
+        std::vector<std::string> objects = {"probe", "gcode_macro ATTACH_PROBE",
+                                            "gcode_macro DOCK_PROBE"};
+        mgr().discover(objects);
+        auto configs = mgr().get_sensors();
+        REQUIRE(configs.size() == 1);
+        REQUIRE(configs[0].type == ProbeSensorType::KLICKY);
+    }
+
+    SECTION("Detects Klicky from alternate macro names") {
+        std::vector<std::string> objects = {"probe", "gcode_macro _Probe_Deploy",
+                                            "gcode_macro _Probe_Stow"};
+        mgr().discover(objects);
+        auto configs = mgr().get_sensors();
+        REQUIRE(configs[0].type == ProbeSensorType::KLICKY);
+    }
+
+    SECTION("Standard probe without Klicky macros stays STANDARD") {
+        std::vector<std::string> objects = {"probe"};
+        mgr().discover(objects);
+        auto configs = mgr().get_sensors();
+        REQUIRE(configs[0].type == ProbeSensorType::STANDARD);
+    }
+
+    SECTION("Standard probe with unrelated macros stays STANDARD") {
+        std::vector<std::string> objects = {"probe", "gcode_macro START_PRINT",
+                                            "gcode_macro END_PRINT"};
+        mgr().discover(objects);
+        auto configs = mgr().get_sensors();
+        REQUIRE(configs[0].type == ProbeSensorType::STANDARD);
+    }
+}
+
+// ============================================================================
+// Probe Type Display String Tests
+// ============================================================================
+
+TEST_CASE("Probe type display strings", "[probe][types]") {
+    REQUIRE(probe_type_to_display_string(ProbeSensorType::STANDARD) == "Probe");
+    REQUIRE(probe_type_to_display_string(ProbeSensorType::BLTOUCH) == "BLTouch");
+    REQUIRE(probe_type_to_display_string(ProbeSensorType::SMART_EFFECTOR) == "Smart Effector");
+    REQUIRE(probe_type_to_display_string(ProbeSensorType::EDDY_CURRENT) == "Eddy Current");
+    REQUIRE(probe_type_to_display_string(ProbeSensorType::CARTOGRAPHER) == "Cartographer");
+    REQUIRE(probe_type_to_display_string(ProbeSensorType::BEACON) == "Beacon");
+    REQUIRE(probe_type_to_display_string(ProbeSensorType::TAP) == "Voron Tap");
+    REQUIRE(probe_type_to_display_string(ProbeSensorType::KLICKY) == "Klicky");
+}

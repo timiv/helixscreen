@@ -8,6 +8,7 @@
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
+#include <set>
 
 // CRITICAL: Subject updates trigger lv_obj_invalidate() which asserts if called
 // during LVGL rendering. WebSocket callbacks run on libhv's event loop thread,
@@ -93,6 +94,39 @@ void ProbeSensorManager::discover(const std::vector<std::string>& klipper_object
                                   "BEACON (companion object present)",
                                   sensor.sensor_name);
                     sensor.type = ProbeSensorType::BEACON;
+                }
+            }
+        }
+    }
+
+    // Post-discovery refinement: upgrade STANDARD probes to KLICKY when
+    // characteristic Klicky macros are present in the objects list.
+    // Klicky probes register as a plain [probe] but include deploy/dock macros.
+    bool has_standard_probe = std::any_of(sensors_.begin(), sensors_.end(), [](const auto& s) {
+        return s.type == ProbeSensorType::STANDARD;
+    });
+
+    if (has_standard_probe) {
+        // Build a set of macro names from gcode_macro entries
+        const std::string macro_prefix = "gcode_macro ";
+        std::set<std::string> macros;
+        for (const auto& obj : klipper_objects) {
+            if (obj.rfind(macro_prefix, 0) == 0 && obj.size() > macro_prefix.size()) {
+                macros.insert(obj.substr(macro_prefix.size()));
+            }
+        }
+
+        // Check for Klicky macro pairs
+        bool is_klicky = (macros.count("ATTACH_PROBE") && macros.count("DOCK_PROBE")) ||
+                         (macros.count("_Probe_Deploy") && macros.count("_Probe_Stow"));
+
+        if (is_klicky) {
+            for (auto& sensor : sensors_) {
+                if (sensor.type == ProbeSensorType::STANDARD) {
+                    spdlog::debug("[ProbeSensorManager] Upgrading standard probe '{}' to "
+                                  "KLICKY (deploy/dock macros present)",
+                                  sensor.sensor_name);
+                    sensor.type = ProbeSensorType::KLICKY;
                 }
             }
         }
