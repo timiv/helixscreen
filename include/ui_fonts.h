@@ -12,10 +12,14 @@ LV_FONT_DECLARE(mdi_icons_64); // Navigation bar icons
 LV_FONT_DECLARE(mdi_icons_48); // Status card icons (large displays)
 LV_FONT_DECLARE(mdi_icons_32); // Status card icons (small displays)
 LV_FONT_DECLARE(mdi_icons_24); // General UI icons (tiny displays)
+LV_FONT_DECLARE(mdi_icons_20); // General UI icons (tiny displays)
 LV_FONT_DECLARE(mdi_icons_16); // Metadata icons (small inline)
+LV_FONT_DECLARE(mdi_icons_14); // Metadata icons (small inline for tiny)
+LV_FONT_DECLARE(mdi_icons_12); // Metadata icons (small inline for tiny)
 
 // Noto Sans - Regular weight with extended Unicode (©®™€£¥°±•…)
 LV_FONT_DECLARE(noto_sans_10);
+LV_FONT_DECLARE(noto_sans_11);
 LV_FONT_DECLARE(noto_sans_12);
 LV_FONT_DECLARE(noto_sans_14);
 LV_FONT_DECLARE(noto_sans_16);
@@ -27,6 +31,7 @@ LV_FONT_DECLARE(noto_sans_28);
 
 // Noto Sans - Light weight with extended Unicode (for text_small)
 LV_FONT_DECLARE(noto_sans_light_10);
+LV_FONT_DECLARE(noto_sans_light_11);
 LV_FONT_DECLARE(noto_sans_light_12);
 LV_FONT_DECLARE(noto_sans_light_14);
 LV_FONT_DECLARE(noto_sans_light_16);
