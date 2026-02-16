@@ -188,6 +188,7 @@ class HomePanel : public PanelBase {
 
     // Tool badge subject (shows active tool name when multi-tool)
     lv_subject_t tool_badge_subject_;
+    lv_subject_t show_tool_badge_;
     char tool_badge_buf_[16] = "";
     void update_tool_badge(int tool_idx);
 

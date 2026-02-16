@@ -201,6 +201,7 @@ void HomePanel::init_subjects() {
     // update_filament_status_visibility()
     UI_MANAGED_SUBJECT_STRING(tool_badge_subject_, tool_badge_buf_, "", "tool_badge_text",
                               subjects_);
+    UI_MANAGED_SUBJECT_INT(show_tool_badge_, 0, "show_tool_badge", subjects_);
 
     UI_MANAGED_SUBJECT_INT(show_filament_status_, 0, "show_filament_status", subjects_);
 
@@ -1353,7 +1354,8 @@ void HomePanel::show_idle_runout_modal() {
 
 void HomePanel::update_tool_badge(int /* tool_idx */) {
     auto& ts = helix::ToolState::instance();
-    if (ts.tool_count() <= 1) {
+    bool multi_tool = ts.tool_count() > 1;
+    if (!multi_tool) {
         tool_badge_buf_[0] = '\0';
     } else {
         const auto* tool = ts.active_tool();
@@ -1363,6 +1365,7 @@ void HomePanel::update_tool_badge(int /* tool_idx */) {
     }
     if (subjects_initialized_) {
         lv_subject_copy_string(&tool_badge_subject_, tool_badge_buf_);
+        lv_subject_set_int(&show_tool_badge_, multi_tool ? 1 : 0);
     }
 }
 
