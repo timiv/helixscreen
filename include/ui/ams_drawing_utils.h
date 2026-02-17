@@ -59,4 +59,80 @@ int32_t calc_bar_width(int32_t container_width, int slot_count, int32_t gap, int
 /** Get display name for a unit (uses unit.name, falls back to "Unit N") */
 std::string get_unit_display_name(const AmsUnit& unit, int unit_index);
 
+// ============================================================================
+// LVGL Widget Factories
+// ============================================================================
+
+/** Create a transparent container (no bg, no border, no padding, no scroll, event bubble) */
+lv_obj_t* create_transparent_container(lv_obj_t* parent);
+
+// ============================================================================
+// Pulse Animation
+// ============================================================================
+
+/// Pulse animation constants (shared by error badges and error dots)
+constexpr int32_t PULSE_SCALE_MIN = 180; ///< ~70% scale
+constexpr int32_t PULSE_SCALE_MAX = 256; ///< 100% scale
+constexpr int32_t PULSE_SAT_MIN = 80;    ///< Washed out
+constexpr int32_t PULSE_SAT_MAX = 255;   ///< Full vivid
+constexpr uint32_t PULSE_DURATION_MS = 800;
+
+/** Start scale+saturation pulse animation on an object. Stores base_color in border_color. */
+void start_pulse(lv_obj_t* dot, lv_color_t base_color);
+
+/** Stop pulse animation and restore defaults (scale=256, no shadow) */
+void stop_pulse(lv_obj_t* dot);
+
+// ============================================================================
+// Error Badge
+// ============================================================================
+
+/** Create a circular error badge (hidden by default, caller positions it) */
+lv_obj_t* create_error_badge(lv_obj_t* parent, int32_t size);
+
+/** Update badge visibility, color, and pulse based on error state */
+void update_error_badge(lv_obj_t* badge, bool has_error, SlotError::Severity severity,
+                        bool animate);
+
+// ============================================================================
+// Slot Bar Column (mini bar with fill + status line)
+// ============================================================================
+
+/** Return type for create_slot_column */
+struct SlotColumn {
+    lv_obj_t* container = nullptr;   ///< Column flex wrapper (bar + status line)
+    lv_obj_t* bar_bg = nullptr;      ///< Background/outline container
+    lv_obj_t* bar_fill = nullptr;    ///< Colored fill (child of bar_bg)
+    lv_obj_t* status_line = nullptr; ///< Bottom indicator line
+};
+
+/** Parameters for styling a slot bar */
+struct BarStyleParams {
+    uint32_t color_rgb = 0x808080;
+    int fill_pct = 100;
+    bool is_present = false;
+    bool is_loaded = false;
+    bool has_error = false;
+    SlotError::Severity severity = SlotError::INFO;
+};
+
+/// Status line dimensions
+constexpr int32_t STATUS_LINE_HEIGHT_PX = 3;
+constexpr int32_t STATUS_LINE_GAP_PX = 2;
+
+/** Create slot column: bar_bg (with bar_fill child) + status_line in a column flex container */
+SlotColumn create_slot_column(lv_obj_t* parent, int32_t bar_width, int32_t bar_height,
+                              int32_t bar_radius);
+
+/**
+ * Style an existing slot bar (update colors, borders, fill, status line).
+ * Visual style matches the overview cards:
+ * - Loaded: 2px border, text color, 80% opa
+ * - Present: 1px border, text_muted, 50% opa
+ * - Empty: 1px border, text_muted, 20% opa (ghosted)
+ * - Error: status line with severity color
+ * - Non-error: status line hidden
+ */
+void style_slot_bar(const SlotColumn& col, const BarStyleParams& params, int32_t bar_radius);
+
 } // namespace ams_draw

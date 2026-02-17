@@ -206,3 +206,141 @@ TEST_CASE("ams_draw::get_unit_display_name falls back to Unit N", "[ams_draw][di
     REQUIRE(ams_draw::get_unit_display_name(unit, 0) == "Unit 1");
     REQUIRE(ams_draw::get_unit_display_name(unit, 2) == "Unit 3");
 }
+
+// ============================================================================
+// Transparent Container
+// ============================================================================
+
+TEST_CASE_METHOD(LVGLTestFixture, "ams_draw::create_transparent_container basic properties",
+                 "[ams_draw][container]") {
+    lv_obj_t* c = ams_draw::create_transparent_container(test_screen());
+    REQUIRE(c != nullptr);
+    REQUIRE(lv_obj_get_style_bg_opa(c, LV_PART_MAIN) == LV_OPA_TRANSP);
+    REQUIRE(lv_obj_get_style_border_width(c, LV_PART_MAIN) == 0);
+    REQUIRE(lv_obj_get_style_pad_top(c, LV_PART_MAIN) == 0);
+    REQUIRE(lv_obj_has_flag(c, LV_OBJ_FLAG_EVENT_BUBBLE));
+    REQUIRE_FALSE(lv_obj_has_flag(c, LV_OBJ_FLAG_SCROLLABLE));
+}
+
+// ============================================================================
+// Error Badge
+// ============================================================================
+
+TEST_CASE_METHOD(LVGLTestFixture, "ams_draw::create_error_badge creates circle",
+                 "[ams_draw][badge]") {
+    lv_obj_t* badge = ams_draw::create_error_badge(test_screen(), 12);
+    REQUIRE(badge != nullptr);
+    lv_obj_update_layout(badge);
+    REQUIRE(lv_obj_get_width(badge) == 12);
+    REQUIRE(lv_obj_get_height(badge) == 12);
+    REQUIRE(lv_obj_get_style_radius(badge, LV_PART_MAIN) == LV_RADIUS_CIRCLE);
+    REQUIRE(lv_obj_has_flag(badge, LV_OBJ_FLAG_HIDDEN)); // Hidden by default
+}
+
+TEST_CASE_METHOD(LVGLTestFixture, "ams_draw::update_error_badge shows on error",
+                 "[ams_draw][badge]") {
+    lv_obj_t* badge = ams_draw::create_error_badge(test_screen(), 12);
+
+    ams_draw::update_error_badge(badge, true, SlotError::ERROR, false);
+    REQUIRE_FALSE(lv_obj_has_flag(badge, LV_OBJ_FLAG_HIDDEN));
+
+    ams_draw::update_error_badge(badge, false, SlotError::INFO, false);
+    REQUIRE(lv_obj_has_flag(badge, LV_OBJ_FLAG_HIDDEN));
+}
+
+// ============================================================================
+// Pulse Animation
+// ============================================================================
+
+TEST_CASE_METHOD(LVGLTestFixture, "ams_draw::start_pulse and stop_pulse don't crash",
+                 "[ams_draw][pulse]") {
+    lv_obj_t* dot = ams_draw::create_error_badge(test_screen(), 14);
+    lv_obj_remove_flag(dot, LV_OBJ_FLAG_HIDDEN);
+    process_lvgl(10);
+
+    // Start pulse — should set border_color for anim callback reference
+    ams_draw::start_pulse(dot, lv_color_hex(0xFF0000));
+    process_lvgl(50);
+
+    // Animation is running; just verify no crash occurred
+    // Border color should be stored as the base color for the color callback
+    lv_color_t border = lv_obj_get_style_border_color(dot, LV_PART_MAIN);
+    REQUIRE(border.red == 0xFF);
+
+    // Stop pulse — should restore defaults
+    ams_draw::stop_pulse(dot);
+    process_lvgl(10);
+    REQUIRE(lv_obj_get_style_shadow_width(dot, LV_PART_MAIN) == 0);
+}
+
+// ============================================================================
+// Slot Bar Column
+// ============================================================================
+
+TEST_CASE_METHOD(LVGLTestFixture, "ams_draw::create_slot_column creates all parts",
+                 "[ams_draw][slot_bar]") {
+    auto col = ams_draw::create_slot_column(test_screen(), 10, 40, 4);
+    REQUIRE(col.container != nullptr);
+    REQUIRE(col.bar_bg != nullptr);
+    REQUIRE(col.bar_fill != nullptr);
+    REQUIRE(col.status_line != nullptr);
+
+    // bar_fill is child of bar_bg
+    REQUIRE(lv_obj_get_parent(col.bar_fill) == col.bar_bg);
+    // bar_bg and status_line are children of container
+    REQUIRE(lv_obj_get_parent(col.bar_bg) == col.container);
+    REQUIRE(lv_obj_get_parent(col.status_line) == col.container);
+}
+
+TEST_CASE_METHOD(LVGLTestFixture, "ams_draw::style_slot_bar loaded state", "[ams_draw][slot_bar]") {
+    auto col = ams_draw::create_slot_column(test_screen(), 10, 40, 4);
+
+    ams_draw::BarStyleParams params;
+    params.color_rgb = 0xFF0000;
+    params.fill_pct = 75;
+    params.is_present = true;
+    params.is_loaded = true;
+    params.has_error = false;
+    ams_draw::style_slot_bar(col, params, 4);
+
+    // Loaded: 2px border, text color, 80% opacity
+    REQUIRE(lv_obj_get_style_border_width(col.bar_bg, LV_PART_MAIN) == 2);
+    REQUIRE(lv_obj_get_style_border_opa(col.bar_bg, LV_PART_MAIN) == LV_OPA_80);
+
+    // Fill visible
+    REQUIRE_FALSE(lv_obj_has_flag(col.bar_fill, LV_OBJ_FLAG_HIDDEN));
+
+    // Status line hidden (loaded shown via border, not status line)
+    REQUIRE(lv_obj_has_flag(col.status_line, LV_OBJ_FLAG_HIDDEN));
+}
+
+TEST_CASE_METHOD(LVGLTestFixture, "ams_draw::style_slot_bar error state shows status line",
+                 "[ams_draw][slot_bar]") {
+    auto col = ams_draw::create_slot_column(test_screen(), 10, 40, 4);
+
+    ams_draw::BarStyleParams params;
+    params.color_rgb = 0x00FF00;
+    params.fill_pct = 50;
+    params.is_present = true;
+    params.is_loaded = false;
+    params.has_error = true;
+    params.severity = SlotError::ERROR;
+    ams_draw::style_slot_bar(col, params, 4);
+
+    // Error: status line visible
+    REQUIRE_FALSE(lv_obj_has_flag(col.status_line, LV_OBJ_FLAG_HIDDEN));
+}
+
+TEST_CASE_METHOD(LVGLTestFixture, "ams_draw::style_slot_bar empty state ghosted",
+                 "[ams_draw][slot_bar]") {
+    auto col = ams_draw::create_slot_column(test_screen(), 10, 40, 4);
+
+    ams_draw::BarStyleParams params;
+    params.is_present = false;
+    ams_draw::style_slot_bar(col, params, 4);
+
+    // Empty: 20% border opacity, fill hidden, status line hidden
+    REQUIRE(lv_obj_get_style_border_opa(col.bar_bg, LV_PART_MAIN) == LV_OPA_20);
+    REQUIRE(lv_obj_has_flag(col.bar_fill, LV_OBJ_FLAG_HIDDEN));
+    REQUIRE(lv_obj_has_flag(col.status_line, LV_OBJ_FLAG_HIDDEN));
+}
