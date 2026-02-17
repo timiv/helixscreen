@@ -37,6 +37,7 @@
 #pragma once
 
 #include "hv/WebSocketClient.h"
+#include "json_fwd.h"
 #include "moonraker_error.h"
 #include "moonraker_events.h"
 #include "moonraker_request.h"
@@ -53,10 +54,7 @@
 #include <string>
 #include <vector>
 
-#include "hv/json.hpp" // libhv's nlohmann json (via cpputil/)
-
-using json = nlohmann::json;
-
+namespace helix {
 /**
  * @brief Unique identifier for notification subscriptions
  *
@@ -79,6 +77,10 @@ using RequestId = uint64_t;
 
 /** @brief Invalid request ID constant */
 constexpr RequestId INVALID_REQUEST_ID = 0;
+} // namespace helix
+
+namespace helix {
+using ::json; // Make global json alias visible in this namespace
 
 /**
  * @brief Connection state for Moonraker WebSocket
@@ -693,3 +695,5 @@ class MoonrakerClient : public hv::WebSocketClient {
     // return nullptr, preventing callbacks from accessing destroyed members.
     std::shared_ptr<bool> lifetime_guard_ = std::make_shared<bool>(true);
 };
+
+} // namespace helix

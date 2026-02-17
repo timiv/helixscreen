@@ -11,6 +11,8 @@
 struct _lv_obj_t;
 typedef struct _lv_obj_t lv_obj_t;
 
+namespace helix {
+
 /**
  * @brief Factory for creating and wiring UI panels
  *
@@ -87,3 +89,5 @@ class PanelFactory {
     std::array<lv_obj_t*, UI_PANEL_COUNT> m_panels = {};
     lv_obj_t* m_print_status_panel = nullptr;
 };
+
+} // namespace helix

@@ -114,7 +114,7 @@ bool AmsSpoolmanPicker::show_for_slot(lv_obj_t* parent, int slot_index, int curr
     callback_guard_ = std::make_shared<bool>(true);
 
     // Create picker via Modal system (provides backdrop + stacking)
-    picker_ = ui_modal_show("spoolman_picker_modal");
+    picker_ = helix::ui::modal_show("spoolman_picker_modal");
     if (!picker_) {
         spdlog::error("[AmsSpoolmanPicker] Failed to create picker from XML");
         return false;
@@ -163,7 +163,7 @@ void AmsSpoolmanPicker::hide() {
     slot_indicator_observer_ = nullptr;
 
     if (picker_) {
-        ui_modal_hide(picker_);
+        helix::ui::modal_hide(picker_);
         picker_ = nullptr;
         slot_index_ = -1;
         current_spool_id_ = 0;

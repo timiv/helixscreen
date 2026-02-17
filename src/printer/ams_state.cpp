@@ -34,6 +34,8 @@
 #include <cstring>
 #include <unordered_map>
 
+using namespace helix;
+
 // Async callback data for thread-safe LVGL updates
 namespace {
 
@@ -754,7 +756,7 @@ void AmsState::on_backend_event(int backend_index, const std::string& event,
     auto queue_sync = [backend_index](bool full_sync, int slot_index) {
         auto sync_data =
             std::make_unique<AsyncSyncData>(AsyncSyncData{backend_index, full_sync, slot_index});
-        ui_queue_update<AsyncSyncData>(std::move(sync_data), [](AsyncSyncData* d) {
+        helix::ui::queue_update<AsyncSyncData>(std::move(sync_data), [](AsyncSyncData* d) {
             // Skip if shutdown is in progress - AmsState singleton may be destroyed
             if (s_shutdown_flag.load(std::memory_order_acquire)) {
                 return;
@@ -839,7 +841,7 @@ void AmsState::sync_dryer_from_backend() {
 
         // Format time remaining text
         if (dryer.active && dryer.remaining_min > 0) {
-            std::string time_str = helix::fmt::duration_remaining(dryer.remaining_min * 60);
+            std::string time_str = helix::format::duration_remaining(dryer.remaining_min * 60);
             std::strncpy(dryer_time_text_buf_, time_str.c_str(), sizeof(dryer_time_text_buf_) - 1);
             dryer_time_text_buf_[sizeof(dryer_time_text_buf_) - 1] = '\0';
         } else {
@@ -1037,7 +1039,7 @@ void AmsState::update_modal_text_subjects() {
     lv_subject_copy_string(&dryer_modal_temp_text_, dryer_modal_temp_text_buf_);
 
     // Format duration using utility (e.g., "4h", "30m", "4h 30m")
-    std::string duration = helix::fmt::duration(modal_duration_min_ * 60);
+    std::string duration = helix::format::duration(modal_duration_min_ * 60);
     snprintf(dryer_modal_duration_text_buf_, sizeof(dryer_modal_duration_text_buf_), "%s",
              duration.c_str());
     lv_subject_copy_string(&dryer_modal_duration_text_, dryer_modal_duration_text_buf_);
@@ -1096,7 +1098,8 @@ void AmsState::refresh_spoolman_weights() {
                         slot_index, spoolman_id, static_cast<float>(spool.remaining_weight_g),
                         static_cast<float>(spool.initial_weight_g)});
 
-                    ui_queue_update<WeightUpdate>(std::move(update_data), [](WeightUpdate* d) {
+                    helix::ui::queue_update<WeightUpdate>(std::move(update_data), [](WeightUpdate*
+                                                                                         d) {
                         // Skip if shutdown is in progress
                         if (s_shutdown_flag.load(std::memory_order_acquire)) {
                             return;

@@ -11,11 +11,11 @@
 
 /**
  * @file async_helpers.h
- * @brief Convenience wrappers for ui_queue_update()
+ * @brief Convenience wrappers for helix::ui::queue_update()
  *
  * Provides type-safe shortcuts for common patterns when deferring work
- * to the LVGL main thread via ui_queue_update(). All helpers ultimately
- * call ui_queue_update() — use that directly for simple lambdas.
+ * to the LVGL main thread via helix::ui::queue_update(). All helpers ultimately
+ * call helix::ui::queue_update() — use that directly for simple lambdas.
  *
  * Exception safety is provided by UpdateQueue::process_pending().
  *
@@ -51,7 +51,7 @@ template <typename T, typename V> void call_method(T* instance, void (T::*method
         return;
     }
 
-    ui_queue_update(
+    helix::ui::queue_update(
         [instance, method, val = std::move(value)]() mutable { (instance->*method)(val); });
 }
 
@@ -74,7 +74,7 @@ void call_method_ref(T* instance, void (T::*method)(const V&), const V& value) {
         return;
     }
 
-    ui_queue_update([instance, method, val = value]() { (instance->*method)(val); });
+    helix::ui::queue_update([instance, method, val = value]() { (instance->*method)(val); });
 }
 
 /**
@@ -98,9 +98,8 @@ void call_method2(T* instance, void (T::*method)(V1, V2), V1 v1, V2 v2) {
         return;
     }
 
-    ui_queue_update([instance, method, val1 = std::move(v1), val2 = std::move(v2)]() mutable {
-        (instance->*method)(val1, val2);
-    });
+    helix::ui::queue_update([instance, method, val1 = std::move(v1),
+                             val2 = std::move(v2)]() mutable { (instance->*method)(val1, val2); });
 }
 
 /**
@@ -122,7 +121,7 @@ void call_method2(T* instance, void (T::*method)(V1, V2), V1 v1, V2 v2) {
  */
 template <typename T, typename Callable>
 void invoke_weak(std::weak_ptr<T> weak, Callable&& callable) {
-    ui_queue_update([w = std::move(weak), fn = std::forward<Callable>(callable)]() {
+    helix::ui::queue_update([w = std::move(weak), fn = std::forward<Callable>(callable)]() {
         if (auto shared = w.lock()) {
             fn(*shared);
         }

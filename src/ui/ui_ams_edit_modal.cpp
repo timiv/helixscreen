@@ -291,8 +291,8 @@ void AmsEditModal::fetch_vendors_from_spoolman() {
             }
 
             // Marshal member writes to main thread
-            ui_queue_update([this, guard, vendors = std::move(vendors),
-                             options = std::move(options)]() mutable {
+            helix::ui::queue_update([this, guard, vendors = std::move(vendors),
+                                     options = std::move(options)]() mutable {
                 if (guard.expired()) {
                     return;
                 }
@@ -449,7 +449,7 @@ void AmsEditModal::update_ui() {
     }
 
     // Update remaining percentage label via subject
-    helix::fmt::format_percent(remaining_pct, remaining_pct_buf_, sizeof(remaining_pct_buf_));
+    helix::format::format_percent(remaining_pct, remaining_pct_buf_, sizeof(remaining_pct_buf_));
     lv_subject_copy_string(&remaining_pct_subject_, remaining_pct_buf_);
 
     // Update progress bar fill width (shown in view mode)
@@ -649,7 +649,7 @@ void AmsEditModal::handle_remaining_changed(int percent) {
     }
 
     // Update the percentage label via subject
-    helix::fmt::format_percent(percent, remaining_pct_buf_, sizeof(remaining_pct_buf_));
+    helix::format::format_percent(percent, remaining_pct_buf_, sizeof(remaining_pct_buf_));
     lv_subject_copy_string(&remaining_pct_subject_, remaining_pct_buf_);
 
     // Update slot info remaining weight based on percentage
@@ -713,8 +713,8 @@ void AmsEditModal::handle_remaining_cancel() {
     }
 
     // Revert the percentage label via subject
-    helix::fmt::format_percent(remaining_pre_edit_pct_, remaining_pct_buf_,
-                               sizeof(remaining_pct_buf_));
+    helix::format::format_percent(remaining_pre_edit_pct_, remaining_pct_buf_,
+                                  sizeof(remaining_pct_buf_));
     lv_subject_copy_string(&remaining_pct_subject_, remaining_pct_buf_);
 
     // Revert the remaining weight in working_info_
@@ -767,7 +767,7 @@ void AmsEditModal::handle_sync_spoolman() {
         spool_id, new_weight,
         [this, spool_id, guard]() {
             // Marshal to main thread — callback fires on WebSocket thread
-            ui_queue_update([this, spool_id, guard]() {
+            helix::ui::queue_update([this, spool_id, guard]() {
                 if (guard.expired()) {
                     spdlog::trace(
                         "[AmsEditModal] Spoolman sync callback ignored - modal destroyed");

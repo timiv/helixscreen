@@ -50,6 +50,7 @@
 #include <cstring>
 #include <memory>
 
+using namespace helix;
 using helix::ui::observe_int_sync;
 using helix::ui::observe_string;
 
@@ -489,7 +490,7 @@ void ControlsPanel::update_nozzle_label() {
 }
 
 void ControlsPanel::update_nozzle_temp_display() {
-    auto result = helix::fmt::heater_display(cached_extruder_temp_, cached_extruder_target_);
+    auto result = helix::format::heater_display(cached_extruder_temp_, cached_extruder_target_);
 
     std::snprintf(nozzle_temp_buf_, sizeof(nozzle_temp_buf_), "%s", result.temp.c_str());
     lv_subject_copy_string(&nozzle_temp_subject_, nozzle_temp_buf_);
@@ -501,7 +502,7 @@ void ControlsPanel::update_nozzle_temp_display() {
 }
 
 void ControlsPanel::update_bed_temp_display() {
-    auto result = helix::fmt::heater_display(cached_bed_temp_, cached_bed_target_);
+    auto result = helix::format::heater_display(cached_bed_temp_, cached_bed_target_);
 
     std::snprintf(bed_temp_buf_, sizeof(bed_temp_buf_), "%s", result.temp.c_str());
     lv_subject_copy_string(&bed_temp_subject_, bed_temp_buf_);
@@ -527,7 +528,7 @@ void ControlsPanel::update_fan_display() {
                       : 0;
 
     if (fan_pct > 0) {
-        helix::fmt::format_percent(fan_pct, fan_speed_buf_, sizeof(fan_speed_buf_));
+        helix::format::format_percent(fan_pct, fan_speed_buf_, sizeof(fan_speed_buf_));
     } else {
         std::snprintf(fan_speed_buf_, sizeof(fan_speed_buf_), "Off");
     }
@@ -657,7 +658,7 @@ void ControlsPanel::populate_secondary_fans() {
         // Speed percentage label - right-aligned
         char speed_buf[16];
         if (fan->speed_percent > 0) {
-            helix::fmt::format_percent(fan->speed_percent, speed_buf, sizeof(speed_buf));
+            helix::format::format_percent(fan->speed_percent, speed_buf, sizeof(speed_buf));
         } else {
             std::snprintf(speed_buf, sizeof(speed_buf), "Off");
         }
@@ -797,7 +798,7 @@ void ControlsPanel::handle_save_z_offset() {
             : lv_tr("This will apply the Z-offset to your endstop and restart Klipper to save the "
                     "configuration. The printer will briefly disconnect.");
 
-    save_z_offset_confirmation_dialog_ = ui_modal_show_confirmation(
+    save_z_offset_confirmation_dialog_ = helix::ui::modal_show_confirmation(
         lv_tr("Save Z-Offset?"), confirm_msg, ModalSeverity::Warning, lv_tr("Save"),
         on_save_z_offset_confirm, on_save_z_offset_cancel, this);
 
@@ -1035,12 +1036,12 @@ void ControlsPanel::handle_home_all() {
         api_->home_axes(
             "XYZ",
             [this]() {
-                ui_async_call(
+                helix::ui::async_call(
                     [](void* ud) { static_cast<ControlsPanel*>(ud)->operation_guard_.end(); },
                     this);
             },
             [this](const MoonrakerError& err) {
-                ui_async_call(
+                helix::ui::async_call(
                     [](void* ud) { static_cast<ControlsPanel*>(ud)->operation_guard_.end(); },
                     this);
                 NOTIFY_ERROR("Homing failed: {}", err.user_message());
@@ -1060,12 +1061,12 @@ void ControlsPanel::handle_home_xy() {
         api_->home_axes(
             "XY",
             [this]() {
-                ui_async_call(
+                helix::ui::async_call(
                     [](void* ud) { static_cast<ControlsPanel*>(ud)->operation_guard_.end(); },
                     this);
             },
             [this](const MoonrakerError& err) {
-                ui_async_call(
+                helix::ui::async_call(
                     [](void* ud) { static_cast<ControlsPanel*>(ud)->operation_guard_.end(); },
                     this);
                 NOTIFY_ERROR("Homing failed: {}", err.user_message());
@@ -1085,12 +1086,12 @@ void ControlsPanel::handle_home_z() {
         api_->home_axes(
             "Z",
             [this]() {
-                ui_async_call(
+                helix::ui::async_call(
                     [](void* ud) { static_cast<ControlsPanel*>(ud)->operation_guard_.end(); },
                     this);
             },
             [this](const MoonrakerError& err) {
-                ui_async_call(
+                helix::ui::async_call(
                     [](void* ud) { static_cast<ControlsPanel*>(ud)->operation_guard_.end(); },
                     this);
                 NOTIFY_ERROR("Homing failed: {}", err.user_message());
@@ -1110,13 +1111,13 @@ void ControlsPanel::handle_qgl() {
         api_->execute_gcode(
             "QUAD_GANTRY_LEVEL",
             [this]() {
-                ui_async_call(
+                helix::ui::async_call(
                     [](void* ud) { static_cast<ControlsPanel*>(ud)->operation_guard_.end(); },
                     this);
                 NOTIFY_SUCCESS("Quad Gantry Level complete");
             },
             [this](const MoonrakerError& err) {
-                ui_async_call(
+                helix::ui::async_call(
                     [](void* ud) { static_cast<ControlsPanel*>(ud)->operation_guard_.end(); },
                     this);
                 NOTIFY_ERROR("QGL failed: {}", err.user_message());
@@ -1136,13 +1137,13 @@ void ControlsPanel::handle_z_tilt() {
         api_->execute_gcode(
             "Z_TILT_ADJUST",
             [this]() {
-                ui_async_call(
+                helix::ui::async_call(
                     [](void* ud) { static_cast<ControlsPanel*>(ud)->operation_guard_.end(); },
                     this);
                 NOTIFY_SUCCESS("Z-Tilt Adjust complete");
             },
             [this](const MoonrakerError& err) {
-                ui_async_call(
+                helix::ui::async_call(
                     [](void* ud) { static_cast<ControlsPanel*>(ud)->operation_guard_.end(); },
                     this);
                 NOTIFY_ERROR("Z-Tilt failed: {}", err.user_message());
@@ -1190,7 +1191,7 @@ void ControlsPanel::update_speed_display() {
     if (auto* speed_subj = printer_state_.get_speed_factor_subject()) {
         speed_pct = lv_subject_get_int(speed_subj);
     }
-    helix::fmt::format_percent(speed_pct, speed_override_buf_, sizeof(speed_override_buf_));
+    helix::format::format_percent(speed_pct, speed_override_buf_, sizeof(speed_override_buf_));
     lv_subject_copy_string(&speed_override_subject_, speed_override_buf_);
 }
 
@@ -1199,7 +1200,7 @@ void ControlsPanel::update_flow_display() {
     int flow_pct = 100;
     // Note: PrinterState may need a get_extrude_factor_subject() method
     // For now, we'll initialize to 100% and update when that's available
-    helix::fmt::format_percent(flow_pct, flow_override_buf_, sizeof(flow_override_buf_));
+    helix::format::format_percent(flow_pct, flow_override_buf_, sizeof(flow_override_buf_));
     lv_subject_copy_string(&flow_override_subject_, flow_override_buf_);
 }
 
@@ -1271,9 +1272,9 @@ void ControlsPanel::handle_flow_up() {
                 int flow;
             };
             auto ctx = std::make_unique<Ctx>(Ctx{this, new_flow});
-            ui_queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
-                helix::fmt::format_percent(c->flow, c->panel->flow_override_buf_,
-                                           sizeof(c->panel->flow_override_buf_));
+            helix::ui::queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
+                helix::format::format_percent(c->flow, c->panel->flow_override_buf_,
+                                              sizeof(c->panel->flow_override_buf_));
                 lv_subject_copy_string(&c->panel->flow_override_subject_,
                                        c->panel->flow_override_buf_);
             });
@@ -1305,9 +1306,9 @@ void ControlsPanel::handle_flow_down() {
                 int flow;
             };
             auto ctx = std::make_unique<Ctx>(Ctx{this, new_flow});
-            ui_queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
-                helix::fmt::format_percent(c->flow, c->panel->flow_override_buf_,
-                                           sizeof(c->panel->flow_override_buf_));
+            helix::ui::queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
+                helix::format::format_percent(c->flow, c->panel->flow_override_buf_,
+                                              sizeof(c->panel->flow_override_buf_));
                 lv_subject_copy_string(&c->panel->flow_override_subject_,
                                        c->panel->flow_override_buf_);
             });
@@ -1329,7 +1330,7 @@ void ControlsPanel::handle_fan_slider_changed(int value) {
 
     // Optimistic update - show new value immediately without waiting for Moonraker
     if (value > 0) {
-        helix::fmt::format_percent(value, fan_speed_buf_, sizeof(fan_speed_buf_));
+        helix::format::format_percent(value, fan_speed_buf_, sizeof(fan_speed_buf_));
     } else {
         std::snprintf(fan_speed_buf_, sizeof(fan_speed_buf_), "Off");
     }
@@ -1353,7 +1354,7 @@ void ControlsPanel::handle_motors_clicked() {
     spdlog::debug("[{}] Motors Disable card clicked - showing confirmation", get_name());
 
     // ModalGuard's operator= hides any previous dialog before assigning new one
-    motors_confirmation_dialog_ = ui_modal_show_confirmation(
+    motors_confirmation_dialog_ = helix::ui::modal_show_confirmation(
         lv_tr("Disable Motors?"), lv_tr("Release all stepper motors. Position will be lost."),
         ModalSeverity::Warning, lv_tr("Disable"), on_motors_confirm, on_motors_cancel, this);
 
@@ -1515,7 +1516,7 @@ void ControlsPanel::update_secondary_fan_speed(const std::string& object_name, i
         if (row.object_name == object_name && row.speed_label && lv_obj_is_valid(row.speed_label)) {
             char speed_buf[16];
             if (speed_pct > 0) {
-                helix::fmt::format_percent(speed_pct, speed_buf, sizeof(speed_buf));
+                helix::format::format_percent(speed_pct, speed_buf, sizeof(speed_buf));
             } else {
                 std::snprintf(speed_buf, sizeof(speed_buf), "Off");
             }

@@ -36,6 +36,8 @@
 #include <functional>
 #include <memory>
 
+using namespace helix;
+
 // ============================================================================
 // Layout Constants
 // ============================================================================
@@ -1002,7 +1004,7 @@ void destroy_ams_overview_panel_ui() {
             g_ams_overview_panel->clear_panel_reference();
         }
 
-        lv_obj_safe_delete(s_ams_overview_panel_obj);
+        helix::ui::safe_delete(s_ams_overview_panel_obj);
     }
 }
 

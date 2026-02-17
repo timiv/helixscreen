@@ -131,7 +131,7 @@ void SubjectInitializer::init_core_subjects() {
     spdlog::trace("[SubjectInitializer] Initializing core subjects");
     app_globals_init_subjects();            // Global subjects (notification subject, etc.)
     ui_printer_status_icon_init_subjects(); // Printer icon state
-    ui_status_bar_init_subjects();          // Notification badge subjects
+    helix::ui::status_bar_init_subjects();  // Notification badge subjects
 }
 
 void SubjectInitializer::init_printer_state_subjects() {

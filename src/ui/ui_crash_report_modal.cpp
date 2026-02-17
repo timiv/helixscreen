@@ -81,7 +81,7 @@ void CrashReportModal::on_hide() {
     // Self-delete: this modal is heap-allocated in application.cpp startup
     // and has no other owner. Deferred so hide() finishes before destruction.
     auto* self = this;
-    ui_async_call([](void* data) { delete static_cast<CrashReportModal*>(data); }, self);
+    helix::ui::async_call([](void* data) { delete static_cast<CrashReportModal*>(data); }, self);
 }
 
 // =============================================================================

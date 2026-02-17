@@ -505,7 +505,7 @@ void PIDCalibrationPanel::send_pid_calibrate() {
         heater_name, target_temp_,
         [this](float kp, float ki, float kd) {
             // Callback from background thread - marshal to UI thread
-            ui_queue_update([this, kp, ki, kd]() {
+            helix::ui::queue_update([this, kp, ki, kd]() {
                 if (cleanup_called())
                     return;
                 // Ignore results if user already aborted
@@ -520,7 +520,7 @@ void PIDCalibrationPanel::send_pid_calibrate() {
         },
         [this](const MoonrakerError& err) {
             std::string msg = err.message;
-            ui_queue_update([this, msg]() {
+            helix::ui::queue_update([this, msg]() {
                 if (cleanup_called())
                     return;
                 if (state_ != State::CALIBRATING) {
@@ -533,7 +533,7 @@ void PIDCalibrationPanel::send_pid_calibrate() {
             });
         },
         [this](int sample, float tolerance) {
-            ui_queue_update([this, sample, tolerance]() {
+            helix::ui::queue_update([this, sample, tolerance]() {
                 if (cleanup_called())
                     return;
                 on_pid_progress(sample, tolerance);
@@ -551,7 +551,7 @@ void PIDCalibrationPanel::send_save_config() {
     spdlog::info("[PIDCal] Sending SAVE_CONFIG");
     api_->save_config(
         [this]() {
-            ui_queue_update([this]() {
+            helix::ui::queue_update([this]() {
                 if (cleanup_called())
                     return;
                 if (state_ == State::SAVING) {
@@ -561,7 +561,7 @@ void PIDCalibrationPanel::send_save_config() {
         },
         [this](const MoonrakerError& err) {
             std::string msg = err.message;
-            ui_queue_update([this, msg]() {
+            helix::ui::queue_update([this, msg]() {
                 if (cleanup_called())
                     return;
                 // Still show results even if save fails

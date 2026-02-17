@@ -155,7 +155,7 @@ void WizardInputShaperStep::init_subjects() {
 // Captures alive flag and queues update to UI thread
 static void safe_update_status(std::weak_ptr<std::atomic<bool>> alive_weak,
                                const std::string& msg) {
-    ui_queue_update([alive_weak, msg]() {
+    helix::ui::queue_update([alive_weak, msg]() {
         if (auto alive = alive_weak.lock()) {
             if (!alive->load(std::memory_order_acquire)) {
                 return; // Step was cleaned up
@@ -171,7 +171,7 @@ static void safe_update_status(std::weak_ptr<std::atomic<bool>> alive_weak,
 }
 
 static void safe_update_progress(std::weak_ptr<std::atomic<bool>> alive_weak, int progress) {
-    ui_queue_update([alive_weak, progress]() {
+    helix::ui::queue_update([alive_weak, progress]() {
         if (auto alive = alive_weak.lock()) {
             if (!alive->load(std::memory_order_acquire)) {
                 return; // Step was cleaned up
@@ -187,7 +187,7 @@ static void safe_update_progress(std::weak_ptr<std::atomic<bool>> alive_weak, in
 }
 
 static void safe_set_complete(std::weak_ptr<std::atomic<bool>> alive_weak) {
-    ui_queue_update([alive_weak]() {
+    helix::ui::queue_update([alive_weak]() {
         if (auto alive = alive_weak.lock()) {
             if (!alive->load(std::memory_order_acquire)) {
                 return; // Step was cleaned up
@@ -208,7 +208,7 @@ static void safe_set_complete(std::weak_ptr<std::atomic<bool>> alive_weak) {
 }
 
 static void safe_handle_error(std::weak_ptr<std::atomic<bool>> alive_weak) {
-    ui_queue_update([alive_weak]() {
+    helix::ui::queue_update([alive_weak]() {
         if (auto alive = alive_weak.lock()) {
             if (!alive->load(std::memory_order_acquire)) {
                 return;

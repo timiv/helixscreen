@@ -144,7 +144,7 @@ class WizardConnectionStep {
      *
      * @param discovery The mDNS discovery implementation to use
      */
-    void set_mdns_discovery(std::unique_ptr<IMdnsDiscovery> discovery);
+    void set_mdns_discovery(std::unique_ptr<helix::IMdnsDiscovery> discovery);
 
     /**
      * @brief Check if this step has been cleaned up
@@ -234,15 +234,15 @@ class WizardConnectionStep {
     static void auto_probe_timer_cb(lv_timer_t* timer);
 
     // mDNS discovery (injectable for testing)
-    std::unique_ptr<IMdnsDiscovery> mdns_discovery_;
-    std::vector<DiscoveredPrinter> discovered_printers_;
+    std::unique_ptr<helix::IMdnsDiscovery> mdns_discovery_;
+    std::vector<helix::DiscoveredPrinter> discovered_printers_;
 
     // Subjects for mDNS UI
     lv_subject_t mdns_status_; ///< "Scanning..." / "Found N printer(s)"
     char mdns_status_buffer_[64];
 
     // mDNS callbacks
-    void on_printers_discovered(const std::vector<DiscoveredPrinter>& printers);
+    void on_printers_discovered(const std::vector<helix::DiscoveredPrinter>& printers);
     static void on_printer_selected_cb(lv_event_t* e);
 };
 

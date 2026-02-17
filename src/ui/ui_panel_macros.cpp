@@ -154,7 +154,7 @@ void MacrosPanel::on_deactivate() {
 
 void MacrosPanel::clear_macro_list() {
     for (auto& entry : macro_entries_) {
-        lv_obj_safe_delete(entry.card);
+        helix::ui::safe_delete(entry.card);
     }
     macro_entries_.clear();
 }
@@ -192,7 +192,7 @@ void MacrosPanel::populate_macro_list() {
 
     // Toggle visibility: show macro list OR empty state
     bool has_macros = visible_count > 0;
-    ui_toggle_list_empty_state(macro_list_container_, empty_state_container_, has_macros);
+    helix::ui::toggle_list_empty_state(macro_list_container_, empty_state_container_, has_macros);
 
     // Update status
     if (has_macros) {

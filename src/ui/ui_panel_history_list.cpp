@@ -29,6 +29,8 @@
 #include <lvgl.h>
 #include <map>
 
+using namespace helix;
+
 // MDI chevron-down symbol for dropdown arrows (replaces FontAwesome LV_SYMBOL_DOWN)
 static const char* MDI_CHEVRON_DOWN = "\xF3\xB0\x85\x80"; // F0140
 
@@ -624,7 +626,7 @@ void HistoryListPanel::clear_list() {
     uint32_t child_count = lv_obj_get_child_count(list_rows_);
     for (int32_t i = child_count - 1; i >= 0; --i) {
         lv_obj_t* child = lv_obj_get_child(list_rows_, i);
-        lv_obj_safe_delete(child);
+        helix::ui::safe_delete(child);
     }
 }
 
@@ -1016,7 +1018,7 @@ void HistoryListPanel::show_detail_overlay(const PrintHistoryJob& job) {
                         uint64_t generation;
                         std::string path;
                     };
-                    ui_queue_update<ThumbUpdate>(
+                    helix::ui::queue_update<ThumbUpdate>(
                         std::make_unique<ThumbUpdate>(
                             ThumbUpdate{self, this_generation, lvgl_path}),
                         [](ThumbUpdate* t) {
@@ -1109,8 +1111,8 @@ void HistoryListPanel::update_detail_subjects(const PrintHistoryJob& job) {
     // Format layer height
     char layer_height_buf[32];
     if (job.layer_height > 0) {
-        helix::fmt::format_distance_mm(job.layer_height, 2, layer_height_buf,
-                                       sizeof(layer_height_buf));
+        helix::format::format_distance_mm(job.layer_height, 2, layer_height_buf,
+                                          sizeof(layer_height_buf));
     } else {
         snprintf(layer_height_buf, sizeof(layer_height_buf), "-");
     }
@@ -1190,7 +1192,7 @@ void HistoryListPanel::handle_reprint() {
     ui_nav_go_back(); // Close history dashboard
 
     // Step 2: Switch to Print Select panel
-    ui_nav_set_active(UI_PANEL_PRINT_SELECT);
+    ui_nav_set_active(PanelId::PrintSelect);
 
     // Step 3: Get PrintSelectPanel and navigate to file details
     PrintSelectPanel* print_panel =

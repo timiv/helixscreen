@@ -100,7 +100,7 @@ class MockScrewsTiltState {
  *
  * Usage:
  *   MoonrakerClientMock mock_client;
- *   PrinterState state;
+ *   helix::PrinterState state;
  *   MoonrakerAPIMock mock_api(mock_client, state);
  *   // mock_api.download_file() now reads from assets/test_gcodes/
  */
@@ -109,10 +109,10 @@ class MoonrakerAPIMock : public MoonrakerAPI {
     /**
      * @brief Construct mock API
      *
-     * @param client MoonrakerClient instance (typically MoonrakerClientMock)
-     * @param state PrinterState instance
+     * @param client helix::MoonrakerClient instance (typically MoonrakerClientMock)
+     * @param state helix::PrinterState instance
      */
-    MoonrakerAPIMock(MoonrakerClient& client, PrinterState& state);
+    MoonrakerAPIMock(helix::MoonrakerClient& client, helix::PrinterState& state);
 
     ~MoonrakerAPIMock() override = default;
 
@@ -120,8 +120,8 @@ class MoonrakerAPIMock : public MoonrakerAPI {
     // Overridden Connection/Subscription/Database Proxies (no-ops for mock)
     // ========================================================================
 
-    SubscriptionId subscribe_notifications(std::function<void(json)> callback) override;
-    bool unsubscribe_notifications(SubscriptionId id) override;
+    helix::SubscriptionId subscribe_notifications(std::function<void(json)> callback) override;
+    bool unsubscribe_notifications(helix::SubscriptionId id) override;
     void register_method_callback(const std::string& method, const std::string& name,
                                   std::function<void(json)> callback) override;
     bool unregister_method_callback(const std::string& method, const std::string& name) override;
@@ -352,7 +352,8 @@ class MoonrakerAPIMock : public MoonrakerAPI {
      * @param on_success Callback with screw adjustment results
      * @param on_error Error callback (rarely called - mock usually succeeds)
      */
-    void calculate_screws_tilt(ScrewTiltCallback on_success, ErrorCallback on_error) override;
+    void calculate_screws_tilt(helix::ScrewTiltCallback on_success,
+                               ErrorCallback on_error) override;
 
     /**
      * @brief Reset the mock bed to initial out-of-level state
@@ -393,7 +394,7 @@ class MoonrakerAPIMock : public MoonrakerAPI {
      * @param on_success Callback with list of mock SpoolInfo
      * @param on_error Error callback (never called - mock always succeeds)
      */
-    void get_spoolman_spools(SpoolListCallback on_success, ErrorCallback on_error) override;
+    void get_spoolman_spools(helix::SpoolListCallback on_success, ErrorCallback on_error) override;
 
     /**
      * @brief Get a single spool by ID from mock inventory
@@ -405,7 +406,7 @@ class MoonrakerAPIMock : public MoonrakerAPI {
      * @param on_success Callback with SpoolInfo (empty optional if not found)
      * @param on_error Error callback (never called - mock always succeeds)
      */
-    void get_spoolman_spool(int spool_id, SpoolCallback on_success,
+    void get_spoolman_spool(int spool_id, helix::SpoolCallback on_success,
                             ErrorCallback on_error) override;
 
     /**
@@ -463,31 +464,35 @@ class MoonrakerAPIMock : public MoonrakerAPI {
                                         SuccessCallback on_success,
                                         ErrorCallback on_error) override;
 
-    void get_spoolman_vendors(VendorListCallback on_success, ErrorCallback on_error) override;
+    void get_spoolman_vendors(helix::VendorListCallback on_success,
+                              ErrorCallback on_error) override;
 
-    void get_spoolman_filaments(FilamentListCallback on_success, ErrorCallback on_error) override;
+    void get_spoolman_filaments(helix::FilamentListCallback on_success,
+                                ErrorCallback on_error) override;
 
-    void create_spoolman_vendor(const nlohmann::json& vendor_data, VendorCreateCallback on_success,
+    void create_spoolman_vendor(const nlohmann::json& vendor_data,
+                                helix::VendorCreateCallback on_success,
                                 ErrorCallback on_error) override;
 
     void create_spoolman_filament(const nlohmann::json& filament_data,
-                                  FilamentCreateCallback on_success,
+                                  helix::FilamentCreateCallback on_success,
                                   ErrorCallback on_error) override;
 
-    void create_spoolman_spool(const nlohmann::json& spool_data, SpoolCreateCallback on_success,
+    void create_spoolman_spool(const nlohmann::json& spool_data,
+                               helix::SpoolCreateCallback on_success,
                                ErrorCallback on_error) override;
 
     void delete_spoolman_spool(int spool_id, SuccessCallback on_success,
                                ErrorCallback on_error) override;
 
-    void get_spoolman_external_vendors(VendorListCallback on_success,
+    void get_spoolman_external_vendors(helix::VendorListCallback on_success,
                                        ErrorCallback on_error) override;
 
     void get_spoolman_external_filaments(const std::string& vendor_name,
-                                         FilamentListCallback on_success,
+                                         helix::FilamentListCallback on_success,
                                          ErrorCallback on_error) override;
 
-    void get_spoolman_filaments(int vendor_id, FilamentListCallback on_success,
+    void get_spoolman_filaments(int vendor_id, helix::FilamentListCallback on_success,
                                 ErrorCallback on_error) override;
 
     void delete_spoolman_vendor(int vendor_id, SuccessCallback on_success,
@@ -577,7 +582,7 @@ class MoonrakerAPIMock : public MoonrakerAPI {
     std::map<std::string, int> mock_wled_brightness_;
 
     // Mock subscription ID counter
-    SubscriptionId mock_next_subscription_id_ = 100;
+    helix::SubscriptionId mock_next_subscription_id_ = 100;
 
     // Mock Spoolman state
     bool mock_spoolman_enabled_ = true;  ///< Whether Spoolman is "connected"

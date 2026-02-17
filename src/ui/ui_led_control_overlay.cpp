@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cstdio>
 
+using namespace helix;
 using namespace helix::led;
 
 // ============================================================================
@@ -217,7 +218,7 @@ void LedControlOverlay::on_activate() {
             uint8_t g = static_cast<uint8_t>(color.g * 255.0);
             uint8_t b = static_cast<uint8_t>(color.b * 255.0);
             lv_obj_t* swatch = current_color_swatch_;
-            ui_queue_update([swatch, r, g, b]() {
+            helix::ui::queue_update([swatch, r, g, b]() {
                 if (swatch)
                     lv_obj_set_style_bg_color(swatch, lv_color_make(r, g, b), 0);
             });
@@ -943,7 +944,7 @@ void LedControlOverlay::handle_strip_selected(const std::string& strip_id) {
     // SAFETY: Defer strip selector rebuild — the clicked chip is a child of
     // strip_selector_section_ being cleaned. Destroying it mid-callback causes
     // use-after-free (issue #80).
-    ui_queue_update([this]() {
+    helix::ui::queue_update([this]() {
         if (strip_selector_section_) {
             lv_obj_clean(strip_selector_section_);
             populate_strip_selector();

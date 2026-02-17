@@ -482,7 +482,7 @@ void SpoolWizardOverlay::create_vendor_then_filament_then_spool() {
     api->create_spoolman_vendor(
         data,
         [this](const VendorInfo& vendor) {
-            ui_queue_update([this, vendor]() {
+            helix::ui::queue_update([this, vendor]() {
                 if (!is_visible()) {
                     spdlog::warn("[{}] Vendor created but overlay no longer visible", get_name());
                     return;
@@ -500,7 +500,7 @@ void SpoolWizardOverlay::create_vendor_then_filament_then_spool() {
             });
         },
         [this](const MoonrakerError& err) {
-            ui_queue_update([this, msg = err.message]() {
+            helix::ui::queue_update([this, msg = err.message]() {
                 on_creation_error("Failed to create vendor: " + msg);
             });
         });
@@ -539,7 +539,7 @@ void SpoolWizardOverlay::create_filament_then_spool(int vendor_id) {
     api->create_spoolman_filament(
         data,
         [this](const FilamentInfo& filament) {
-            ui_queue_update([this, filament]() {
+            helix::ui::queue_update([this, filament]() {
                 if (!is_visible()) {
                     spdlog::warn("[{}] Filament created but overlay no longer visible", get_name());
                     return;
@@ -552,7 +552,7 @@ void SpoolWizardOverlay::create_filament_then_spool(int vendor_id) {
             });
         },
         [this](const MoonrakerError& err) {
-            ui_queue_update([this, msg = err.message]() {
+            helix::ui::queue_update([this, msg = err.message]() {
                 on_creation_error("Failed to create filament: " + msg, created_vendor_id_);
             });
         });
@@ -583,7 +583,7 @@ void SpoolWizardOverlay::create_spool(int filament_id) {
     api->create_spoolman_spool(
         data,
         [this](const SpoolInfo& spool) {
-            ui_queue_update([this, spool]() {
+            helix::ui::queue_update([this, spool]() {
                 if (!is_visible()) {
                     spdlog::warn("[{}] Spool created but overlay no longer visible", get_name());
                     return;
@@ -592,7 +592,7 @@ void SpoolWizardOverlay::create_spool(int filament_id) {
             });
         },
         [this](const MoonrakerError& err) {
-            ui_queue_update([this, msg = err.message]() {
+            helix::ui::queue_update([this, msg = err.message]() {
                 on_creation_error("Failed to create spool: " + msg, created_vendor_id_,
                                   created_filament_id_);
             });
@@ -772,7 +772,7 @@ void SpoolWizardOverlay::load_vendors() {
 
     // Helper lambda — called by whichever callback completes second
     auto finish = [this, ctx]() {
-        ui_queue_update([this, ctx]() {
+        helix::ui::queue_update([this, ctx]() {
             all_vendors_ = merge_vendors(ctx->external_vendors, ctx->server_vendors);
             filtered_vendors_ = filter_vendor_list(all_vendors_, vendor_search_query_);
 
@@ -985,11 +985,11 @@ void SpoolWizardOverlay::on_wizard_show_create_vendor_modal(lv_event_t* /*e*/) {
         // Register keyboards for text inputs
         lv_obj_t* name_input = lv_obj_find_by_name(wiz.create_vendor_dialog_, "new_vendor_name");
         if (name_input) {
-            ui_modal_register_keyboard(wiz.create_vendor_dialog_, name_input);
+            helix::ui::modal_register_keyboard(wiz.create_vendor_dialog_, name_input);
         }
         lv_obj_t* url_input = lv_obj_find_by_name(wiz.create_vendor_dialog_, "new_vendor_url");
         if (url_input) {
-            ui_modal_register_keyboard(wiz.create_vendor_dialog_, url_input);
+            helix::ui::modal_register_keyboard(wiz.create_vendor_dialog_, url_input);
         }
     }
 }
@@ -1259,7 +1259,7 @@ void SpoolWizardOverlay::load_filaments() {
     api->get_spoolman_filaments(
         vendor_id,
         [this, vendor_id](const std::vector<FilamentInfo>& server_list) {
-            ui_queue_update([this, server_list, vendor_id]() {
+            helix::ui::queue_update([this, server_list, vendor_id]() {
                 // Convert FilamentInfo -> FilamentEntry
                 for (const auto& fi : server_list) {
                     FilamentEntry entry;
@@ -1303,7 +1303,7 @@ void SpoolWizardOverlay::load_filaments() {
         },
         [this](const MoonrakerError& err) {
             spdlog::warn("[SpoolWizard] Failed to fetch filaments: {}", err.message);
-            ui_queue_update([this]() {
+            helix::ui::queue_update([this]() {
                 if (subjects_initialized_) {
                     lv_subject_set_int(&filaments_loading_subject_, 0);
                     lv_subject_set_int(&filament_count_subject_, 0);
@@ -1538,32 +1538,32 @@ void SpoolWizardOverlay::on_wizard_show_create_filament_modal(lv_event_t* /*e*/)
         lv_obj_t* name_input =
             lv_obj_find_by_name(wiz.create_filament_dialog_, "new_filament_name");
         if (name_input) {
-            ui_modal_register_keyboard(wiz.create_filament_dialog_, name_input);
+            helix::ui::modal_register_keyboard(wiz.create_filament_dialog_, name_input);
         }
         lv_obj_t* nozzle_min = lv_obj_find_by_name(wiz.create_filament_dialog_, "nozzle_temp_min");
         if (nozzle_min) {
-            ui_modal_register_keyboard(wiz.create_filament_dialog_, nozzle_min);
+            helix::ui::modal_register_keyboard(wiz.create_filament_dialog_, nozzle_min);
         }
         lv_obj_t* nozzle_max = lv_obj_find_by_name(wiz.create_filament_dialog_, "nozzle_temp_max");
         if (nozzle_max) {
-            ui_modal_register_keyboard(wiz.create_filament_dialog_, nozzle_max);
+            helix::ui::modal_register_keyboard(wiz.create_filament_dialog_, nozzle_max);
         }
         lv_obj_t* bed_min = lv_obj_find_by_name(wiz.create_filament_dialog_, "bed_temp_min");
         if (bed_min) {
-            ui_modal_register_keyboard(wiz.create_filament_dialog_, bed_min);
+            helix::ui::modal_register_keyboard(wiz.create_filament_dialog_, bed_min);
         }
         lv_obj_t* bed_max = lv_obj_find_by_name(wiz.create_filament_dialog_, "bed_temp_max");
         if (bed_max) {
-            ui_modal_register_keyboard(wiz.create_filament_dialog_, bed_max);
+            helix::ui::modal_register_keyboard(wiz.create_filament_dialog_, bed_max);
         }
         lv_obj_t* weight = lv_obj_find_by_name(wiz.create_filament_dialog_, "filament_weight");
         if (weight) {
-            ui_modal_register_keyboard(wiz.create_filament_dialog_, weight);
+            helix::ui::modal_register_keyboard(wiz.create_filament_dialog_, weight);
         }
         lv_obj_t* spool_weight =
             lv_obj_find_by_name(wiz.create_filament_dialog_, "filament_spool_weight");
         if (spool_weight) {
-            ui_modal_register_keyboard(wiz.create_filament_dialog_, spool_weight);
+            helix::ui::modal_register_keyboard(wiz.create_filament_dialog_, spool_weight);
         }
 
         // Populate material dropdown from filament database

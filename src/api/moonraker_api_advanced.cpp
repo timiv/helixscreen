@@ -18,6 +18,8 @@
 #include <set>
 #include <sstream>
 
+using namespace helix;
+
 using namespace moonraker_internal;
 
 // ============================================================================
@@ -1569,9 +1571,9 @@ void MoonrakerAPI::get_input_shaper_config(InputShaperConfigCallback on_success,
 }
 
 // Aliases for json_utils.h helpers
-using helix::json::safe_float;
-using helix::json::safe_int;
-using helix::json::safe_string;
+using helix::json_util::safe_float;
+using helix::json_util::safe_int;
+using helix::json_util::safe_string;
 
 // Helper to parse a Spoolman spool JSON object into SpoolInfo
 static SpoolInfo parse_spool_info(const nlohmann::json& spool_json) {

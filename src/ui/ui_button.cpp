@@ -19,6 +19,8 @@
 
 #include <cstring>
 
+using namespace helix;
+
 namespace {
 
 // User data stored on button to track icon/label positions

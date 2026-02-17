@@ -234,7 +234,7 @@ static void wire_button_events() {
             lv_obj_add_event_cb(
                 btn,
                 [](lv_event_t* e) {
-                    ui_event_safe_call("keypad_digit", [e]() {
+                    helix::ui::event_safe_call("keypad_digit", [e]() {
                         int digit = (int)(intptr_t)lv_event_get_user_data(e);
                         append_digit(digit);
                     });
@@ -249,7 +249,7 @@ static void wire_button_events() {
         lv_obj_add_event_cb(
             btn_back,
             [](lv_event_t*) {
-                ui_event_safe_call("keypad_backspace", []() { handle_backspace(); });
+                helix::ui::event_safe_call("keypad_backspace", []() { handle_backspace(); });
             },
             LV_EVENT_CLICKED, nullptr);
     }
@@ -262,7 +262,9 @@ static void wire_button_events() {
     if (ok_btn) {
         lv_obj_add_event_cb(
             ok_btn,
-            [](lv_event_t*) { ui_event_safe_call("keypad_confirm", []() { handle_confirm(); }); },
+            [](lv_event_t*) {
+                helix::ui::event_safe_call("keypad_confirm", []() { handle_confirm(); });
+            },
             LV_EVENT_CLICKED, nullptr);
     }
 

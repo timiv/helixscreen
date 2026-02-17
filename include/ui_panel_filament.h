@@ -51,10 +51,10 @@ class FilamentPanel : public PanelBase {
     /**
      * @brief Construct FilamentPanel with injected dependencies
      *
-     * @param printer_state Reference to PrinterState
+     * @param printer_state Reference to helix::PrinterState
      * @param api Pointer to MoonrakerAPI (for future temp commands)
      */
-    FilamentPanel(PrinterState& printer_state, MoonrakerAPI* api);
+    FilamentPanel(helix::PrinterState& printer_state, MoonrakerAPI* api);
 
     ~FilamentPanel() override;
 

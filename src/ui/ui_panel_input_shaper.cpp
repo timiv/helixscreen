@@ -25,6 +25,8 @@
 #include <cstdio>
 #include <random>
 
+using namespace helix;
+
 // Shaper overlay colors (distinct, visible on dark bg) — shared by chart and legend
 static constexpr uint32_t SHAPER_OVERLAY_COLORS[] = {
     0x4FC3F7, // ZV - light blue
@@ -428,14 +430,14 @@ void InputShaperPanel::on_activate() {
         auto alive = alive_;
         api_->get_input_shaper_config(
             [this, alive](const InputShaperConfig& config) {
-                ui_queue_update([this, alive, config]() {
+                helix::ui::queue_update([this, alive, config]() {
                     if (!alive->load())
                         return;
                     populate_current_config(config);
                 });
             },
             [this, alive](const MoonrakerError& err) {
-                ui_queue_update([this, alive, msg = err.message]() {
+                helix::ui::queue_update([this, alive, msg = err.message]() {
                     if (!alive->load())
                         return;
                     spdlog::debug("[InputShaper] Could not query config: {}", msg);
@@ -815,7 +817,7 @@ void InputShaperPanel::apply_y_after_x() {
             if (api_) {
                 api_->get_input_shaper_config(
                     [this, alive](const InputShaperConfig& config) {
-                        ui_queue_update([this, alive, config]() {
+                        helix::ui::queue_update([this, alive, config]() {
                             if (!alive->load())
                                 return;
                             populate_current_config(config);
@@ -932,8 +934,8 @@ void InputShaperPanel::populate_current_config(const InputShaperConfig& config) 
         lv_subject_copy_string(&is_current_x_type_, is_current_x_type_buf_);
 
         // X frequency
-        helix::fmt::format_frequency_hz(config.shaper_freq_x, is_current_x_freq_buf_,
-                                        sizeof(is_current_x_freq_buf_));
+        helix::format::format_frequency_hz(config.shaper_freq_x, is_current_x_freq_buf_,
+                                           sizeof(is_current_x_freq_buf_));
         lv_subject_copy_string(&is_current_x_freq_, is_current_x_freq_buf_);
 
         // Uppercase Y type
@@ -944,8 +946,8 @@ void InputShaperPanel::populate_current_config(const InputShaperConfig& config) 
         lv_subject_copy_string(&is_current_y_type_, is_current_y_type_buf_);
 
         // Y frequency
-        helix::fmt::format_frequency_hz(config.shaper_freq_y, is_current_y_freq_buf_,
-                                        sizeof(is_current_y_freq_buf_));
+        helix::format::format_frequency_hz(config.shaper_freq_y, is_current_y_freq_buf_,
+                                           sizeof(is_current_y_freq_buf_));
         lv_subject_copy_string(&is_current_y_freq_, is_current_y_freq_buf_);
 
         // Max accel - leave empty for now (populated from results in Chunk 3)
@@ -1033,7 +1035,7 @@ void InputShaperPanel::populate_axis_result(char axis, const InputShaperResult& 
 
     // Format frequency
     char freq_buf[16];
-    helix::fmt::format_frequency_hz(result.shaper_freq, freq_buf, sizeof(freq_buf));
+    helix::format::format_frequency_hz(result.shaper_freq, freq_buf, sizeof(freq_buf));
 
     if (axis == 'X') {
         lv_subject_set_int(&is_results_has_x_, 1);
@@ -1098,7 +1100,7 @@ void InputShaperPanel::populate_axis_result(char axis, const InputShaperResult& 
             lv_subject_copy_string(&cmp[i].type, cmp[i].type_buf);
 
             // Frequency
-            helix::fmt::format_frequency_hz(opt.frequency, cmp[i].freq_buf, CMP_VALUE_BUF);
+            helix::format::format_frequency_hz(opt.frequency, cmp[i].freq_buf, CMP_VALUE_BUF);
             lv_subject_copy_string(&cmp[i].freq, cmp[i].freq_buf);
 
             // Vibration with quality description
@@ -1616,5 +1618,5 @@ void InputShaperPanel::handle_help_clicked() {
 
         "Lower vibration % is better. Lower smoothing preserves detail.";
 
-    ui_modal_show_alert("Input Shaper Help", help_message, ModalSeverity::Info, "Got It");
+    helix::ui::modal_show_alert("Input Shaper Help", help_message, ModalSeverity::Info, "Got It");
 }

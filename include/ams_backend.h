@@ -16,6 +16,11 @@
 #include "ams_error.h"
 #include "ams_types.h"
 
+class MoonrakerAPI;
+namespace helix {
+class MoonrakerClient;
+}
+
 #include <any>
 #include <functional>
 #include <memory>
@@ -86,7 +91,7 @@ class AmsBackend {
     /**
      * @brief Release subscriptions without unsubscribing
      *
-     * Use during shutdown when the MoonrakerClient may already be destroyed.
+     * Use during shutdown when the helix::MoonrakerClient may already be destroyed.
      * This abandons the subscription rather than trying to call into the client.
      * Backends that hold SubscriptionGuards should call release() on them.
      */
@@ -675,7 +680,7 @@ class AmsBackend {
      *
      * @param detected_type The detected AMS type from printer discovery
      * @return Unique pointer to backend instance, or nullptr if type is NONE
-     * @deprecated Use create(AmsType, MoonrakerAPI*, MoonrakerClient*) for real backends
+     * @deprecated Use create(AmsType, MoonrakerAPI*, helix::MoonrakerClient*) for real backends
      */
     static std::unique_ptr<AmsBackend> create(AmsType detected_type);
 
@@ -691,11 +696,11 @@ class AmsBackend {
      *
      * @param detected_type The detected AMS type from printer discovery
      * @param api Pointer to MoonrakerAPI for sending commands
-     * @param client Pointer to MoonrakerClient for subscriptions
+     * @param client Pointer to helix::MoonrakerClient for subscriptions
      * @return Unique pointer to backend instance, or nullptr if type is NONE
      */
-    static std::unique_ptr<AmsBackend> create(AmsType detected_type, class MoonrakerAPI* api,
-                                              class MoonrakerClient* client);
+    static std::unique_ptr<AmsBackend> create(AmsType detected_type, MoonrakerAPI* api,
+                                              helix::MoonrakerClient* client);
 
     /**
      * @brief Create mock backend for testing

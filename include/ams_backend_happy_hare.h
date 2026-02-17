@@ -46,11 +46,11 @@ class AmsBackendHappyHare : public AmsBackend {
      * @brief Construct Happy Hare backend
      *
      * @param api Pointer to MoonrakerAPI (for sending G-code commands)
-     * @param client Pointer to MoonrakerClient (for subscribing to updates)
+     * @param client Pointer to helix::MoonrakerClient (for subscribing to updates)
      *
      * @note Both pointers must remain valid for the lifetime of this backend.
      */
-    AmsBackendHappyHare(MoonrakerAPI* api, MoonrakerClient* client);
+    AmsBackendHappyHare(MoonrakerAPI* api, helix::MoonrakerClient* client);
 
     ~AmsBackendHappyHare() override;
 
@@ -225,8 +225,8 @@ class AmsBackendHappyHare : public AmsBackend {
     AmsError validate_slot_index(int gate_index) const;
 
     // Dependencies
-    MoonrakerAPI* api_;       ///< For sending G-code commands
-    MoonrakerClient* client_; ///< For subscribing to updates
+    MoonrakerAPI* api_;              ///< For sending G-code commands
+    helix::MoonrakerClient* client_; ///< For subscribing to updates
 
     // State
     mutable std::mutex mutex_;         ///< Protects state access

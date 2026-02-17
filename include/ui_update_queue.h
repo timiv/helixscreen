@@ -10,7 +10,7 @@
  * happen during the render phase.
  *
  * Architecture:
- * 1. Any thread can queue updates via ui_queue_update()
+ * 1. Any thread can queue updates via helix::ui::queue_update()
  * 2. Updates accumulate in a thread-safe queue
  * 3. At the start of each frame (via LVGL timer), all pending updates are processed
  * 4. Rendering happens AFTER all updates are applied
@@ -21,14 +21,14 @@
  * Usage:
  * @code
  * // From any thread (WebSocket callback, async operation, etc.):
- * ui_queue_update([](void*) {
+ * helix::ui::queue_update([](void*) {
  *     lv_subject_set_int(&my_subject, new_value);
  *     lv_label_set_text(label, "Updated!");
  * });
  *
  * // With captured data:
  * auto* data = new MyData{value, text};
- * ui_queue_update([](void* user_data) {
+ * helix::ui::queue_update([](void* user_data) {
  *     auto* d = static_cast<MyData*>(user_data);
  *     lv_subject_set_int(&my_subject, d->value);
  *     delete d;
@@ -204,8 +204,6 @@ class UpdateQueue {
     bool initialized_ = false;
 };
 
-} // namespace helix::ui
-
 /**
  * @brief Queue a UI update for safe execution
  *
@@ -215,8 +213,8 @@ class UpdateQueue {
  *
  * @param callback Function to execute on the main thread
  */
-inline void ui_queue_update(helix::ui::UpdateCallback callback) {
-    helix::ui::UpdateQueue::instance().queue(std::move(callback));
+inline void queue_update(UpdateCallback callback) {
+    UpdateQueue::instance().queue(std::move(callback));
 }
 
 /**
@@ -229,11 +227,10 @@ inline void ui_queue_update(helix::ui::UpdateCallback callback) {
  * @param data Data to pass to callback (moved into queue)
  * @param callback Function to execute with data
  */
-template <typename T>
-void ui_queue_update(std::unique_ptr<T> data, std::function<void(T*)> callback) {
+template <typename T> void queue_update(std::unique_ptr<T> data, std::function<void(T*)> callback) {
     // Capture data and callback in a lambda
     T* raw_ptr = data.release(); // Transfer ownership
-    ui_queue_update([raw_ptr, callback = std::move(callback)]() {
+    queue_update([raw_ptr, callback = std::move(callback)]() {
         std::unique_ptr<T> owned(raw_ptr); // Reclaim ownership for RAII
         callback(owned.get());
     });
@@ -246,8 +243,8 @@ void ui_queue_update(std::unique_ptr<T> data, std::function<void(T*)> callback) 
  * creating any UI elements. This ensures the processing timer has highest
  * priority and runs before other timers.
  */
-inline void ui_update_queue_init() {
-    helix::ui::UpdateQueue::instance().init();
+inline void update_queue_init() {
+    UpdateQueue::instance().init();
 }
 
 /**
@@ -255,8 +252,8 @@ inline void ui_update_queue_init() {
  *
  * Call this during application shutdown, BEFORE lv_deinit().
  */
-inline void ui_update_queue_shutdown() {
-    helix::ui::UpdateQueue::instance().shutdown();
+inline void update_queue_shutdown() {
+    UpdateQueue::instance().shutdown();
 }
 
 /**
@@ -266,17 +263,19 @@ inline void ui_update_queue_shutdown() {
  * to ensure callbacks run BEFORE rendering, not during. Exceptions thrown by
  * callbacks are caught and logged by UpdateQueue::process_pending().
  *
- * Migration: Simply replace `lv_async_call(` with `ui_async_call(`
+ * Migration: Simply replace `lv_async_call(` with `async_call(`
  *
  * @param async_xcb Callback function (same signature as lv_async_call)
  * @param user_data User data passed to callback
  * @return LV_RESULT_OK always (queue never fails)
  */
-inline lv_result_t ui_async_call(lv_async_cb_t async_xcb, void* user_data) {
-    ui_queue_update([async_xcb, user_data]() {
+inline lv_result_t async_call(lv_async_cb_t async_xcb, void* user_data) {
+    queue_update([async_xcb, user_data]() {
         if (async_xcb) {
             async_xcb(user_data);
         }
     });
     return LV_RESULT_OK;
 }
+
+} // namespace helix::ui

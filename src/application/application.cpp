@@ -158,6 +158,8 @@
 #include <mach-o/dyld.h>
 #endif
 
+using namespace helix;
+
 // External globals for logging (defined in cli_args.cpp, populated by parse_cli_args)
 extern std::string g_log_dest_cli;
 extern std::string g_log_file_cli;
@@ -831,7 +833,7 @@ bool Application::init_panel_subjects() {
     helix::AbortManager::instance().init(m_moonraker->api(), &get_printer_state());
 
     // Register status bar callbacks
-    ui_status_bar_register_callbacks();
+    helix::ui::status_bar_register_callbacks();
     ui_panel_screws_tilt_register_callbacks();
     ui_panel_input_shaper_register_callbacks();
     ui_probe_overlay_register_callbacks();
@@ -868,14 +870,14 @@ bool Application::init_ui() {
     ui_printer_status_icon_init();
 
     // Initialize notification system (status bar without printer icon)
-    ui_status_bar_init();
+    helix::ui::status_bar_init();
 
     // Seed test notifications in --test mode for debugging
     if (get_runtime_config()->is_test_mode()) {
         auto& history = NotificationHistory::instance();
         history.seed_test_data();
         // Update status bar to show unread count and severity
-        ui_status_bar_update_notification_count(history.get_unread_count());
+        helix::ui::status_bar_update_notification_count(history.get_unread_count());
         // Map ToastSeverity to NotificationStatus for bell color
         auto severity = history.get_highest_unread_severity();
         NotificationStatus status = NotificationStatus::NONE;
@@ -886,7 +888,7 @@ bool Application::init_ui() {
         } else if (severity == ToastSeverity::INFO || severity == ToastSeverity::SUCCESS) {
             status = NotificationStatus::INFO;
         }
-        ui_status_bar_update_notification(status);
+        helix::ui::status_bar_update_notification(status);
     }
 
     // Initialize toast system
@@ -1050,7 +1052,7 @@ bool Application::init_plugins() {
             ToastManager::instance().show_with_action(
                 ToastSeverity::WARNING, toast_msg, "Manage",
                 [](void* /*user_data*/) {
-                    ui_nav_set_active(UI_PANEL_SETTINGS);
+                    ui_nav_set_active(PanelId::Settings);
                     get_global_settings_panel().handle_plugins_clicked();
                 },
                 nullptr, 8000);
@@ -1142,7 +1144,7 @@ bool Application::run_wizard() {
 void Application::create_overlays() {
     // Navigate to initial panel
     if (m_args.initial_panel >= 0) {
-        ui_nav_set_active(static_cast<ui_panel_id_t>(m_args.initial_panel));
+        ui_nav_set_active(static_cast<PanelId>(m_args.initial_panel));
     }
 
     // Create requested overlay panels
@@ -1470,7 +1472,7 @@ void Application::create_overlays() {
     // Handle --select-file flag
     RuntimeConfig* runtime_config = get_runtime_config();
     if (runtime_config->select_file != nullptr) {
-        ui_nav_set_active(UI_PANEL_PRINT_SELECT);
+        ui_nav_set_active(PanelId::PrintSelect);
         auto* print_panel = get_print_select_panel(get_printer_state(), m_moonraker->api());
         if (print_panel) {
             print_panel->set_pending_file_selection(runtime_config->select_file);
@@ -1490,11 +1492,12 @@ void Application::setup_discovery_callbacks() {
         };
         auto ctx =
             std::make_unique<HardwareDiscoveredCtx>(HardwareDiscoveredCtx{hardware, api, client});
-        ui_queue_update<HardwareDiscoveredCtx>(std::move(ctx), [](HardwareDiscoveredCtx* c) {
-            // Update API's hardware data (replaces MoonrakerAPI constructor callback)
-            c->api->hardware() = c->hardware;
-            helix::init_subsystems_from_hardware(c->hardware, c->api, c->client);
-        });
+        helix::ui::queue_update<HardwareDiscoveredCtx>(
+            std::move(ctx), [](HardwareDiscoveredCtx* c) {
+                // Update API's hardware data (replaces MoonrakerAPI constructor callback)
+                c->api->hardware() = c->hardware;
+                helix::init_subsystems_from_hardware(c->hardware, c->api, c->client);
+            });
     });
 
     // Capture Application pointer for callback - used to check shutdown state and access plugin
@@ -1510,7 +1513,7 @@ void Application::setup_discovery_callbacks() {
         };
         auto ctx = std::make_unique<DiscoveryCompleteCtx>(
             DiscoveryCompleteCtx{hardware, api, client, app});
-        ui_queue_update<DiscoveryCompleteCtx>(std::move(ctx), [](DiscoveryCompleteCtx* c) {
+        helix::ui::queue_update<DiscoveryCompleteCtx>(std::move(ctx), [](DiscoveryCompleteCtx* c) {
             // Safety check: if Application is shutting down, skip all processing
             // This prevents use-after-free if shutdown races with callback delivery
             if (c->app->m_shutdown_complete) {
@@ -1581,7 +1584,7 @@ void Application::setup_discovery_callbacks() {
                         int max_temp = static_cast<int>(limits.max_temperature_celsius);
                         int min_temp = static_cast<int>(limits.min_temperature_celsius);
 
-                        ui_queue_update([min_temp, max_temp, min_extrude]() {
+                        helix::ui::queue_update([min_temp, max_temp, min_extrude]() {
                             get_global_filament_panel().set_limits(min_temp, max_temp, min_extrude);
                             spdlog::debug("[Application] Safety limits propagated to panels");
                         });
@@ -1618,7 +1621,7 @@ void Application::setup_discovery_callbacks() {
             // via ui_queue_update and may not have landed yet at this point.
             MoonrakerAPI* api_ptr_zoffset = c->api;
             lv_obj_t* screen = c->app->m_screen;
-            ui_queue_update([api_ptr_zoffset, screen]() {
+            helix::ui::queue_update([api_ptr_zoffset, screen]() {
                 auto& ps = get_printer_state();
                 int probe_active = lv_subject_get_int(ps.get_manual_probe_active_subject());
                 spdlog::info("[Application] Checking manual_probe at startup: is_active={}",
@@ -1741,7 +1744,7 @@ void Application::init_action_prompt() {
     m_action_prompt_manager->set_on_show([this](const helix::PromptData& data) {
         spdlog::info("[ActionPrompt] Showing prompt: {}", data.title);
         // WebSocket callbacks run on background thread - must use ui_queue_update
-        ui_queue_update([this, data]() {
+        helix::ui::queue_update([this, data]() {
             if (m_action_prompt_modal && m_screen) {
                 m_action_prompt_modal->show_prompt(m_screen, data);
             }
@@ -1751,7 +1754,7 @@ void Application::init_action_prompt() {
     // Wire on_close callback to hide modal
     m_action_prompt_manager->set_on_close([this]() {
         spdlog::info("[ActionPrompt] Closing prompt");
-        ui_queue_update([this]() {
+        helix::ui::queue_update([this]() {
             if (m_action_prompt_modal) {
                 m_action_prompt_modal->hide();
             }
@@ -1761,7 +1764,7 @@ void Application::init_action_prompt() {
     // Wire on_notify callback for standalone notifications (action:notify)
     m_action_prompt_manager->set_on_notify([](const std::string& message) {
         spdlog::info("[ActionPrompt] Notification: {}", message);
-        ui_queue_update([message]() {
+        helix::ui::queue_update([message]() {
             ToastManager::instance().show(ToastSeverity::INFO, message.c_str(), 5000);
         });
     });
@@ -2235,7 +2238,7 @@ void Application::shutdown() {
     // Clear pending async callbacks BEFORE destroying panels.
     // This prevents use-after-free: async observer callbacks may have been queued
     // with stale 'self' pointers that will crash if processed after panel destruction.
-    ui_update_queue_shutdown();
+    helix::ui::update_queue_shutdown();
 
     // Stop ALL LVGL animations before destroying panels.
     // Animations hold pointers to objects; if panels are destroyed first,

@@ -31,6 +31,7 @@
 #include <ctime>
 #include <memory>
 
+using namespace helix;
 using helix::ui::observe_int_sync;
 using helix::ui::temperature::centi_to_degrees_f;
 
@@ -55,7 +56,7 @@ TempControlPanel::TempControlPanel(PrinterState& printer_state, MoonrakerAPI* ap
     int bed_petg = petg_info ? petg_info->bed_temp : 80;
     int bed_abs = abs_info ? abs_info->bed_temp : 100;
 
-    nozzle_config_ = {.type = HEATER_NOZZLE,
+    nozzle_config_ = {.type = helix::HeaterType::Nozzle,
                       .name = "Nozzle",
                       .title = "Nozzle Temperature",
                       .color = theme_manager_get_color("heating_color"),
@@ -64,7 +65,7 @@ TempControlPanel::TempControlPanel(PrinterState& printer_state, MoonrakerAPI* ap
                       .presets = {0, nozzle_pla, nozzle_petg, nozzle_abs},
                       .keypad_range = {0.0f, 350.0f}};
 
-    bed_config_ = {.type = HEATER_BED,
+    bed_config_ = {.type = helix::HeaterType::Bed,
                    .name = "Bed",
                    .title = "Heatbed Temperature",
                    .color = theme_manager_get_color("cooling_color"),
@@ -723,7 +724,7 @@ void TempControlPanel::on_bed_preset_abs_clicked(lv_event_t* e) {
 // Struct for keypad callback
 struct KeypadCallbackData {
     TempControlPanel* panel;
-    heater_type_t type;
+    helix::HeaterType type;
 };
 
 void TempControlPanel::keypad_value_cb(float value, void* user_data) {
@@ -732,7 +733,7 @@ void TempControlPanel::keypad_value_cb(float value, void* user_data) {
         return;
 
     int temp = static_cast<int>(value);
-    if (data->type == HEATER_NOZZLE) {
+    if (data->type == helix::HeaterType::Nozzle) {
         spdlog::debug("[TempPanel] Nozzle custom temperature: {}°C via keypad", temp);
         data->panel->send_nozzle_temperature(temp);
     } else {
@@ -751,7 +752,7 @@ void TempControlPanel::on_nozzle_custom_clicked(lv_event_t* e) {
     if (!self)
         return;
 
-    nozzle_keypad_data = {self, HEATER_NOZZLE};
+    nozzle_keypad_data = {self, helix::HeaterType::Nozzle};
 
     ui_keypad_config_t keypad_config = {.initial_value = static_cast<float>(self->nozzle_target_),
                                         .min_value = self->nozzle_config_.keypad_range.min,
@@ -772,7 +773,7 @@ void TempControlPanel::on_bed_custom_clicked(lv_event_t* e) {
     if (!self)
         return;
 
-    bed_keypad_data = {self, HEATER_BED};
+    bed_keypad_data = {self, helix::HeaterType::Bed};
 
     ui_keypad_config_t keypad_config = {.initial_value = static_cast<float>(self->bed_target_),
                                         .min_value = self->bed_config_.keypad_range.min,
@@ -1167,7 +1168,7 @@ void TempControlPanel::rebuild_extruder_segments() {
     // SAFETY: Defer the clean+rebuild. When called from the extruder button click
     // handler (select_extruder), the clicked button is a child of the selector being
     // cleaned. Destroying it mid-callback causes use-after-free (issue #80).
-    ui_queue_update([this]() { rebuild_extruder_segments_impl(); });
+    helix::ui::queue_update([this]() { rebuild_extruder_segments_impl(); });
 }
 
 void TempControlPanel::rebuild_extruder_segments_impl() {

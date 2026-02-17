@@ -178,7 +178,7 @@ void SensorSettingsOverlay::populate_switch_sensors() {
     uint32_t child_count = lv_obj_get_child_count(sensors_list);
     for (int i = static_cast<int>(child_count) - 1; i >= 0; i--) {
         lv_obj_t* child = lv_obj_get_child(sensors_list, i);
-        lv_obj_safe_delete(child);
+        helix::ui::safe_delete(child);
     }
 
     // Get standalone sensors (excludes AMS/multi-material types)
@@ -330,7 +330,7 @@ void SensorSettingsOverlay::populate_probe_sensors() {
     uint32_t child_count = lv_obj_get_child_count(sensors_list);
     for (int i = static_cast<int>(child_count) - 1; i >= 0; i--) {
         lv_obj_t* child = lv_obj_get_child(sensors_list, i);
-        lv_obj_safe_delete(child);
+        helix::ui::safe_delete(child);
     }
 
     auto& mgr = helix::sensors::ProbeSensorManager::instance();
@@ -408,7 +408,7 @@ void SensorSettingsOverlay::populate_width_sensors() {
     uint32_t child_count = lv_obj_get_child_count(sensors_list);
     for (int i = static_cast<int>(child_count) - 1; i >= 0; i--) {
         lv_obj_t* child = lv_obj_get_child(sensors_list, i);
-        lv_obj_safe_delete(child);
+        helix::ui::safe_delete(child);
     }
 
     auto& mgr = helix::sensors::WidthSensorManager::instance();
@@ -470,7 +470,7 @@ void SensorSettingsOverlay::populate_humidity_sensors() {
     uint32_t child_count = lv_obj_get_child_count(sensors_list);
     for (int i = static_cast<int>(child_count) - 1; i >= 0; i--) {
         lv_obj_t* child = lv_obj_get_child(sensors_list, i);
-        lv_obj_safe_delete(child);
+        helix::ui::safe_delete(child);
     }
 
     auto& mgr = helix::sensors::HumiditySensorManager::instance();
@@ -533,7 +533,7 @@ void SensorSettingsOverlay::populate_accel_sensors() {
     uint32_t child_count = lv_obj_get_child_count(sensors_list);
     for (int i = static_cast<int>(child_count) - 1; i >= 0; i--) {
         lv_obj_t* child = lv_obj_get_child(sensors_list, i);
-        lv_obj_safe_delete(child);
+        helix::ui::safe_delete(child);
     }
 
     auto& mgr = helix::sensors::AccelSensorManager::instance();
@@ -611,7 +611,7 @@ void SensorSettingsOverlay::populate_color_sensors() {
     uint32_t child_count = lv_obj_get_child_count(sensors_list);
     for (int i = static_cast<int>(child_count) - 1; i >= 0; i--) {
         lv_obj_t* child = lv_obj_get_child(sensors_list, i);
-        lv_obj_safe_delete(child);
+        helix::ui::safe_delete(child);
     }
 
     auto& mgr = helix::sensors::ColorSensorManager::instance();
@@ -671,7 +671,7 @@ void SensorSettingsOverlay::populate_temperature_sensors() {
     uint32_t child_count = lv_obj_get_child_count(sensors_list);
     for (int i = static_cast<int>(child_count) - 1; i >= 0; i--) {
         lv_obj_t* child = lv_obj_get_child(sensors_list, i);
-        lv_obj_safe_delete(child);
+        helix::ui::safe_delete(child);
     }
 
     auto& mgr = helix::sensors::TemperatureSensorManager::instance();

@@ -127,7 +127,7 @@ void ColorPicker::on_show() {
 
     // Register keyboard for hex input so software keyboard appears on touch
     if (hex_input_ && dialog_) {
-        ui_modal_register_keyboard(dialog_, hex_input_);
+        helix::ui::modal_register_keyboard(dialog_, hex_input_);
     }
 
     // Bind name label to subject (save observer for cleanup)

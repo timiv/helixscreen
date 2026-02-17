@@ -26,6 +26,8 @@
 #include <string>
 #include <vector>
 
+using namespace helix;
+
 // Global wizard subject for Next button state (defined in ui_wizard.cpp)
 extern lv_subject_t connection_test_passed;
 

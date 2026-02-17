@@ -29,6 +29,8 @@
 #include <unordered_set>
 #include <vector>
 
+using namespace helix;
+
 static lv_theme_t* current_theme = nullptr;
 static bool use_dark_mode = true;
 static lv_display_t* theme_display = nullptr;

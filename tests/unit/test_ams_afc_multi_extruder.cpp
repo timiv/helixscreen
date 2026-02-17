@@ -23,6 +23,7 @@
 #include "../catch_amalgamated.hpp"
 #include "hv/json.hpp"
 
+using namespace helix;
 // ============================================================================
 // Test helper for multi-extruder AFC parsing
 // ============================================================================

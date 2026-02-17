@@ -3,11 +3,10 @@
 
 #pragma once
 
-#include <json.hpp> // nlohmann/json from libhv
+#include "json_fwd.h"
+
 #include <string>
 #include <vector>
-
-using json = nlohmann::json;
 
 /**
  * @file moonraker_types.h

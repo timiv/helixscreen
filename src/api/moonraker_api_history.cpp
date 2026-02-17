@@ -16,6 +16,8 @@
 #include <iomanip>
 #include <sstream>
 
+using namespace helix;
+
 using namespace moonraker_internal;
 
 namespace {
@@ -26,7 +28,7 @@ namespace {
  * @return Formatted string like "2h 15m" or "45m" or "30s"
  */
 std::string format_history_duration(double seconds) {
-    return helix::fmt::duration(static_cast<int>(seconds));
+    return helix::format::duration(static_cast<int>(seconds));
 }
 
 /**

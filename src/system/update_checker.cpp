@@ -47,6 +47,8 @@
 #define INSTALLER_FILENAME "install.sh"
 #endif
 
+using namespace helix;
+
 using json = nlohmann::json;
 
 namespace {
@@ -636,7 +638,7 @@ void UpdateChecker::report_download_status(DownloadStatus status, int progress,
         download_error_ = error;
     }
 
-    ui_queue_update([this, status, progress, text]() {
+    helix::ui::queue_update([this, status, progress, text]() {
         if (subjects_initialized_) {
             lv_subject_set_int(&download_status_subject_, static_cast<int>(status));
             lv_subject_set_int(&download_progress_subject_, progress);
@@ -1081,7 +1083,7 @@ void UpdateChecker::check_for_updates(Callback callback) {
             // Release lock before dispatching (callback may call back into UpdateChecker)
             lock.unlock();
             // Dispatch to LVGL thread
-            ui_queue_update([callback, status, cached]() { callback(status, cached); });
+            helix::ui::queue_update([callback, status, cached]() { callback(status, cached); });
         }
         return;
     }
@@ -1129,7 +1131,7 @@ void UpdateChecker::check_for_updates(Callback callback) {
 
     // Update subjects on LVGL thread (check_for_updates is public, could be called from any thread)
     if (subjects_initialized_) {
-        ui_queue_update([this]() {
+        helix::ui::queue_update([this]() {
             lv_subject_set_int(&checking_subject_, 1);
             lv_subject_set_int(&status_subject_, static_cast<int>(Status::Checking));
             lv_subject_copy_string(&version_text_subject_, "Checking...");
@@ -1452,13 +1454,13 @@ static void register_notify_callbacks() {
 void UpdateChecker::show_update_notification() {
     spdlog::info("[UpdateChecker] Show update notification");
     if (!notify_modal_) {
-        notify_modal_ = ui_modal_show("update_notify_modal");
+        notify_modal_ = helix::ui::modal_show("update_notify_modal");
     }
 }
 
 void UpdateChecker::hide_update_notification() {
     if (notify_modal_) {
-        ui_modal_hide(notify_modal_);
+        helix::ui::modal_hide(notify_modal_);
         notify_modal_ = nullptr;
     }
 }
@@ -1773,7 +1775,7 @@ void UpdateChecker::report_result(Status status, std::optional<ReleaseInfo> info
 
     // Dispatch to LVGL thread for subject updates and callback
     spdlog::debug("[UpdateChecker] Dispatching to LVGL thread");
-    ui_queue_update([this, callback, status, info, error]() {
+    helix::ui::queue_update([this, callback, status, info, error]() {
         spdlog::debug("[UpdateChecker] Executing on LVGL thread");
 
         // Update LVGL subjects

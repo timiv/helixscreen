@@ -40,6 +40,8 @@
 #include <cstdlib>
 #include <vector>
 
+using namespace helix;
+
 MoonrakerManager::MoonrakerManager() : m_startup_time(std::chrono::steady_clock::now()) {}
 
 MoonrakerManager::~MoonrakerManager() {
@@ -190,7 +192,7 @@ void MoonrakerManager::process_notifications() {
             // Auto-close Connection Failed modal when connection is restored
             // (Disconnect modal is now handled by unified recovery dialog in EmergencyStopOverlay)
             if (new_state == static_cast<int>(ConnectionState::CONNECTED)) {
-                lv_obj_t* modal = ui_modal_get_top();
+                lv_obj_t* modal = helix::ui::modal_get_top();
                 if (modal) {
                     lv_obj_t* title_label = lv_obj_find_by_name(modal, "dialog_title");
                     if (title_label) {
@@ -198,7 +200,7 @@ void MoonrakerManager::process_notifications() {
                         if (title && strcmp(title, "Connection Failed") == 0) {
                             spdlog::info("[MoonrakerManager] Auto-closing '{}' modal on reconnect",
                                          title);
-                            ui_modal_hide(modal);
+                            helix::ui::modal_hide(modal);
                         }
                     }
                 }

@@ -77,7 +77,7 @@ void AbortManager::deinit_subjects() {
 
     // Delete backdrop (and its child dialog) if it exists
     // (Display may already be deleted if window was closed via X button)
-    lv_obj_safe_delete(backdrop_);
+    helix::ui::safe_delete(backdrop_);
 
     // Deinitialize all subjects via RAII manager
     subjects_.deinit_all();
@@ -222,7 +222,7 @@ void AbortManager::try_heater_interrupt() {
         "HEATER_INTERRUPT",
         [this]() {
             // Success callback - Kalico detected
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* user_data) {
                     auto* self = static_cast<AbortManager*>(user_data);
                     self->on_heater_interrupt_success();
@@ -232,7 +232,7 @@ void AbortManager::try_heater_interrupt() {
         [this](const MoonrakerError& err) {
             // Error callback - likely "Unknown command"
             spdlog::debug("[AbortManager] HEATER_INTERRUPT error: {}", err.message);
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* user_data) {
                     auto* self = static_cast<AbortManager*>(user_data);
                     self->on_heater_interrupt_error();
@@ -260,7 +260,7 @@ void AbortManager::start_probe() {
         "M115",
         [this]() {
             // Success callback - queue is responsive
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* user_data) {
                     auto* self = static_cast<AbortManager*>(user_data);
                     self->on_probe_response();
@@ -269,7 +269,7 @@ void AbortManager::start_probe() {
         },
         [this](const MoonrakerError& /* err */) {
             // Error callback - treat as timeout/blocked
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* user_data) {
                     auto* self = static_cast<AbortManager*>(user_data);
                     self->on_probe_timeout();
@@ -315,7 +315,7 @@ void AbortManager::send_cancel_print() {
         "CANCEL_PRINT",
         [this]() {
             // Success callback
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* user_data) {
                     auto* self = static_cast<AbortManager*>(user_data);
                     self->on_cancel_success();
@@ -324,7 +324,7 @@ void AbortManager::send_cancel_print() {
         },
         [this](const MoonrakerError& /* err */) {
             // Error callback - escalate to ESTOP
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* user_data) {
                     auto* self = static_cast<AbortManager*>(user_data);
                     self->on_cancel_timeout();
@@ -357,7 +357,7 @@ void AbortManager::escalate_to_estop() {
     // Send M112 emergency stop
     api_->emergency_stop(
         [this]() {
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* user_data) {
                     auto* self = static_cast<AbortManager*>(user_data);
                     self->on_estop_sent();
@@ -366,7 +366,7 @@ void AbortManager::escalate_to_estop() {
         },
         [this](const MoonrakerError& /* err */) {
             // Even on error, proceed to restart (M112 may have worked)
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* user_data) {
                     auto* self = static_cast<AbortManager*>(user_data);
                     self->on_estop_sent();
@@ -392,7 +392,7 @@ void AbortManager::send_firmware_restart() {
     // Send FIRMWARE_RESTART
     api_->restart_firmware(
         [this]() {
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* user_data) {
                     auto* self = static_cast<AbortManager*>(user_data);
                     self->on_restart_sent();
@@ -401,7 +401,7 @@ void AbortManager::send_firmware_restart() {
         },
         [this](const MoonrakerError& /* err */) {
             // Even on error, proceed to wait for reconnect
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* user_data) {
                     auto* self = static_cast<AbortManager*>(user_data);
                     self->on_restart_sent();
@@ -442,7 +442,7 @@ void AbortManager::complete_abort(const char* message) {
     // Set print outcome to CANCELLED for UI badge display
     // Moonraker reports "standby" after M112+restart, not "cancelled"
     if (printer_state_) {
-        ui_async_call(
+        helix::ui::async_call(
             [](void* user_data) {
                 auto* state = static_cast<PrinterState*>(user_data);
                 state->set_print_outcome(PrintOutcome::CANCELLED);

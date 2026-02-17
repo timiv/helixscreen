@@ -64,7 +64,9 @@
 #include <vector>
 
 // Forward declarations
+namespace helix {
 class WiFiManager;
+}
 class EthernetManager;
 struct WiFiNetwork;
 
@@ -221,7 +223,7 @@ class NetworkSettingsOverlay : public OverlayBase {
     char password_modal_ssid_buffer_[64];
 
     // Integration
-    std::shared_ptr<WiFiManager> wifi_manager_;
+    std::shared_ptr<helix::WiFiManager> wifi_manager_;
     std::unique_ptr<EthernetManager> ethernet_manager_;
     std::shared_ptr<NetworkTester> network_tester_;
 

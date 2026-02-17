@@ -103,7 +103,7 @@ void ams_detail_destroy_slots(AmsDetailWidgets& w, lv_obj_t* slot_widgets[], int
     (void)w; // Reserved for future use (e.g. labels_layer cleanup)
 
     for (int i = 0; i < slot_count; ++i) {
-        lv_obj_safe_delete(slot_widgets[i]);
+        helix::ui::safe_delete(slot_widgets[i]);
         slot_widgets[i] = nullptr;
     }
     slot_count = 0;

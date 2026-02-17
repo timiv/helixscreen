@@ -17,6 +17,8 @@
 
 #include <algorithm>
 
+using namespace helix;
+
 // ============================================================================
 // MODAL STYLE CONSTANTS
 // ============================================================================
@@ -224,10 +226,10 @@ void ModalStack::exit_animation_done(lv_anim_t* anim) {
     // Delete the backdrop using our safe queue (not lv_obj_delete_async which uses
     // LVGL's internal timer and could potentially fire during rendering)
     spdlog::debug("[ModalStack] Exit animation complete - deleting backdrop");
-    ui_async_call(
+    helix::ui::async_call(
         [](void* obj) {
             lv_obj_t* widget = static_cast<lv_obj_t*>(obj);
-            lv_obj_safe_delete(widget);
+            helix::ui::safe_delete(widget);
         },
         backdrop);
 }
@@ -242,10 +244,10 @@ void ModalStack::animate_exit(lv_obj_t* backdrop, lv_obj_t* dialog) {
         lv_obj_set_style_transform_scale(dialog, MODAL_SCALE_END, LV_PART_MAIN);
         lv_obj_set_style_opa(dialog, LV_OPA_COVER, LV_PART_MAIN);
         spdlog::debug("[ModalStack] Animations disabled - deleting modal instantly");
-        ui_async_call(
+        helix::ui::async_call(
             [](void* obj) {
                 lv_obj_t* widget = static_cast<lv_obj_t*>(obj);
-                lv_obj_safe_delete(widget);
+                helix::ui::safe_delete(widget);
             },
             backdrop);
         return;
@@ -314,7 +316,7 @@ Modal::~Modal() {
         // Hide immediately without calling virtual on_hide() - derived class already destroyed
         // Note: lv_obj_safe_delete handles focus group cleanup (ui_defocus_tree)
         ModalStack::instance().remove(backdrop_);
-        lv_obj_safe_delete(backdrop_);
+        helix::ui::safe_delete(backdrop_);
         // dialog_ is a child of backdrop_ and was destroyed with it
         dialog_ = nullptr;
     }
@@ -346,7 +348,7 @@ Modal& Modal::operator=(Modal&& other) noexcept {
             }
             // Note: lv_obj_safe_delete handles focus group cleanup (ui_defocus_tree)
             ModalStack::instance().remove(backdrop_);
-            lv_obj_safe_delete(backdrop_);
+            helix::ui::safe_delete(backdrop_);
             // dialog_ is a child of backdrop_ and was destroyed with it
             dialog_ = nullptr;
         }
@@ -389,7 +391,7 @@ lv_obj_t* Modal::show(const char* component_name, const char** attrs) {
     lv_obj_t* dialog = static_cast<lv_obj_t*>(lv_xml_create(backdrop, component_name, attrs));
     if (!dialog) {
         spdlog::error("[Modal] Failed to create modal from XML: {}", component_name);
-        lv_obj_safe_delete(backdrop);
+        helix::ui::safe_delete(backdrop);
         return nullptr;
     }
 
@@ -440,10 +442,10 @@ void Modal::hide(lv_obj_t* dialog) {
     lv_obj_t* backdrop = stack.backdrop_for(dialog);
     if (!backdrop) {
         spdlog::warn("[Modal] Dialog not found in stack");
-        ui_async_call(
+        helix::ui::async_call(
             [](void* obj) {
                 lv_obj_t* widget = static_cast<lv_obj_t*>(obj);
-                lv_obj_safe_delete(widget);
+                helix::ui::safe_delete(widget);
             },
             dialog);
         return;
@@ -621,7 +623,7 @@ bool Modal::create_and_show(lv_obj_t* parent, const char* comp_name, const char*
     dialog_ = static_cast<lv_obj_t*>(lv_xml_create(backdrop_, comp_name, attrs));
     if (!dialog_) {
         spdlog::error("[{}] Failed to create modal from XML component '{}'", get_name(), comp_name);
-        lv_obj_safe_delete(backdrop_);
+        helix::ui::safe_delete(backdrop_);
         return false;
     }
 
@@ -662,7 +664,7 @@ void Modal::destroy() {
             lv_anim_delete(dialog_, nullptr);
         }
         ModalStack::instance().remove(backdrop_);
-        lv_obj_safe_delete(backdrop_);
+        helix::ui::safe_delete(backdrop_);
         // dialog_ is a child of backdrop_ and was destroyed with it
         dialog_ = nullptr;
     }
@@ -771,7 +773,7 @@ static void static_modal_close_cb(lv_event_t* e) {
     }
 }
 
-void modal_init_subjects() {
+void helix::ui::modal_init_subjects() {
     if (g_subjects_initialized) {
         spdlog::warn("[Modal] Subjects already initialized - skipping");
         return;
@@ -798,7 +800,7 @@ void modal_init_subjects() {
     spdlog::trace("[Modal] Modal dialog subjects registered");
 }
 
-void ui_modal_deinit_subjects() {
+void helix::ui::modal_deinit_subjects() {
     if (!g_subjects_initialized) {
         return;
     }
@@ -807,8 +809,8 @@ void ui_modal_deinit_subjects() {
     spdlog::debug("[Modal] Modal dialog subjects deinitialized");
 }
 
-void modal_configure(ModalSeverity severity, bool show_cancel, const char* primary_text,
-                     const char* cancel_text) {
+void helix::ui::modal_configure(ModalSeverity severity, bool show_cancel, const char* primary_text,
+                                const char* cancel_text) {
     if (!g_subjects_initialized) {
         spdlog::error("[Modal] Cannot configure - subjects not initialized!");
         return;
@@ -830,19 +832,19 @@ void modal_configure(ModalSeverity severity, bool show_cancel, const char* prima
     }
 }
 
-lv_subject_t* modal_severity_subject() {
+lv_subject_t* helix::ui::modal_get_severity_subject() {
     return &g_dialog_severity;
 }
 
-lv_subject_t* modal_show_cancel_subject() {
+lv_subject_t* helix::ui::modal_get_show_cancel_subject() {
     return &g_dialog_show_cancel;
 }
 
-lv_subject_t* modal_primary_text_subject() {
+lv_subject_t* helix::ui::modal_get_primary_text_subject() {
     return &g_dialog_primary_text;
 }
 
-lv_subject_t* modal_cancel_text_subject() {
+lv_subject_t* helix::ui::modal_get_cancel_text_subject() {
     return &g_dialog_cancel_text;
 }
 
@@ -850,7 +852,7 @@ lv_subject_t* modal_cancel_text_subject() {
 // KEYBOARD REGISTRATION
 // ============================================================================
 
-void ui_modal_register_keyboard(lv_obj_t* modal, lv_obj_t* textarea) {
+void helix::ui::modal_register_keyboard(lv_obj_t* modal, lv_obj_t* textarea) {
     if (!modal || !textarea) {
         spdlog::error("[Modal] Cannot register keyboard: modal={}, textarea={}", (void*)modal,
                       (void*)textarea);
@@ -876,9 +878,10 @@ void ui_modal_register_keyboard(lv_obj_t* modal, lv_obj_t* textarea) {
 // CONFIRMATION DIALOG HELPERS
 // ============================================================================
 
-lv_obj_t* ui_modal_show_confirmation(const char* title, const char* message, ModalSeverity severity,
-                                     const char* confirm_text, lv_event_cb_t on_confirm,
-                                     lv_event_cb_t on_cancel, void* user_data) {
+lv_obj_t* helix::ui::modal_show_confirmation(const char* title, const char* message,
+                                             ModalSeverity severity, const char* confirm_text,
+                                             lv_event_cb_t on_confirm, lv_event_cb_t on_cancel,
+                                             void* user_data) {
     if (!title || !message) {
         spdlog::error("[Modal] show_confirmation: title and message are required");
         return nullptr;
@@ -888,7 +891,8 @@ lv_obj_t* ui_modal_show_confirmation(const char* title, const char* message, Mod
     const char* attrs[] = {"title", title, "message", message, nullptr};
 
     // Configure modal with severity and button text
-    modal_configure(severity, true, confirm_text ? confirm_text : lv_tr("OK"), lv_tr("Cancel"));
+    helix::ui::modal_configure(severity, true, confirm_text ? confirm_text : lv_tr("OK"),
+                               lv_tr("Cancel"));
 
     // Show the modal
     lv_obj_t* dialog = Modal::show("modal_dialog", attrs);
@@ -915,8 +919,9 @@ lv_obj_t* ui_modal_show_confirmation(const char* title, const char* message, Mod
     return dialog;
 }
 
-lv_obj_t* ui_modal_show_alert(const char* title, const char* message, ModalSeverity severity,
-                              const char* ok_text, lv_event_cb_t on_ok, void* user_data) {
+lv_obj_t* helix::ui::modal_show_alert(const char* title, const char* message,
+                                      ModalSeverity severity, const char* ok_text,
+                                      lv_event_cb_t on_ok, void* user_data) {
     if (!title || !message) {
         spdlog::error("[Modal] show_alert: title and message are required");
         return nullptr;
@@ -926,7 +931,7 @@ lv_obj_t* ui_modal_show_alert(const char* title, const char* message, ModalSever
     const char* attrs[] = {"title", title, "message", message, nullptr};
 
     // Configure modal: no cancel button
-    modal_configure(severity, false, ok_text ? ok_text : lv_tr("OK"), nullptr);
+    helix::ui::modal_configure(severity, false, ok_text ? ok_text : lv_tr("OK"), nullptr);
 
     // Show the modal
     lv_obj_t* dialog = Modal::show("modal_dialog", attrs);

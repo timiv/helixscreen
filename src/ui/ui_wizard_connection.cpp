@@ -31,6 +31,8 @@
 #include <memory>
 #include <string>
 
+using namespace helix;
+
 // ============================================================================
 // External Subject (defined in ui_wizard.cpp)
 // ============================================================================
@@ -336,7 +338,7 @@ void WizardConnectionStep::on_connection_success() {
     spdlog::info("[Wizard Connection] Connection successful!");
 
     // Defer ALL operations (including config) to main thread
-    ui_async_call(
+    helix::ui::async_call(
         [](void* ctx) {
             auto* self = static_cast<WizardConnectionStep*>(ctx);
 
@@ -398,7 +400,7 @@ void WizardConnectionStep::on_connection_success() {
                         spdlog::info("[Wizard Connection] Hardware discovery complete!");
 
                         // Defer discovery UI update to main thread
-                        ui_async_call(
+                        helix::ui::async_call(
                             [](void* ctx2) {
                                 auto* self2 = static_cast<WizardConnectionStep*>(ctx2);
 
@@ -447,7 +449,7 @@ void WizardConnectionStep::on_connection_success() {
                         spdlog::warn("[Wizard Connection] Discovery failed: {}", reason);
 
                         // Defer error UI update to main thread
-                        ui_async_call(
+                        helix::ui::async_call(
                             [](void* ctx2) {
                                 auto* self2 = static_cast<WizardConnectionStep*>(ctx2);
 
@@ -488,7 +490,7 @@ void WizardConnectionStep::on_connection_failure() {
     spdlog::debug("[Wizard Connection] on_disconnected fired");
 
     // Defer LVGL operations to main thread
-    ui_async_call(
+    helix::ui::async_call(
         [](void* ctx) {
             auto* self = static_cast<WizardConnectionStep*>(ctx);
 
@@ -656,7 +658,7 @@ void WizardConnectionStep::on_auto_probe_success() {
     auto_probe_state_.store(AutoProbeState::SUCCEEDED);
 
     // Defer ALL operations (including config) to main thread
-    ui_async_call(
+    helix::ui::async_call(
         [](void* ctx) {
             auto* self = static_cast<WizardConnectionStep*>(ctx);
 
@@ -730,7 +732,7 @@ void WizardConnectionStep::on_auto_probe_success() {
                         spdlog::info("[Wizard Connection] Auto-probe: Hardware discovery complete");
 
                         // Defer discovery completion UI update to main thread
-                        ui_async_call(
+                        helix::ui::async_call(
                             [](void* ctx2) {
                                 auto* self2 = static_cast<WizardConnectionStep*>(ctx2);
 
@@ -773,7 +775,7 @@ void WizardConnectionStep::on_auto_probe_success() {
                                      reason);
 
                         // Defer error UI update to main thread
-                        ui_async_call(
+                        helix::ui::async_call(
                             [](void* ctx2) {
                                 auto* self2 = static_cast<WizardConnectionStep*>(ctx2);
 
@@ -823,7 +825,7 @@ void WizardConnectionStep::on_auto_probe_failure() {
     auto_probe_state_.store(AutoProbeState::FAILED);
 
     // Defer LVGL operations to main thread
-    ui_async_call(
+    helix::ui::async_call(
         [](void* ctx) {
             auto* self = static_cast<WizardConnectionStep*>(ctx);
 

@@ -17,6 +17,8 @@
 
 #include <string>
 
+using namespace helix;
+
 // Static member initialization
 bool ChangeHostModal::callbacks_registered_ = false;
 ChangeHostModal* ChangeHostModal::active_instance_ = nullptr;
@@ -68,12 +70,12 @@ bool ChangeHostModal::show_modal(lv_obj_t* parent) {
         // Register keyboards for text inputs
         lv_obj_t* host_input = lv_obj_find_by_name(dialog(), "host_input");
         if (host_input) {
-            ui_modal_register_keyboard(dialog(), host_input);
+            helix::ui::modal_register_keyboard(dialog(), host_input);
         }
 
         lv_obj_t* port_input = lv_obj_find_by_name(dialog(), "port_input");
         if (port_input) {
-            ui_modal_register_keyboard(dialog(), port_input);
+            helix::ui::modal_register_keyboard(dialog(), port_input);
         }
 
         // Observe text input changes to invalidate validation when user edits
@@ -236,7 +238,7 @@ void ChangeHostModal::handle_test_connection() {
 void ChangeHostModal::on_test_success() {
     spdlog::info("[ChangeHostModal] Test connection successful");
 
-    ui_async_call(
+    helix::ui::async_call(
         [](void* ctx) {
             auto* self = static_cast<ChangeHostModal*>(ctx);
             if (!self->is_visible())
@@ -254,7 +256,7 @@ void ChangeHostModal::on_test_success() {
 void ChangeHostModal::on_test_failure() {
     spdlog::warn("[ChangeHostModal] Test connection failed");
 
-    ui_async_call(
+    helix::ui::async_call(
         [](void* ctx) {
             auto* self = static_cast<ChangeHostModal*>(ctx);
             if (!self->is_visible())

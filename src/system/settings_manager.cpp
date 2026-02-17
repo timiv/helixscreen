@@ -25,6 +25,8 @@
 #include <cmath>
 #include <cstring>
 
+using namespace helix;
+
 // Display dim option values (seconds) - time before screen dims to lower brightness
 // Index: 0=Never, 1=30sec, 2=1min, 3=2min, 4=5min
 static const int DIM_OPTIONS[] = {0, 30, 60, 120, 300};

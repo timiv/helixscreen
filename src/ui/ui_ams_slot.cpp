@@ -25,6 +25,8 @@
 #include <memory>
 #include <unordered_map>
 
+using namespace helix;
+
 // ============================================================================
 // Per-widget user data (managed via static registry for safe shutdown)
 // ============================================================================

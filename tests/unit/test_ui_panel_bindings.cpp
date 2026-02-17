@@ -34,6 +34,7 @@
 
 #include "../catch_amalgamated.hpp"
 
+using namespace helix;
 // Helper to set values on the XML-registered subject (what temp_display actually reads)
 // This is critical for test isolation - other tests may have registered their own
 // subjects with the same names, so we must use lv_xml_get_subject to get the

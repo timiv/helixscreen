@@ -784,7 +784,7 @@ TEST_CASE("CHAR: Overlay lazy creation", "[characterization][settings][hardware_
  *    - PrinterState::get_hardware_validation_result()
  *    - PrinterState::remove_hardware_issue()
  *    - HardwareValidator static methods
- *    - ui_modal_show_confirmation()
+ *    - helix::ui::modal_show_confirmation()
  *    - ui_severity_card_finalize()
  *    - Config (for optional/expected persistence)
  */

@@ -8,6 +8,7 @@
 #include "../catch_amalgamated.hpp"
 
 using namespace helix;
+using namespace helix::ui;
 using json = nlohmann::json;
 
 // Helper to flush queued UI updates so subject values are readable

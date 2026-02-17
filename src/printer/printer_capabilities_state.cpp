@@ -116,7 +116,7 @@ void PrinterCapabilitiesState::set_hardware(const PrinterDiscovery& hardware,
 
 void PrinterCapabilitiesState::set_spoolman_available(bool available) {
     // Thread-safe: Use ui_queue_update to update LVGL subject from any thread
-    ui_queue_update([this, available]() {
+    helix::ui::queue_update([this, available]() {
         lv_subject_set_int(&printer_has_spoolman_, available ? 1 : 0);
         spdlog::debug("[PrinterCapabilitiesState] Spoolman availability set: {}", available);
     });
@@ -124,7 +124,7 @@ void PrinterCapabilitiesState::set_spoolman_available(bool available) {
 
 void PrinterCapabilitiesState::set_webcam_available(bool available) {
     // Thread-safe: Use ui_queue_update to update LVGL subject from any thread
-    ui_queue_update([this, available]() {
+    helix::ui::queue_update([this, available]() {
         lv_subject_set_int(&printer_has_webcam_, available ? 1 : 0);
         spdlog::debug("[PrinterCapabilitiesState] Webcam availability set: {}", available);
     });
@@ -132,7 +132,7 @@ void PrinterCapabilitiesState::set_webcam_available(bool available) {
 
 void PrinterCapabilitiesState::set_timelapse_available(bool available) {
     // Thread-safe: Use ui_queue_update to update LVGL subject from any thread
-    ui_queue_update([this, available]() {
+    helix::ui::queue_update([this, available]() {
         // Gate behind beta features — timelapse is still in beta
         bool beta = Config::get_instance() && Config::get_instance()->is_beta_features_enabled();
         bool effective = available && beta;

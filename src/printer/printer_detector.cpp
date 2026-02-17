@@ -31,6 +31,7 @@ namespace fs = std::experimental::filesystem;
 #include "hv/json.hpp"
 
 using json = nlohmann::json;
+using namespace helix;
 
 // ============================================================================
 // JSON Database Loader with User Extensions Support

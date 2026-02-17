@@ -63,6 +63,8 @@
 #include <algorithm>
 #include <memory>
 
+using namespace helix;
+
 // ============================================================================
 // CONSTRUCTOR
 // ============================================================================
@@ -768,8 +770,8 @@ void SettingsPanel::fetch_print_hours() {
 
     api_->get_history_totals(
         [this](const PrintHistoryTotals& totals) {
-            std::string formatted = helix::fmt::duration(static_cast<int>(totals.total_time));
-            ui_queue_update([this, formatted]() {
+            std::string formatted = helix::format::duration(static_cast<int>(totals.total_time));
+            helix::ui::queue_update([this, formatted]() {
                 if (subjects_initialized_) {
                     lv_subject_copy_string(&print_hours_value_subject_, formatted.c_str());
                     spdlog::trace("[{}] Print hours updated: {}", get_name(), formatted);
@@ -858,7 +860,7 @@ void SettingsPanel::show_restart_prompt() {
         return;
     }
 
-    restart_prompt_dialog_ = ui_modal_show("restart_prompt_dialog");
+    restart_prompt_dialog_ = helix::ui::modal_show("restart_prompt_dialog");
     if (restart_prompt_dialog_) {
         spdlog::debug("[{}] Restart prompt dialog shown via Modal system", get_name());
         // Clear pending flag so we don't show again until next change
@@ -1055,7 +1057,7 @@ void SettingsPanel::handle_restart_helix_clicked() {
     ui_toast_show(ToastSeverity::INFO, lv_tr("Restarting HelixScreen..."), 1500);
 
     // Schedule restart after brief delay to let toast display
-    ui_async_call(
+    helix::ui::async_call(
         [](void*) {
             spdlog::info("[SettingsPanel] Initiating restart...");
             app_request_restart_service();
@@ -1082,7 +1084,7 @@ void SettingsPanel::handle_factory_reset_clicked() {
             // Register close callback to delete dialog when animation completes
             NavigationManager::instance().register_overlay_close_callback(
                 factory_reset_dialog_, [this]() {
-                    lv_obj_safe_delete(factory_reset_dialog_);
+                    helix::ui::safe_delete(factory_reset_dialog_);
                     factory_reset_dialog_ = nullptr;
                 });
 
@@ -1119,7 +1121,7 @@ void SettingsPanel::handle_plugins_clicked() {
 
 void SettingsPanel::show_update_download_modal() {
     if (!update_download_modal_) {
-        update_download_modal_ = ui_modal_show("update_download_modal");
+        update_download_modal_ = helix::ui::modal_show("update_download_modal");
     }
 
     // Set to Confirming state with version info
@@ -1132,7 +1134,7 @@ void SettingsPanel::show_update_download_modal() {
 
 void SettingsPanel::hide_update_download_modal() {
     if (update_download_modal_) {
-        ui_modal_hide(update_download_modal_);
+        helix::ui::modal_hide(update_download_modal_);
         update_download_modal_ = nullptr;
     }
     // Reset download state
@@ -1388,7 +1390,7 @@ void SettingsPanel::on_restart_later_clicked(lv_event_t* /* e */) {
     LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_restart_later_clicked");
     auto& panel = get_global_settings_panel();
     if (panel.restart_prompt_dialog_) {
-        ui_modal_hide(panel.restart_prompt_dialog_);
+        helix::ui::modal_hide(panel.restart_prompt_dialog_);
         panel.restart_prompt_dialog_ = nullptr;
     }
     LVGL_SAFE_EVENT_CB_END();

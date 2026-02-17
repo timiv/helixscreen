@@ -419,10 +419,10 @@ void PrinterImageOverlay::handle_usb_import(const std::string& source_path) {
     lv_subject_copy_string(&usb_status_subject_, msg.c_str());
 
     // import_image_async() currently runs synchronously, but the callback is wrapped
-    // in ui_queue_update() for safety in case the implementation becomes truly async
+    // in helix::ui::queue_update() for safety in case the implementation becomes truly async
     helix::PrinterImageManager::instance().import_image_async(
         source_path, [filename](helix::PrinterImageManager::ImportResult result) {
-            ui_queue_update([result = std::move(result), filename]() {
+            helix::ui::queue_update([result = std::move(result), filename]() {
                 auto& overlay = get_printer_image_overlay();
 
                 if (result.success) {

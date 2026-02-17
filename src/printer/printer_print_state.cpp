@@ -386,7 +386,7 @@ void PrinterPrintState::set_print_layer_total(int total) {
 
 void PrinterPrintState::set_print_layer_current(int layer) {
     spdlog::debug("[LayerTracker] set_print_layer_current({}) via gcode fallback", layer);
-    ui_queue_update([this, layer]() {
+    helix::ui::queue_update([this, layer]() {
         if (!has_real_layer_data_) {
             spdlog::info("[LayerTracker] Receiving real layer data from gcode response");
             has_real_layer_data_ = true;
@@ -405,7 +405,7 @@ void PrinterPrintState::set_print_start_state(PrintStartPhase phase, const char*
     // This is called from WebSocket callbacks (background thread).
     std::string msg = message ? message : "";
     int clamped_progress = std::clamp(progress, 0, 100);
-    ui_queue_update([this, phase, msg, clamped_progress]() {
+    helix::ui::queue_update([this, phase, msg, clamped_progress]() {
         // Reset print progress when transitioning from IDLE to a preparing phase
         // IMPORTANT: Read old_phase inside lambda for thread safety - avoids race
         // condition where another callback could modify print_start_phase_ between
@@ -426,7 +426,7 @@ void PrinterPrintState::set_print_start_state(PrintStartPhase phase, const char*
 
 void PrinterPrintState::reset_print_start_state() {
     // CRITICAL: Defer to main thread via ui_queue_update
-    ui_queue_update([this]() {
+    helix::ui::queue_update([this]() {
         int phase = lv_subject_get_int(&print_start_phase_);
         if (phase != static_cast<int>(PrintStartPhase::IDLE)) {
             spdlog::debug("[PrinterPrintState] Resetting print start state to IDLE");
@@ -440,7 +440,7 @@ void PrinterPrintState::reset_print_start_state() {
 
 void PrinterPrintState::set_print_in_progress(bool in_progress) {
     // Thread-safe wrapper: defer LVGL subject updates to main thread
-    ui_queue_update([this, in_progress]() { set_print_in_progress_internal(in_progress); });
+    helix::ui::queue_update([this, in_progress]() { set_print_in_progress_internal(in_progress); });
 }
 
 void PrinterPrintState::set_print_start_time_left(const char* text) {
@@ -472,7 +472,7 @@ void PrinterPrintState::set_estimated_print_time(int seconds) {
     // Defer subject update to main thread: called from metadata callback (background thread).
     // lv_subject_set_int triggers observer chain which touches LVGL objects.
     int est = estimated_print_time_;
-    ui_queue_update([this, est]() {
+    helix::ui::queue_update([this, est]() {
         // Seed/update time_left with slicer estimate when progress is still 0%.
         // Once progress-based calculation kicks in (>=1%), it takes over.
         if (est > 0 && lv_subject_get_int(&print_progress_) == 0) {

@@ -21,7 +21,7 @@ namespace helix {
  * Events arrive via WebSocket notify_timelapse_event and are
  * dispatched through handle_timelapse_event().
  *
- * @note Thread-safe: handle_timelapse_event() uses ui_queue_update()
+ * @note Thread-safe: handle_timelapse_event() uses helix::ui::queue_update()
  *       for subject updates from WebSocket callbacks.
  */
 class TimelapseState {
@@ -46,7 +46,7 @@ class TimelapseState {
      * - "newframe": Increments frame count
      * - "render": Updates render progress/status, triggers notifications
      *
-     * Thread-safe: Uses ui_queue_update() for subject updates.
+     * Thread-safe: Uses helix::ui::queue_update() for subject updates.
      *
      * @param event JSON event from notify_timelapse_event
      */
@@ -55,7 +55,7 @@ class TimelapseState {
     /**
      * @brief Reset all state (on disconnect or new print)
      *
-     * Thread-safe: Uses ui_queue_update() for subject updates.
+     * Thread-safe: Uses helix::ui::queue_update() for subject updates.
      */
     void reset();
 

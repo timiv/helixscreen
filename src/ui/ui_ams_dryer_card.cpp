@@ -103,7 +103,7 @@ bool AmsDryerCard::setup(lv_obj_t* panel) {
         spdlog::debug("[AmsDryerCard] Progress bar observer set up");
     }
 
-    // Modal is created on-demand via ui_modal_show() in on_open_modal_cb
+    // Modal is created on-demand via helix::ui::modal_show() in on_open_modal_cb
     // Initial sync of dryer state
     AmsState::instance().sync_dryer_from_backend();
     spdlog::debug("[AmsDryerCard] Setup complete");
@@ -117,7 +117,7 @@ void AmsDryerCard::cleanup() {
 
     // Hide modal if visible (Modal system handles deletion)
     if (dryer_modal_ && lv_is_initialized()) {
-        ui_modal_hide(dryer_modal_);
+        helix::ui::modal_hide(dryer_modal_);
         dryer_modal_ = nullptr;
     }
 
@@ -153,7 +153,7 @@ void AmsDryerCard::start_drying(float temp_c, int duration_min, int fan_pct) {
         AmsState::instance().sync_dryer_from_backend();
         // Close the presets modal
         if (dryer_modal_) {
-            ui_modal_hide(dryer_modal_);
+            helix::ui::modal_hide(dryer_modal_);
             dryer_modal_ = nullptr;
         }
     } else {
@@ -248,7 +248,7 @@ void AmsDryerCard::on_open_modal_cb(lv_event_t* e) {
     spdlog::debug("[AmsDryerCard] Opening dryer modal");
 
     // Show modal via Modal system (creates backdrop programmatically)
-    self->dryer_modal_ = ui_modal_show("dryer_presets_modal");
+    self->dryer_modal_ = helix::ui::modal_show("dryer_presets_modal");
 
     if (self->dryer_modal_) {
         // Store 'this' in modal's user_data for callback traversal
@@ -268,7 +268,7 @@ void AmsDryerCard::on_close_modal_cb(lv_event_t* e) {
     spdlog::debug("[AmsDryerCard] Closing dryer modal");
 
     if (self->dryer_modal_) {
-        ui_modal_hide(self->dryer_modal_);
+        helix::ui::modal_hide(self->dryer_modal_);
         self->dryer_modal_ = nullptr;
     }
 }

@@ -35,6 +35,8 @@
 // Platform-specific includes for process restart
 #if defined(__unix__) || defined(__APPLE__)
 #include <unistd.h> // fork, execv, usleep
+using namespace helix;
+
 #endif
 
 // Global singleton instances (extern declarations in header, definitions here)
@@ -133,7 +135,7 @@ void app_globals_init_subjects() {
     lv_xml_register_subject(nullptr, "show_beta_features", &g_show_beta_features_subject);
 
     // Initialize modal dialog subjects (for modal_dialog.xml binding)
-    ui_modal_init_subjects();
+    helix::ui::modal_init_subjects();
 
     g_subjects_initialized = true;
 
@@ -148,7 +150,7 @@ void app_globals_deinit_subjects() {
         return;
     }
     g_subjects.deinit_all();
-    ui_modal_deinit_subjects(); // Clean up modal subjects
+    helix::ui::modal_deinit_subjects(); // Clean up modal subjects
     g_subjects_initialized = false;
     spdlog::debug("[App Globals] Global subjects deinitialized");
 }

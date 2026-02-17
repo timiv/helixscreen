@@ -84,8 +84,8 @@ std::string PrinterDiscovery::summary() const {
     return ss.str();
 }
 
-void init_subsystems_from_hardware(const PrinterDiscovery& hardware, ::MoonrakerAPI* api,
-                                   ::MoonrakerClient* client) {
+void init_subsystems_from_hardware(const PrinterDiscovery& hardware, MoonrakerAPI* api,
+                                   MoonrakerClient* client) {
     spdlog::debug("[PrinterDiscovery] Initializing subsystems from hardware discovery");
 
     // Initialize AMS backend (AFC, Happy Hare, ValgACE, Tool Changer)

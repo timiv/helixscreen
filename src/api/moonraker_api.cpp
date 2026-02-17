@@ -11,6 +11,8 @@
 #include <sstream>
 #include <thread>
 
+using namespace helix;
+
 using namespace moonraker_internal;
 
 // ============================================================================

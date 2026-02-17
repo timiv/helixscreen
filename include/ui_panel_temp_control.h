@@ -18,7 +18,9 @@
 #include <vector>
 
 // Forward declarations
+namespace helix {
 class PrinterState;
+}
 class MoonrakerAPI;
 class TempControlPanel;
 
@@ -65,7 +67,7 @@ class BedTempPanelLifecycle : public IPanelLifecycle {
  */
 class TempControlPanel {
   public:
-    TempControlPanel(PrinterState& printer_state, MoonrakerAPI* api);
+    TempControlPanel(helix::PrinterState& printer_state, MoonrakerAPI* api);
     ~TempControlPanel();
 
     // Non-copyable, non-movable (has reference member and LVGL subject state)
@@ -216,7 +218,7 @@ class TempControlPanel {
     // Keypad callback
     static void keypad_value_cb(float value, void* user_data);
 
-    PrinterState& printer_state_;
+    helix::PrinterState& printer_state_;
     MoonrakerAPI* api_;
 
     // Observer handles (RAII cleanup via ObserverGuard)

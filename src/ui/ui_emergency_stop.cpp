@@ -17,6 +17,8 @@
 
 #include <spdlog/spdlog.h>
 
+using namespace helix;
+
 namespace {
 // Recovery dialog content per reason
 struct RecoveryContent {
@@ -144,7 +146,7 @@ void EmergencyStopOverlay::create() {
 
                 // Auto-dismiss recovery dialog when Klipper is back to READY
                 // NOTE: Must defer to main thread - observer may fire from WebSocket thread
-                ui_async_call(
+                helix::ui::async_call(
                     [](void*) {
                         auto& inst = EmergencyStopOverlay::instance();
                         // Guard against async callback firing after display destruction
@@ -231,7 +233,7 @@ void EmergencyStopOverlay::show_confirmation_dialog() {
     spdlog::debug("[EmergencyStop] Showing confirmation dialog");
 
     // Create dialog via Modal system (handles backdrop, z-order, animations)
-    confirmation_dialog_ = ui_modal_show("estop_confirmation_dialog");
+    confirmation_dialog_ = helix::ui::modal_show("estop_confirmation_dialog");
 
     if (!confirmation_dialog_) {
         spdlog::error("[EmergencyStop] Failed to create confirmation dialog, executing directly");
@@ -244,7 +246,7 @@ void EmergencyStopOverlay::show_confirmation_dialog() {
 
 void EmergencyStopOverlay::dismiss_confirmation_dialog() {
     if (confirmation_dialog_) {
-        ui_modal_hide(confirmation_dialog_);
+        helix::ui::modal_hide(confirmation_dialog_);
         confirmation_dialog_ = nullptr;
         spdlog::debug("[EmergencyStop] Confirmation dialog dismissed");
     }
@@ -262,7 +264,7 @@ void EmergencyStopOverlay::show_recovery_dialog() {
     spdlog::info("[KlipperRecovery] Creating recovery dialog (Klipper in SHUTDOWN state)");
 
     // Use Modal system — backdrop is created programmatically
-    recovery_dialog_ = ui_modal_show("klipper_recovery_dialog");
+    recovery_dialog_ = helix::ui::modal_show("klipper_recovery_dialog");
     spdlog::debug("[KlipperRecovery] Dialog created, recovery_dialog_={}",
                   static_cast<void*>(recovery_dialog_));
 
@@ -277,7 +279,7 @@ void EmergencyStopOverlay::show_recovery_dialog() {
 
 void EmergencyStopOverlay::dismiss_recovery_dialog() {
     if (recovery_dialog_) {
-        ui_modal_hide(recovery_dialog_);
+        helix::ui::modal_hide(recovery_dialog_);
         recovery_dialog_ = nullptr;
         recovery_reason_ = RecoveryReason::NONE;
         spdlog::debug("[KlipperRecovery] Recovery dialog dismissed");
@@ -320,7 +322,7 @@ void EmergencyStopOverlay::show_recovery_for(RecoveryReason reason) {
             spdlog::info("[KlipperRecovery] Connection dropped while SHUTDOWN dialog showing, "
                          "updating buttons");
             recovery_reason_ = RecoveryReason::DISCONNECTED;
-            ui_async_call(
+            helix::ui::async_call(
                 [](void*) { EmergencyStopOverlay::instance().update_recovery_dialog_content(); },
                 nullptr);
         } else {
@@ -333,7 +335,7 @@ void EmergencyStopOverlay::show_recovery_for(RecoveryReason reason) {
     recovery_reason_ = reason;
 
     // Defer to main thread - may be called from WebSocket thread
-    ui_async_call(
+    helix::ui::async_call(
         [](void*) {
             auto& inst = EmergencyStopOverlay::instance();
             // Guard: dialog may have been shown by another async call in the meantime

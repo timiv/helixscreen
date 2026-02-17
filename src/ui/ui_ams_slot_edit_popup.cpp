@@ -183,7 +183,7 @@ bool AmsSlotEditPopup::show_for_slot(lv_obj_t* parent, int slot_index, lv_obj_t*
 }
 
 void AmsSlotEditPopup::hide() {
-    if (lv_obj_safe_delete(popup_)) {
+    if (helix::ui::safe_delete(popup_)) {
         slot_index_ = -1;
         tool_dropdown_ = nullptr;
         backup_dropdown_ = nullptr;

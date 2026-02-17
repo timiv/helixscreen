@@ -215,7 +215,7 @@ void SpoolmanPanel::refresh_spools() {
                 spdlog::warn("[{}] API unavailable for status check", get_name());
                 // Schedule UI update on main thread
                 auto* data = new std::pair<SpoolmanPanel*, std::vector<SpoolInfo>>(this, spools);
-                ui_async_call(
+                helix::ui::async_call(
                     [](void* ud) {
                         auto* ctx =
                             static_cast<std::pair<SpoolmanPanel*, std::vector<SpoolInfo>>*>(ud);
@@ -234,7 +234,7 @@ void SpoolmanPanel::refresh_spools() {
                     // Schedule UI update on main thread
                     auto* data = new std::tuple<SpoolmanPanel*, std::vector<SpoolInfo>, int>(
                         this, spools, active_id);
-                    ui_async_call(
+                    helix::ui::async_call(
                         [](void* ud) {
                             auto* ctx = static_cast<
                                 std::tuple<SpoolmanPanel*, std::vector<SpoolInfo>, int>*>(ud);
@@ -250,7 +250,7 @@ void SpoolmanPanel::refresh_spools() {
                     spdlog::warn("[{}] Failed to get active spool: {}", get_name(), err.message);
                     auto* data =
                         new std::pair<SpoolmanPanel*, std::vector<SpoolInfo>>(this, spools);
-                    ui_async_call(
+                    helix::ui::async_call(
                         [](void* ud) {
                             auto* ctx =
                                 static_cast<std::pair<SpoolmanPanel*, std::vector<SpoolInfo>>*>(ud);
@@ -264,7 +264,7 @@ void SpoolmanPanel::refresh_spools() {
         },
         [this](const MoonrakerError& err) {
             spdlog::error("[{}] Failed to fetch spools: {}", get_name(), err.message);
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* ud) {
                     auto* self = static_cast<SpoolmanPanel*>(ud);
                     self->cached_spools_.clear();
@@ -431,7 +431,7 @@ void SpoolmanPanel::set_active_spool(int spool_id) {
             spdlog::info("[{}] Set active spool to {}", get_name(), spool_id);
 
             // Schedule all UI work on main thread (cached_spools_ is not thread-safe)
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* ud) {
                     auto* ctx = static_cast<std::pair<SpoolmanPanel*, int>*>(ud);
                     auto* self = ctx->first;
@@ -453,7 +453,7 @@ void SpoolmanPanel::set_active_spool(int spool_id) {
         [this, spool_id](const MoonrakerError& err) {
             spdlog::error("[{}] Failed to set active spool {}: {}", get_name(), spool_id,
                           err.message);
-            ui_async_call(
+            helix::ui::async_call(
                 [](void*) {
                     ui_toast_show(ToastSeverity::ERROR, lv_tr("Failed to set active spool"), 3000);
                 },
@@ -504,7 +504,7 @@ void SpoolmanPanel::delete_spool(int spool_id) {
     static int s_pending_delete_id = 0;
     s_pending_delete_id = spool_id;
 
-    ui_modal_show_confirmation(
+    helix::ui::modal_show_confirmation(
         lv_tr("Delete Spool?"), message.c_str(), ModalSeverity::Warning, lv_tr("Delete"),
         [](lv_event_t* /*e*/) {
             // Close the confirmation dialog immediately
@@ -527,7 +527,7 @@ void SpoolmanPanel::delete_spool(int spool_id) {
                 [id]() {
                     spdlog::info("[Spoolman] Spool {} deleted successfully", id);
                     // Schedule UI work on LVGL thread (API callbacks run on background thread)
-                    ui_async_call(
+                    helix::ui::async_call(
                         [](void*) {
                             ui_toast_show(ToastSeverity::SUCCESS, lv_tr("Spool deleted"), 2000);
                             get_global_spoolman_panel().refresh_spools();
@@ -536,7 +536,7 @@ void SpoolmanPanel::delete_spool(int spool_id) {
                 },
                 [id](const MoonrakerError& err) {
                     spdlog::error("[Spoolman] Failed to delete spool {}: {}", id, err.message);
-                    ui_async_call(
+                    helix::ui::async_call(
                         [](void*) {
                             ui_toast_show(ToastSeverity::ERROR, lv_tr("Failed to delete spool"),
                                           3000);

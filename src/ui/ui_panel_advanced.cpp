@@ -26,6 +26,8 @@
 
 #include <spdlog/spdlog.h>
 
+using namespace helix;
+
 // Global instance (singleton pattern matching SettingsPanel)
 static std::unique_ptr<AdvancedPanel> g_advanced_panel;
 

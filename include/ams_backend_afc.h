@@ -69,11 +69,11 @@ class AmsBackendAfc : public AmsBackend {
      * @brief Construct AFC backend
      *
      * @param api Pointer to MoonrakerAPI (for sending G-code commands)
-     * @param client Pointer to MoonrakerClient (for subscribing to updates)
+     * @param client Pointer to helix::MoonrakerClient (for subscribing to updates)
      *
      * @note Both pointers must remain valid for the lifetime of this backend.
      */
-    AmsBackendAfc(MoonrakerAPI* api, MoonrakerClient* client);
+    AmsBackendAfc(MoonrakerAPI* api, helix::MoonrakerClient* client);
 
     ~AmsBackendAfc() override;
 
@@ -454,8 +454,8 @@ class AmsBackendAfc : public AmsBackend {
     AmsError validate_slot_index(int slot_index) const;
 
     // Dependencies
-    MoonrakerAPI* api_;       ///< For sending G-code commands
-    MoonrakerClient* client_; ///< For subscribing to updates
+    MoonrakerAPI* api_;              ///< For sending G-code commands
+    helix::MoonrakerClient* client_; ///< For subscribing to updates
 
     // State
     mutable std::recursive_mutex mutex_; ///< Protects state access (recursive for callback safety)
@@ -523,12 +523,12 @@ class AmsBackendAfc : public AmsBackend {
     std::vector<helix::printer::EndlessSpoolConfig>
         endless_spool_configs_; ///< Per-lane backup config
 
-    // Config file managers (lazy-loaded on first device action access)
+    // helix::Config file managers (lazy-loaded on first device action access)
     std::unique_ptr<AfcConfigManager> afc_config_;        ///< AFC/AFC.cfg
     std::unique_ptr<AfcConfigManager> macro_vars_config_; ///< AFC/AFC_Macro_Vars.cfg
     std::atomic<bool> configs_loading_{false};            ///< Currently loading config files
     std::atomic<bool> configs_loaded_{
-        false}; ///< Config files have been loaded (acquire/release barrier)
+        false}; ///< helix::Config files have been loaded (acquire/release barrier)
 
     /// Load AFC config files from printer
     void load_afc_configs();

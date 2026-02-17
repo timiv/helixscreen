@@ -7,6 +7,7 @@
 #include "../catch_amalgamated.hpp"
 #include "hv/json.hpp"
 
+using namespace helix;
 TEST_CASE("LedController singleton access", "[led]") {
     auto& ctrl = helix::led::LedController::instance();
     auto& ctrl2 = helix::led::LedController::instance();

@@ -28,7 +28,7 @@
  */
 class AmsOverviewPanel : public PanelBase {
   public:
-    AmsOverviewPanel(PrinterState& printer_state, MoonrakerAPI* api);
+    AmsOverviewPanel(helix::PrinterState& printer_state, MoonrakerAPI* api);
     ~AmsOverviewPanel() override = default;
 
     // === PanelBase Interface ===

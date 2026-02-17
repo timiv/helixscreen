@@ -334,11 +334,11 @@ void TimelapseSettingsOverlay::fetch_video_list() {
     api_->list_files(
         "timelapse", "", false,
         [this](const std::vector<FileInfo>& files) {
-            ui_queue_update([this, files]() { populate_video_list(files); });
+            helix::ui::queue_update([this, files]() { populate_video_list(files); });
         },
         [this](const MoonrakerError& error) {
             spdlog::error("[{}] Failed to fetch video list: {}", get_name(), error.message);
-            ui_queue_update([this]() {
+            helix::ui::queue_update([this]() {
                 if (video_list_empty_) {
                     lv_obj_remove_flag(video_list_empty_, LV_OBJ_FLAG_HIDDEN);
                 }
@@ -466,9 +466,10 @@ void TimelapseSettingsOverlay::populate_video_list(const std::vector<FileInfo>& 
 
                 g_timelapse_settings->pending_delete_filename_ = filename;
 
-                g_timelapse_settings->delete_confirmation_dialog_ = ui_modal_show_confirmation(
-                    "Delete Video?", filename, ModalSeverity::Warning, "Delete",
-                    on_delete_video_confirmed, on_delete_video_cancelled, nullptr);
+                g_timelapse_settings->delete_confirmation_dialog_ =
+                    helix::ui::modal_show_confirmation(
+                        "Delete Video?", filename, ModalSeverity::Warning, "Delete",
+                        on_delete_video_confirmed, on_delete_video_cancelled, nullptr);
             },
             LV_EVENT_CLICKED, nullptr);
     }

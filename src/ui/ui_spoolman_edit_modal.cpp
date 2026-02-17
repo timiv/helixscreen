@@ -483,7 +483,7 @@ void SpoolEditModal::handle_save() {
             return;
         }
         spdlog::info("[SpoolEditModal] All changes saved for spool {}", spool_id);
-        ui_async_call(
+        helix::ui::async_call(
             [](void* ud) {
                 auto* self = static_cast<SpoolEditModal*>(ud);
                 if (!self->callback_guard_) {
@@ -500,7 +500,7 @@ void SpoolEditModal::handle_save() {
 
     auto on_error = [spool_id](const MoonrakerError& err) {
         spdlog::error("[SpoolEditModal] Failed to save spool {}: {}", spool_id, err.message);
-        ui_async_call(
+        helix::ui::async_call(
             [](void*) { ui_toast_show(ToastSeverity::ERROR, lv_tr("Failed to save spool"), 3000); },
             nullptr);
     };

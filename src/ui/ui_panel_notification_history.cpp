@@ -21,6 +21,8 @@
 #include <cstring>
 #include <memory>
 
+using namespace helix;
+
 // ============================================================================
 // CONSTRUCTOR
 // ============================================================================
@@ -166,8 +168,8 @@ void NotificationHistoryPanel::refresh() {
     history_.mark_all_read();
 
     // Update status bar - badge count is 0 and bell goes gray (no unread)
-    ui_status_bar_update_notification_count(0);
-    ui_status_bar_update_notification(NotificationStatus::NONE);
+    helix::ui::status_bar_update_notification_count(0);
+    helix::ui::status_bar_update_notification(NotificationStatus::NONE);
 
     spdlog::debug("[{}] Refreshed: {} entries displayed", get_name(), entries.size());
 }

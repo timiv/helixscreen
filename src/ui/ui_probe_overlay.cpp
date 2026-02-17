@@ -18,6 +18,7 @@
 
 #include <spdlog/spdlog.h>
 
+using namespace helix;
 using helix::sensors::probe_type_to_display_string;
 using helix::sensors::ProbeSensorManager;
 using helix::sensors::ProbeSensorType;

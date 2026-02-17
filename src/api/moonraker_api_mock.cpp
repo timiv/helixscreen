@@ -21,6 +21,8 @@
 #include <set>
 #include <sstream>
 
+using namespace helix;
+
 // Static initialization of path prefixes for fallback search
 const std::vector<std::string> MoonrakerAPIMock::PATH_PREFIXES = {
     "",      // From project root: assets/test_gcodes/

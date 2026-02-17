@@ -52,7 +52,7 @@ struct ToolInfo {
 
 /// Manages tool information for multi-tool printers (toolchangers, multi-extruder).
 /// Thread safety: All public methods must be called from the LVGL/UI thread only.
-/// Subject updates are routed through ui_queue_update() from background threads.
+/// Subject updates are routed through helix::ui::queue_update() from background threads.
 class ToolState {
   public:
     static ToolState& instance();

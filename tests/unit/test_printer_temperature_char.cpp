@@ -24,6 +24,7 @@
 
 #include "../catch_amalgamated.hpp"
 
+using namespace helix;
 // ============================================================================
 // Observer Notification Tests - Verify observers fire on temperature changes
 // ============================================================================
@@ -492,12 +493,15 @@ TEST_CASE("Temperature characterization: empty status does not affect values",
 // ============================================================================
 
 /// Test access helper for PrinterTemperatureState
+/// Must be in namespace helix to match friend declaration in PrinterState
+namespace helix {
 class PrinterTemperatureStateTestAccess {
   public:
-    static helix::PrinterTemperatureState& get_temp_state(PrinterState& ps) {
+    static PrinterTemperatureState& get_temp_state(PrinterState& ps) {
         return ps.temperature_state_;
     }
 };
+} // namespace helix
 
 TEST_CASE("Multi-extruder: init_extruders creates correct entries from heater list",
           "[multi-extruder][temperature]") {

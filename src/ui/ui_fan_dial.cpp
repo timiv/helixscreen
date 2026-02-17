@@ -18,6 +18,8 @@
 #include <cstdio>
 #include <utility>
 
+using namespace helix;
+
 // ============================================================================
 // FanDial Implementation
 // ============================================================================
@@ -112,7 +114,7 @@ FanDial::FanDial(FanDial&& other) noexcept
 FanDial& FanDial::operator=(FanDial&& other) noexcept {
     if (this != &other) {
         // Clean up current resources (child widgets are destroyed with root_)
-        lv_obj_safe_delete(root_);
+        helix::ui::safe_delete(root_);
 
         // Move resources
         root_ = other.root_;
@@ -261,7 +263,7 @@ void FanDial::update_speed_label(int percent) {
         lv_label_set_text(speed_label_, "Off");
     } else {
         char buf[8];
-        helix::fmt::format_percent(percent, buf, sizeof(buf));
+        helix::format::format_percent(percent, buf, sizeof(buf));
         lv_label_set_text(speed_label_, buf);
     }
 }

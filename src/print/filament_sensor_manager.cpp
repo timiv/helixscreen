@@ -600,11 +600,11 @@ void FilamentSensorManager::update_from_status(const json& status) {
                 spdlog::info("[FilamentSensorManager] sync_mode: updating subjects synchronously");
                 update_subjects();
             } else {
-                // Defer subject updates to main LVGL thread via ui_queue_update()
+                // Defer subject updates to main LVGL thread via helix::ui::queue_update()
                 // This avoids the "Invalidate area not allowed during rendering" assertion
                 // and provides exception safety (try-catch wrapping)
                 spdlog::debug("[FilamentSensorManager] async_mode: deferring via ui_queue_update");
-                ui_queue_update(
+                helix::ui::queue_update(
                     [] { FilamentSensorManager::instance().update_subjects_on_main_thread(); });
             }
         }

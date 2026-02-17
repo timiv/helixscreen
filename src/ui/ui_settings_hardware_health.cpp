@@ -129,7 +129,7 @@ void HardwareHealthOverlay::on_deactivate() {
 
     // Clean up any open modal dialog
     if (hardware_save_dialog_) {
-        ui_modal_hide(hardware_save_dialog_);
+        helix::ui::modal_hide(hardware_save_dialog_);
         hardware_save_dialog_ = nullptr;
     }
     pending_hardware_save_.clear();
@@ -320,12 +320,12 @@ void HardwareHealthOverlay::handle_hardware_action(const char* hardware_name, bo
         }
         // SAFETY: Defer rebuild — the Ignore button that fired this event is a child
         // of the list being cleaned by populate_hardware_issues() (issue #80).
-        ui_queue_update([this]() { populate_hardware_issues(); });
+        helix::ui::queue_update([this]() { populate_hardware_issues(); });
     } else {
         // "Save" - Add to expected hardware (with confirmation)
         // Close any existing dialog first (must happen before writing to static buffer)
         if (hardware_save_dialog_) {
-            ui_modal_hide(hardware_save_dialog_);
+            helix::ui::modal_hide(hardware_save_dialog_);
             hardware_save_dialog_ = nullptr;
         }
 
@@ -339,7 +339,7 @@ void HardwareHealthOverlay::handle_hardware_action(const char* hardware_name, bo
                  hw_name.c_str());
 
         // Show confirmation dialog
-        hardware_save_dialog_ = ui_modal_show_confirmation(
+        hardware_save_dialog_ = helix::ui::modal_show_confirmation(
             lv_tr("Save Hardware"), message_buf, ModalSeverity::Info, lv_tr("Save"),
             on_hardware_save_confirm, on_hardware_save_cancel, this);
     }
@@ -348,7 +348,7 @@ void HardwareHealthOverlay::handle_hardware_action(const char* hardware_name, bo
 void HardwareHealthOverlay::handle_hardware_save_confirm() {
     // Close dialog first
     if (hardware_save_dialog_) {
-        ui_modal_hide(hardware_save_dialog_);
+        helix::ui::modal_hide(hardware_save_dialog_);
         hardware_save_dialog_ = nullptr;
     }
 
@@ -364,14 +364,14 @@ void HardwareHealthOverlay::handle_hardware_save_confirm() {
         printer_state_->remove_hardware_issue(pending_hardware_save_);
     }
     // SAFETY: Defer rebuild for consistency with the Ignore path (issue #80).
-    ui_queue_update([this]() { populate_hardware_issues(); });
+    helix::ui::queue_update([this]() { populate_hardware_issues(); });
     pending_hardware_save_.clear();
 }
 
 void HardwareHealthOverlay::handle_hardware_save_cancel() {
     // Close dialog
     if (hardware_save_dialog_) {
-        ui_modal_hide(hardware_save_dialog_);
+        helix::ui::modal_hide(hardware_save_dialog_);
         hardware_save_dialog_ = nullptr;
     }
 

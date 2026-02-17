@@ -195,8 +195,8 @@ void DisplaySettingsOverlay::init_brightness_controls() {
         lv_slider_set_value(brightness_slider, brightness, LV_ANIM_OFF);
 
         // Update subject (label binding happens in XML)
-        helix::fmt::format_percent(brightness, brightness_value_buf_,
-                                   sizeof(brightness_value_buf_));
+        helix::format::format_percent(brightness, brightness_value_buf_,
+                                      sizeof(brightness_value_buf_));
         lv_subject_copy_string(&brightness_value_subject_, brightness_value_buf_);
 
         spdlog::debug("[{}] Brightness initialized to {}%", get_name(), brightness);
@@ -340,7 +340,7 @@ void DisplaySettingsOverlay::handle_brightness_changed(int value) {
     SettingsManager::instance().set_brightness(value);
 
     // Update subject (label binding happens in XML)
-    helix::fmt::format_percent(value, brightness_value_buf_, sizeof(brightness_value_buf_));
+    helix::format::format_percent(value, brightness_value_buf_, sizeof(brightness_value_buf_));
     lv_subject_copy_string(&brightness_value_subject_, brightness_value_buf_);
 }
 
@@ -457,7 +457,7 @@ void DisplaySettingsOverlay::handle_theme_settings_clicked() {
             theme_explorer_overlay_, [this]() {
                 // Revert to the theme that was active when explorer opened
                 theme_manager_apply_theme(original_theme_, theme_manager_is_dark_mode());
-                lv_obj_safe_delete(theme_explorer_overlay_);
+                helix::ui::safe_delete(theme_explorer_overlay_);
                 // Clear cache so next open picks up filesystem changes
                 cached_themes_.clear();
             });
@@ -634,7 +634,7 @@ void DisplaySettingsOverlay::on_preview_open_modal(lv_event_t* e) {
     LV_UNUSED(e);
 
     // Show a sample modal with lorem ipsum (not translatable - intentional lorem ipsum)
-    ui_modal_show_confirmation(
+    helix::ui::modal_show_confirmation(
         lv_tr("Sample Dialog"),
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod "
         "tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim "

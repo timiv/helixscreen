@@ -25,6 +25,8 @@
 #include <memory>
 #include <unordered_map>
 
+using namespace helix;
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -304,7 +306,7 @@ static void segment_anim_cb(void* var, int32_t value) {
     // Defer invalidation to avoid calling during render phase
     // Animation exec callbacks can run during lv_timer_handler() which may overlap with rendering
     // Check lv_obj_is_valid() in case widget is deleted before callback executes
-    ui_async_call(
+    helix::ui::async_call(
         [](void* obj_ptr) {
             auto* obj = static_cast<lv_obj_t*>(obj_ptr);
             if (lv_obj_is_valid(obj)) {
@@ -363,7 +365,7 @@ static void error_pulse_anim_cb(void* var, int32_t value) {
     data->error_pulse_opa = static_cast<lv_opa_t>(value);
     // Defer invalidation to avoid calling during render phase
     // Check lv_obj_is_valid() in case widget is deleted before callback executes
-    ui_async_call(
+    helix::ui::async_call(
         [](void* obj_ptr) {
             auto* obj = static_cast<lv_obj_t*>(obj_ptr);
             if (lv_obj_is_valid(obj)) {
@@ -426,7 +428,7 @@ static void heat_pulse_anim_cb(void* var, int32_t value) {
 
     data->heat_pulse_opa = static_cast<lv_opa_t>(value);
     // Defer invalidation to avoid calling during render phase
-    ui_async_call(
+    helix::ui::async_call(
         [](void* obj_ptr) {
             auto* obj = static_cast<lv_obj_t*>(obj_ptr);
             if (lv_obj_is_valid(obj)) {

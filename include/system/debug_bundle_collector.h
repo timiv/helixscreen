@@ -27,7 +27,7 @@ class DebugBundleCollector {
     static nlohmann::json collect(const BundleOptions& options = {});
 
     /// Collect, compress, and upload asynchronously.
-    /// Callback is invoked on the UI thread via ui_queue_update().
+    /// Callback is invoked on the UI thread via helix::ui::queue_update().
     using ResultCallback = std::function<void(const BundleResult&)>;
     static void upload_async(const BundleOptions& options, ResultCallback callback);
 

@@ -41,6 +41,8 @@
 
 #include <cstdio>
 
+using namespace helix;
+
 // Subject declarations (static/global scope required)
 static lv_subject_t current_step;
 static lv_subject_t total_steps;
@@ -251,7 +253,7 @@ void ui_wizard_deinit_subjects() {
     // in lv_deinit() when those widgets are deleted.
     if (wizard_container && lv_is_initialized()) {
         spdlog::debug("[Wizard] Deleting wizard container during deinit");
-        lv_obj_safe_delete(wizard_container);
+        helix::ui::safe_delete(wizard_container);
         current_screen_step = -1;
     }
 

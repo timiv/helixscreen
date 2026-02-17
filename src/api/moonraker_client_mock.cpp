@@ -22,6 +22,8 @@
 #include <random>
 #include <sstream>
 
+using namespace helix;
+
 // Delegating constructor - uses default speedup of 1.0
 MoonrakerClientMock::MoonrakerClientMock(PrinterType type) : MoonrakerClientMock(type, 1.0) {}
 

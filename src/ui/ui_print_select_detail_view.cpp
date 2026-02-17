@@ -76,12 +76,12 @@ PrintSelectDetailView::~PrintSelectDetailView() {
 
     // Clean up confirmation dialog if open
     if (confirmation_dialog_widget_) {
-        ui_modal_hide(confirmation_dialog_widget_);
+        helix::ui::modal_hide(confirmation_dialog_widget_);
         confirmation_dialog_widget_ = nullptr;
     }
 
     // Clean up main widget if created
-    lv_obj_safe_delete(overlay_root_);
+    helix::ui::safe_delete(overlay_root_);
 }
 
 // ============================================================================
@@ -350,7 +350,7 @@ void PrintSelectDetailView::show_delete_confirmation(const std::string& filename
              "Are you sure you want to delete '%s'? This action cannot be undone.",
              filename.c_str());
 
-    confirmation_dialog_widget_ = ui_modal_show_confirmation(
+    confirmation_dialog_widget_ = helix::ui::modal_show_confirmation(
         lv_tr("Delete File?"), msg_buf, ModalSeverity::Warning, lv_tr("Delete"),
         on_confirm_delete_static, on_cancel_delete_static, this);
 
@@ -364,7 +364,7 @@ void PrintSelectDetailView::show_delete_confirmation(const std::string& filename
 
 void PrintSelectDetailView::hide_delete_confirmation() {
     if (confirmation_dialog_widget_) {
-        ui_modal_hide(confirmation_dialog_widget_);
+        helix::ui::modal_hide(confirmation_dialog_widget_);
         confirmation_dialog_widget_ = nullptr;
     }
 }

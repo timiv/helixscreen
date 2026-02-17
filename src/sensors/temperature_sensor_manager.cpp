@@ -207,7 +207,7 @@ void TemperatureSensorManager::update_from_status(const nlohmann::json& status) 
             } else {
                 spdlog::trace(
                     "[TemperatureSensorManager] async_mode: deferring via ui_queue_update");
-                ui_queue_update(
+                helix::ui::queue_update(
                     [] { TemperatureSensorManager::instance().update_subjects_on_main_thread(); });
             }
         }

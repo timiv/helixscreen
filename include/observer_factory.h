@@ -14,7 +14,7 @@
  * 3. Raw observer - stores raw value without async call (for timer-based updates)
  *
  * @pattern Factory pattern with member-pointers for type-safe field access
- * @threading Observers with update methods use ui_async_call() for thread safety
+ * @threading Observers with update methods use helix::ui::async_call() for thread safety
  */
 
 #pragma once
@@ -106,7 +106,7 @@ void value_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
 
     // Schedule async UI update via captured member function pointer
     auto* async_ctx = new ValueObserverContext<T, Panel>(*ctx);
-    ui_async_call(
+    helix::ui::async_call(
         [](void* user_data) {
             auto* c = static_cast<ValueObserverContext<T, Panel>*>(user_data);
             if (c && c->panel && c->on_update) {
@@ -138,7 +138,7 @@ void transform_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
 
     // Schedule async UI update - must copy context for async call
     auto* async_ctx = new TransformObserverContext<T, Panel, Transform>(*ctx);
-    ui_async_call(
+    helix::ui::async_call(
         [](void* user_data) {
             auto* c = static_cast<TransformObserverContext<T, Panel, Transform>*>(user_data);
             if (c && c->panel && c->on_update) {
@@ -306,7 +306,7 @@ struct AsyncLambdaObserverContext {
 /**
  * @brief Create deferred int observer with custom lambda handler
  *
- * The handler is deferred via ui_queue_update() to run after the current
+ * The handler is deferred via helix::ui::queue_update() to run after the current
  * subject notification completes. This prevents re-entrant observer
  * destruction crashes (issue #82). Safe default for all observer callbacks.
  *
@@ -339,7 +339,7 @@ ObserverGuard observe_int_sync(lv_subject_t* subject, Panel* panel, Handler&& ha
                 // destroyed before execution (the exact crash in issue #82).
                 auto handler_copy = c->handler;
                 auto* panel_ptr = c->panel;
-                ui_queue_update(
+                helix::ui::queue_update(
                     [handler_copy, panel_ptr, value]() { handler_copy(panel_ptr, value); });
             }
         },
@@ -414,7 +414,7 @@ ObserverGuard observe_int_async(lv_subject_t* subject, Panel* panel, ValueHandle
                 c->value_handler(c->panel, value);
 
                 // Schedule async update
-                ui_async_call(
+                helix::ui::async_call(
                     [](void* user_data) {
                         auto* ctx = static_cast<detail::AsyncLambdaObserverContext<
                             Panel, DecayedValueHandler, DecayedUpdateHandler>*>(user_data);
@@ -431,7 +431,7 @@ ObserverGuard observe_int_async(lv_subject_t* subject, Panel* panel, ValueHandle
 /**
  * @brief Create deferred string observer with custom lambda handler
  *
- * The handler is deferred via ui_queue_update() to run after the current
+ * The handler is deferred via helix::ui::queue_update() to run after the current
  * subject notification completes. String value is copied to ensure validity.
  *
  * @tparam Panel Panel class type
@@ -457,7 +457,7 @@ ObserverGuard observe_string(lv_subject_t* subject, Panel* panel, Handler&& hand
                 std::string str_copy = str ? str : "";
                 auto handler_copy = c->handler;
                 auto* panel_ptr = c->panel;
-                ui_queue_update([handler_copy, panel_ptr, str_copy]() {
+                helix::ui::queue_update([handler_copy, panel_ptr, str_copy]() {
                     handler_copy(panel_ptr, str_copy.c_str());
                 });
             }
@@ -533,7 +533,7 @@ ObserverGuard observe_string_async(lv_subject_t* subject, Panel* panel,
                 c->value_handler(c->panel, str);
 
                 // Schedule async update
-                ui_async_call(
+                helix::ui::async_call(
                     [](void* user_data) {
                         auto* ctx = static_cast<detail::AsyncLambdaObserverContext<
                             Panel, DecayedValueHandler, DecayedUpdateHandler>*>(user_data);

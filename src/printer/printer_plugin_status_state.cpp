@@ -50,7 +50,7 @@ void PrinterPluginStatusState::deinit_subjects() {
 
 void PrinterPluginStatusState::set_installed_sync(bool installed) {
     // Synchronous update - caller must ensure this runs on UI thread
-    // PrinterState wraps this in ui_queue_update() and calls
+    // PrinterState wraps this in helix::ui::queue_update() and calls
     // update_gcode_modification_visibility() afterward
     lv_subject_set_int(&helix_plugin_installed_, installed ? 1 : 0);
     spdlog::info("[PrinterPluginStatusState] HelixPrint plugin installed: {}", installed);
@@ -58,7 +58,7 @@ void PrinterPluginStatusState::set_installed_sync(bool installed) {
 
 void PrinterPluginStatusState::set_phase_tracking_enabled(bool enabled) {
     // Thread-safe: Use ui_queue_update to update LVGL subject from any thread
-    ui_queue_update([this, enabled]() {
+    helix::ui::queue_update([this, enabled]() {
         lv_subject_set_int(&phase_tracking_enabled_, enabled ? 1 : 0);
         spdlog::info("[PrinterPluginStatusState] Phase tracking enabled: {}", enabled);
     });

@@ -56,10 +56,10 @@ class AmsPanel : public PanelBase {
   public:
     /**
      * @brief Construct AMS panel with dependencies
-     * @param printer_state Reference to global PrinterState
+     * @param printer_state Reference to global helix::PrinterState
      * @param api Pointer to MoonrakerAPI (may be nullptr)
      */
-    AmsPanel(PrinterState& printer_state, MoonrakerAPI* api);
+    AmsPanel(helix::PrinterState& printer_state, MoonrakerAPI* api);
     ~AmsPanel() override = default;
 
     // === PanelBase Interface ===

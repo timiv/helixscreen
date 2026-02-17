@@ -49,6 +49,8 @@
 #include <sstream>
 #include <unordered_map>
 
+using namespace helix;
+
 // Global instance pointer for XML callback access (atomic for safety during destruction)
 static std::atomic<AmsPanel*> g_ams_panel_instance{nullptr};
 
@@ -893,9 +895,9 @@ void AmsPanel::recreate_step_progress_for_operation(StepOperationType op_type) {
         if (supports_purge) {
             // Fresh load with purge: Heat → Feed → Purge
             ui_step_t steps[] = {
-                {"Heat nozzle", UI_STEP_STATE_PENDING},
-                {"Feed filament", UI_STEP_STATE_PENDING},
-                {"Purge", UI_STEP_STATE_PENDING},
+                {"Heat nozzle", StepState::Pending},
+                {"Feed filament", StepState::Pending},
+                {"Purge", StepState::Pending},
             };
             current_step_count_ = 3;
             step_progress_ = ui_step_progress_create(step_progress_container_, steps, 3, false,
@@ -903,8 +905,8 @@ void AmsPanel::recreate_step_progress_for_operation(StepOperationType op_type) {
         } else {
             // Fresh load without purge: Heat → Feed
             ui_step_t steps[] = {
-                {"Heat nozzle", UI_STEP_STATE_PENDING},
-                {"Feed filament", UI_STEP_STATE_PENDING},
+                {"Heat nozzle", StepState::Pending},
+                {"Feed filament", StepState::Pending},
             };
             current_step_count_ = 2;
             step_progress_ = ui_step_progress_create(step_progress_container_, steps, 2, false,
@@ -916,10 +918,10 @@ void AmsPanel::recreate_step_progress_for_operation(StepOperationType op_type) {
         if (supports_purge) {
             // Swap load with purge: Heat → Cut/Tip → Feed → Purge
             ui_step_t steps[] = {
-                {"Heat nozzle", UI_STEP_STATE_PENDING},
-                {tip_step_label, UI_STEP_STATE_PENDING},
-                {"Feed filament", UI_STEP_STATE_PENDING},
-                {"Purge", UI_STEP_STATE_PENDING},
+                {"Heat nozzle", StepState::Pending},
+                {tip_step_label, StepState::Pending},
+                {"Feed filament", StepState::Pending},
+                {"Purge", StepState::Pending},
             };
             current_step_count_ = 4;
             step_progress_ = ui_step_progress_create(step_progress_container_, steps, 4, false,
@@ -927,9 +929,9 @@ void AmsPanel::recreate_step_progress_for_operation(StepOperationType op_type) {
         } else {
             // Swap load without purge: Heat → Cut/Tip → Feed
             ui_step_t steps[] = {
-                {"Heat nozzle", UI_STEP_STATE_PENDING},
-                {tip_step_label, UI_STEP_STATE_PENDING},
-                {"Feed filament", UI_STEP_STATE_PENDING},
+                {"Heat nozzle", StepState::Pending},
+                {tip_step_label, StepState::Pending},
+                {"Feed filament", StepState::Pending},
             };
             current_step_count_ = 3;
             step_progress_ = ui_step_progress_create(step_progress_container_, steps, 3, false,
@@ -940,9 +942,9 @@ void AmsPanel::recreate_step_progress_for_operation(StepOperationType op_type) {
     case StepOperationType::UNLOAD: {
         // Unload: Heat → Cut/Tip → Retract
         ui_step_t steps[] = {
-            {"Heat nozzle", UI_STEP_STATE_PENDING},
-            {tip_step_label, UI_STEP_STATE_PENDING},
-            {"Retract", UI_STEP_STATE_PENDING},
+            {"Heat nozzle", StepState::Pending},
+            {tip_step_label, StepState::Pending},
+            {"Retract", StepState::Pending},
         };
         current_step_count_ = 3;
         step_progress_ =
@@ -2146,7 +2148,7 @@ void destroy_ams_panel_ui() {
             g_ams_panel->clear_panel_reference();
         }
 
-        lv_obj_safe_delete(s_ams_panel_obj);
+        helix::ui::safe_delete(s_ams_panel_obj);
 
         // Note: Widget registrations remain (LVGL doesn't support unregistration)
         // Note: g_ams_panel C++ object stays for state preservation

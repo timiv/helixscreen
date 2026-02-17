@@ -14,6 +14,8 @@
 #include <cstring>
 #include <memory>
 
+using namespace helix;
+
 // External subject for enabling/disabling Next button
 extern lv_subject_t connection_test_passed;
 

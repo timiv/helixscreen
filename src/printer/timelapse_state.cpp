@@ -72,7 +72,7 @@ void TimelapseState::handle_timelapse_event(const nlohmann::json& event) {
     if (action == "newframe") {
         // Increment frame count — read+write both inside ui_queue_update
         // since lv_subject_get_int must be called from the UI thread
-        ui_queue_update([this]() {
+        helix::ui::queue_update([this]() {
             int current = lv_subject_get_int(&timelapse_frame_count_);
             lv_subject_set_int(&timelapse_frame_count_, current + 1);
         });
@@ -100,7 +100,7 @@ void TimelapseState::handle_timelapse_event(const nlohmann::json& event) {
         }
 
         if (status == "running") {
-            ui_queue_update([this, progress]() {
+            helix::ui::queue_update([this, progress]() {
                 lv_subject_set_int(&timelapse_render_progress_, progress);
                 lv_subject_copy_string(&timelapse_render_status_, "rendering");
             });
@@ -115,7 +115,7 @@ void TimelapseState::handle_timelapse_event(const nlohmann::json& event) {
             spdlog::debug("[TimelapseState] Render progress: {}%", progress);
 
         } else if (status == "success") {
-            ui_queue_update([this]() {
+            helix::ui::queue_update([this]() {
                 lv_subject_set_int(&timelapse_render_progress_, 0);
                 lv_subject_copy_string(&timelapse_render_status_, "complete");
             });
@@ -126,7 +126,7 @@ void TimelapseState::handle_timelapse_event(const nlohmann::json& event) {
             spdlog::info("[TimelapseState] Render complete: {}", filename);
 
         } else if (status == "error") {
-            ui_queue_update(
+            helix::ui::queue_update(
                 [this]() { lv_subject_copy_string(&timelapse_render_status_, "error"); });
 
             last_notified_progress_ = -1;
@@ -149,7 +149,7 @@ void TimelapseState::reset() {
         return;
     }
 
-    ui_queue_update([this]() {
+    helix::ui::queue_update([this]() {
         lv_subject_set_int(&timelapse_frame_count_, 0);
         lv_subject_set_int(&timelapse_render_progress_, 0);
         lv_subject_copy_string(&timelapse_render_status_, "idle");

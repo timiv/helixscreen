@@ -75,7 +75,7 @@ void DebugBundleModal::on_hide() {
     // Self-delete: this modal is heap-allocated and has no other owner.
     // Deferred so hide() finishes before destruction.
     auto* self = this;
-    ui_async_call([](void* data) { delete static_cast<DebugBundleModal*>(data); }, self);
+    helix::ui::async_call([](void* data) { delete static_cast<DebugBundleModal*>(data); }, self);
 }
 
 // =============================================================================

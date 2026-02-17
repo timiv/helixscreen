@@ -27,6 +27,8 @@
 #include <map>
 #include <sstream>
 
+using namespace helix;
+
 // ============================================================================
 // Global Instance
 // ============================================================================
@@ -447,7 +449,7 @@ void HistoryDashboardPanel::update_statistics(const std::vector<PrintHistoryJob>
 // ============================================================================
 
 std::string HistoryDashboardPanel::format_duration(double seconds) {
-    return helix::fmt::duration(static_cast<int>(seconds));
+    return helix::format::duration(static_cast<int>(seconds));
 }
 
 std::string HistoryDashboardPanel::format_filament(double mm) {
@@ -669,7 +671,7 @@ void HistoryDashboardPanel::update_filament_chart(const std::vector<PrintHistory
 
     // Clear existing bar rows
     for (auto* row : filament_bar_rows_) {
-        lv_obj_safe_delete(row);
+        helix::ui::safe_delete(row);
     }
     filament_bar_rows_.clear();
 

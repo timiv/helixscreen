@@ -17,6 +17,8 @@
 #include <cstring>
 #include <string>
 
+using namespace helix;
+
 // ============================================================================
 // ANIMATION CONSTANTS
 // ============================================================================
@@ -145,7 +147,7 @@ void ToastManager::animate_exit(lv_obj_t* toast) {
     if (!SettingsManager::instance().get_animations_enabled()) {
         // Directly delete the toast - no animation
         if (toast && active_toast_ == toast) {
-            lv_obj_safe_delete(active_toast_);
+            helix::ui::safe_delete(active_toast_);
             animating_exit_ = false;
             spdlog::debug("[ToastManager] Animations disabled - hiding toast instantly");
         }
@@ -182,7 +184,7 @@ void ToastManager::exit_animation_complete_cb(lv_anim_t* anim) {
             lv_group_remove_obj(toast);
         }
 
-        lv_obj_safe_delete(mgr.active_toast_);
+        helix::ui::safe_delete(mgr.active_toast_);
         mgr.animating_exit_ = false;
         spdlog::debug("[ToastManager] Exit animation complete, toast deleted");
     }
@@ -286,9 +288,9 @@ void ToastManager::hide() {
     size_t unread = NotificationHistory::instance().get_unread_count();
 
     if (unread == 0) {
-        ui_status_bar_update_notification(NotificationStatus::NONE);
+        helix::ui::status_bar_update_notification(NotificationStatus::NONE);
     } else {
-        ui_status_bar_update_notification(severity_to_notification_status(highest));
+        helix::ui::status_bar_update_notification(severity_to_notification_status(highest));
     }
 
     // Animate exit (widget deletion happens in completion callback)
@@ -373,7 +375,7 @@ void ToastManager::create_toast_internal(ToastSeverity severity, const char* mes
     lv_timer_set_repeat_count(dismiss_timer_, 1); // Run once then stop
 
     // Update status bar notification icon
-    ui_status_bar_update_notification(severity_to_notification_status(severity));
+    helix::ui::status_bar_update_notification(severity_to_notification_status(severity));
 
     // Play error sound for error toasts (uses EVENT priority so it's not affected by
     // ui_sounds_enabled)
@@ -435,7 +437,7 @@ void ui_toast_show(ToastSeverity severity, const char* message, uint32_t duratio
     auto params =
         std::make_unique<ToastParams>(ToastParams{severity, message ? message : "", duration_ms});
 
-    ui_queue_update<ToastParams>(std::move(params), [](ToastParams* p) {
+    helix::ui::queue_update<ToastParams>(std::move(params), [](ToastParams* p) {
         ToastManager::instance().show(p->severity, p->message.c_str(), p->duration_ms);
     });
 }
@@ -457,7 +459,7 @@ void ui_toast_show_with_action(ToastSeverity severity, const char* message, cons
         ToastActionParams{severity, message ? message : "", action_text ? action_text : "",
                           action_callback, user_data, duration_ms});
 
-    ui_queue_update<ToastActionParams>(std::move(params), [](ToastActionParams* p) {
+    helix::ui::queue_update<ToastActionParams>(std::move(params), [](ToastActionParams* p) {
         ToastManager::instance().show_with_action(p->severity, p->message.c_str(),
                                                   p->action_text.c_str(), p->action_callback,
                                                   p->user_data, p->duration_ms);
@@ -465,7 +467,7 @@ void ui_toast_show_with_action(ToastSeverity severity, const char* message, cons
 }
 
 void ui_toast_hide() {
-    ui_async_call([](void*) { ToastManager::instance().hide(); }, nullptr);
+    helix::ui::async_call([](void*) { ToastManager::instance().hide(); }, nullptr);
 }
 
 bool ui_toast_is_visible() {

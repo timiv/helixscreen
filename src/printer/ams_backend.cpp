@@ -17,6 +17,8 @@
 #include <cctype>
 #include <cstdlib>
 
+using namespace helix;
+
 // Helper to create mock backend with optional features
 static std::unique_ptr<AmsBackendMock> create_mock_with_features(int gate_count) {
     auto mock = std::make_unique<AmsBackendMock>(gate_count);

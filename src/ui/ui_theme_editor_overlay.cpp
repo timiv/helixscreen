@@ -25,6 +25,8 @@
 #include <cstring>
 #include <sys/stat.h>
 
+using namespace helix;
+
 // ============================================================================
 // GLOBAL INSTANCE
 // ============================================================================
@@ -730,7 +732,7 @@ void ThemeEditorOverlay::show_save_as_dialog() {
     }
 
     // Show save as modal
-    save_as_dialog_ = ui_modal_show("theme_save_as_modal");
+    save_as_dialog_ = helix::ui::modal_show("theme_save_as_modal");
     if (!save_as_dialog_) {
         spdlog::error("[{}] Failed to show Save As dialog", get_name());
         return;
@@ -745,7 +747,7 @@ void ThemeEditorOverlay::show_save_as_dialog() {
         lv_textarea_set_cursor_pos(input, LV_TEXTAREA_CURSOR_LAST);
 
         // Register with keyboard manager for on-screen keyboard
-        ui_modal_register_keyboard(save_as_dialog_, input);
+        helix::ui::modal_register_keyboard(save_as_dialog_, input);
     }
 
     spdlog::debug("[{}] Showing Save As dialog", get_name());
@@ -756,7 +758,7 @@ void ThemeEditorOverlay::show_discard_confirmation(std::function<void()> on_disc
     pending_discard_action_ = std::move(on_discard);
 
     // Show confirmation dialog using modal system
-    discard_dialog_ = ui_modal_show_confirmation(
+    discard_dialog_ = helix::ui::modal_show_confirmation(
         lv_tr("Discard Changes?"), lv_tr("You have unsaved changes. Discard them?"),
         ModalSeverity::Warning, lv_tr("Discard"), on_discard_confirm, on_discard_cancel, nullptr);
 

@@ -17,6 +17,8 @@
 
 #include <cstring>
 
+using namespace helix;
+
 // Macro for keyboard button control flags
 #define LV_KB_BTN(width) static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_POPOVER | (width))
 
@@ -143,7 +145,7 @@ bool KeyboardManager::point_in_area(const lv_area_t* area, const lv_point_t* poi
 }
 
 void KeyboardManager::overlay_cleanup() {
-    lv_obj_safe_delete(overlay_);
+    helix::ui::safe_delete(overlay_);
     alternatives_ = nullptr;
     pressed_char_ = nullptr;
     pressed_btn_id_ = 0;

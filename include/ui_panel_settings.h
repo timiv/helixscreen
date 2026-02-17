@@ -43,7 +43,7 @@ class SettingsPanel : public PanelBase {
      * @param printer_state Reference to PrinterState
      * @param api Pointer to MoonrakerAPI
      */
-    SettingsPanel(PrinterState& printer_state, MoonrakerAPI* api);
+    SettingsPanel(helix::PrinterState& printer_state, MoonrakerAPI* api);
 
     ~SettingsPanel() override;
 

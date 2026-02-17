@@ -24,6 +24,8 @@
 #include <cstring>
 #include <memory>
 
+using namespace helix;
+
 // ============================================================================
 // Global Instance
 // ============================================================================
@@ -434,7 +436,7 @@ void WizardWifiStep::clear_network_list() {
 
             // Delete the widget - the DELETE handler will automatically clean up
             // WifiWizardNetworkItemData
-            lv_obj_safe_delete(child);
+            helix::ui::safe_delete(child);
         }
     }
 
@@ -895,7 +897,7 @@ void WizardWifiStep::init_wifi_manager() {
                     // Use lv_async_call to update UI on main thread
                     // Store networks temporarily for the async call
                     cached_networks_ = networks;
-                    ui_async_call(
+                    helix::ui::async_call(
                         [](void* ctx) {
                             auto* self = static_cast<WizardWifiStep*>(ctx);
                             // Double-check cleanup in async callback
@@ -930,7 +932,7 @@ void WizardWifiStep::show_password_modal(const char* ssid) {
     spdlog::debug("[{}] Showing password modal for SSID: {}", get_name(), ssid);
 
     const char* attrs[] = {"ssid", ssid, NULL};
-    password_modal_ = ui_modal_show("wifi_password_modal", attrs);
+    password_modal_ = helix::ui::modal_show("wifi_password_modal", attrs);
 
     if (!password_modal_) {
         LOG_ERROR_INTERNAL("Failed to create password modal");
@@ -942,7 +944,7 @@ void WizardWifiStep::show_password_modal(const char* ssid) {
     lv_obj_t* password_input = lv_obj_find_by_name(password_modal_, "password_input");
     if (password_input) {
         lv_textarea_set_text(password_input, "");
-        ui_modal_register_keyboard(password_modal_, password_input);
+        helix::ui::modal_register_keyboard(password_modal_, password_input);
 
         lv_group_t* group = lv_group_get_default();
         if (group) {
@@ -970,7 +972,7 @@ void WizardWifiStep::hide_password_modal() {
 
     spdlog::debug("[{}] Hiding password modal", get_name());
 
-    ui_modal_hide(password_modal_);
+    helix::ui::modal_hide(password_modal_);
     password_modal_ = nullptr;
 }
 

@@ -14,6 +14,9 @@
 #include <filesystem>
 #include <thread>
 
+using namespace helix;
+using namespace helix::ui;
+
 // ============================================================================
 // LVGL safe initialization (idempotent)
 // ============================================================================
@@ -568,7 +571,7 @@ void EmergencyStopOverlay::show_recovery_for(RecoveryReason reason) {
         if (reason == RecoveryReason::DISCONNECTED &&
             recovery_reason_ == RecoveryReason::SHUTDOWN) {
             recovery_reason_ = RecoveryReason::DISCONNECTED;
-            ui_async_call(
+            helix::ui::async_call(
                 [](void*) { EmergencyStopOverlay::instance().update_recovery_dialog_content(); },
                 nullptr);
         }
@@ -576,7 +579,7 @@ void EmergencyStopOverlay::show_recovery_for(RecoveryReason reason) {
     }
 
     recovery_reason_ = reason;
-    ui_async_call(
+    helix::ui::async_call(
         [](void*) {
             auto& inst = EmergencyStopOverlay::instance();
             if (inst.recovery_dialog_)
@@ -601,7 +604,7 @@ void EmergencyStopOverlay::show_recovery_dialog() {
     if (recovery_dialog_)
         return;
     // Use Modal system — backdrop is created programmatically
-    recovery_dialog_ = ui_modal_show("klipper_recovery_dialog");
+    recovery_dialog_ = helix::ui::modal_show("klipper_recovery_dialog");
     if (recovery_dialog_) {
         // XML <view name="..."> is not applied by lv_xml_create — set explicitly for lookups
         lv_obj_set_name(recovery_dialog_, "klipper_recovery_card");
@@ -610,7 +613,7 @@ void EmergencyStopOverlay::show_recovery_dialog() {
 
 void EmergencyStopOverlay::dismiss_recovery_dialog() {
     if (recovery_dialog_) {
-        ui_modal_hide(recovery_dialog_);
+        helix::ui::modal_hide(recovery_dialog_);
         recovery_dialog_ = nullptr;
         recovery_reason_ = RecoveryReason::NONE;
     }
@@ -685,11 +688,11 @@ KeyboardHint ui_text_input_get_keyboard_hint(lv_obj_t* textarea) {
 #include "ui_notification_manager.h"
 #include "ui_printer_status_icon.h"
 
-void ui_notification_update(NotificationStatus /* status */) {
+void helix::ui::notification_update(NotificationStatus /* status */) {
     // No-op in tests
 }
 
-void ui_notification_update_count(size_t /* count */) {
+void helix::ui::notification_update_count(size_t /* count */) {
     // No-op in tests
 }
 
@@ -842,7 +845,7 @@ lv_subject_t& get_notification_subject() {
 static lv_subject_t s_test_notification_count_subject;
 static bool s_test_notification_subjects_initialized = false;
 
-void ui_notification_init_subjects() {
+void helix::ui::notification_init_subjects() {
     if (!s_test_notification_subjects_initialized) {
         lv_subject_init_int(&s_test_notification_count_subject, 0);
         s_test_notification_subjects_initialized = true;
@@ -850,7 +853,7 @@ void ui_notification_init_subjects() {
     }
 }
 
-void ui_notification_deinit_subjects() {
+void helix::ui::notification_deinit_subjects() {
     if (s_test_notification_subjects_initialized) {
         lv_subject_deinit(&s_test_notification_count_subject);
         s_test_notification_subjects_initialized = false;
@@ -858,11 +861,11 @@ void ui_notification_deinit_subjects() {
     }
 }
 
-void ui_notification_register_callbacks() {
+void helix::ui::notification_register_callbacks() {
     spdlog::debug("[Test Stub] ui_notification_register_callbacks: no-op in tests");
 }
 
-void ui_notification_manager_init() {
+void helix::ui::notification_manager_init() {
     spdlog::debug("[Test Stub] ui_notification_manager_init: no-op in tests");
 }
 

@@ -373,7 +373,7 @@ void DebugBundleCollector::upload_async(const BundleOptions& options, ResultCall
 
             if (compressed.empty()) {
                 result.error_message = "Compression failed";
-                ui_queue_update([callback, result]() { callback(result); });
+                helix::ui::queue_update([callback, result]() { callback(result); });
                 return;
             }
 
@@ -416,7 +416,7 @@ void DebugBundleCollector::upload_async(const BundleOptions& options, ResultCall
             spdlog::error("[DebugBundle] Upload exception: {}", e.what());
         }
 
-        ui_queue_update([callback, result]() { callback(result); });
+        helix::ui::queue_update([callback, result]() { callback(result); });
     }).detach();
 }
 

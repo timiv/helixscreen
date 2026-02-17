@@ -11,7 +11,9 @@
 #include <vector>
 
 // Forward declarations
+namespace helix {
 class WiFiManager;
+}
 class EthernetManager;
 struct WiFiNetwork;
 
@@ -158,7 +160,7 @@ class WizardWifiStep {
     char wifi_password_modal_ssid_buffer_[64];
 
     // WiFiManager and EthernetManager (shared_ptr for async safety)
-    std::shared_ptr<WiFiManager> wifi_manager_;
+    std::shared_ptr<helix::WiFiManager> wifi_manager_;
     std::unique_ptr<EthernetManager> ethernet_manager_;
 
     // Current network selection for password modal

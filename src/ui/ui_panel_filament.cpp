@@ -36,6 +36,8 @@
 #include <cstring>
 #include <memory>
 
+using namespace helix;
+
 // Preset material names (indexed by material ID: 0=PLA, 1=PETG, 2=ABS, 3=TPU)
 // Temperatures are now looked up from filament_database.h
 static constexpr const char* PRESET_MATERIAL_NAMES[] = {"PLA", "PETG", "ABS", "TPU"};
@@ -132,11 +134,11 @@ FilamentPanel::~FilamentPanel() {
     // Clean up warning dialogs if open (prevents memory leak and use-after-free)
     if (lv_is_initialized()) {
         if (load_warning_dialog_) {
-            ui_modal_hide(load_warning_dialog_);
+            helix::ui::modal_hide(load_warning_dialog_);
             load_warning_dialog_ = nullptr;
         }
         if (unload_warning_dialog_) {
-            ui_modal_hide(unload_warning_dialog_);
+            helix::ui::modal_hide(unload_warning_dialog_);
             unload_warning_dialog_ = nullptr;
         }
     }
@@ -271,7 +273,7 @@ void FilamentPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
             if (!self || !self->temp_group_ || !self->temp_graph_card_)
                 return;
 
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* ctx) {
                     auto* panel = static_cast<FilamentPanel*>(ctx);
                     bool has_ams =
@@ -749,13 +751,13 @@ void FilamentPanel::handle_purge_button() {
     api_->execute_gcode(
         gcode,
         [this, amount = purge_amount_]() {
-            ui_async_call([](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); },
-                          this);
+            helix::ui::async_call(
+                [](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); }, this);
             NOTIFY_SUCCESS("Purge complete ({}mm)", amount);
         },
         [this](const MoonrakerError& error) {
-            ui_async_call([](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); },
-                          this);
+            helix::ui::async_call(
+                [](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); }, this);
             NOTIFY_ERROR("Purge failed: {}", error.user_message());
         });
 }
@@ -846,7 +848,7 @@ void FilamentPanel::handle_extruder_changed() {
         [this](const std::string& err) {
             NOTIFY_ERROR("Tool change failed: {}", err);
             // Revert dropdown to actual active tool on UI thread
-            ui_async_call(
+            helix::ui::async_call(
                 [](void* ctx) {
                     auto* panel = static_cast<FilamentPanel*>(ctx);
                     if (panel->extruder_dropdown_) {
@@ -1117,13 +1119,13 @@ void FilamentPanel::execute_load() {
     StandardMacros::instance().execute(
         StandardMacroSlot::LoadFilament, api_,
         [this]() {
-            ui_async_call([](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); },
-                          this);
+            helix::ui::async_call(
+                [](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); }, this);
             NOTIFY_SUCCESS("Filament loaded");
         },
         [this](const MoonrakerError& error) {
-            ui_async_call([](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); },
-                          this);
+            helix::ui::async_call(
+                [](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); }, this);
             NOTIFY_ERROR("Filament load failed: {}", error.user_message());
         });
 }
@@ -1144,13 +1146,13 @@ void FilamentPanel::execute_unload() {
     StandardMacros::instance().execute(
         StandardMacroSlot::UnloadFilament, api_,
         [this]() {
-            ui_async_call([](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); },
-                          this);
+            helix::ui::async_call(
+                [](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); }, this);
             NOTIFY_SUCCESS("Filament unloaded");
         },
         [this](const MoonrakerError& error) {
-            ui_async_call([](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); },
-                          this);
+            helix::ui::async_call(
+                [](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); }, this);
             NOTIFY_ERROR("Filament unload failed: {}", error.user_message());
         });
 }
@@ -1158,11 +1160,11 @@ void FilamentPanel::execute_unload() {
 void FilamentPanel::show_load_warning() {
     // Close any existing dialog first
     if (load_warning_dialog_) {
-        ui_modal_hide(load_warning_dialog_);
+        helix::ui::modal_hide(load_warning_dialog_);
         load_warning_dialog_ = nullptr;
     }
 
-    load_warning_dialog_ = ui_modal_show_confirmation(
+    load_warning_dialog_ = helix::ui::modal_show_confirmation(
         lv_tr("Filament Detected"),
         lv_tr("The toolhead sensor indicates filament is already loaded. "
               "Proceed with load anyway?"),
@@ -1180,16 +1182,16 @@ void FilamentPanel::show_load_warning() {
 void FilamentPanel::show_unload_warning() {
     // Close any existing dialog first
     if (unload_warning_dialog_) {
-        ui_modal_hide(unload_warning_dialog_);
+        helix::ui::modal_hide(unload_warning_dialog_);
         unload_warning_dialog_ = nullptr;
     }
 
-    unload_warning_dialog_ =
-        ui_modal_show_confirmation(lv_tr("No Filament Detected"),
-                                   lv_tr("The toolhead sensor indicates no filament is present. "
-                                         "Proceed with unload anyway?"),
-                                   ModalSeverity::Warning, lv_tr("Proceed"),
-                                   on_unload_warning_proceed, on_unload_warning_cancel, this);
+    unload_warning_dialog_ = helix::ui::modal_show_confirmation(
+        lv_tr("No Filament Detected"),
+        lv_tr("The toolhead sensor indicates no filament is present. "
+              "Proceed with unload anyway?"),
+        ModalSeverity::Warning, lv_tr("Proceed"), on_unload_warning_proceed,
+        on_unload_warning_cancel, this);
 
     if (!unload_warning_dialog_) {
         spdlog::error("[{}] Failed to create unload warning dialog", get_name());
@@ -1205,7 +1207,7 @@ void FilamentPanel::on_load_warning_proceed(lv_event_t* e) {
     if (self) {
         // Hide dialog first
         if (self->load_warning_dialog_) {
-            ui_modal_hide(self->load_warning_dialog_);
+            helix::ui::modal_hide(self->load_warning_dialog_);
             self->load_warning_dialog_ = nullptr;
         }
         // Execute load
@@ -1218,7 +1220,7 @@ void FilamentPanel::on_load_warning_cancel(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_load_warning_cancel");
     auto* self = static_cast<FilamentPanel*>(lv_event_get_user_data(e));
     if (self && self->load_warning_dialog_) {
-        ui_modal_hide(self->load_warning_dialog_);
+        helix::ui::modal_hide(self->load_warning_dialog_);
         self->load_warning_dialog_ = nullptr;
         spdlog::debug("[FilamentPanel] Load cancelled by user");
     }
@@ -1231,7 +1233,7 @@ void FilamentPanel::on_unload_warning_proceed(lv_event_t* e) {
     if (self) {
         // Hide dialog first
         if (self->unload_warning_dialog_) {
-            ui_modal_hide(self->unload_warning_dialog_);
+            helix::ui::modal_hide(self->unload_warning_dialog_);
             self->unload_warning_dialog_ = nullptr;
         }
         // Execute unload
@@ -1244,7 +1246,7 @@ void FilamentPanel::on_unload_warning_cancel(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_unload_warning_cancel");
     auto* self = static_cast<FilamentPanel*>(lv_event_get_user_data(e));
     if (self && self->unload_warning_dialog_) {
-        ui_modal_hide(self->unload_warning_dialog_);
+        helix::ui::modal_hide(self->unload_warning_dialog_);
         self->unload_warning_dialog_ = nullptr;
         spdlog::debug("[FilamentPanel] Unload cancelled by user");
     }

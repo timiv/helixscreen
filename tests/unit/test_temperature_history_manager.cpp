@@ -49,6 +49,8 @@ class TemperatureHistoryManagerTestAccess {
 
 #include "../catch_amalgamated.hpp"
 
+using namespace helix;
+using namespace helix::ui;
 // ============================================================================
 // Global LVGL Initialization
 // ============================================================================
@@ -79,9 +81,9 @@ class TemperatureHistoryManagerTestFixture {
 
   public:
     TemperatureHistoryManagerTestFixture() {
-        // Initialize update queue once (static guard) - CRITICAL for ui_queue_update()
+        // Initialize update queue once (static guard) - CRITICAL for helix::ui::queue_update()
         if (!queue_initialized) {
-            ui_update_queue_init();
+            helix::ui::update_queue_init();
             queue_initialized = true;
         }
 
@@ -97,7 +99,7 @@ class TemperatureHistoryManagerTestFixture {
         UpdateQueueTestAccess::drain(helix::ui::UpdateQueue::instance());
 
         // Shutdown queue
-        ui_update_queue_shutdown();
+        helix::ui::update_queue_shutdown();
 
         // Reset static flag for next test
         queue_initialized = false;

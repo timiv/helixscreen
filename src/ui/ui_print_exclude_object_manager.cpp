@@ -296,21 +296,22 @@ void PrintExcludeObjectManager::exclude_undo_timer_cb(lv_timer_t* timer) {
                               err.message);
 
                 // UI operations must happen on the main thread
-                ui_queue_update([self, alive, object_name, user_msg = err.user_message()]() {
-                    if (!alive->load()) {
-                        return;
-                    }
-                    NOTIFY_ERROR("Failed to exclude '{}': {}", object_name, user_msg);
+                helix::ui::queue_update(
+                    [self, alive, object_name, user_msg = err.user_message()]() {
+                        if (!alive->load()) {
+                            return;
+                        }
+                        NOTIFY_ERROR("Failed to exclude '{}': {}", object_name, user_msg);
 
-                    // Revert visual state - refresh viewer with only confirmed exclusions
-                    if (self->gcode_viewer_) {
-                        ui_gcode_viewer_set_excluded_objects(self->gcode_viewer_,
-                                                             self->excluded_objects_);
-                        spdlog::debug(
-                            "[PrintExcludeObjectManager] Reverted visual exclusion for '{}'",
-                            object_name);
-                    }
-                });
+                        // Revert visual state - refresh viewer with only confirmed exclusions
+                        if (self->gcode_viewer_) {
+                            ui_gcode_viewer_set_excluded_objects(self->gcode_viewer_,
+                                                                 self->excluded_objects_);
+                            spdlog::debug(
+                                "[PrintExcludeObjectManager] Reverted visual exclusion for '{}'",
+                                object_name);
+                        }
+                    });
             });
     } else {
         spdlog::warn("[PrintExcludeObjectManager] No API available - simulating exclusion");
