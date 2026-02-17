@@ -606,7 +606,7 @@ Quick patterns for working with the multi-extruder and tool abstraction systems.
 ```cpp
 #include "printer_state.h"
 
-auto& ps = PrinterState::instance();
+auto& ps = helix::PrinterState::instance();
 auto& pts = ps.temperature();
 
 // Legacy: first extruder (backward compatible)

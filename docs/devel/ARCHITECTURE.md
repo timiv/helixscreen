@@ -2,6 +2,8 @@
 
 This document explains the HelixScreen prototype's system design, data flow patterns, and architectural decisions.
 
+> **Visual diagrams:** See [`docs/architecture/`](../architecture/README.md) for Mermaid and D2 diagrams covering system overview, data flow, threading, UI layer, startup sequence, and singleton map.
+
 ## Overview
 
 HelixScreen uses a modern, declarative approach to embedded UI development that completely separates presentation from logic:
@@ -43,9 +45,9 @@ LVGL 9's Subject-Observer pattern enables automatic UI updates:
 
 ```cpp
 // C++ is pure logic - zero layout code
-ui_panel_nozzle_init_subjects();
+nozzle_panel.init_subjects();
 lv_xml_create(screen, "nozzle_panel", NULL);
-ui_panel_nozzle_update(210);  // All bound widgets update automatically
+nozzle_panel.set_temp(210);  // All bound widgets update automatically
 ```
 
 **Benefits:**
@@ -128,6 +130,21 @@ Theme preference saved to `helixconfig.json` and restored on next launch:
   ...
 }
 ```
+
+## Namespace Organization
+
+All HelixScreen code lives under the `helix::` namespace:
+
+| Namespace | Contents | Example |
+|-----------|----------|---------|
+| `helix::` | Core singletons, state, managers | `helix::PrinterState`, `helix::Config` |
+| `helix::ui::` | UI functions, update queue | `helix::ui::queue_update()` |
+
+**Rules:**
+- **No `using` declarations in headers** — always use fully-qualified names in `.h` files
+- **`using namespace helix;`** is acceptable in `.cpp` files only
+- **Enum classes** — all enums use `enum class` within `helix::` (e.g., `helix::PanelId`, `helix::PrintState`)
+- **JSON alias** — consolidated in `json_fwd.h` (`#include "json_fwd.h"` for forward declaration)
 
 ## ⚠️ CRITICAL: Reactive-First Principle - "The HelixScreen Way"
 
@@ -212,20 +229,20 @@ void ui_panel_init() {
 
 ```
 app_layout.xml
-├── navigation_bar.xml      # 5-button vertical navigation
-└── content_area            # 31 panels + 17 overlays (see ui_xml/*.xml)
+├── navigation_bar.xml      # 6-button vertical navigation
+└── content_area            # 6 panels + 25+ overlays (see ui_xml/*.xml)
 ```
 
 **Design Patterns:**
 - **App Layout** - Root container with navigation + content area
 - **Panel Components** - Self-contained UI screens with reactive data
 - **Sub-Panel Overlays** - Motion/temp controls that slide over main content
-- **Global Navigation** - Persistent 5-button navigation bar
+- **Global Navigation** - Persistent 6-button navigation bar
 
 ## ⚠️ PREFERRED: Class-Based Architecture
 
 **All new code should use class-based patterns.** This applies to:
-- **UI panels** (SubjectManagedPanel or PanelBase)
+- **UI panels** (PanelBase for main panels, OverlayBase for overlays)
 - **Modals** (Modal)
 - **Backend managers** (WiFiManager, EthernetManager, MoonrakerClient)
 - **Domain state classes** (Printer*State decomposition)
@@ -242,46 +259,44 @@ app_layout.xml
 
 **For implementation examples, see [DEVELOPER_QUICK_REFERENCE.md](DEVELOPER_QUICK_REFERENCE.md#class-patterns).**
 
-### SubjectManagedPanel Base Class
+### Panel & Overlay Base Classes
 
-Panels that own LVGL subjects should inherit from `SubjectManagedPanel` for automatic observer cleanup:
+All main panels inherit from `PanelBase`, overlays from `OverlayBase`:
 
 ```cpp
-class MyPanel : public SubjectManagedPanel {
+class MyPanel : public PanelBase {
 public:
-    explicit MyPanel(lv_obj_t* parent);
+    MyPanel();
     ~MyPanel() override;
 
-    void show() override;
-    void hide() override;
-    lv_obj_t* get_root() const override { return root_; }
+    void init_subjects() override;   // Create subjects + self-register cleanup
+    void setup(lv_obj_t* panel, lv_obj_t* parent) override;
+    void on_activate() override;
+    void on_deactivate() override;
 
 private:
-    void init_subjects();     // Call BEFORE lv_xml_create()
-    void setup_observers();   // Wire reactive bindings via observer_factory.h
-
-    lv_obj_t* root_ = nullptr;
     lv_subject_t my_subject_{};
     char buf_[128]{};         // Static storage for string subjects
 };
 ```
 
-**Benefits over raw PanelBase:**
-- Automatic observer removal on destruction (no manual cleanup)
-- `add_observer()` method tracks all observers via `ObserverGuard`
-- Safe during shutdown (checks `lv_is_initialized()`)
+**Key features:**
+- Two-phase init: `init_subjects()` first, then `setup()` after XML creation
+- `register_observer()` tracks all observers via `ObserverGuard` for RAII cleanup
+- Lifecycle hooks: `on_activate()` / `on_deactivate()` called by `NavigationManager`
+- Dependency injection: receives `PrinterState&` and `MoonrakerAPI*`
+- Self-registration: `init_subjects()` MUST register cleanup with `StaticSubjectRegistry`
 
 ### ❌ AVOID: Function-Based Patterns
 
-```cpp
-// ❌ OLD PATTERN - Do not use for new code
-void ui_panel_motion_init(lv_obj_t* parent);
-void ui_panel_motion_show();
-void ui_panel_motion_hide();
+The old C-style wrapper APIs (`ui_panel_*_init()`, `ui_panel_*_show()`) have been **removed**. All panels and overlays use class-based patterns:
 
-// ✅ NEW PATTERN - Use classes
-auto motion = std::make_unique<MotionPanel>(parent);
-motion->show();
+```cpp
+// ✅ Current pattern - class-based with lifecycle
+auto& motion = MotionPanel::instance();
+motion.init_subjects();
+// ... XML creation ...
+motion.on_activate();
 ```
 
 ## Domain Decomposition: PrinterState
@@ -331,7 +346,7 @@ public:
     lv_subject_t* nozzle_temp_subject();
     lv_subject_t* bed_temp_subject();
 
-    // Setters (called from WebSocket thread via ui_async_call)
+    // Setters (called from WebSocket thread via helix::ui::queue_update)
     void set_nozzle_temp(int temp);
     void set_bed_temp(int temp);
 
@@ -409,9 +424,9 @@ struct ToolInfo {
 lv_xml_register_component_from_file("A:/ui_xml/globals.xml");
 lv_xml_register_component_from_file("A:/ui_xml/home_panel.xml");
 
-// 2. Initialize subjects (BEFORE XML creation)
-ui_nav_init();
-ui_panel_home_init_subjects();
+// 2. Initialize subjects (BEFORE XML creation) — each self-registers cleanup
+helix::NavigationManager::instance().init_subjects();
+home_panel.init_subjects();
 
 // 3. NOW create UI - bindings will find initialized subjects
 lv_xml_create(screen, "app_layout", NULL);
@@ -732,21 +747,29 @@ MyPanel::~MyPanel() {
 3. lv_deinit()                            ← Now safe - all observers disconnected
 ```
 
-**Registration Pattern:**
+**Self-Registration Pattern (MANDATORY):**
+
+Each component's `init_subjects()` method MUST self-register its own cleanup. Registration is **never** done externally (e.g., in SubjectInitializer). This prevents forgotten registrations that cause shutdown crashes.
 
 ```cpp
-// In SubjectInitializer::init_*_subjects():
+// Inside the component's own init_subjects():
+void PrinterState::init_subjects() {
+    if (subjects_initialized_) return;
+    // ... create subjects ...
+    subjects_initialized_ = true;
 
-// 1. Initialize subjects
-get_printer_state().init_subjects();
+    // Self-register cleanup (co-located with init)
+    StaticSubjectRegistry::instance().register_deinit(
+        "PrinterState", []() { PrinterState::instance().deinit_subjects(); });
+}
+```
 
-// 2. Register cleanup with appropriate registry
-StaticSubjectRegistry::instance().register_deinit(
-    "PrinterState", []() { get_printer_state().reset_for_testing(); });
-
-// For panels:
-StaticPanelRegistry::instance().register_destroy(
-    "EmergencyStopSubjects", []() { EmergencyStopOverlay::instance().deinit_subjects(); });
+SubjectInitializer just calls `init_subjects()` — it does NOT register cleanup:
+```cpp
+// In SubjectInitializer::init_core_and_state():
+PrinterState::instance().init_subjects();   // Self-registers internally
+AmsState::instance().init_subjects();       // Self-registers internally
+ToolState::instance().init_subjects();      // Self-registers internally
 ```
 
 **deinit_subjects() Pattern:**
@@ -809,30 +832,27 @@ The LVGL assertion `!disp->rendering_in_progress` will fire, and on embedded tar
 
 ### Safe Pattern: Defer to Main Thread
 
-**Always use `ui_async_call()` for subject updates from background threads:**
+**Always use `helix::ui::queue_update()` for subject updates from background threads:**
 
 ```cpp
 #include "ui_update_queue.h"
 
-// ✅ CORRECT - defers to main thread via ui_async_call()
-struct TempUpdateContext {
-    PrinterState* state;
-    int temperature;
-};
-
-void async_temp_callback(void* user_data) {
-    auto* ctx = static_cast<TempUpdateContext*>(user_data);
-    lv_subject_set_int(ctx->state->temp_subject(), ctx->temperature);  // Now safe!
-    delete ctx;
-}
-
+// ✅ CORRECT - defers to main thread via queue_update()
 void update_from_websocket_thread(int temp) {
-    auto* ctx = new TempUpdateContext{&get_printer_state(), temp};
-    ui_async_call(async_temp_callback, ctx);  // Queued for main thread, runs BEFORE render
+    helix::ui::queue_update([temp]() {
+        lv_subject_set_int(&temp_subject, temp);  // Safe: runs on main thread
+    });
 }
+
+// With captured data (unique_ptr overload for RAII):
+auto data = std::make_unique<MyData>(value, text);
+helix::ui::queue_update(std::move(data), [](MyData* d) {
+    lv_subject_set_int(&my_subject, d->value);
+    // d is automatically deleted after callback
+});
 ```
 
-**Why `ui_async_call()` not `lv_async_call()`?** LVGL's native `lv_async_call()` can fire *during* the render phase, causing assertion failures. Our `ui_async_call()` uses `LV_EVENT_REFR_START` to guarantee execution *before* rendering begins.
+**Why `helix::ui::queue_update()` not `lv_async_call()`?** LVGL's native `lv_async_call()` can fire *during* the render phase, causing assertion failures. Our `queue_update()` processes all queued lambdas at the START of each `lv_timer_handler()` cycle, *before* rendering begins.
 
 **Reference Implementation:** See `printer_state.cpp` for the `set_*_internal()` pattern used by:
 - `set_printer_capabilities()` → `set_printer_capabilities_internal()`
@@ -850,11 +870,11 @@ void handle_ui_event(lv_event_t* e) {
 }
 ```
 
-### Backend Integration Pattern: ui_async_call()
+### Backend Integration Pattern: helix::ui::queue_update()
 
 **Problem:** Backend threads (networking, file I/O, WiFi scanning) need to update UI but cannot call LVGL APIs directly.
 
-**Solution:** Use `ui_async_call()` to marshal widget updates to the main thread:
+**Solution:** Use `helix::ui::queue_update()` to marshal widget updates to the main thread:
 
 ```cpp
 #include "ui_update_queue.h"
@@ -864,36 +884,25 @@ void WiFiManager::handle_scan_complete(const std::string& data) {
     // Parse results (safe - no LVGL calls)
     auto networks = parse_networks(data);
 
-    // Create data for dispatch
-    struct CallbackData {
-        std::vector<WiFiNetwork> networks;
-        std::function<void(const std::vector<WiFiNetwork>&)> callback;
-    };
-    auto* cb_data = new CallbackData{networks, scan_callback_};
-
     // Dispatch to LVGL main thread (safe - runs before render)
-    ui_async_call([](void* user_data) {
-        auto* data = static_cast<CallbackData*>(user_data);
-
+    helix::ui::queue_update([networks = std::move(networks), cb = scan_callback_]() {
         // NOW safe to create/modify widgets
-        data->callback(data->networks);  // Calls populate_network_list()
-
-        delete data;  // Clean up
-    }, cb_data);
+        cb(networks);  // Calls populate_network_list()
+    });
 }
 ```
 
 **Key Points:**
-1. **Backend thread:** Parse data, prepare callback data structure
-2. **ui_async_call():** Queues callback to execute on main thread BEFORE rendering
-3. **Main thread callback:** Creates/modifies widgets safely
-4. **Memory management:** Heap-allocate data, delete in callback
+1. **Backend thread:** Parse data, capture into lambda
+2. **`helix::ui::queue_update()`:** Queues lambda for main thread, runs BEFORE rendering
+3. **Main thread lambda:** Creates/modifies widgets safely
+4. **Memory management:** Lambda captures handle lifetime automatically
 
 **Without this pattern:** Race conditions, segfaults, undefined behavior when backend thread creates widgets while LVGL is rendering.
 
 **Reference Implementation:** `src/api/wifi_manager.cpp` (all event handlers use this pattern)
 
-### When to Use ui_async_call()
+### When to Use helix::ui::queue_update()
 
 ✅ **ALWAYS use when on a background thread and:**
 - Need to create/modify widgets (`lv_obj_*()` functions)
@@ -907,13 +916,13 @@ void WiFiManager::handle_scan_complete(const std::string& data) {
 - Pure computation with no LVGL calls at all
 - Just logging or updating non-LVGL state
 
-**Key insight:** If you're in a callback from libhv, std::thread, or any networking library, assume you're on a background thread and use `ui_async_call()`.
+**Key insight:** If you're in a callback from libhv, std::thread, or any networking library, assume you're on a background thread and use `helix::ui::queue_update()`.
 
 ### Multi-Backend AmsState Coordination
 
-`AmsState` uses a `std::recursive_mutex` to protect the `backends_` vector and all backend operations. When a backend emits an event on a background thread, the handler acquires the mutex, reads backend state, then posts subject updates via `ui_async_call()`. Each backend's event callback captures its index at registration time, so events are routed to the correct per-backend subject storage without ambiguity.
+`AmsState` uses a `std::recursive_mutex` to protect the `backends_` vector and all backend operations. When a backend emits an event on a background thread, the handler acquires the mutex, reads backend state, then posts subject updates via `helix::ui::queue_update()`. Each backend's event callback captures its index at registration time, so events are routed to the correct per-backend subject storage without ambiguity.
 
-For secondary backends (index 1+), slot subjects live in `BackendSlotSubjects` structs rather than the flat `slot_colors_[]`/`slot_statuses_[]` arrays. The `sync_backend(int)` and `update_slot_for_backend(int, int)` methods handle this routing. All subject writes happen on the LVGL thread via `ui_async_call()`, so no additional synchronization is needed for the subject values themselves.
+For secondary backends (index 1+), slot subjects live in `BackendSlotSubjects` structs rather than the flat `slot_colors_[]`/`slot_statuses_[]` arrays. The `sync_backend(int)` and `update_slot_for_backend(int, int)` methods handle this routing. All subject writes happen on the LVGL thread via `helix::ui::queue_update()`, so no additional synchronization is needed for the subject values themselves.
 
 ## Sensor Framework
 
@@ -940,7 +949,7 @@ Managers implement only the discovery methods for their data source.
 ⚠️ Moonraker callbacks run on libhv's thread, NOT the main LVGL thread.
 
 - `discover*()`, `load_config()`, `set_sensor_*()` → Main thread only
-- `update_from_status()` → Thread-safe (mutex + ui_async_call)
+- `update_from_status()` → Thread-safe (mutex + helix::ui::queue_update)
 - `save_config()` → Thread-safe (read-only with mutex)
 
 ## LVGL Configuration
@@ -1166,7 +1175,7 @@ Full spool lifecycle management via Spoolman integration:
 
 API calls route through `server.spoolman.proxy` JSON-RPC via Moonraker. The wizard supports dual-source vendor/filament data (server + SpoolmanDB external catalog) with deduplication. Creation is atomic with best-effort rollback.
 
-Gated behind beta features (`show_beta_features` subject).
+Spoolman is now decoupled from AMS backends — spool assignments are tracked per-tool via `ToolState` with persistence to `config/tool_spools.json`. This allows Spoolman to work independently of any filament changer hardware.
 
 ### Config Migration System
 
@@ -1220,7 +1229,7 @@ Theme-aware markdown rendering widget registered as an XML custom component:
 
 Async update checking and in-place installation system:
 
-- **UpdateChecker** - Singleton that checks GitHub releases API and R2 CDN for newer versions. Rate-limited to 1 check per hour. Background thread for HTTP, results marshaled to LVGL thread via `ui_async_call()`.
+- **UpdateChecker** - Singleton that checks GitHub releases API and R2 CDN for newer versions. Rate-limited to 1 check per hour. Background thread for HTTP, results marshaled to LVGL thread via `helix::ui::queue_update()`.
 - **Three update channels** - Stable (GitHub releases), Beta (pre-releases), Dev (custom URL)
 - **Download pipeline** - Confirm -> Download -> Verify (SHA-256 + ELF architecture validation) -> Install (`install.sh`)
 - **Safety guards** - Downloads blocked during active prints, explicit user confirmation required
@@ -1323,7 +1332,7 @@ This is correct - `str` contains an actual hex value from XML, not a token name.
 spdlog may be destroyed during static destruction. Use `fprintf(stderr, ...)` in destructors of static/global objects.
 
 ### 8. Async Context new/delete
-`ui_async_call()` requires heap-allocated context structs for thread marshaling. The async callback must `delete` the context.
+`helix::ui::queue_update()` with the `unique_ptr` overload handles memory automatically. The raw lambda overload captures by value or move, avoiding manual `new`/`delete`.
 
 ### 9. CLI printf
 Code in `cli_args.cpp` runs before logging infrastructure is initialized - printf is acceptable.
