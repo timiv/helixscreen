@@ -832,21 +832,18 @@ bool UpdateChecker::validate_elf_architecture(const std::string& tarball_path) {
     auto ret =
         safe_exec({"tar", "xzf", tarball_path, "-C", temp_dir, "helixscreen/bin/helix-screen"});
     if (ret != 0) {
-        // BusyBox tar may not support -z; decompress first, then extract
-        std::string uncompressed = tarball_path + ".tar";
-        ret = safe_exec({"gunzip", "-k", "-f", tarball_path});
-        if (ret == 0) {
-            // gunzip -k creates tarball_path without .gz → need to find it
-            // Actually gunzip -k keeps original, output is input minus .gz suffix
-            // But our file ends in .tar.gz, so output is .tar
-            std::string tar_path = tarball_path;
-            auto gz_pos = tar_path.rfind(".gz");
-            if (gz_pos != std::string::npos) {
-                tar_path = tar_path.substr(0, gz_pos);
+        // BusyBox tar may not support -z; copy + gunzip -f + tar (no -k needed)
+        // gunzip -k (keep-original) is absent on older BusyBox — use cp instead.
+        std::string tmp_copy = temp_dir + "/tmp_copy.tar.gz";
+        if (safe_exec({"cp", tarball_path, tmp_copy}) == 0) {
+            if (safe_exec({"gunzip", "-f", tmp_copy}) == 0) {
+                std::string tmp_tar = temp_dir + "/tmp_copy.tar";
+                ret = safe_exec(
+                    {"tar", "xf", tmp_tar, "-C", temp_dir, "helixscreen/bin/helix-screen"});
+                std::remove(tmp_tar.c_str());
+            } else {
+                std::remove(tmp_copy.c_str());
             }
-            ret =
-                safe_exec({"tar", "xf", tar_path, "-C", temp_dir, "helixscreen/bin/helix-screen"});
-            std::remove(tar_path.c_str()); // Clean up decompressed tarball
         }
         if (ret != 0) {
             spdlog::warn("[UpdateChecker] Could not extract binary for validation, skipping");
@@ -926,28 +923,8 @@ void UpdateChecker::do_install(const std::string& tarball_path) {
 
     mkdir(extracted_dir.c_str(), 0750);
 
-    // Try tar xzf first (GNU tar), fall back to gunzip+tar (BusyBox)
-    std::string tar_member = std::string("helixscreen/") + INSTALLER_FILENAME;
-    auto ext_ret = safe_exec({"tar", "xzf", tarball_path, "-C", extracted_dir, tar_member});
-    if (ext_ret != 0) {
-        // BusyBox tar may not support -z; decompress then extract
-        std::string tar_path = tarball_path;
-        auto gz_pos = tar_path.rfind(".gz");
-        if (gz_pos != std::string::npos) {
-            tar_path = tar_path.substr(0, gz_pos);
-        }
-        // gunzip -k keeps original, creates .tar
-        if (safe_exec({"gunzip", "-k", "-f", tarball_path}) == 0) {
-            ext_ret = safe_exec({"tar", "xf", tar_path, "-C", extracted_dir, tar_member});
-            std::remove(tar_path.c_str());
-        }
-    }
-
-    std::string extracted_installer = extracted_dir + "/helixscreen/" + INSTALLER_FILENAME;
-    if (ext_ret == 0 && access(extracted_installer.c_str(), R_OK) == 0) {
-        // Make executable
-        chmod(extracted_installer.c_str(), 0755);
-        install_script = extracted_installer;
+    install_script = extract_installer_from_tarball(tarball_path, extracted_dir);
+    if (!install_script.empty()) {
         extracted_from_tarball = true;
         spdlog::info("[UpdateChecker] Using installer extracted from update tarball");
     } else {
@@ -997,6 +974,41 @@ void UpdateChecker::do_install(const std::string& tarball_path) {
 // ============================================================================
 // Static helpers
 // ============================================================================
+
+std::string UpdateChecker::extract_installer_from_tarball(const std::string& tarball_path,
+                                                          const std::string& extract_dir) {
+    std::string tar_member = std::string("helixscreen/") + INSTALLER_FILENAME;
+
+    // Try GNU tar first (handles -z natively on most systems)
+    auto ext_ret = safe_exec({"tar", "xzf", tarball_path, "-C", extract_dir, tar_member});
+
+    if (ext_ret != 0) {
+        // BusyBox tar may not support the -z flag for gzip decompression.
+        // Fallback: copy the tarball and decompress the copy with gunzip -f.
+        // We deliberately avoid gunzip -k (keep-original) because that flag is
+        // absent from older BusyBox gunzip builds (pre-1.30 era), which is exactly
+        // the environment where we need this fallback to succeed.
+        std::string tmp_copy = extract_dir + "/tmp_copy.tar.gz";
+        if (safe_exec({"cp", tarball_path, tmp_copy}) == 0) {
+            // gunzip -f: decompress in-place, strips .gz suffix, no -k needed
+            if (safe_exec({"gunzip", "-f", tmp_copy}) == 0) {
+                std::string tmp_tar = extract_dir + "/tmp_copy.tar";
+                ext_ret = safe_exec({"tar", "xf", tmp_tar, "-C", extract_dir, tar_member});
+                std::remove(tmp_tar.c_str());
+            } else {
+                std::remove(tmp_copy.c_str()); // clean up if decompression failed
+            }
+        }
+    }
+
+    std::string installer = extract_dir + "/helixscreen/" + INSTALLER_FILENAME;
+    if (ext_ret == 0 && access(installer.c_str(), R_OK) == 0) {
+        chmod(installer.c_str(), 0755);
+        return installer;
+    }
+
+    return "";
+}
 
 std::string
 UpdateChecker::find_local_installer(const std::vector<std::string>& extra_search_paths) {
