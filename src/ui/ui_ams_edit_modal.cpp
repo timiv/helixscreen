@@ -1119,9 +1119,7 @@ void AmsEditModal::register_callbacks() {
     lv_xml_register_event_cb(nullptr, "ams_edit_manual_entry_cb", on_manual_entry_cb);
     lv_xml_register_event_cb(nullptr, "ams_edit_change_spool_cb", on_change_spool_cb);
     lv_xml_register_event_cb(nullptr, "ams_edit_unlink_cb", on_unlink_cb);
-    // Register handler for spool_item clicks (shared component uses this callback name).
-    // This overrides AmsSpoolmanPicker's registration for the same name, which is
-    // intentional since the standalone picker is being absorbed (see Task 9).
+    // Register handler for spool_item clicks (shared component uses this callback name)
     lv_xml_register_event_cb(nullptr, "spoolman_spool_item_clicked_cb", on_spool_item_cb);
 
     callbacks_registered_ = true;

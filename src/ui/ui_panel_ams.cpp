@@ -112,7 +112,6 @@ static void ensure_ams_widgets_registered() {
     helix::ui::get_ams_device_operations_overlay().register_callbacks();
 
     // Context menu callbacks registered by helix::ui::AmsContextMenu class
-    // Spoolman picker callbacks registered by helix::ui::AmsSpoolmanPicker class
     // Edit modal and color picker callbacks registered by helix::ui::AmsEditModal class
 
     // Register XML components (dryer card must be registered before ams_panel since it's used
@@ -127,7 +126,6 @@ static void ensure_ams_widgets_registered() {
     lv_xml_register_component_from_file("A:ui_xml/ams_context_menu.xml");
     lv_xml_register_component_from_file("A:ui_xml/ams_slot_edit_popup.xml");
     lv_xml_register_component_from_file("A:ui_xml/spoolman_spool_item.xml");
-    lv_xml_register_component_from_file("A:ui_xml/spoolman_picker_modal.xml");
     lv_xml_register_component_from_file("A:ui_xml/ams_edit_modal.xml");
     lv_xml_register_component_from_file("A:ui_xml/ams_loading_error_modal.xml");
     // NOTE: color_picker.xml is registered at startup in xml_registration.cpp
@@ -193,9 +191,7 @@ static void on_settings_clicked_xml(lv_event_t* e) {
 }
 
 // Dryer card callbacks now handled by helix::ui::AmsDryerCard class
-// Context menu and spoolman picker callbacks now handled by extracted classes:
-// - helix::ui::AmsContextMenu (ui_ams_context_menu.cpp)
-// - helix::ui::AmsSpoolmanPicker (ui_ams_spoolman_picker.cpp)
+// Context menu callbacks handled by helix::ui::AmsContextMenu class
 // Edit modal callbacks handled by helix::ui::AmsEditModal class
 
 // ============================================================================
@@ -292,7 +288,6 @@ void AmsPanel::init_subjects() {
 
     // UI module subjects are now encapsulated in their respective classes:
     // - helix::ui::AmsEditModal
-    // - helix::ui::AmsSpoolmanPicker
     // - helix::ui::AmsColorPicker
 
     subjects_initialized_ = true;
@@ -442,7 +437,6 @@ void AmsPanel::on_deactivate() {
 void AmsPanel::clear_panel_reference() {
     // Reset extracted UI modules (they handle their own RAII cleanup)
     dryer_card_.reset();
-    spoolman_picker_.reset();
     context_menu_.reset();
     slot_edit_popup_.reset();
     edit_modal_.reset();
@@ -1741,10 +1735,6 @@ void AmsPanel::show_context_menu(int slot_index, lv_obj_t* near_widget, lv_point
                 show_edit_modal(slot);
                 break;
 
-            case helix::ui::AmsContextMenu::MenuAction::SPOOLMAN:
-                show_spoolman_picker(slot);
-                break;
-
             case helix::ui::AmsContextMenu::MenuAction::CANCELLED:
             default:
                 break;
@@ -1811,97 +1801,6 @@ void AmsPanel::show_slot_edit_popup(int slot_index, lv_obj_t* near_widget) {
 
     // Show the popup near the slot widget
     slot_edit_popup_->show_for_slot(parent_screen_, slot_index, near_widget, backend);
-}
-
-// ============================================================================
-// Spoolman Picker Management (delegates to helix::ui::AmsSpoolmanPicker)
-// ============================================================================
-
-void AmsPanel::show_spoolman_picker(int slot_index) {
-    if (!parent_screen_) {
-        spdlog::warn("[{}] Cannot show picker - no parent screen", get_name());
-        return;
-    }
-
-    // Create picker on first use
-    if (!spoolman_picker_) {
-        spoolman_picker_ = std::make_unique<helix::ui::AmsSpoolmanPicker>();
-    }
-
-    // Get current spoolman_id for this slot
-    int current_spool_id = 0;
-    AmsBackend* backend = AmsState::instance().get_backend();
-    if (backend) {
-        SlotInfo slot_info = backend->get_slot_info(slot_index);
-        current_spool_id = slot_info.spoolman_id;
-    }
-
-    // Set callback to handle picker results
-    spoolman_picker_->set_completion_callback(
-        [this](const helix::ui::AmsSpoolmanPicker::PickerResult& result) {
-            AmsBackend* backend = AmsState::instance().get_backend();
-            if (!backend) {
-                return;
-            }
-
-            switch (result.action) {
-            case helix::ui::AmsSpoolmanPicker::PickerAction::ASSIGN: {
-                // Enrich slot with Spoolman data
-                SlotInfo slot_info = backend->get_slot_info(result.slot_index);
-                slot_info.spoolman_id = result.spool_id;
-
-                const SpoolInfo& spool = result.spool_info;
-                slot_info.color_name = spool.color_name;
-                slot_info.material = spool.material;
-                slot_info.brand = spool.vendor;
-                slot_info.spool_name = spool.vendor + " " + spool.material;
-                slot_info.remaining_weight_g = static_cast<float>(spool.remaining_weight_g);
-                slot_info.total_weight_g = static_cast<float>(spool.initial_weight_g);
-                slot_info.nozzle_temp_min = spool.nozzle_temp_min;
-                slot_info.nozzle_temp_max = spool.nozzle_temp_max;
-                slot_info.bed_temp = spool.bed_temp_recommended;
-
-                // Parse color hex to RGB
-                if (!spool.color_hex.empty()) {
-                    std::string hex = spool.color_hex;
-                    if (hex[0] == '#') {
-                        hex = hex.substr(1);
-                    }
-                    try {
-                        slot_info.color_rgb = static_cast<uint32_t>(std::stoul(hex, nullptr, 16));
-                    } catch (...) {
-                        spdlog::warn("[AmsPanel] Failed to parse color hex: {}", spool.color_hex);
-                    }
-                }
-
-                backend->set_slot_info(result.slot_index, slot_info);
-                AmsState::instance().sync_from_backend();
-                refresh_slots();
-                NOTIFY_INFO("Spool assigned to Slot {}", result.slot_index + 1);
-                break;
-            }
-
-            case helix::ui::AmsSpoolmanPicker::PickerAction::UNLINK: {
-                SlotInfo slot_info = backend->get_slot_info(result.slot_index);
-                slot_info.spoolman_id = 0;
-                slot_info.spool_name.clear();
-                slot_info.remaining_weight_g = -1;
-                slot_info.total_weight_g = -1;
-                backend->set_slot_info(result.slot_index, slot_info);
-                AmsState::instance().sync_from_backend();
-                refresh_slots();
-                NOTIFY_INFO("Slot {} assignment cleared", result.slot_index + 1);
-                break;
-            }
-
-            case helix::ui::AmsSpoolmanPicker::PickerAction::CANCELLED:
-            default:
-                break;
-            }
-        });
-
-    // Show the picker
-    spoolman_picker_->show_for_slot(parent_screen_, slot_index, current_spool_id, api_);
 }
 
 // ============================================================================
