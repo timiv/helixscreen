@@ -93,51 +93,14 @@ void remove_variant_styles(lv_obj_t* obj) {
 void apply_variant_text_style(lv_obj_t* obj, Variant v) {
     remove_variant_styles(obj);
 
-    auto& tm = ThemeManager::instance();
-    lv_style_t* style = nullptr;
-    lv_opa_t opa = LV_OPA_COVER;
+    lv_color_t color = variant_color(v);
+    lv_opa_t opa = variant_opa(v);
 
-    switch (v) {
-    case Variant::TEXT:
-    case Variant::NONE:
-        style = tm.get_style(StyleRole::IconText);
-        break;
-    case Variant::MUTED:
-        style = tm.get_style(StyleRole::TextMuted);
-        break;
-    case Variant::PRIMARY:
-        style = tm.get_style(StyleRole::IconPrimary);
-        break;
-    case Variant::SECONDARY:
-        style = tm.get_style(StyleRole::IconSecondary);
-        break;
-    case Variant::TERTIARY:
-        style = tm.get_style(StyleRole::IconTertiary);
-        break;
-    case Variant::DISABLED:
-        style = tm.get_style(StyleRole::IconText);
-        opa = LV_OPA_50;
-        break;
-    case Variant::SUCCESS:
-        style = tm.get_style(StyleRole::IconSuccess);
-        break;
-    case Variant::WARNING:
-        style = tm.get_style(StyleRole::IconWarning);
-        break;
-    case Variant::DANGER:
-        style = tm.get_style(StyleRole::IconDanger);
-        break;
-    case Variant::INFO:
-        style = tm.get_style(StyleRole::IconInfo);
-        break;
-    }
-
-    if (style) {
-        lv_obj_add_style(obj, style, LV_PART_MAIN);
-    }
-    if (opa != LV_OPA_COVER) {
-        lv_obj_set_style_text_opa(obj, opa, LV_PART_MAIN);
-    }
+    // Use local style (lv_obj_set_style_*) instead of adding style to ensure
+    // variant has highest priority, even when lv_xml_obj_apply() or other
+    // functions set local style properties (like text_font).
+    lv_obj_set_style_text_color(obj, color, LV_PART_MAIN);
+    lv_obj_set_style_text_opa(obj, opa, LV_PART_MAIN);
 }
 
 } // namespace helix::ui
