@@ -280,6 +280,68 @@
     <string name="icon_font_xl_medium" value="mdi_icons_64"/>
     <string name="icon_font_xl_large" value="mdi_icons_64"/>
     <!-- NO BASE icon_font_xl - registered at runtime -->
+    <!-- ===================================================================== -->
+    <!-- Switch Sizing - Responsive Toggle Switch Dimensions (2D Matrix)       -->
+    <!-- ===================================================================== -->
+    <!-- Format: switch_{property}_{size}_{breakpoint}
+         - property: width/height/knob_pad
+         - size: tiny/small/medium/large (semantic size from size="" attribute)
+         - breakpoint: small/medium/large (screen resolution breakpoint)
+         Runtime selects via theme_manager based on screen + requested size -->
+
+    <!-- SMALL screens (≤480px: 480x320, Pi 3.5" displays) -->
+    <!-- tiny size on small screens -->
+    <px name="switch_width_tiny_small" value="32"/>
+    <px name="switch_height_tiny_small" value="16"/>
+    <px name="switch_knob_pad_tiny_small" value="1"/>
+    <!-- small size on small screens -->
+    <px name="switch_width_small_small" value="40"/>
+    <px name="switch_height_small_small" value="20"/>
+    <px name="switch_knob_pad_small_small" value="1"/>
+    <!-- medium size on small screens -->
+    <px name="switch_width_medium_small" value="48"/>
+    <px name="switch_height_medium_small" value="24"/>
+    <px name="switch_knob_pad_medium_small" value="2"/>
+    <!-- large size on small screens -->
+    <px name="switch_width_large_small" value="56"/>
+    <px name="switch_height_large_small" value="28"/>
+    <px name="switch_knob_pad_large_small" value="2"/>
+
+    <!-- MEDIUM screens (481-800px: 800x480, Pi 7" displays) -->
+    <!-- tiny size on medium screens -->
+    <px name="switch_width_tiny_medium" value="48"/>
+    <px name="switch_height_tiny_medium" value="24"/>
+    <px name="switch_knob_pad_tiny_medium" value="2"/>
+    <!-- small size on medium screens -->
+    <px name="switch_width_small_medium" value="64"/>
+    <px name="switch_height_small_medium" value="32"/>
+    <px name="switch_knob_pad_small_medium" value="2"/>
+    <!-- medium size on medium screens -->
+    <px name="switch_width_medium_medium" value="80"/>
+    <px name="switch_height_medium_medium" value="40"/>
+    <px name="switch_knob_pad_medium_medium" value="3"/>
+    <!-- large size on medium screens -->
+    <px name="switch_width_large_medium" value="88"/>
+    <px name="switch_height_large_medium" value="44"/>
+    <px name="switch_knob_pad_large_medium" value="3"/>
+
+    <!-- LARGE screens (>800px: 1024x600+, desktop/large displays) -->
+    <!-- tiny size on large screens -->
+    <px name="switch_width_tiny_large" value="64"/>
+    <px name="switch_height_tiny_large" value="32"/>
+    <px name="switch_knob_pad_tiny_large" value="2"/>
+    <!-- small size on large screens -->
+    <px name="switch_width_small_large" value="88"/>
+    <px name="switch_height_small_large" value="40"/>
+    <px name="switch_knob_pad_small_large" value="3"/>
+    <!-- medium size on large screens -->
+    <px name="switch_width_medium_large" value="112"/>
+    <px name="switch_height_medium_large" value="48"/>
+    <px name="switch_knob_pad_medium_large" value="4"/>
+    <!-- large size on large screens -->
+    <px name="switch_width_large_large" value="128"/>
+    <px name="switch_height_large_large" value="56"/>
+    <px name="switch_knob_pad_large_large" value="4"/>
 
     <!-- Step progress colors (wizard steps) -->
     <color name="step_pending" value="#4c566a"/>

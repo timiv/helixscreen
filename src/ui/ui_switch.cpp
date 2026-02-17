@@ -18,7 +18,7 @@
 
 /**
  * Size preset bundles for ui_switch
- * Maps semantic size names to dimension values (screen-size-aware)
+ * Maps semantic size names to dimension values (queried from XML constants)
  */
 struct SwitchSizePreset {
     int32_t width;
@@ -28,68 +28,98 @@ struct SwitchSizePreset {
     int32_t horiz_margin; // Horizontal margin for knob extending past track edges
 };
 
-// Presets populated by ui_switch_init_size_presets() based on screen dimensions
-static SwitchSizePreset SIZE_TINY;
-static SwitchSizePreset SIZE_SMALL;
-static SwitchSizePreset SIZE_MEDIUM;
-static SwitchSizePreset SIZE_LARGE;
+/**
+ * Query a switch size constant from XML and calculate margins
+ * Returns dimension value, or fallback if constant not found
+ * Margins are calculated as ~25% of height for knob overflow
+ */
+static int32_t get_switch_dimension(const char* const_name, int32_t fallback) {
+    const char* value_str = lv_xml_get_const(nullptr, const_name);
+    if (!value_str) {
+        spdlog::warn("[Switch] Constant '{}' not found, using fallback {}", const_name, fallback);
+        return fallback;
+    }
+
+    int32_t value = lv_xml_atoi(value_str);
+    spdlog::trace("[Switch] Loaded constant '{}' = {}px", const_name, value);
+    return value;
+}
 
 /**
- * Initialize size presets based on screen dimensions
- * Called once at startup from ui_switch_register()
+ * Determine screen breakpoint suffix based on display resolution
+ * Returns "_small", "_medium", or "_large"
  */
-static void ui_switch_init_size_presets() {
-    // Use custom breakpoints optimized for our hardware: max(hor_res, ver_res)
+static const char* get_breakpoint_suffix() {
     lv_display_t* display = lv_display_get_default();
+    if (!display) {
+        return "_medium"; // Fallback
+    }
+
     int32_t hor_res = lv_display_get_horizontal_resolution(display);
     int32_t ver_res = lv_display_get_vertical_resolution(display);
-    int32_t greater_res = LV_MAX(hor_res, ver_res);
+    int32_t greater_res = (hor_res > ver_res) ? hor_res : ver_res;
 
-    // Margin calculation: knob extends ~25% beyond track on each side
-    // vert_margin = height * 0.25 (rounded up)
-    // horiz_margin = similar, but knob extends horizontally too
-    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) { // ≤480: 480x320
-        SIZE_TINY = {32, 16, 1, 4, 4};
-        SIZE_SMALL = {40, 20, 1, 5, 5};
-        SIZE_MEDIUM = {48, 24, 2, 6, 6};
-        SIZE_LARGE = {56, 28, 2, 7, 7};
-        spdlog::trace("[Switch] Initialized SMALL screen presets (greater_res={}px)", greater_res);
-    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) { // 481-800: 800x480
-        SIZE_TINY = {48, 24, 2, 6, 6};
-        SIZE_SMALL = {64, 32, 2, 8, 8};
-        SIZE_MEDIUM = {80, 40, 3, 10, 10};
-        SIZE_LARGE = {88, 44, 3, 11, 11};
-        spdlog::trace("[Switch] Initialized MEDIUM screen presets (greater_res={}px)", greater_res);
-    } else { // >800: 1024x600+
-        SIZE_TINY = {64, 32, 2, 8, 8};
-        SIZE_SMALL = {88, 40, 3, 10, 10};
-        SIZE_MEDIUM = {112, 48, 4, 12, 12};
-        SIZE_LARGE = {128, 56, 4, 14, 14};
-        spdlog::trace("[Switch] Initialized LARGE screen presets (greater_res={}px)", greater_res);
+    // Match original breakpoint logic
+    if (greater_res <= 480) {
+        return "_small";
+    } else if (greater_res <= 800) {
+        return "_medium";
+    } else {
+        return "_large";
     }
 }
 
 /**
- * Parse size string to SwitchSizePreset
+ * Build a size preset by querying responsive constants (2D matrix)
+ * size_suffix: "_tiny", "_small", "_medium", or "_large" (semantic size)
+ * Combines with screen breakpoint to query: switch_{property}_{size}_{breakpoint}
+ */
+static SwitchSizePreset build_size_preset(const char* size_suffix) {
+    const char* breakpoint_suffix = get_breakpoint_suffix();
+
+    char width_const[64], height_const[64], knob_pad_const[64];
+    snprintf(width_const, sizeof(width_const), "switch_width%s%s", size_suffix, breakpoint_suffix);
+    snprintf(height_const, sizeof(height_const), "switch_height%s%s", size_suffix,
+             breakpoint_suffix);
+    snprintf(knob_pad_const, sizeof(knob_pad_const), "switch_knob_pad%s%s", size_suffix,
+             breakpoint_suffix);
+
+    int32_t width = get_switch_dimension(width_const, 40);
+    int32_t height = get_switch_dimension(height_const, 20);
+    int32_t knob_pad = get_switch_dimension(knob_pad_const, 1);
+
+    // Calculate margins: knob extends ~25% beyond track on each side
+    int32_t vert_margin = (height + 3) / 4; // height * 0.25, rounded up
+    int32_t horiz_margin = vert_margin;     // Same for horizontal overflow
+
+    spdlog::trace("[Switch] Built preset: size={}, breakpoint={} -> {}x{}, pad={}", size_suffix,
+                  breakpoint_suffix, width, height, knob_pad);
+
+    return {width, height, knob_pad, vert_margin, horiz_margin};
+}
+
+/**
+ * Parse size string to SwitchSizePreset by querying XML constants
  * Returns true if valid size found, false otherwise
  */
 static bool parse_size_preset(const char* size_str, SwitchSizePreset* out_preset) {
+    const char* suffix = nullptr;
+
     if (strcmp(size_str, "tiny") == 0) {
-        *out_preset = SIZE_TINY;
-        return true;
+        suffix = "_tiny";
     } else if (strcmp(size_str, "small") == 0) {
-        *out_preset = SIZE_SMALL;
-        return true;
+        suffix = "_small";
     } else if (strcmp(size_str, "medium") == 0) {
-        *out_preset = SIZE_MEDIUM;
-        return true;
+        suffix = "_medium";
     } else if (strcmp(size_str, "large") == 0) {
-        *out_preset = SIZE_LARGE;
-        return true;
+        suffix = "_large";
+    } else {
+        spdlog::warn("[Switch] Invalid size '{}', ignoring preset", size_str);
+        return false;
     }
 
-    spdlog::warn("[Switch] Invalid size '{}', ignoring preset", size_str);
-    return false;
+    *out_preset = build_size_preset(suffix);
+    return true;
 }
 
 /**
@@ -319,87 +349,58 @@ static void ui_switch_xml_apply(lv_xml_parser_state_t* state, const char** attrs
  * Register responsive constants for switch sizing based on screen dimensions
  * Call this BEFORE registering XML components that use switches
  */
+/**
+ * Register test panel-specific constants
+ *
+ * Queries responsive switch dimensions (2D matrix) and creates test panel
+ * aliases plus computed values like row heights.
+ *
+ * Called once at startup from xml_registration.cpp
+ */
 void ui_switch_register_responsive_constants() {
-    spdlog::trace("[Switch] Registering responsive constants");
+    spdlog::trace("[Switch] Registering test panel responsive constants");
 
-    // Use custom breakpoints optimized for our hardware: max(hor_res, ver_res)
+    // Determine current screen breakpoint
+    const char* breakpoint_suffix = get_breakpoint_suffix();
+
+    // Query default switch size (small size for current breakpoint)
+    char width_const[64], height_const[64], knob_pad_const[64];
+    snprintf(width_const, sizeof(width_const), "switch_width_small%s", breakpoint_suffix);
+    snprintf(height_const, sizeof(height_const), "switch_height_small%s", breakpoint_suffix);
+    snprintf(knob_pad_const, sizeof(knob_pad_const), "switch_knob_pad_small%s", breakpoint_suffix);
+
+    const char* switch_width = lv_xml_get_const(nullptr, width_const);
+    const char* switch_height = lv_xml_get_const(nullptr, height_const);
+    const char* knob_pad = lv_xml_get_const(nullptr, knob_pad_const);
+
+    if (!switch_width || !switch_height || !knob_pad) {
+        spdlog::error("[Switch] Responsive constants not found for breakpoint {}",
+                      breakpoint_suffix);
+        return;
+    }
+
+    // Get display for breakpoint detection (for computed values like row heights)
     lv_display_t* display = lv_display_get_default();
-    int32_t hor_res = lv_display_get_horizontal_resolution(display);
     int32_t ver_res = lv_display_get_vertical_resolution(display);
-    int32_t greater_res = LV_MAX(hor_res, ver_res);
 
-    // Switch sizing strategy:
-    // - Knob is square (width = height of switch)
-    // - Knob padding (style_pad_knob_all) adds visual spacing inside switch
-    // - Width = ~2x height to allow knob to slide
-    // - Row height calculation CRITICAL:
-    //   * XML uses style_pad_all="#space_lg" (responsive: 12/16/20px)
-    //   * Total row height = switch_height + (2 * container_padding)
-    //   * Container padding varies by screen size via theme_manager_register_responsive_spacing()
+    // Compute row heights based on switch height + padding
+    // These are test panel specific and can't be in globals.xml
+    int32_t height_val = lv_xml_atoi(switch_height);
+    int32_t row_padding = (ver_res <= 480) ? 20 : (ver_res <= 800) ? 18 : 20;
 
-    const char* switch_width;
-    const char* switch_height;
-    const char* knob_pad;
-    const char* row_height;
-    const char* row_height_large;
-    const char* label_font;
-    const char* label_large_font;
+    char row_height[16], row_height_large[16];
+    snprintf(row_height, sizeof(row_height), "%d", height_val + (2 * row_padding));
+    snprintf(row_height_large, sizeof(row_height_large), "%d", height_val + (2 * row_padding) + 10);
 
-    const char* switch_width_large;
-    const char* switch_height_large;
-    const char* knob_pad_large;
+    // Label fonts for test panel (could be moved to globals.xml if needed elsewhere)
+    const char* label_font = lv_xml_get_const(nullptr, "font_body");
+    const char* label_large_font = lv_xml_get_const(nullptr, "font_heading");
 
-    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) { // ≤480: 480x320
-        switch_height = "20";
-        switch_width = "40";
-        knob_pad = "1";
-        row_height = "60";
-        row_height_large = "70";
-        label_font = "montserrat_12";
-        label_large_font = "montserrat_14";
-
-        // Large variant
-        switch_height_large = "28";
-        switch_width_large = "56";
-        knob_pad_large = "2";
-
-        spdlog::trace("[Switch] Screen: SMALL (greater_res={}px), switch: {}x{}, row: {}px",
-                      greater_res, switch_width, switch_height, row_height);
-    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) { // 481-800: 800x480
-        switch_height = "28";
-        switch_width = "56";
-        knob_pad = "2";
-        row_height = "64";
-        row_height_large = "72";
-        label_font = "montserrat_16";
-        label_large_font = "montserrat_20";
-
-        // Large variant
-        switch_height_large = "44";
-        switch_width_large = "88";
-        knob_pad_large = "3";
-
-        spdlog::trace("[Switch] Screen: MEDIUM (greater_res={}px), switch: {}x{}, row: {}px",
-                      greater_res, switch_width, switch_height, row_height);
-    } else { // >800: 1024x600+
-        // Switch: 44px height, 88px width
-        // Knob: 3px padding
-        // Row: 44 + (2 * 20) = 84px
-        switch_height = "44";
-        switch_width = "88";
-        knob_pad = "6";
-        row_height = "84";
-        row_height_large = "104";
-        label_font = "montserrat_20";
-        label_large_font = lv_xml_get_const(NULL, "font_heading");
-
-        // Large variant
-        switch_height_large = "56";
-        switch_width_large = "112";
-        knob_pad_large = "4";
-
-        spdlog::trace("[Switch] Screen: LARGE (greater_res={}px), switch: {}x{}, row: {}px",
-                      greater_res, switch_width, switch_height, row_height);
+    if (!label_font) {
+        label_font = "montserrat_16"; // Fallback
+    }
+    if (!label_large_font) {
+        label_large_font = "montserrat_20"; // Fallback
     }
 
     // Get globals scope for constant registration
@@ -409,28 +410,44 @@ void ui_switch_register_responsive_constants() {
         return;
     }
 
-    // Register test panel constants
+    // Register test panel aliases (for backward compatibility)
     lv_xml_register_const(scope, "test_switch_width", switch_width);
     lv_xml_register_const(scope, "test_switch_height", switch_height);
     lv_xml_register_const(scope, "test_switch_knob_pad", knob_pad);
+
+    // Register computed test panel constants
     lv_xml_register_const(scope, "test_row_height", row_height);
     lv_xml_register_const(scope, "test_row_height_large", row_height_large);
     lv_xml_register_const(scope, "test_label_font", label_font);
     lv_xml_register_const(scope, "test_label_large_font", label_large_font);
 
-    lv_xml_register_const(scope, "test_switch_width_large", switch_width_large);
-    lv_xml_register_const(scope, "test_switch_height_large", switch_height_large);
-    lv_xml_register_const(scope, "test_switch_knob_pad_large", knob_pad_large);
+    // Large variant aliases (query from 2D matrix)
+    char width_lg[64], height_lg[64], knob_pad_lg[64];
+    snprintf(width_lg, sizeof(width_lg), "switch_width_large%s", breakpoint_suffix);
+    snprintf(height_lg, sizeof(height_lg), "switch_height_large%s", breakpoint_suffix);
+    snprintf(knob_pad_lg, sizeof(knob_pad_lg), "switch_knob_pad_large%s", breakpoint_suffix);
 
-    spdlog::trace("[Switch] Registered constants: {}x{} (pad={}), row={}", switch_width,
-                  switch_height, knob_pad, row_height);
+    const char* switch_width_lg = lv_xml_get_const(nullptr, width_lg);
+    const char* switch_height_lg = lv_xml_get_const(nullptr, height_lg);
+    const char* knob_pad_lg_val = lv_xml_get_const(nullptr, knob_pad_lg);
+
+    if (switch_width_lg)
+        lv_xml_register_const(scope, "test_switch_width_large", switch_width_lg);
+    if (switch_height_lg)
+        lv_xml_register_const(scope, "test_switch_height_large", switch_height_lg);
+    if (knob_pad_lg_val)
+        lv_xml_register_const(scope, "test_switch_knob_pad_large", knob_pad_lg_val);
+
+    spdlog::trace(
+        "[Switch] Registered test constants (breakpoint={}): switch={}x{} (pad={}), row={}",
+        breakpoint_suffix, switch_width, switch_height, knob_pad, row_height);
 }
 
 /**
  * Register the ui_switch widget with LVGL's XML system
  */
 void ui_switch_register() {
-    ui_switch_init_size_presets();
     lv_xml_register_widget("ui_switch", ui_switch_xml_create, ui_switch_xml_apply);
-    spdlog::trace("[Switch] Registered ui_switch widget with XML system");
+    spdlog::trace("[Switch] Registered ui_switch widget with XML system (queries responsive "
+                  "constants at runtime)");
 }
