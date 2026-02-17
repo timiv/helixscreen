@@ -382,7 +382,7 @@ std::string DisplayBackendFbdev::auto_detect_touch_device() const {
     Config* cfg = Config::get_instance();
     auto device_override = cfg->get<std::string>("/input/touch_device", "");
     if (!device_override.empty()) {
-        spdlog::info("[DRM Backend] Using touch device from config: {}", device_override);
+        spdlog::info("[Fbdev Backend] Using touch device from config: {}", device_override);
         return device_override;
     }
 
