@@ -338,6 +338,16 @@ void ControlsPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Wire up card click handlers (cards need manual wiring for navigation)
     setup_card_handlers();
 
+    // Attach heating icon animators for nozzle/bed status visualization
+    if (auto* icon = lv_obj_find_by_name(panel_, "nozzle_heater_icon")) {
+        nozzle_heater_animator_.attach(icon);
+        nozzle_heater_animator_.update(cached_extruder_temp_, cached_extruder_target_);
+    }
+    if (auto* icon = lv_obj_find_by_name(panel_, "bed_heater_icon")) {
+        bed_heater_animator_.attach(icon);
+        bed_heater_animator_.update(cached_bed_temp_, cached_bed_target_);
+    }
+
     // Register observers for live data updates
     register_observers();
 
@@ -508,6 +518,8 @@ void ControlsPanel::update_nozzle_temp_display() {
 
     std::snprintf(nozzle_status_buf_, sizeof(nozzle_status_buf_), "%s", result.status.c_str());
     lv_subject_copy_string(&nozzle_status_subject_, nozzle_status_buf_);
+
+    nozzle_heater_animator_.update(cached_extruder_temp_, cached_extruder_target_);
 }
 
 void ControlsPanel::update_bed_temp_display() {
@@ -520,6 +532,8 @@ void ControlsPanel::update_bed_temp_display() {
 
     std::snprintf(bed_status_buf_, sizeof(bed_status_buf_), "%s", result.status.c_str());
     lv_subject_copy_string(&bed_status_subject_, bed_status_buf_);
+
+    bed_heater_animator_.update(cached_bed_temp_, cached_bed_target_);
 }
 
 void ControlsPanel::update_fan_display() {

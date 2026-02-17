@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "ui_heating_animator.h"
 #include "ui_observer_guard.h"
 #include "ui_panel_base.h"
 #include "ui_print_tune_overlay.h"
@@ -155,6 +156,7 @@ class ControlsPanel : public PanelBase {
     lv_subject_t nozzle_pct_subject_{};
     lv_subject_t nozzle_status_subject_{};
     char nozzle_status_buf_[16] = {};
+    HeatingIconAnimator nozzle_heater_animator_;
 
     // Bed temperature display
     lv_subject_t bed_temp_subject_{};
@@ -162,6 +164,7 @@ class ControlsPanel : public PanelBase {
     lv_subject_t bed_pct_subject_{};
     lv_subject_t bed_status_subject_{};
     char bed_status_buf_[16] = {};
+    HeatingIconAnimator bed_heater_animator_;
 
     // Fan speed display
     lv_subject_t fan_speed_subject_{};
