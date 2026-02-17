@@ -2082,7 +2082,12 @@ extract_release() {
 # Remove backup of previous installation (call after service starts successfully)
 cleanup_old_install() {
     if [ -d "${INSTALL_DIR}.old" ]; then
-        $(file_sudo "${INSTALL_DIR}.old") rm -rf "${INSTALL_DIR}.old"
+        # Always use $SUDO here: deploy_platform_hooks installs platform/hooks.sh as root
+        # (via "$SUDO cp" + "$SUDO chmod"), so the .old directory contains root-owned files
+        # that the service user cannot remove without elevated privileges.
+        # The || true prevents a cleanup failure from failing the entire install -- the
+        # update already succeeded at this point; a leftover .old directory is harmless.
+        $SUDO rm -rf "${INSTALL_DIR}.old" || true
         log_info "Cleaned up previous installation backup"
     fi
 }
