@@ -1132,14 +1132,23 @@ TEST_CASE("Tarball installer extraction creates correct structure", "[update_che
 
 namespace {
 
-// Resolve path to tests/fixtures/update/ using __FILE__ so tests work regardless
-// of the CWD the test binary is run from.
+// Resolve path to tests/fixtures/update/ using __FILE__.
+// __FILE__ may be absolute or relative depending on build system.
 std::string get_update_fixture_dir() {
-    std::string src = __FILE__; // absolute path to this .cpp file
+    std::string src = __FILE__;
+
+    // Handle both absolute (".../tests/unit/...") and relative ("tests/unit/...") paths
     auto pos = src.rfind("/tests/unit/");
-    if (pos == std::string::npos)
-        return "";
-    return src.substr(0, pos) + "/tests/fixtures/update/";
+    if (pos != std::string::npos) {
+        return src.substr(0, pos) + "/tests/fixtures/update/";
+    }
+
+    // Relative path starting with "tests/unit/"
+    if (src.find("tests/unit/") == 0) {
+        return "tests/fixtures/update/";
+    }
+
+    return "";
 }
 
 } // namespace
