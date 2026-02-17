@@ -463,6 +463,16 @@ static void on_click(lv_event_t* e) {
     navigate_to_ams_panel();
 }
 
+/** Size changed callback - rebuild bars when container is resized */
+static void on_size_changed(lv_event_t* e) {
+    lv_obj_t* obj = lv_event_get_target_obj(e);
+    AmsMiniStatusData* data = get_data(obj);
+    if (data && data->slot_count > 0) {
+        spdlog::trace("[AmsMiniStatus] Size changed, rebuilding layout");
+        rebuild_bars(data);
+    }
+}
+
 // ============================================================================
 // Public API
 // ============================================================================
@@ -527,6 +537,9 @@ lv_obj_t* ui_ams_mini_status_create(lv_obj_t* parent, int32_t height) {
     // Make clickable to open AMS panel
     lv_obj_add_flag(container, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(container, on_click, LV_EVENT_CLICKED, nullptr);
+
+    // Handle size changes to reflow layout responsively
+    lv_obj_add_event_cb(container, on_size_changed, LV_EVENT_SIZE_CHANGED, nullptr);
 
     // Initially hidden (no slots)
     lv_obj_add_flag(container, LV_OBJ_FLAG_HIDDEN);
@@ -777,6 +790,9 @@ static void* ui_ams_mini_status_xml_create(lv_xml_parser_state_t* state, const c
     // Make clickable to open AMS panel
     lv_obj_add_flag(container, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(container, on_click, LV_EVENT_CLICKED, nullptr);
+
+    // Handle size changes to reflow layout responsively
+    lv_obj_add_event_cb(container, on_size_changed, LV_EVENT_SIZE_CHANGED, nullptr);
 
     // Initially hidden (no slots)
     lv_obj_add_flag(container, LV_OBJ_FLAG_HIDDEN);
