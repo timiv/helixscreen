@@ -214,8 +214,12 @@ class AmsEditModal : public Modal {
 
     /**
      * @brief Find AmsEditModal instance from event target
+     * Uses static active instance (only one modal can be open at a time)
      */
     static AmsEditModal* get_instance_from_event(lv_event_t* e);
+
+    /// Active instance pointer (set on show, cleared on hide)
+    static AmsEditModal* s_active_instance_;
 };
 
 } // namespace helix::ui

@@ -120,8 +120,8 @@ bool AmsEditModal::show_for_slot(lv_obj_t* parent, int slot_index, const SlotInf
         return false;
     }
 
-    // Store 'this' in modal's user_data for callback traversal
-    lv_obj_set_user_data(dialog_, this);
+    // Set static active instance for callback routing
+    s_active_instance_ = this;
 
     // Determine first view: picker for empty slots with Spoolman, form otherwise
     bool has_spoolman = false;
@@ -198,6 +198,9 @@ void AmsEditModal::on_show() {
 }
 
 void AmsEditModal::on_hide() {
+    // Clear static active instance
+    s_active_instance_ = nullptr;
+
     // Invalidate callback guard to prevent async callbacks from using stale 'this' [L012]
     callback_guard_.reset();
 
@@ -1130,21 +1133,16 @@ void AmsEditModal::register_callbacks() {
 // Static Callbacks (Instance Lookup via User Data)
 // ============================================================================
 
-AmsEditModal* AmsEditModal::get_instance_from_event(lv_event_t* e) {
-    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
+AmsEditModal* AmsEditModal::s_active_instance_ = nullptr;
 
-    // Traverse parent chain to find modal root with user_data
-    lv_obj_t* obj = target;
-    while (obj) {
-        void* user_data = lv_obj_get_user_data(obj);
-        if (user_data) {
-            return static_cast<AmsEditModal*>(user_data);
-        }
-        obj = lv_obj_get_parent(obj);
+AmsEditModal* AmsEditModal::get_instance_from_event(lv_event_t* /*e*/) {
+    // Use static active instance — only one edit modal can be open at a time.
+    // The old parent-walk approach was unsafe: any ancestor with user_data
+    // (e.g., panels, screens) would be miscast as AmsEditModal*.
+    if (!s_active_instance_) {
+        spdlog::warn("[AmsEditModal] Callback fired with no active instance");
     }
-
-    spdlog::warn("[AmsEditModal] Could not find instance from event target");
-    return nullptr;
+    return s_active_instance_;
 }
 
 void AmsEditModal::on_close_cb(lv_event_t* e) {
