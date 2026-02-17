@@ -232,38 +232,7 @@ void FilamentPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     nozzle_current_label_ = lv_obj_find_by_name(panel_, "nozzle_current_temp");
     bed_current_label_ = lv_obj_find_by_name(panel_, "bed_current_temp");
 
-    // Find temp layout widgets for dynamic sizing when AMS is hidden
-    temp_group_ = lv_obj_find_by_name(panel_, "temp_group");
-    temp_graph_card_ = lv_obj_find_by_name(panel_, "temp_graph_card");
-
-    // Subscribe to AMS type to expand temp graph when no AMS present [L020] [L029]
-    ams_type_observer_ = ObserverGuard(
-        AmsState::instance().get_ams_type_subject(),
-        [](lv_observer_t* observer, [[maybe_unused]] lv_subject_t* subject) {
-            auto* self = static_cast<FilamentPanel*>(lv_observer_get_user_data(observer));
-            if (!self || !self->temp_group_ || !self->temp_graph_card_)
-                return;
-
-            ui_async_call(
-                [](void* ctx) {
-                    auto* panel = static_cast<FilamentPanel*>(ctx);
-                    bool has_ams =
-                        (lv_subject_get_int(AmsState::instance().get_ams_type_subject()) != 0);
-
-                    if (has_ams) {
-                        // AMS visible: standard 120px graph
-                        lv_obj_set_height(panel->temp_graph_card_, 120);
-                        lv_obj_set_flex_grow(panel->temp_group_, 0);
-                        lv_obj_set_flex_grow(panel->temp_graph_card_, 0);
-                    } else {
-                        // AMS hidden: expand graph to fill available space
-                        lv_obj_set_flex_grow(panel->temp_group_, 1);
-                        lv_obj_set_flex_grow(panel->temp_graph_card_, 1);
-                    }
-                },
-                self);
-        },
-        this);
+    // Layout is now fully declarative via XML flex_grow - no C++ size overrides needed
 
     // Initialize visual state
     update_preset_buttons_visual();

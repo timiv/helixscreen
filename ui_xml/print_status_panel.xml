@@ -4,16 +4,8 @@
 <component>
   <!-- overlay_bg and overlay_text are theme-aware pairs defined in globals.xml -->
   <consts>
-    <!-- metadata_clip_height: Clip container for print status metadata overlay -->
-    <px name="metadata_clip_height_small" value="95"/>
-    <px name="metadata_clip_height_medium" value="105"/>
-    <px name="metadata_clip_height_large" value="113"/>
     <!-- Thumbnail vertical offset to clear metadata overlay at bottom -->
     <percentage name="thumbnail_offset_y" value="-40%"/>
-    <!-- metadata_overlay_height: Inner metadata overlay (slightly taller than clip) -->
-    <px name="metadata_overlay_height_small" value="101"/>
-    <px name="metadata_overlay_height_medium" value="111"/>
-    <px name="metadata_overlay_height_large" value="119"/>
   </consts>
   <styles>
     <!-- Fully transparent but still takes up layout space -->
@@ -28,8 +20,8 @@
     <header_bar name="overlay_header"
                 title="Print Status" title_tag="Print Status" hide_action_button="false"
                 action_button_icon="alert_octagon" action_button_bg_color="#danger" action_button_radius="9999"
-                action_button_width="44" action_button_height="44" action_button_pad="0" hide_action_button_text="true"
-                action_button_callback="emergency_stop_clicked"/>
+                action_button_width="#button_height_sm" action_button_height="#button_height_sm" action_button_pad="0"
+                hide_action_button_text="true" action_button_callback="emergency_stop_clicked"/>
     <!-- Content Area (two columns: viewer left, controls right) -->
     <lv_obj name="overlay_content"
             width="100%" flex_grow="1" style_pad_left="#space_lg" style_pad_right="#space_lg" style_pad_top="0"
@@ -55,7 +47,8 @@
         <!-- Thumbnail image (shown in thumbnail[0] mode only, hidden in 3D[1] and 2D[2]) -->
         <!-- Image source set programmatically via lv_image_set_src() when thumbnail available -->
         <lv_image name="print_thumbnail"
-                  width="100%" height="100%" align="center" inner_align="contain" style_translate_y="#thumbnail_offset_y">
+                  width="100%" height="100%" align="center" inner_align="contain"
+                  style_translate_y="#thumbnail_offset_y">
           <bind_flag_if_gt subject="gcode_viewer_mode" flag="hidden" ref_value="0"/>
         </lv_image>
 
@@ -85,9 +78,9 @@
 
         <!-- Objects list button: top-left corner, visible only when multi-object print -->
         <lv_obj name="btn_objects"
-                width="36" height="36" align="top_left" style_translate_x="#space_md" style_translate_y="#space_md"
-                style_bg_color="#card_bg" style_bg_opa="180" style_radius="18" clickable="true" style_pad_all="0"
-                scrollable="false">
+                width="#button_height_sm" height="#button_height_sm" align="top_left" style_translate_x="#space_md"
+                style_translate_y="#space_md" style_bg_color="#card_bg" style_bg_opa="180" style_radius="9999"
+                clickable="true" style_pad_all="0" scrollable="false">
           <bind_flag_if_eq subject="exclude_objects_available" flag="hidden" ref_value="0"/>
           <lv_label text="#icon_view_list" style_text_font="mdi_icons_24" style_text_color="#text_muted" align="center"/>
           <event_cb trigger="clicked" callback="on_print_status_objects"/>
@@ -97,8 +90,9 @@
         <!-- Hidden by default. Binding removes hidden ONLY when outcome == COMPLETE (1) -->
         <lv_obj name="print_complete_overlay"
                 width="100%" height="100%" align="top_mid" style_radius="0" style_pad_all="#space_lg"
-                style_pad_bottom="#metadata_clip_height" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-                style_flex_track_place="center" style_pad_gap="#space_sm" scrollable="false" hidden="true">
+                style_pad_bottom="#detail_metadata_clip_height" flex_flow="column" style_flex_main_place="center"
+                style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_sm"
+                scrollable="false" hidden="true">
           <bind_flag_if_not_eq subject="print_outcome" flag="hidden" ref_value="1"/>
           <!-- Green success badge with checkmark (animated on appearance) -->
           <!-- Uses ui_button for auto-contrast text via update_button_text_contrast() -->
@@ -113,8 +107,9 @@
         <!-- Hidden by default. Binding removes hidden ONLY when outcome == CANCELLED (2) -->
         <lv_obj name="print_cancelled_overlay"
                 width="100%" height="100%" align="top_mid" style_radius="0" style_pad_all="#space_lg"
-                style_pad_bottom="#metadata_clip_height" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-                style_flex_track_place="center" style_pad_gap="#space_sm" scrollable="false" hidden="true">
+                style_pad_bottom="#detail_metadata_clip_height" flex_flow="column" style_flex_main_place="center"
+                style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_sm"
+                scrollable="false" hidden="true">
           <bind_flag_if_not_eq subject="print_outcome" flag="hidden" ref_value="2"/>
           <!-- Orange warning badge with cancel icon (animated on appearance) -->
           <!-- Uses ui_button for auto-contrast text via update_button_text_contrast() -->
@@ -129,8 +124,9 @@
         <!-- Hidden by default. Binding removes hidden ONLY when outcome == ERROR (3) -->
         <lv_obj name="print_error_overlay"
                 width="100%" height="100%" align="top_mid" style_radius="0" style_pad_all="#space_lg"
-                style_pad_bottom="#metadata_clip_height" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-                style_flex_track_place="center" style_pad_gap="#space_sm" scrollable="false" hidden="true">
+                style_pad_bottom="#detail_metadata_clip_height_small" flex_flow="column" style_flex_main_place="center"
+                style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_sm"
+                scrollable="false" hidden="true">
           <bind_flag_if_not_eq subject="print_outcome" flag="hidden" ref_value="3"/>
           <!-- Red danger badge with alert icon (animated on appearance) -->
           <!-- Uses ui_button for auto-contrast text via update_button_text_contrast() -->
@@ -143,11 +139,11 @@
 
         <!-- Metadata container - fixed height at bottom, overlaying thumbnail -->
         <lv_obj name="metadata_clip"
-                width="100%" height="#metadata_clip_height" style_radius="0" style_pad_all="0" align="bottom_mid"
-                scrollable="false">
+                width="100%" height="#detail_metadata_clip_height_small" style_radius="0" style_pad_all="0"
+                align="bottom_mid" scrollable="false">
           <!-- Inner overlay with semi-transparent background and rounded corners -->
           <lv_obj name="metadata_overlay"
-                  width="100%" height="#metadata_overlay_height" align="bottom_mid" style_bg_opa="160"
+                  width="100%" height="#detail_metadata_overlay_height" align="bottom_mid" style_bg_opa="160"
                   style_radius="#border_radius" style_pad_left="#space_sm" style_pad_right="#space_sm"
                   style_pad_top="#space_md" style_pad_bottom="#space_md" style_pad_gap="#space_xs" flex_flow="column"
                   scrollable="false">

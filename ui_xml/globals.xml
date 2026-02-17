@@ -33,26 +33,32 @@
          runtime by ui_theme.cpp - do NOT define them here or responsive overrides
          will be silently ignored due to LVGL's lv_xml_register_const() behavior. -->
     <!-- space_xxs: Tiny spacing (keypad rows, compact icon gaps) -->
+    <px name="space_xxs_tiny" value="1"/>
     <px name="space_xxs_small" value="2"/>
     <px name="space_xxs_medium" value="3"/>
     <px name="space_xxs_large" value="4"/>
     <!-- space_xs: Extra small (button icon+text, dense info) -->
+    <px name="space_xs_tiny" value="2"/>
     <px name="space_xs_small" value="4"/>
     <px name="space_xs_medium" value="5"/>
     <px name="space_xs_large" value="6"/>
     <!-- space_sm: Small (tight layouts, minor separations) -->
+    <px name="space_sm_tiny" value="4"/>
     <px name="space_sm_small" value="6"/>
     <px name="space_sm_medium" value="7"/>
     <px name="space_sm_large" value="8"/>
     <!-- space_md: Medium (standard flex gaps, compact padding) -->
+    <px name="space_md_tiny" value="6"/>
     <px name="space_md_small" value="8"/>
     <px name="space_md_medium" value="10"/>
     <px name="space_md_large" value="12"/>
     <!-- space_lg: Large (container padding, major sections) -->
+    <px name="space_lg_tiny" value="8"/>
     <px name="space_lg_small" value="12"/>
     <px name="space_lg_medium" value="16"/>
     <px name="space_lg_large" value="20"/>
     <!-- space_xl: Extra large (emphasis cards, major separations) -->
+    <px name="space_xl_tiny" value="8"/>
     <px name="space_xl_small" value="16"/>
     <px name="space_xl_medium" value="20"/>
     <px name="space_xl_large" value="24"/>
@@ -80,6 +86,7 @@
     <!-- Responsive Badge Sizes (badge_size)                                   -->
     <!-- ===================================================================== -->
     <!-- Small round badge for tool numbers, counts, etc. overlaid on icons -->
+    <px name="badge_size_tiny" value="10"/>
     <px name="badge_size_small" value="16"/>
     <px name="badge_size_medium" value="18"/>
     <px name="badge_size_large" value="20"/>
@@ -179,22 +186,25 @@
     <px name="button_padding" value="12"/>
 
     <!-- Icon buttons, back buttons -->
+    <px name="button_height_sm_tiny" value="22"/>
     <px name="button_height_sm_small" value="36"/>
     <px name="button_height_sm_medium" value="40"/>
     <px name="button_height_sm_large" value="48"/>
-    <px name="button_height_sm" value="40"/>
 
     <!-- button_height is responsive: _small/_medium/_large registered as button_height based on screen size -->
+    <px name="button_height_tiny" value="26"/>
     <px name="button_height_small" value="48"/>
     <px name="button_height_medium" value="52"/>
     <px name="button_height_large" value="72"/>
 
+    <px name="button_height_lg_tiny" value="32"/>
     <px name="button_height_lg_small" value="64"/>
     <px name="button_height_lg_medium" value="70"/>
     <px name="button_height_lg_large" value="96"/>
 
     <!-- Other component dimensions -->
     <!-- header_height is responsive: _small/_medium/_large registered as header_height based on screen height -->
+    <px name="header_height_tiny" value="28"/>
     <px name="header_height_small" value="48"/>
     <px name="header_height_medium" value="56"/>
     <px name="header_height_large" value="60"/>
@@ -203,14 +213,17 @@
     <!-- Responsive Panel Heights (print status, file detail, history)         -->
     <!-- ===================================================================== -->
     <!-- temp_card_height: Temperature card height in print status panel -->
+    <px name="temp_card_height_tiny" value="48"/>
     <px name="temp_card_height_small" value="64"/>
     <px name="temp_card_height_medium" value="72"/>
     <px name="temp_card_height_large" value="80"/>
     <!-- detail_metadata_clip_height: Clip container for print file detail overlay -->
+    <px name="detail_metadata_clip_height_tiny" value="72"/>
     <px name="detail_metadata_clip_height_small" value="92"/>
     <px name="detail_metadata_clip_height_medium" value="112"/>
     <px name="detail_metadata_clip_height_large" value="112"/>
     <!-- detail_metadata_overlay_height: Inner overlay for print file detail -->
+    <px name="detail_metadata_overlay_height_tiny" value="80"/>
     <px name="detail_metadata_overlay_height_small" value="100"/>
     <px name="detail_metadata_overlay_height_medium" value="120"/>
     <px name="detail_metadata_overlay_height_large" value="120"/>
@@ -238,21 +251,25 @@
          runtime by ui_theme_register_responsive_fonts() - do NOT define them
          here or responsive overrides will be silently ignored. -->
     <!-- font_heading variants (section headings, large text) -->
+    <string name="font_heading_tiny" value="noto_sans_14"/>
     <string name="font_heading_small" value="noto_sans_20"/>
     <string name="font_heading_medium" value="noto_sans_26"/>
     <string name="font_heading_large" value="noto_sans_28"/>
     <!-- NO BASE font_heading - registered at runtime -->
     <!-- font_body variants (standard body text) -->
+    <string name="font_body_tiny" value="noto_sans_11"/>
     <string name="font_body_small" value="noto_sans_14"/>
     <string name="font_body_medium" value="noto_sans_18"/>
     <string name="font_body_large" value="noto_sans_20"/>
     <!-- NO BASE font_body - registered at runtime -->
     <!-- font_small variants (hints, helpers, chart labels) - uses Light weight -->
+    <string name="font_small_tiny" value="noto_sans_light_11"/>
     <string name="font_small_small" value="noto_sans_light_12"/>
     <string name="font_small_medium" value="noto_sans_light_16"/>
     <string name="font_small_large" value="noto_sans_light_18"/>
     <!-- NO BASE font_small - registered at runtime -->
     <!-- font_xs variants (compact metadata, card overlays, badges) - uses Light weight -->
+    <string name="font_xs_tiny" value="noto_sans_light_10"/>
     <string name="font_xs_small" value="noto_sans_light_10"/>
     <string name="font_xs_medium" value="noto_sans_light_12"/>
     <string name="font_xs_large" value="noto_sans_light_14"/>
@@ -260,22 +277,32 @@
     <!-- ===================================================================== -->
     <!-- Icon Typography - Responsive Material Design Icon Fonts               -->
     <!-- ===================================================================== -->
+    <!-- icon_font_xs: Extra-small icons (compact badges, minimal UI elements) -->
+    <string name="icon_font_xs_tiny" value="mdi_icons_14"/>
+    <string name="icon_font_xs_small" value="mdi_icons_16"/>
+    <string name="icon_font_xs_medium" value="mdi_icons_24"/>
+    <string name="icon_font_xs_large" value="mdi_icons_24"/>
+    <!-- NO BASE icon_font_xs - registered at runtime -->
     <!-- icon_font_sm: Small inline icons (metadata, hints, small indicators) -->
+    <string name="icon_font_sm_tiny" value="mdi_icons_14"/>
     <string name="icon_font_sm_small" value="mdi_icons_16"/>
     <string name="icon_font_sm_medium" value="mdi_icons_16"/>
     <string name="icon_font_sm_large" value="mdi_icons_24"/>
     <!-- NO BASE icon_font_sm - registered at runtime -->
     <!-- icon_font_md: Standard UI icons (buttons, status, notifications) -->
+    <string name="icon_font_md_tiny" value="mdi_icons_24"/>
     <string name="icon_font_md_small" value="mdi_icons_24"/>
     <string name="icon_font_md_medium" value="mdi_icons_24"/>
     <string name="icon_font_md_large" value="mdi_icons_32"/>
     <!-- NO BASE icon_font_md - registered at runtime -->
     <!-- icon_font_lg: Large icons (cards, status panels, emphasis) -->
+    <string name="icon_font_lg_tiny" value="mdi_icons_24"/>
     <string name="icon_font_lg_small" value="mdi_icons_32"/>
     <string name="icon_font_lg_medium" value="mdi_icons_48"/>
     <string name="icon_font_lg_large" value="mdi_icons_48"/>
     <!-- NO BASE icon_font_lg - registered at runtime -->
     <!-- icon_font_xl: Navigation/hero icons (nav bar, large displays) -->
+    <string name="icon_font_xl_small" value="mdi_icons_32"/>
     <string name="icon_font_xl_small" value="mdi_icons_48"/>
     <string name="icon_font_xl_medium" value="mdi_icons_64"/>
     <string name="icon_font_xl_large" value="mdi_icons_64"/>
