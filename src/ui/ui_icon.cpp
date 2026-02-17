@@ -19,6 +19,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <cstdlib>
 #include <cstring>
 
 /**
@@ -51,22 +52,59 @@ static IconSize parse_size(const char* size_str) {
 }
 
 /**
- * Get the MDI font for a given size
+ * Get the MDI font for a given size by querying XML constants
+ *
+ * This enables theme-aware icon fonts. Themes can override icon fonts
+ * by defining different font constants in their globals.xml file.
+ *
+ * IMPORTANT: This function will CRASH if a font is not found. This is
+ * intentional - silent fallbacks cause visual bugs that are hard to debug.
  */
 static const lv_font_t* get_font_for_size(IconSize size) {
+    const char* font_const_name = nullptr;
+
+    // Map icon size to font constant name in globals.xml
     switch (size) {
     case IconSize::XS:
-        return &mdi_icons_16;
+        font_const_name = "icon_font_xs";
+        break;
     case IconSize::SM:
-        return &mdi_icons_24;
+        font_const_name = "icon_font_sm";
+        break;
     case IconSize::MD:
-        return &mdi_icons_32;
+        font_const_name = "icon_font_md";
+        break;
     case IconSize::LG:
-        return &mdi_icons_48;
+        font_const_name = "icon_font_lg";
+        break;
     case IconSize::XL:
     default:
-        return &mdi_icons_64;
+        font_const_name = "icon_font_xl";
+        break;
     }
+
+    // Query font name from XML constant (FAIL FAST if not found)
+    const char* font_name = lv_xml_get_const(nullptr, font_const_name);
+    if (!font_name) {
+        spdlog::critical("[Icon] FATAL: Icon font constant '{}' not found in globals.xml",
+                         font_const_name);
+        spdlog::critical("[Icon] Check that globals.xml defines this constant");
+        std::exit(EXIT_FAILURE);
+    }
+
+    // Get the actual font (FAIL FAST if not compiled)
+    const lv_font_t* font = lv_xml_get_font(nullptr, font_name);
+    if (!font) {
+        spdlog::critical("[Icon] FATAL: Icon font '{}' (from constant '{}') is not compiled!",
+                         font_name, font_const_name);
+        spdlog::critical("[Icon] FIX: Enable the icon font in lv_conf.h or regenerate fonts");
+        std::exit(EXIT_FAILURE);
+    }
+
+    spdlog::trace("[Icon] Applied icon font '{}' (from '{}') - line_height={}px", font_name,
+                  font_const_name, lv_font_get_line_height(font));
+
+    return font;
 }
 
 /**
