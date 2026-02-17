@@ -150,6 +150,8 @@
     "time_format": 0,
     "_time_format_comment": "Time display format. 0 = 12-hour (2:30 PM), 1 = 24-hour (14:30). Default is 12-hour.",
     "rotate": 0,
+    "pwm_lifecycle_control": true,
+    "_pwm_lifecycle_control_comment": "Use BACKLIGHT_ENABLE/DISABLE ioctls for PWM lifecycle management. Some platforms invert PWM polarity when disabling; set false to use brightness-only control. Default: true.",
     "sleep_sec": 1800,
     "_sleep_sec_comment": "Seconds of inactivity before display turns OFF (0 = never). Default: 1800 (30 minutes).",
     "dim_sec": 300,

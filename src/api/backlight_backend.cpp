@@ -3,6 +3,7 @@
 
 #include "backlight_backend.h"
 
+#include "config.h"
 #include "runtime_config.h"
 #include "spdlog/spdlog.h"
 
@@ -246,12 +247,14 @@ class BacklightBackendAllwinner : public BacklightBackend {
     static constexpr int MAX_BRIGHTNESS = 255;
 
     BacklightBackendAllwinner() {
+        // PWM lifecycle control: when enabled, use BACKLIGHT_ENABLE/DISABLE ioctls.
+        // When disabled, only SET_BRIGHTNESS is used to avoid driver-side polarity flips
+        // on platforms where pwm_disable inverts the PWM output.
+        auto* config = helix::Config::get_instance();
+        pwm_lifecycle_control_ = config->get<bool>("/display/pwm_lifecycle_control", true);
+
         probe_device();
-        if (available_) {
-            // Reset backlight driver state by cycling through DISABLE.
-            // On AD5M, the Allwinner DISP2 driver can get into an "inverted" state
-            // where higher brightness values = dimmer screen. Cycling through
-            // DISABLE clears this state and restores normal polarity.
+        if (available_ && pwm_lifecycle_control_) {
             reset_driver_state();
         }
     }
@@ -310,9 +313,8 @@ class BacklightBackendAllwinner : public BacklightBackend {
         // ioctl args: [screen_id, arg1, 0, 0]
         unsigned long args[4] = {0, 0, 0, 0};
 
-        if (brightness == 0) {
-            // Set PWM duty cycle to 0 first - on some Allwinner variants (AD5M),
-            // BACKLIGHT_DISABLE alone doesn't control the PWM output
+        if (percent == 0) {
+            // Set PWM duty cycle to 0
             args[1] = 0;
             int ret = ioctl(fd.get(), DISP_LCD_SET_BRIGHTNESS, args);
             if (ret < 0) {
@@ -321,28 +323,38 @@ class BacklightBackendAllwinner : public BacklightBackend {
                              strerror(err));
             }
 
-            // Also disable backlight via dedicated ioctl (may control enable GPIO)
-            args[1] = 0;
-            ret = ioctl(fd.get(), DISP_LCD_BACKLIGHT_DISABLE, args);
-            if (ret < 0) {
-                int err = errno;
-                spdlog::warn("[Backlight-Allwinner] ioctl BACKLIGHT_DISABLE failed: {}",
-                             strerror(err));
+            if (pwm_lifecycle_control_) {
+                // Also disable backlight via dedicated ioctl (may control enable GPIO)
+                // NOTE: Some platforms invert PWM polarity when BACKLIGHT_DISABLE
+                // is called (driver-side pwm_disable flips polarity). Skip when
+                // pwm_lifecycle_control is false to avoid that behavior.
+                args[1] = 0;
+                ret = ioctl(fd.get(), DISP_LCD_BACKLIGHT_DISABLE, args);
+                if (ret < 0) {
+                    int err = errno;
+                    spdlog::warn("[Backlight-Allwinner] ioctl BACKLIGHT_DISABLE failed: {}",
+                                 strerror(err));
+                }
             }
-            spdlog::debug("[Backlight-Allwinner] Backlight disabled (PWM=0 + DISABLE)");
+            spdlog::debug("[Backlight-Allwinner] Backlight disabled (PWM=0{})",
+                          pwm_lifecycle_control_ ? " + DISABLE" : "");
         } else {
-            // Enable backlight first (required on AD5M before SET_BRIGHTNESS works)
-            int ret = ioctl(fd.get(), DISP_LCD_BACKLIGHT_ENABLE, args);
-            if (ret < 0) {
-                int err = errno;
-                spdlog::warn("[Backlight-Allwinner] ioctl BACKLIGHT_ENABLE failed: {}",
-                             strerror(err));
-                // Continue anyway - some devices may not need explicit enable
+            if (pwm_lifecycle_control_) {
+                // Enable backlight first (required on some platforms before
+                // SET_BRIGHTNESS works). Skipped when lifecycle control is disabled
+                // never uses ENABLE/DISABLE — just SET_BRIGHTNESS directly.
+                int ret = ioctl(fd.get(), DISP_LCD_BACKLIGHT_ENABLE, args);
+                if (ret < 0) {
+                    int err = errno;
+                    spdlog::warn("[Backlight-Allwinner] ioctl BACKLIGHT_ENABLE failed: {}",
+                                 strerror(err));
+                    // Continue anyway - some devices may not need explicit enable
+                }
             }
 
             // Set brightness level
             args[1] = static_cast<unsigned long>(brightness);
-            ret = ioctl(fd.get(), DISP_LCD_SET_BRIGHTNESS, args);
+            int ret = ioctl(fd.get(), DISP_LCD_SET_BRIGHTNESS, args);
             if (ret < 0) {
                 int err = errno;
                 spdlog::warn("[Backlight-Allwinner] ioctl SET_BRIGHTNESS failed: {}",
@@ -421,11 +433,13 @@ class BacklightBackendAllwinner : public BacklightBackend {
         }
 
         available_ = true;
-        spdlog::info("[Backlight-Allwinner] Found {} (current brightness: {})", DISP_DEVICE,
-                     (ret > 0) ? ret : static_cast<int>(args[1]));
+        int raw = (ret > 0) ? ret : static_cast<int>(args[1]);
+        spdlog::info("[Backlight-Allwinner] Found {} (raw brightness: {}{})", DISP_DEVICE, raw,
+                     pwm_lifecycle_control_ ? "" : ", no PWM lifecycle");
     }
 
     bool available_ = false;
+    bool pwm_lifecycle_control_ = true;
 };
 #endif // __linux__
 

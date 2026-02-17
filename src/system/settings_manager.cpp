@@ -531,6 +531,11 @@ bool SettingsManager::get_sleep_while_printing() const {
     return lv_subject_get_int(const_cast<lv_subject_t*>(&sleep_while_printing_subject_)) != 0;
 }
 
+bool SettingsManager::get_pwm_lifecycle_control() const {
+    Config* config = Config::get_instance();
+    return config->get<bool>("/display/pwm_lifecycle_control", true);
+}
+
 void SettingsManager::set_sleep_while_printing(bool enabled) {
     spdlog::info("[SettingsManager] set_sleep_while_printing({})", enabled);
 
