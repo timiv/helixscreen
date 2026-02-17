@@ -6,6 +6,7 @@
 
 #include "../catch_amalgamated.hpp"
 
+using namespace helix;
 TEST_CASE("LedController config: default values after init", "[led][config]") {
     auto& ctrl = helix::led::LedController::instance();
     ctrl.deinit();

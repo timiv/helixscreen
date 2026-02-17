@@ -10,6 +10,8 @@
 
 #include "../catch_amalgamated.hpp"
 
+using namespace helix;
+
 // Test fixture for navigation tests
 class NavigationTestFixture {
   public:
@@ -175,8 +177,8 @@ class NavbarIconTestFixture : public LVGLUITestFixture {
     /**
      * @brief Set active panel
      */
-    void set_active_panel(int panel_id) {
-        ui_nav_set_active(static_cast<PanelId>(panel_id));
+    void set_active_panel(PanelId panel_id) {
+        ui_nav_set_active(panel_id);
     }
 
     lv_obj_t* navbar_ = nullptr;

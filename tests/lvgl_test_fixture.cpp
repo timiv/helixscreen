@@ -10,6 +10,9 @@
 #include <chrono>
 #include <thread>
 
+using namespace helix;
+using namespace helix::ui;
+
 // Static member definitions
 std::once_flag LVGLTestFixture::s_init_flag;
 bool LVGLTestFixture::s_initialized = false;

@@ -24,6 +24,7 @@
 #include "../catch_amalgamated.hpp"
 
 using json = nlohmann::json;
+using namespace helix;
 
 // ============================================================================
 // HardwareSnapshot Tests
@@ -421,6 +422,8 @@ TEST_CASE("HardwareValidator - Snapshot roundtrip", "[hardware][validator]") {
 // Test fixture for Config-dependent HardwareValidator tests
 // NOTE: After the plural naming refactor, hardware config moves from
 // /hardware/ to /printer/hardware/
+// Must be in namespace helix to match friend declaration in Config
+namespace helix {
 class HardwareValidatorConfigFixture {
   protected:
     Config config;
@@ -483,6 +486,7 @@ class HardwareValidatorConfigFixture {
                            {"last_snapshot", snapshot}}}}}};
     }
 };
+} // namespace helix
 
 TEST_CASE_METHOD(HardwareValidatorConfigFixture,
                  "HardwareValidator - is_hardware_optional with empty config",
@@ -712,6 +716,8 @@ TEST_CASE_METHOD(HardwareValidatorConfigFixture,
 // ============================================================================
 
 // Fixture for MMU detection tests - extends HardwareValidatorConfigFixture for Config access
+// Must be in namespace helix to match friend declaration in Config (inherited via base)
+namespace helix {
 class MmuDetectionFixture : public HardwareValidatorConfigFixture {
   protected:
     MoonrakerClientMock client;
@@ -735,6 +741,7 @@ class MmuDetectionFixture : public HardwareValidatorConfigFixture {
         return false;
     }
 };
+} // namespace helix
 
 TEST_CASE_METHOD(MmuDetectionFixture,
                  "HardwareValidator - MMU detection uses has_mmu() capability flag",

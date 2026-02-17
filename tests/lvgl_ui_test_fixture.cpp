@@ -44,6 +44,8 @@
 
 #include <spdlog/spdlog.h>
 
+using namespace helix;
+
 LVGLUITestFixture::LVGLUITestFixture() {
     spdlog::debug("[LVGLUITestFixture] Starting initialization...");
 

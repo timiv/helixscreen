@@ -20,6 +20,7 @@
 #include "../catch_amalgamated.hpp"
 
 using namespace helix::ui;
+using namespace helix::ui;
 using helix::ui::temperature::centi_to_degrees;
 
 // Helper to drain the update queue after subject changes.

@@ -28,6 +28,8 @@
 #include "../catch_amalgamated.hpp"
 
 using json = nlohmann::json;
+using namespace helix;
+using namespace helix::ui;
 
 // ============================================================================
 // Test Fixture for ActivePrintMediaManager tests

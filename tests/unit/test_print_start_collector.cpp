@@ -463,6 +463,8 @@ TEST_CASE("PrintStart: typical noise lines should not match phases", "[print][ne
 #include "print_start_collector.h"
 #include "print_start_profile.h"
 
+using namespace helix;
+using namespace helix::ui;
 /**
  * @brief HELIX:PHASE signal parser for direct testing
  *

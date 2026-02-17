@@ -14,6 +14,9 @@
 #include <filesystem>
 #include <thread>
 
+using namespace helix;
+using namespace helix::ui;
+
 // ============================================================================
 // LVGL safe initialization (idempotent)
 // ============================================================================

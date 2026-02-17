@@ -410,6 +410,7 @@ TEST_CASE("Update checker error scenarios", "[update_checker][error]") {
 
 #include "system/update_checker.h"
 
+using namespace helix;
 TEST_CASE("UpdateChecker status enum values", "[update_checker][status]") {
     // Verify enum values exist and are distinct
     REQUIRE(static_cast<int>(UpdateChecker::Status::Idle) == 0);

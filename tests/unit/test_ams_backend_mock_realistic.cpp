@@ -10,6 +10,7 @@
 
 #include "../catch_amalgamated.hpp"
 
+using namespace helix;
 /**
  * @file test_ams_backend_mock_realistic.cpp
  * @brief Unit tests for AMS mock backend realistic mode functionality

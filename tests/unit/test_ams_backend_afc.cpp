@@ -10,6 +10,7 @@
 
 #include "../catch_amalgamated.hpp"
 
+using namespace helix;
 /**
  * @brief Test helper class providing access to AmsBackendAfc internals
  *

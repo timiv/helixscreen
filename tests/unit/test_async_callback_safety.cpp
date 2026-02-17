@@ -616,7 +616,7 @@ TEST_CASE("Real-world: delete file callback pattern", "[callback][async][real_wo
         // Simulate API success callback (runs on background thread)
         // This captures alive and self, then defers to main thread
         auto on_success = [alive, self, &simulate_ui_async_call]() {
-            simulate_helix::ui::async_call([alive, self]() {
+            simulate_ui_async_call([alive, self]() {
                 if (!alive->load()) {
                     return; // Panel was destroyed
                 }
@@ -649,7 +649,7 @@ TEST_CASE("Real-world: delete file callback pattern", "[callback][async][real_wo
 
             // Simulate API success callback
             auto on_success = [alive, self, &simulate_ui_async_call]() {
-                simulate_helix::ui::async_call([alive, self]() {
+                simulate_ui_async_call([alive, self]() {
                     if (!alive->load()) {
                         return; // Panel was destroyed - this path should be taken
                     }
