@@ -27,10 +27,8 @@ void AssetManager::register_fonts() {
     lv_xml_register_font(nullptr, "mdi_icons_48", &mdi_icons_48);
     lv_xml_register_font(nullptr, "mdi_icons_32", &mdi_icons_32);
     lv_xml_register_font(nullptr, "mdi_icons_24", &mdi_icons_24);
-    lv_xml_register_font(nullptr, "mdi_icons_20", &mdi_icons_20);
     lv_xml_register_font(nullptr, "mdi_icons_16", &mdi_icons_16);
     lv_xml_register_font(nullptr, "mdi_icons_14", &mdi_icons_14);
-    lv_xml_register_font(nullptr, "mdi_icons_12", &mdi_icons_12);
 
     // Montserrat text fonts - used by semantic text components:
     // - text_heading uses font_heading (20/26/28 for small/medium/large breakpoints)
