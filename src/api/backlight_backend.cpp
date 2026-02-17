@@ -248,13 +248,15 @@ class BacklightBackendAllwinner : public BacklightBackend {
 
     BacklightBackendAllwinner() {
         // PWM lifecycle control: when enabled, use BACKLIGHT_ENABLE/DISABLE ioctls.
-        // When disabled, only SET_BRIGHTNESS is used to avoid driver-side polarity flips
-        // on platforms where pwm_disable inverts the PWM output.
         auto* config = helix::Config::get_instance();
         pwm_lifecycle_control_ = config->get<bool>("/display/pwm_lifecycle_control", true);
 
         probe_device();
         if (available_ && pwm_lifecycle_control_) {
+            // Reset backlight driver state by cycling through DISABLE.
+            // On AD5M, the Allwinner DISP2 driver can get into an "inverted" state
+            // where higher brightness values = dimmer screen. Cycling through
+            // DISABLE clears this state and restores normal polarity.
             reset_driver_state();
         }
     }
@@ -313,8 +315,9 @@ class BacklightBackendAllwinner : public BacklightBackend {
         // ioctl args: [screen_id, arg1, 0, 0]
         unsigned long args[4] = {0, 0, 0, 0};
 
-        if (percent == 0) {
-            // Set PWM duty cycle to 0
+        if (brightness == 0) {
+            // Set PWM duty cycle to 0 first - on some Allwinner variants (AD5M),
+            // BACKLIGHT_DISABLE alone doesn't control the PWM output
             args[1] = 0;
             int ret = ioctl(fd.get(), DISP_LCD_SET_BRIGHTNESS, args);
             if (ret < 0) {
@@ -342,7 +345,7 @@ class BacklightBackendAllwinner : public BacklightBackend {
             if (pwm_lifecycle_control_) {
                 // Enable backlight first (required on some platforms before
                 // SET_BRIGHTNESS works). Skipped when lifecycle control is disabled
-                // never uses ENABLE/DISABLE — just SET_BRIGHTNESS directly.
+                // to avoid polarity issues.
                 int ret = ioctl(fd.get(), DISP_LCD_BACKLIGHT_ENABLE, args);
                 if (ret < 0) {
                     int err = errno;

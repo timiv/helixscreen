@@ -211,14 +211,6 @@ class SettingsManager {
     bool get_sleep_while_printing() const;
 
     /**
-     * @brief Get backlight PWM lifecycle control setting
-     *
-     * When true, use BACKLIGHT_ENABLE/DISABLE ioctls; when false, only set
-     * brightness (avoids driver-side polarity flips on some platforms).
-     */
-    bool get_pwm_lifecycle_control() const;
-
-    /**
      * @brief Set sleep while printing state
      *
      * When enabled (default), the display can dim and sleep during active prints
