@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cstdlib>
 #include <string>
 
 namespace helix {
@@ -180,6 +181,38 @@ inline bool device_needs_calibration(const std::string& name, const std::string&
     // Capacitive controllers (Goodix, FocalTech, ILI, Atmel) are factory-calibrated
     // and report mapped screen coordinates — even when connected via I2C, not USB.
     return is_resistive_touchscreen_name(name);
+}
+
+/**
+ * @brief Check if touch ABS range doesn't match display resolution
+ *
+ * For capacitive screens that report coordinates for a different resolution
+ * than the actual display (e.g., Goodix on SV06 Ace: ABS 800x480, display 480x272).
+ * When there's a mismatch, the calibration wizard should be shown even for
+ * capacitive touchscreens that are normally "factory calibrated".
+ *
+ * @param abs_max_x Maximum ABS_X value from EVIOCGABS
+ * @param abs_max_y Maximum ABS_Y value from EVIOCGABS
+ * @param display_width Display width in pixels
+ * @param display_height Display height in pixels
+ * @return true if ABS range mismatches display resolution beyond tolerance
+ */
+inline bool has_abs_display_mismatch(int abs_max_x, int abs_max_y, int display_width,
+                                     int display_height) {
+    // Can't determine mismatch with invalid ranges
+    if (abs_max_x <= 0 || abs_max_y <= 0 || display_width <= 0 || display_height <= 0) {
+        return false;
+    }
+
+    // Allow ~5% tolerance for rounding differences in ABS ranges
+    constexpr float TOLERANCE = 0.05f;
+
+    float x_ratio =
+        static_cast<float>(std::abs(abs_max_x - display_width)) / static_cast<float>(display_width);
+    float y_ratio = static_cast<float>(std::abs(abs_max_y - display_height)) /
+                    static_cast<float>(display_height);
+
+    return (x_ratio > TOLERANCE) || (y_ratio > TOLERANCE);
 }
 
 } // namespace helix

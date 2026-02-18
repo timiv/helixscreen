@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <linux/fb.h>
+#include <linux/input.h>
 #include <linux/kd.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -355,6 +356,41 @@ lv_indev_t* DisplayBackendFbdev::create_input_pointer() {
     needs_calibration_ = helix::device_needs_calibration(dev_name, dev_phys, has_abs);
     spdlog::info("[Fbdev Backend] Input device '{}' phys='{}' abs={} → calibration {}", dev_name,
                  dev_phys, has_abs, needs_calibration_ ? "needed" : "not needed");
+
+    // Read and log ABS ranges for diagnostic purposes, and check for mismatch
+    // on capacitive screens that may report coordinates for a different resolution
+    if (has_abs) {
+        int fd = open(touch_path.c_str(), O_RDONLY | O_CLOEXEC);
+        if (fd >= 0) {
+            struct input_absinfo abs_x = {};
+            struct input_absinfo abs_y = {};
+            bool got_x = (ioctl(fd, EVIOCGABS(ABS_X), &abs_x) == 0);
+            bool got_y = (ioctl(fd, EVIOCGABS(ABS_Y), &abs_y) == 0);
+            close(fd);
+
+            if (got_x && got_y) {
+                spdlog::info(
+                    "[Fbdev Backend] Touch ABS range: X({}..{}), Y({}..{}) — display: {}x{}",
+                    abs_x.minimum, abs_x.maximum, abs_y.minimum, abs_y.maximum, screen_width_,
+                    screen_height_);
+
+                // Even if the device is capacitive (doesn't need calibration per se),
+                // check if the ABS range mismatches the display resolution.
+                // This catches cases like Goodix on SV06 Ace where the touch panel
+                // reports coordinates for 800x480 but display is 480x272.
+                if (!needs_calibration_ &&
+                    helix::has_abs_display_mismatch(abs_x.maximum, abs_y.maximum, screen_width_,
+                                                    screen_height_)) {
+                    needs_calibration_ = true;
+                    spdlog::info("[Fbdev Backend] ABS range mismatch detected — "
+                                 "calibration wizard will show");
+                }
+            }
+        } else {
+            spdlog::debug("[Fbdev Backend] Could not open {} for ABS range query: {}", touch_path,
+                          strerror(errno));
+        }
+    }
 
     // Check for touch axis configuration via environment variables
     // HELIX_TOUCH_SWAP_AXES=1 - swap X and Y axes

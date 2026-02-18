@@ -647,6 +647,68 @@ TEST_CASE("TouchCalibration: phantom SPI vs real USB touchscreen scoring factors
     }
 }
 
+// ============================================================================
+// ABS Range Mismatch Detection Tests (has_abs_display_mismatch)
+// ============================================================================
+
+TEST_CASE("TouchCalibration: has_abs_display_mismatch", "[touch-calibration][abs-mismatch]") {
+    SECTION("matching ABS and display — no mismatch") {
+        // ABS max matches display resolution exactly
+        REQUIRE(has_abs_display_mismatch(800, 480, 800, 480) == false);
+    }
+
+    SECTION("matching within 5% tolerance — no mismatch") {
+        // ABS max is ~4% off from display — within tolerance
+        REQUIRE(has_abs_display_mismatch(832, 480, 800, 480) == false);
+    }
+
+    SECTION("SV06 Ace scenario: Goodix reports 800x480, display is 480x272") {
+        // This is the exact bug scenario from issue #123
+        REQUIRE(has_abs_display_mismatch(800, 480, 480, 272) == true);
+    }
+
+    SECTION("mismatch on X axis only") {
+        REQUIRE(has_abs_display_mismatch(1024, 480, 800, 480) == true);
+    }
+
+    SECTION("mismatch on Y axis only") {
+        REQUIRE(has_abs_display_mismatch(800, 600, 800, 480) == true);
+    }
+
+    SECTION("both axes mismatched") {
+        REQUIRE(has_abs_display_mismatch(1024, 768, 800, 480) == true);
+    }
+
+    SECTION("invalid ABS ranges return false (can't determine)") {
+        REQUIRE(has_abs_display_mismatch(0, 480, 800, 480) == false);
+        REQUIRE(has_abs_display_mismatch(800, 0, 800, 480) == false);
+        REQUIRE(has_abs_display_mismatch(-1, 480, 800, 480) == false);
+        REQUIRE(has_abs_display_mismatch(800, -1, 800, 480) == false);
+    }
+
+    SECTION("invalid display dimensions return false") {
+        REQUIRE(has_abs_display_mismatch(800, 480, 0, 480) == false);
+        REQUIRE(has_abs_display_mismatch(800, 480, 800, 0) == false);
+    }
+
+    SECTION("ABS slightly smaller than display — within tolerance") {
+        // ABS 770x460 vs display 800x480: ~3.75% and ~4.2%, within 5%
+        REQUIRE(has_abs_display_mismatch(770, 460, 800, 480) == false);
+    }
+
+    SECTION("ABS at exactly 5% boundary") {
+        // 5% of 800 = 40, so ABS 840 is right at the edge
+        // 5% of 480 = 24, so ABS 504 is right at the edge
+        // At exactly 5% the ratio equals TOLERANCE, which is not > TOLERANCE
+        REQUIRE(has_abs_display_mismatch(840, 504, 800, 480) == false);
+    }
+
+    SECTION("ABS just beyond 5% boundary triggers mismatch") {
+        // Just past 5% on X axis
+        REQUIRE(has_abs_display_mismatch(841, 480, 800, 480) == true);
+    }
+}
+
 TEST_CASE("TouchCalibration: scoring factors for common touchscreen types",
           "[touch-calibration][scoring]") {
     SECTION("platform resistive (sun4i): known name, SPI bus") {
