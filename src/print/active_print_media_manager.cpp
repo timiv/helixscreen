@@ -141,6 +141,15 @@ void ActivePrintMediaManager::process_filename(const char* raw_filename) {
 
     // Load thumbnail if filename changed
     if (!effective_filename.empty() && effective_filename != last_loaded_thumbnail_filename_) {
+        // Clear stale thumbnail path from the previous print so load_thumbnail_for_file()
+        // doesn't short-circuit with the old thumbnail. This fixes the bug where starting
+        // a new print via Mainsail would show the previous print's thumbnail.
+        // Only clear if we previously loaded a thumbnail for a different file — if
+        // last_loaded_thumbnail_filename_ is empty, this is the first print and any
+        // existing thumbnail was intentionally pre-set (e.g., USB/PrintStartController).
+        if (!last_loaded_thumbnail_filename_.empty()) {
+            printer_state_.set_print_thumbnail_path("");
+        }
         load_thumbnail_for_file(effective_filename);
         last_loaded_thumbnail_filename_ = effective_filename;
     }

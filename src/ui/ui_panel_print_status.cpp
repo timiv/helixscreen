@@ -2161,6 +2161,8 @@ void PrintStatusPanel::set_filename(const char* filename) {
     // Load thumbnail ONLY if effective filename changed (makes this function idempotent)
     // This prevents redundant loads when observer fires repeatedly with same filename
     if (!effective_filename.empty() && effective_filename != loaded_thumbnail_filename_) {
+        // Clear stale cached thumbnail from previous print
+        cached_thumbnail_path_.clear();
         spdlog::debug("[{}] Loading thumbnail for: {}", get_name(), effective_filename);
         load_thumbnail_for_file(effective_filename);
 

@@ -491,3 +491,55 @@ TEST_CASE_METHOD(ActivePrintMediaManagerTestFixture,
     }
 }
 #endif
+
+// ============================================================================
+// Stale Thumbnail Invalidation Tests
+// ============================================================================
+// Regression: Starting a new print via Mainsail showed the PREVIOUS print's
+// thumbnail because print_thumbnail_path_ was never cleared between prints.
+
+TEST_CASE_METHOD(ActivePrintMediaManagerTestFixture,
+                 "ActivePrintMediaManager: new print clears stale thumbnail path",
+                 "[ActivePrintMediaManager]") {
+    SECTION("different file after idle clears old thumbnail") {
+        // Print A starts and gets a thumbnail
+        set_print_filename("print_a.gcode");
+        state().set_print_thumbnail_path("A:/cache/print_a_thumb.bin");
+        REQUIRE(get_thumbnail_path() == "A:/cache/print_a_thumb.bin");
+
+        // Print A ends - Moonraker sends empty filename
+        set_print_filename("");
+        // Thumbnail preserved (intentional for post-cancel UX)
+        REQUIRE(get_thumbnail_path() == "A:/cache/print_a_thumb.bin");
+
+        // Print B starts from Mainsail - stale thumbnail must be cleared
+        set_print_filename("print_b.gcode");
+        REQUIRE(get_display_filename() == "print_b");
+        // The old thumbnail path should be cleared so the new one can be fetched
+        REQUIRE(get_thumbnail_path() == "");
+    }
+
+    SECTION("direct switch between prints clears old thumbnail") {
+        // Print A with thumbnail
+        set_print_filename("first.gcode");
+        state().set_print_thumbnail_path("A:/cache/first_thumb.bin");
+        REQUIRE(get_thumbnail_path() == "A:/cache/first_thumb.bin");
+
+        // Print B starts immediately (no empty filename in between)
+        set_print_filename("second.gcode");
+        REQUIRE(get_display_filename() == "second");
+        REQUIRE(get_thumbnail_path() == "");
+    }
+
+    SECTION("same filename reprint preserves thumbnail") {
+        // Print A with thumbnail
+        set_print_filename("benchy.gcode");
+        state().set_print_thumbnail_path("A:/cache/benchy_thumb.bin");
+        REQUIRE(get_thumbnail_path() == "A:/cache/benchy_thumb.bin");
+
+        // Same file reprinted - idempotent guard means no change, which is correct
+        // (the cached thumbnail is still valid for the same file)
+        set_print_filename("benchy.gcode");
+        REQUIRE(get_thumbnail_path() == "A:/cache/benchy_thumb.bin");
+    }
+}
