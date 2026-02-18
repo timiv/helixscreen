@@ -504,15 +504,19 @@ void AmsOverviewPanel::refresh_system_path(const AmsSystemInfo& info, int curren
         }
 
         int unit_tool_count = 0;
-        if (first_tool >= 0) {
-            // For PARALLEL: each slot maps to a different tool (tool_count = distinct tools)
-            // For HUB: all slots map to same tool (tool_count = 1)
+        if (topo != PathTopology::PARALLEL) {
+            // HUB/LINEAR: all slots in this unit converge to a single toolhead
+            unit_tool_count = 1;
+            if (first_tool < 0) {
+                first_tool = total_tools; // Assign next available tool index
+            }
+        } else if (first_tool >= 0) {
+            // PARALLEL: each slot maps to a different tool (tool_count = distinct tools)
             unit_tool_count = max_tool - first_tool + 1;
         } else if (!unit.slots.empty()) {
-            // Fallback: use slot count for parallel, 1 for hub
+            // PARALLEL fallback: no mapped_tool data, use slot count
             first_tool = total_tools;
-            unit_tool_count =
-                (topo == PathTopology::PARALLEL) ? static_cast<int>(unit.slots.size()) : 1;
+            unit_tool_count = static_cast<int>(unit.slots.size());
         }
 
         ui_system_path_canvas_set_unit_tools(system_path_, i, unit_tool_count,
@@ -526,13 +530,13 @@ void AmsOverviewPanel::refresh_system_path(const AmsSystemInfo& info, int curren
             }
         }
 
-        // Two accumulation strategies:
-        // - Units with mapped_tool data: use max tool index (tools may overlap/share)
-        // - Units without mapped_tool: append sequentially after known tools
-        if (first_tool >= 0) {
+        // Accumulate total tool count
+        // For PARALLEL with mapped_tool data: use max tool index (tools may overlap/share)
+        // For HUB or no mapped_tool: add unit_tool_count sequentially
+        if (topo == PathTopology::PARALLEL && max_tool >= 0) {
             total_tools = std::max(total_tools, max_tool + 1);
         } else {
-            total_tools += unit_tool_count;
+            total_tools = std::max(total_tools, first_tool + unit_tool_count);
         }
     }
 

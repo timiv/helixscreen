@@ -924,14 +924,14 @@ void AmsBackendAfc::parse_afc_stepper(const std::string& lane_name, const nlohma
         status_str = data["status"].get<std::string>();
     }
 
-    if (tool_loaded) {
+    if (tool_loaded || status_str == "Loaded") {
         slot->status = SlotStatus::LOADED;
-    } else if (status_str == "Loaded" || sensors.prep || sensors.load) {
+    } else if (status_str == "Ready" || sensors.prep || sensors.load) {
         slot->status = SlotStatus::AVAILABLE;
     } else if (status_str == "None" || status_str.empty()) {
         slot->status = SlotStatus::EMPTY;
     } else {
-        slot->status = SlotStatus::AVAILABLE; // Default for other states like "Ready"
+        slot->status = SlotStatus::AVAILABLE; // Default for other states
     }
 
     // Populate or clear per-slot error based on lane status
@@ -1023,12 +1023,42 @@ void AmsBackendAfc::parse_afc_hub(const std::string& hub_name, const nlohmann::j
         hub_sensors_[hub_name] = state;
         spdlog::trace("[AMS AFC] Hub sensor {}: {}", hub_name, state);
 
-        // Update the matching AmsUnit's hub_sensor_triggered for real-time state
-        for (auto& unit : system_info_.units) {
-            if (unit.name == hub_name) {
-                unit.has_hub_sensor = true;
-                unit.hub_sensor_triggered = state;
+        // Update the parent AmsUnit's hub_sensor_triggered for real-time state.
+        // Two strategies:
+        // 1. If unit_infos_ has hub lists (from Klipper unit objects), use those
+        //    to find which unit owns this hub (handles OpenAMS per-lane hubs
+        //    where hub names differ from unit names).
+        // 2. Fallback: match hub name directly against unit.name (works when
+        //    hub names match unit names, e.g., standard Box Turtle "Turtle_1").
+        bool found = false;
+        for (size_t ui = 0; ui < unit_infos_.size() && ui < system_info_.units.size(); ++ui) {
+            const auto& uinfo = unit_infos_[ui];
+            bool owns_hub =
+                std::find(uinfo.hubs.begin(), uinfo.hubs.end(), hub_name) != uinfo.hubs.end();
+            if (owns_hub) {
+                system_info_.units[ui].has_hub_sensor = true;
+                // Any hub triggered in this unit means filament is at/past hub
+                bool any_triggered = false;
+                for (const auto& h : uinfo.hubs) {
+                    auto it = hub_sensors_.find(h);
+                    if (it != hub_sensors_.end() && it->second) {
+                        any_triggered = true;
+                        break;
+                    }
+                }
+                system_info_.units[ui].hub_sensor_triggered = any_triggered;
+                found = true;
                 break;
+            }
+        }
+        // Fallback: direct name match (hub name == unit name)
+        if (!found) {
+            for (auto& unit : system_info_.units) {
+                if (unit.name == hub_name) {
+                    unit.has_hub_sensor = true;
+                    unit.hub_sensor_triggered = state;
+                    break;
+                }
             }
         }
     }
@@ -1622,12 +1652,33 @@ void AmsBackendAfc::reorganize_units_from_map() {
         unit.connected = true;
         unit.has_toolhead_sensor = true;
         unit.has_slot_sensors = true;
-        unit.has_hub_sensor = true; // AFC hubs have filament sensors
-
-        // Set hub sensor triggered state from per-hub map
-        auto hub_it = hub_sensors_.find(unit_name);
-        if (hub_it != hub_sensors_.end()) {
-            unit.hub_sensor_triggered = hub_it->second;
+        // Set hub sensor state — two strategies:
+        // 1. Check unit_infos_ for hub lists (OpenAMS: hub names differ from unit names)
+        // 2. Fallback: direct name match in hub_sensors_ (hub name == unit name)
+        unit.has_hub_sensor = false;
+        unit.hub_sensor_triggered = false;
+        bool found_via_uinfo = false;
+        for (const auto& uinfo : unit_infos_) {
+            if (uinfo.name == unit_name && !uinfo.hubs.empty()) {
+                unit.has_hub_sensor = true;
+                for (const auto& h : uinfo.hubs) {
+                    auto hub_it = hub_sensors_.find(h);
+                    if (hub_it != hub_sensors_.end() && hub_it->second) {
+                        unit.hub_sensor_triggered = true;
+                        break;
+                    }
+                }
+                found_via_uinfo = true;
+                break;
+            }
+        }
+        if (!found_via_uinfo) {
+            // Fallback: hub name matches unit name directly
+            auto hub_it = hub_sensors_.find(unit_name);
+            if (hub_it != hub_sensors_.end()) {
+                unit.has_hub_sensor = true;
+                unit.hub_sensor_triggered = hub_it->second;
+            }
         }
 
         for (int i = 0; i < unit.slot_count; ++i) {

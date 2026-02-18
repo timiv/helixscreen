@@ -443,12 +443,6 @@ void ui_notification_error(const char* title, const char* message, bool modal) {
                   message ? message : "(null)", modal);
 }
 
-void ui_notification_info_with_action(const char* title, const char* message, const char* action) {
-    spdlog::debug("[Test Stub] ui_notification_info_with_action: {} - {} (action={})",
-                  title ? title : "(null)", message ? message : "(null)",
-                  action ? action : "(null)");
-}
-
 // Stub ToastManager class for tests
 #include "ui_toast_manager.h"
 
