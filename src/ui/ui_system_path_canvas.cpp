@@ -256,7 +256,7 @@ static void draw_tool_badge(lv_layer_t* layer, int32_t cx, int32_t nozzle_y, int
                             int tool_num, const lv_font_t* font, lv_color_t bg_color,
                             lv_color_t text_color) {
     // Static buffer — lv_draw_label defers rendering, stack buffer would be freed
-    static char tool_label[8];
+    static char tool_label[16];
     snprintf(tool_label, sizeof(tool_label), "T%d", tool_num);
 
     int32_t font_h = lv_font_get_line_height(font);
