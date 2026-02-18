@@ -129,9 +129,6 @@ void PrinterPrintState::update_from_status(const nlohmann::json& status) {
 
         if (stats.contains("state")) {
             std::string state_str = stats["state"].get<std::string>();
-            // Update string subject (for UI display binding)
-            lv_subject_copy_string(&print_state_, state_str.c_str());
-            // Update enum subject (for type-safe logic)
             PrintJobState new_state = parse_print_job_state(state_str.c_str());
             auto current_state = static_cast<PrintJobState>(lv_subject_get_int(&print_state_enum_));
             auto current_outcome = static_cast<PrintOutcome>(lv_subject_get_int(&print_outcome_));
@@ -175,6 +172,10 @@ void PrinterPrintState::update_from_status(const nlohmann::json& status) {
                               static_cast<int>(current_state));
                 lv_subject_set_int(&print_state_enum_, static_cast<int>(new_state));
             }
+
+            // Update string subject AFTER enum so observers see consistent state
+            // (PrintSelectPanel observes print_state_ string but reads print_state_enum_)
+            lv_subject_copy_string(&print_state_, state_str.c_str());
 
             // Update print_active (1 when PRINTING/PAUSED, 0 otherwise)
             // This derived subject simplifies XML bindings for card visibility

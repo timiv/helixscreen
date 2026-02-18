@@ -1019,6 +1019,60 @@ TEST_CASE("Print characterization: observer fires when print_progress changes",
     lv_observer_remove(observer);
 }
 
+TEST_CASE("Print: string observer sees updated enum (issue #125 regression)",
+          "[print][observer][regression]") {
+    // Issue #125: PrintSelectPanel observes print_state_ (string) but reads
+    // print_state_enum_ to decide if Print button should be enabled. If the
+    // string subject fires before the enum is updated, can_start_new_print()
+    // reads stale PRINTING state and keeps the button disabled permanently.
+    lv_init_safe();
+
+    PrinterState& state = get_printer_state();
+    PrinterStateTestAccess::reset(state);
+    state.init_subjects(false);
+
+    // Start a print
+    json printing = {{"print_stats", {{"state", "printing"}}}};
+    state.update_from_status(printing);
+    REQUIRE(state.get_print_job_state() == PrintJobState::PRINTING);
+    REQUIRE_FALSE(state.can_start_new_print());
+
+    // Track what the string observer sees when state changes to "complete"
+    struct ObserverData {
+        PrinterState* state;
+        bool can_print_when_observed;
+        int enum_value_when_observed;
+        int fire_count;
+    };
+    ObserverData data{&state, false, -1, 0};
+
+    auto observer_cb = [](lv_observer_t* observer, lv_subject_t* /*subject*/) {
+        auto* d = static_cast<ObserverData*>(lv_observer_get_user_data(observer));
+        d->fire_count++;
+        d->can_print_when_observed = d->state->can_start_new_print();
+        d->enum_value_when_observed = static_cast<int>(d->state->get_print_job_state());
+    };
+
+    lv_observer_t* observer =
+        lv_subject_add_observer(state.get_print_state_subject(), observer_cb, &data);
+
+    // Initial add notification
+    REQUIRE(data.fire_count == 1);
+
+    // Complete the print — the string observer must see COMPLETE enum, not stale PRINTING
+    json complete = {{"print_stats", {{"state", "complete"}}}};
+    state.update_from_status(complete);
+
+    REQUIRE(data.fire_count >= 2);
+    REQUIRE(data.enum_value_when_observed == static_cast<int>(PrintJobState::COMPLETE));
+    REQUIRE(data.can_print_when_observed == true);
+
+    // Verify can_start_new_print is true after the full update
+    REQUIRE(state.can_start_new_print() == true);
+
+    lv_observer_remove(observer);
+}
+
 // ============================================================================
 // Reset Cycle Tests
 // ============================================================================
