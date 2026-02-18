@@ -3,7 +3,28 @@
 // GitHub App authentication for Cloudflare Workers.
 // Generates installation tokens using JWT + RS256 via Web Crypto API.
 
+import type { CrashReport } from "./symbol-resolver";
+
 const GITHUB_API = "https://api.github.com";
+
+/** Minimal shape of a GitHub issue from the search API. */
+interface GitHubSearchIssue {
+  number: number;
+  html_url: string;
+}
+
+interface GitHubSearchResponse {
+  total_count: number;
+  items: GitHubSearchIssue[];
+}
+
+interface GitHubInstallationResponse {
+  id: number;
+}
+
+interface GitHubTokenResponse {
+  token: string;
+}
 
 // =============================================================================
 // PEM → CryptoKey
@@ -13,7 +34,7 @@ const GITHUB_API = "https://api.github.com";
  * Import a PEM-encoded RSA private key for RS256 signing.
  * Handles both PKCS#1 (BEGIN RSA PRIVATE KEY) and PKCS#8 (BEGIN PRIVATE KEY).
  */
-export async function importPrivateKey(pem) {
+export async function importPrivateKey(pem: string): Promise<CryptoKey> {
   const pemBody = pem
     .replace(/-----BEGIN RSA PRIVATE KEY-----/, "")
     .replace(/-----END RSA PRIVATE KEY-----/, "")
@@ -40,7 +61,7 @@ export async function importPrivateKey(pem) {
 // ASN.1 helpers for PKCS#1 → PKCS#8 wrapping
 // =============================================================================
 
-function wrapPkcs1InPkcs8(pkcs1) {
+function wrapPkcs1InPkcs8(pkcs1: Uint8Array): Uint8Array {
   // PKCS#8 envelope: SEQUENCE { INTEGER 0, SEQUENCE { OID rsaEncryption, NULL }, OCTET STRING { pkcs1 } }
   const rsaOid = new Uint8Array([
     0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
@@ -51,7 +72,7 @@ function wrapPkcs1InPkcs8(pkcs1) {
   return wrapAsn1(0x30, concatBytes(version, rsaOid, octetString));
 }
 
-function wrapAsn1(tag, content) {
+function wrapAsn1(tag: number, content: Uint8Array): Uint8Array {
   const len = encodeAsn1Length(content.length);
   const result = new Uint8Array(1 + len.length + content.length);
   result[0] = tag;
@@ -60,9 +81,9 @@ function wrapAsn1(tag, content) {
   return result;
 }
 
-function encodeAsn1Length(length) {
+function encodeAsn1Length(length: number): Uint8Array {
   if (length < 0x80) return new Uint8Array([length]);
-  const bytes = [];
+  const bytes: number[] = [];
   let tmp = length;
   while (tmp > 0) {
     bytes.unshift(tmp & 0xff);
@@ -71,7 +92,7 @@ function encodeAsn1Length(length) {
   return new Uint8Array([0x80 | bytes.length, ...bytes]);
 }
 
-function concatBytes(...arrays) {
+function concatBytes(...arrays: Uint8Array[]): Uint8Array {
   const total = arrays.reduce((sum, a) => sum + a.length, 0);
   const result = new Uint8Array(total);
   let offset = 0;
@@ -86,7 +107,7 @@ function concatBytes(...arrays) {
 // JWT
 // =============================================================================
 
-function base64url(data) {
+function base64url(data: string | Uint8Array): string {
   const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
   return btoa(String.fromCharCode(...bytes))
     .replace(/\+/g, "-")
@@ -94,7 +115,7 @@ function base64url(data) {
     .replace(/=+$/, "");
 }
 
-async function createJWT(appId, privateKey) {
+async function createJWT(appId: string, privateKey: CryptoKey): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
   const payload = {
@@ -120,7 +141,7 @@ async function createJWT(appId, privateKey) {
 // GitHub API
 // =============================================================================
 
-async function githubFetch(path, token, options = {}) {
+async function githubFetch(path: string, token: string, options: RequestInit = {}): Promise<Response> {
   return fetch(`${GITHUB_API}${path}`, {
     ...options,
     headers: {
@@ -135,13 +156,13 @@ async function githubFetch(path, token, options = {}) {
 
 /**
  * Get a short-lived installation access token for the GitHub App.
- * @param {string} appId - GitHub App ID
- * @param {string} pemKey - PEM-encoded private key
- * @param {string} owner - Repo owner
- * @param {string} repo - Repo name
- * @returns {Promise<string>} Installation access token
  */
-export async function getInstallationToken(appId, pemKey, owner, repo) {
+export async function getInstallationToken(
+  appId: string,
+  pemKey: string,
+  owner: string,
+  repo: string
+): Promise<string> {
   const key = await importPrivateKey(pemKey);
   const jwt = await createJWT(appId, key);
 
@@ -154,7 +175,7 @@ export async function getInstallationToken(appId, pemKey, owner, repo) {
     const body = await installRes.text();
     throw new Error(`Failed to get installation: ${installRes.status} ${body}`);
   }
-  const { id } = await installRes.json();
+  const { id } = (await installRes.json()) as GitHubInstallationResponse;
 
   // Create installation access token
   const tokenRes = await githubFetch(
@@ -167,7 +188,7 @@ export async function getInstallationToken(appId, pemKey, owner, repo) {
     throw new Error(`Failed to create token: ${tokenRes.status} ${body}`);
   }
 
-  const { token } = await tokenRes.json();
+  const { token } = (await tokenRes.json()) as GitHubTokenResponse;
   return token;
 }
 
@@ -179,7 +200,7 @@ export async function getInstallationToken(appId, pemKey, owner, repo) {
  * Generate a short fingerprint for a crash to detect duplicates.
  * Based on: signal + version + first backtrace frame
  */
-export function crashFingerprint(report) {
+export function crashFingerprint(report: CrashReport): string {
   const sig = report.signal_name || `SIG${report.signal}`;
   const ver = report.app_version || "unknown";
   const frame = report.backtrace?.[0] || "no-bt";
@@ -188,23 +209,34 @@ export function crashFingerprint(report) {
 
 /**
  * Search for an existing open issue with the same crash fingerprint.
- * @returns {Promise<{number: number, html_url: string} | null>}
  */
-export async function findExistingIssue(token, owner, repo, fingerprint) {
+export async function findExistingIssue(
+  token: string,
+  owner: string,
+  repo: string,
+  fingerprint: string
+): Promise<GitHubSearchIssue | null> {
   const query = encodeURIComponent(
     `repo:${owner}/${repo} is:issue is:open label:crash "${fingerprint}" in:body`
   );
   const res = await githubFetch(`/search/issues?q=${query}&per_page=1`, token);
   if (!res.ok) return null;
 
-  const data = await res.json();
+  const data = (await res.json()) as GitHubSearchResponse;
   return data.total_count > 0 ? data.items[0] : null;
 }
 
 /**
  * Add a comment to an existing issue noting an additional occurrence.
  */
-export async function addDuplicateComment(token, owner, repo, issueNumber, report, fingerprint) {
+export async function addDuplicateComment(
+  token: string,
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  report: CrashReport,
+  fingerprint: string
+): Promise<void> {
   const comment = [
     `## Additional occurrence`,
     "",

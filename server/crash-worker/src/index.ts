@@ -20,10 +20,51 @@ import {
   crashFingerprint,
   findExistingIssue,
   addDuplicateComment,
-} from "./github-app.js";
+} from "./github-app";
+import { resolveBacktrace } from "./symbol-resolver";
+import type { CrashReport, ResolvedBacktrace } from "./symbol-resolver";
+
+/** Worker environment bindings. */
+interface Env {
+  // R2 buckets
+  DEBUG_BUNDLES: R2Bucket;
+  TELEMETRY_BUCKET: R2Bucket;
+
+  // Rate limiters
+  CRASH_LIMITER: RateLimit;
+  DEBUG_BUNDLE_LIMITER: RateLimit;
+
+  // Vars (wrangler.toml [vars])
+  GITHUB_REPO: string;
+  GITHUB_APP_ID: string;
+  NOTIFICATION_EMAIL: string;
+  EMAIL_FROM: string;
+
+  // Secrets (wrangler secret put)
+  INGEST_API_KEY: string;
+  GITHUB_APP_PRIVATE_KEY: string;
+  ADMIN_API_KEY: string;
+  RESEND_API_KEY: string;
+}
+
+/** GitHub issue creation result. */
+interface IssueResult {
+  number: number;
+  html_url: string;
+  is_duplicate: boolean;
+}
+
+/** Metadata extracted from a debug bundle. */
+interface BundleMetadata {
+  version: string;
+  printer_model: string;
+  klipper_version: string;
+  platform: string;
+  timestamp: string;
+}
 
 export default {
-  async fetch(request, env) {
+  async fetch(request: Request, env: Env): Promise<Response> {
     // Handle CORS preflight
     if (request.method === "OPTIONS") {
       return new Response(null, {
@@ -60,13 +101,13 @@ export default {
 
     return jsonResponse(404, { error: "Not found" });
   },
-};
+} satisfies ExportedHandler<Env>;
 
 /**
  * Handle an incoming crash report.
  * Validates the API key and payload, then creates a GitHub issue.
  */
-async function handleCrashReport(request, env) {
+async function handleCrashReport(request: Request, env: Env): Promise<Response> {
   // --- Authentication ---
   const apiKey = request.headers.get("X-API-Key");
   if (!apiKey || apiKey !== env.INGEST_API_KEY) {
@@ -81,7 +122,7 @@ async function handleCrashReport(request, env) {
   }
 
   // --- Parse and validate body ---
-  let body;
+  let body: CrashReport;
   try {
     body = await request.json();
   } catch {
@@ -105,7 +146,7 @@ async function handleCrashReport(request, env) {
       is_duplicate: issue.is_duplicate || false,
     });
   } catch (err) {
-    console.error("Failed to create GitHub issue:", err.message);
+    console.error("Failed to create GitHub issue:", (err as Error).message);
     return jsonResponse(500, { error: "Failed to create GitHub issue" });
   }
 }
@@ -114,7 +155,7 @@ async function handleCrashReport(request, env) {
  * Check that all required fields are present and non-empty.
  * Returns an array of missing field names.
  */
-function validateRequiredFields(body, fields) {
+function validateRequiredFields(body: Record<string, unknown>, fields: string[]): string[] {
   return fields.filter(
     (f) => body[f] === undefined || body[f] === null || body[f] === ""
   );
@@ -125,7 +166,7 @@ function validateRequiredFields(body, fields) {
  * Uses GitHub App authentication (issues appear as "HelixScreen Crash Reporter [bot]").
  * Deduplicates by fingerprint — adds a comment to existing issues instead of creating new ones.
  */
-async function createGitHubIssue(env, report) {
+async function createGitHubIssue(env: Env, report: CrashReport): Promise<IssueResult> {
   const [owner, repo] = env.GITHUB_REPO.split("/");
 
   // Get installation token from GitHub App
@@ -145,13 +186,23 @@ async function createGitHubIssue(env, report) {
     return { number: existing.number, html_url: existing.html_url, is_duplicate: true };
   }
 
+  // Resolve backtrace symbols from R2 (best-effort, never throws)
+  let resolved: ResolvedBacktrace | null = null;
+  if (env.TELEMETRY_BUCKET) {
+    try {
+      resolved = await resolveBacktrace(env.TELEMETRY_BUCKET, report);
+    } catch (err) {
+      console.error("Symbol resolution failed:", (err as Error).message);
+    }
+  }
+
   // Include fault type in title when available (e.g., "SEGV_MAPERR at 0x00000000")
   let title = `Crash: ${report.signal_name} in v${report.app_version}`;
   if (report.fault_code_name && report.fault_addr) {
     title = `Crash: ${report.signal_name} (${report.fault_code_name} at ${report.fault_addr}) in v${report.app_version}`;
   }
 
-  const body = formatIssueBody(report, fingerprint);
+  const body = formatIssueBody(report, fingerprint, resolved);
 
   const response = await fetch(
     `https://api.github.com/repos/${env.GITHUB_REPO}/issues`,
@@ -176,14 +227,14 @@ async function createGitHubIssue(env, report) {
     throw new Error(`GitHub API ${response.status}: ${text}`);
   }
 
-  const issue = await response.json();
+  const issue = (await response.json()) as { number: number; html_url: string };
   return { number: issue.number, html_url: issue.html_url, is_duplicate: false };
 }
 
 /**
  * Format the crash report into a structured markdown issue body.
  */
-function formatIssueBody(r, fingerprint) {
+function formatIssueBody(r: CrashReport, fingerprint: string, resolved: ResolvedBacktrace | null): string {
   const timestamp = r.timestamp || new Date().toISOString();
   const uptime = r.uptime_seconds != null ? `${r.uptime_seconds}s` : "unknown";
 
@@ -202,21 +253,28 @@ function formatIssueBody(r, fingerprint) {
     md += `| **Fault** | ${r.fault_code_name} at ${r.fault_addr} |\n`;
   }
 
-  // Register state (Phase 2)
+  // Register state (Phase 2) — with resolved symbols when available
   if (r.registers) {
     md += `\n## Registers
 
 | Register | Value |
 |----------|-------|
 `;
-    if (r.registers.pc) md += `| **PC** | ${r.registers.pc} |\n`;
-    if (r.registers.sp) md += `| **SP** | ${r.registers.sp} |\n`;
-    if (r.registers.lr) md += `| **LR** | ${r.registers.lr} |\n`;
-    if (r.registers.bp) md += `| **BP** | ${r.registers.bp} |\n`;
+    const regs = resolved?.resolvedRegisters || {};
+    for (const [reg, val] of Object.entries(r.registers)) {
+      if (!val) continue;
+      const label = reg.toUpperCase();
+      const sym = regs[reg];
+      if (sym) {
+        md += `| **${label}** | \`${val}\` → \`${sym}\` |\n`;
+      } else {
+        md += `| **${label}** | \`${val}\` |\n`;
+      }
+    }
   }
 
   // System info section (all fields optional)
-  if (r.platform || r.display_backend || r.ram_mb || r.cpu_info || r.printer_model || r.klipper_version) {
+  if (r.platform || r.display_backend || r.ram_mb || r.cpu_cores || r.printer_model || r.klipper_version) {
     md += `\n## System Info
 
 | Field | Value |
@@ -230,14 +288,37 @@ function formatIssueBody(r, fingerprint) {
     if (r.klipper_version) md += `| **Klipper** | ${r.klipper_version} |\n`;
   }
 
-  // Backtrace section
+  // Backtrace section — with resolved symbols when available
   if (r.backtrace && r.backtrace.length > 0) {
-    md += `\n## Backtrace
+    md += `\n## Backtrace\n\n`;
 
-\`\`\`
-${r.backtrace.join("\n")}
-\`\`\`
-`;
+    if (resolved?.frames?.some((f) => f.symbol)) {
+      // Resolved backtrace: show as table
+      md += `| # | Address | Symbol |\n|---|---------|--------|\n`;
+      for (let i = 0; i < resolved.frames.length; i++) {
+        const f = resolved.frames[i];
+        const sym = f.symbol ? `\`${f.symbol}\`` : "(unknown)";
+        md += `| ${i} | \`${f.raw}\` | ${sym} |\n`;
+      }
+
+      // Add metadata about resolution
+      const parts: string[] = [];
+      if (resolved.loadBase) {
+        parts.push(
+          resolved.autoDetectedBase
+            ? `load_base: ${resolved.loadBase} (auto-detected)`
+            : `load_base: ${resolved.loadBase}`
+        );
+      }
+      parts.push(`symbol file: v${r.app_version}/${r.platform || r.app_platform}.sym`);
+      md += `\n<sub>${parts.join(" · ")}</sub>\n`;
+    } else {
+      // Unresolved: raw addresses in code block (original format)
+      md += `\`\`\`\n${r.backtrace.join("\n")}\n\`\`\`\n`;
+      if (resolved?.symbolFileFound === false) {
+        md += `\n<sub>No symbol file found for v${r.app_version}/${r.platform || r.app_platform || "unknown"}</sub>\n`;
+      }
+    }
   }
 
   // Log tail in a collapsed section
@@ -266,7 +347,7 @@ ${r.log_tail.join("\n")}
  * Generate a random share code using an unambiguous character set.
  * Excludes I, O, 0, 1 to avoid confusion when reading codes aloud.
  */
-function generateShareCode(length = 8) {
+function generateShareCode(length = 8): string {
   const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const values = crypto.getRandomValues(new Uint8Array(length));
   return Array.from(values, (v) => charset[v % charset.length]).join("");
@@ -276,7 +357,7 @@ function generateShareCode(length = 8) {
  * Handle an incoming debug bundle upload.
  * Validates the API key and payload, stores in R2, returns a share code.
  */
-async function handleDebugBundleUpload(request, env) {
+async function handleDebugBundleUpload(request: Request, env: Env): Promise<Response> {
   // --- Authentication ---
   const apiKey = request.headers.get("X-API-Key");
   if (!apiKey || apiKey !== env.INGEST_API_KEY) {
@@ -315,7 +396,7 @@ async function handleDebugBundleUpload(request, env) {
     const metadata = await extractBundleMetadata(body);
     await sendBundleNotification(env, shareCode, clientIP, metadata);
   } catch (err) {
-    console.error("Failed to send bundle notification:", err.message);
+    console.error("Failed to send bundle notification:", (err as Error).message);
   }
 
   return jsonResponse(201, { share_code: shareCode });
@@ -325,7 +406,7 @@ async function handleDebugBundleUpload(request, env) {
  * Retrieve a debug bundle by share code.
  * Requires admin API key for access.
  */
-async function handleDebugBundleRetrieve(request, env, url) {
+async function handleDebugBundleRetrieve(request: Request, env: Env, url: URL): Promise<Response> {
   // --- Authentication (admin key) ---
   const adminKey = request.headers.get("X-Admin-Key");
   if (!adminKey || adminKey !== env.ADMIN_API_KEY) {
@@ -358,7 +439,7 @@ async function handleDebugBundleRetrieve(request, env, url) {
  * Decompress a gzipped ArrayBuffer and extract metadata from the JSON bundle.
  * Returns an object with version, printer_model, timestamp, etc.
  */
-async function extractBundleMetadata(gzippedBody) {
+async function extractBundleMetadata(gzippedBody: ArrayBuffer): Promise<BundleMetadata> {
   try {
     const ds = new DecompressionStream("gzip");
     const writer = ds.writable.getWriter();
@@ -366,7 +447,7 @@ async function extractBundleMetadata(gzippedBody) {
     writer.close();
 
     const reader = ds.readable.getReader();
-    const chunks = [];
+    const chunks: Uint8Array[] = [];
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -382,13 +463,15 @@ async function extractBundleMetadata(gzippedBody) {
       }, new Uint8Array())
     );
 
-    const json = JSON.parse(text);
+    const json = JSON.parse(text) as Record<string, unknown>;
+    const printerInfo = json.printer_info as Record<string, string> | undefined;
+    const systemInfo = json.system_info as Record<string, string> | undefined;
     return {
-      version: json.version || "unknown",
-      printer_model: json.printer_info?.model || "unknown",
-      klipper_version: json.printer_info?.klipper_version || "unknown",
-      platform: json.system_info?.platform || "unknown",
-      timestamp: json.timestamp || new Date().toISOString(),
+      version: (json.version as string) || "unknown",
+      printer_model: printerInfo?.model || "unknown",
+      klipper_version: printerInfo?.klipper_version || "unknown",
+      platform: systemInfo?.platform || "unknown",
+      timestamp: (json.timestamp as string) || new Date().toISOString(),
     };
   } catch {
     return {
@@ -404,7 +487,12 @@ async function extractBundleMetadata(gzippedBody) {
 /**
  * Send a notification email via Resend when a debug bundle is uploaded.
  */
-async function sendBundleNotification(env, shareCode, clientIP, metadata) {
+async function sendBundleNotification(
+  env: Env,
+  shareCode: string,
+  clientIP: string,
+  metadata: BundleMetadata
+): Promise<void> {
   if (!env.RESEND_API_KEY) {
     console.warn("RESEND_API_KEY not set, skipping notification");
     return;
@@ -462,7 +550,7 @@ Retrieve: curl --compressed -H "X-Admin-Key: $HELIX_ADMIN_KEY" https://crash.hel
 /**
  * Build a JSON response with CORS headers.
  */
-function jsonResponse(status, data) {
+function jsonResponse(status: number, data: Record<string, unknown>): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
@@ -477,7 +565,7 @@ function jsonResponse(status, data) {
  * Not strictly needed for device-to-worker traffic, but included for
  * completeness if a web dashboard ever hits this endpoint.
  */
-function corsHeaders() {
+function corsHeaders(): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
