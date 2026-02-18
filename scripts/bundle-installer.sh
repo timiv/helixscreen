@@ -232,11 +232,11 @@ main() {
         esac
     done
 
-    echo ""
-    echo "${BOLD}========================================${NC}"
-    echo "${BOLD}       HelixScreen Installer${NC}"
-    echo "${BOLD}========================================${NC}"
-    echo ""
+    printf '\n'
+    printf '%b\n' "${BOLD}========================================${NC}"
+    printf '%b\n' "${BOLD}       HelixScreen Installer${NC}"
+    printf '%b\n' "${BOLD}========================================${NC}"
+    printf '\n'
 
     # Detect platform
     platform=$(detect_platform)
@@ -355,11 +355,11 @@ main() {
     # Cleanup on success
     cleanup_on_success
 
-    echo ""
-    echo "${GREEN}${BOLD}========================================${NC}"
-    echo "${GREEN}${BOLD}    Installation Complete!${NC}"
-    echo "${GREEN}${BOLD}========================================${NC}"
-    echo ""
+    printf '\n'
+    printf '%b\n' "${GREEN}${BOLD}========================================${NC}"
+    printf '%b\n' "${GREEN}${BOLD}    Installation Complete!${NC}"
+    printf '%b\n' "${GREEN}${BOLD}========================================${NC}"
+    printf '\n'
     echo "HelixScreen ${version} installed to ${INSTALL_DIR}"
     echo ""
     print_post_install_commands
