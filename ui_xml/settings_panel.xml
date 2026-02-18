@@ -26,11 +26,14 @@
                         label="3D Preview" label_tag="3D Preview" icon="rotate_3d"
                         description="Interactive 3D G-code during prints"
                         description_tag="Interactive 3D G-code during prints" callback="on_gcode_3d_changed"/>
-    <!-- Display Settings (opens overlay for brightness + sleep timeout) -->
-    <setting_action_row name="row_display_settings"
-                        label="Display Settings" label_tag="Display Settings" icon="light"
-                        description="Theme, brightness, and sleep settings"
-                        description_tag="Theme, brightness, and sleep settings" callback="on_display_settings_clicked"/>
+    <!-- Display Settings (opens overlay for brightness + sleep timeout; hidden on Android) -->
+    <lv_obj name="container_display_settings" width="100%" style_pad_all="0" scrollable="false">
+      <bind_flag_if_eq subject="show_backlight_settings" flag="hidden" ref_value="0"/>
+      <setting_action_row name="row_display_settings"
+                          label="Display Settings" label_tag="Display Settings" icon="light"
+                          description="Theme, brightness, and sleep settings"
+                          description_tag="Theme, brightness, and sleep settings" callback="on_display_settings_clicked"/>
+    </lv_obj>
     <!-- ================================================================== -->
     <!-- PRINTER SECTION -->
     <!-- ================================================================== -->
@@ -139,11 +142,14 @@
     <!-- SYSTEM SECTION -->
     <!-- ================================================================== -->
     <setting_section_header title="SYSTEM" title_tag="SYSTEM" icon="sysinfo"/>
-    <!-- Network Settings -->
-    <setting_action_row name="row_network"
-                        label="Network Settings" label_tag="Network Settings" icon="wifi"
-                        description="WiFi and Ethernet configuration" description_tag="WiFi and Ethernet configuration"
-                        callback="on_network_clicked"/>
+    <!-- Network Settings (hidden on Android where OS manages WiFi) -->
+    <lv_obj name="container_network_settings" width="100%" style_pad_all="0" scrollable="false">
+      <bind_flag_if_eq subject="show_network_settings" flag="hidden" ref_value="0"/>
+      <setting_action_row name="row_network"
+                          label="Network Settings" label_tag="Network Settings" icon="wifi"
+                          description="WiFi and Ethernet configuration"
+                          description_tag="WiFi and Ethernet configuration" callback="on_network_clicked"/>
+    </lv_obj>
     <!-- Printer Host (clickable - opens change host modal) -->
     <setting_action_row name="row_printer_host"
                         label="Host" label_tag="Host" icon="lan" callback="on_change_host_clicked"/>
@@ -195,6 +201,7 @@
                         description_tag="Reset all settings and restart wizard" callback="on_factory_reset_clicked"/>
     <!-- Install Update (visible only when update available) -->
     <lv_obj name="container_install_update" width="100%" style_pad_all="0">
+      <bind_flag_if_eq subject="show_update_settings" flag="hidden" ref_value="0"/>
       <bind_flag_if_not_eq subject="update_status" flag="hidden" ref_value="2"/>
       <setting_action_row name="row_install_update"
                           label="Install Update" label_tag="Install Update" icon="download" description=""
@@ -246,10 +253,13 @@
                             options="Stable&#10;Beta&#10;Dev" bind_selected="update_channel"
                             callback="on_update_channel_changed"/>
     </lv_obj>
-    <!-- Check for Updates (reactive description shows available version) -->
-    <setting_action_row name="row_check_updates"
-                        label="Check for Updates" label_tag="Check for Updates" icon="refresh"
-                        bind_description="update_version_text" callback="on_check_updates_clicked"/>
+    <!-- Check for Updates (reactive description shows available version; hidden on Android) -->
+    <lv_obj name="container_check_updates" width="100%" style_pad_all="0" scrollable="false">
+      <bind_flag_if_eq subject="show_update_settings" flag="hidden" ref_value="0"/>
+      <setting_action_row name="row_check_updates"
+                          label="Check for Updates" label_tag="Check for Updates" icon="refresh"
+                          bind_description="update_version_text" callback="on_check_updates_clicked"/>
+    </lv_obj>
     <!-- Klipper Version -->
     <setting_info_row name="row_klipper" label="Klipper" label_tag="Klipper" icon="toy_brick_outline">
       <text_muted name="value" text="—"/>

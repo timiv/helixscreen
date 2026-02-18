@@ -10,7 +10,7 @@
 
 #ifdef __APPLE__
 #include "ethernet_backend_macos.h"
-#else
+#elif !defined(__ANDROID__)
 #include "ethernet_backend_linux.h"
 #endif
 
@@ -32,6 +32,10 @@ std::unique_ptr<EthernetBackend> EthernetBackend::create() {
         spdlog::info("[EthernetBackend] No Ethernet interface found");
     }
     return backend;
+#elif defined(__ANDROID__)
+    // Android: Ethernet managed by the OS
+    spdlog::info("[EthernetBackend] Android platform - Ethernet not managed natively");
+    return nullptr;
 #else
     // Linux: Use native backend (handles missing interface gracefully)
     spdlog::debug("[EthernetBackend] Creating Linux backend");

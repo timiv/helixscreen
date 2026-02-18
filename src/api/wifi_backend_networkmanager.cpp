@@ -5,7 +5,7 @@
 
 #include "spdlog/spdlog.h"
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__ANDROID__)
 // ============================================================================
 // Linux Implementation: NetworkManager fallback via nmcli
 // ============================================================================
@@ -738,4 +738,4 @@ bool WifiBackendNetworkManager::supports_5ghz() const {
     return false;
 }
 
-#endif // __APPLE__
+#endif // !__APPLE__ && !__ANDROID__

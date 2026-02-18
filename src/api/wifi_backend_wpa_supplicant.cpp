@@ -7,7 +7,7 @@
 
 #include "spdlog/spdlog.h"
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__ANDROID__)
 // ============================================================================
 // Linux Implementation: Full wpa_supplicant integration
 // ============================================================================
@@ -1108,4 +1108,4 @@ std::string WifiBackendWpaSupplicant::detect_security_type(const std::string& fl
 
 // Empty file - all methods are inline in header
 
-#endif // __APPLE__
+#endif // !__APPLE__ && !__ANDROID__

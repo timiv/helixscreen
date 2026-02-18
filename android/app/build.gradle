@@ -1,0 +1,89 @@
+apply plugin: 'com.android.application'
+
+// Read version from project root VERSION.txt to stay in sync with embedded builds
+def versionFile = file("../../VERSION.txt")
+def helix_version = versionFile.text.trim()
+def versionParts = helix_version.split("\\.")
+def vMajor = versionParts[0].toInteger()
+def vMinor = versionParts[1].toInteger()
+def vPatch = versionParts[2].replaceAll("-.*", "").toInteger()
+
+android {
+    namespace "org.helixscreen.app"
+    compileSdkVersion 34
+    ndkVersion "29.0.14206865"
+
+    defaultConfig {
+        applicationId "org.helixscreen.app"
+        minSdkVersion 28
+        targetSdkVersion 34
+        versionCode vMajor * 10000 + vMinor * 100 + vPatch  // 0.10.4 → 1004
+        versionName helix_version
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared"
+                abiFilters 'arm64-v8a', 'x86_64'
+            }
+        }
+    }
+
+    signingConfigs {
+        release {
+            def ks = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release.storeFile ? signingConfigs.release : signingConfigs.debug
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+
+    splits {
+        abi {
+            enable true
+            reset()
+            include "arm64-v8a", "x86_64"
+            universalApk true
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'jni/CMakeLists.txt'
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    lint {
+        abortOnError false
+    }
+
+}
+
+// Copy project assets into APK assets directory, preserving directory structure.
+// The asset extractor on Android reads these and copies them to internal storage.
+task copyAssets(type: Copy) {
+    from('../../ui_xml') { into 'ui_xml' }
+    from('../../assets') { into 'assets' }
+    from('../../config') { into 'config' }
+    into 'src/main/assets'
+}
+
+preBuild.dependsOn copyAssets
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+}

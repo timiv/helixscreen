@@ -5,7 +5,7 @@
 
 #include "usb_backend_mock.h"
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 #include "usb_backend_linux.h"
 #endif
 
@@ -17,7 +17,7 @@ std::unique_ptr<UsbBackend> UsbBackend::create(bool force_mock) {
         return std::make_unique<UsbBackendMock>();
     }
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
     // Linux: Use native backend (inotify preferred, polling fallback)
     spdlog::debug("[UsbBackend] Linux platform detected - using native backend");
     auto backend = std::make_unique<UsbBackendLinux>();
@@ -35,8 +35,8 @@ std::unique_ptr<UsbBackend> UsbBackend::create(bool force_mock) {
     spdlog::info("[UsbBackend] macOS platform - USB support not available");
     return nullptr;
 #else
-    // Unsupported platform
-    spdlog::warn("[UsbBackend] Unknown platform - USB support not available");
+    // Android and other unsupported platforms
+    spdlog::info("[UsbBackend] Platform does not support native USB");
     return nullptr;
 #endif
 }

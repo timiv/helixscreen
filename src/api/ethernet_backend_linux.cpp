@@ -1,6 +1,8 @@
 // Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#if !defined(__ANDROID__)
+
 #include "ethernet_backend_linux.h"
 
 #include "ifconfig.h" // libhv's cross-platform ifconfig utility
@@ -246,3 +248,5 @@ EthernetInfo EthernetBackendLinux::get_info() {
 
     return info;
 }
+
+#endif // !__ANDROID__

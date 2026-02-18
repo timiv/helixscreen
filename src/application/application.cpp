@@ -98,8 +98,10 @@
 #include "ui_wizard_touch_calibration.h"
 #include "ui_wizard_wifi.h"
 
+#include "android_asset_extractor.h"
 #include "data_root_resolver.h"
 #include "led/ui_led_control_overlay.h"
+#include "platform_info.h"
 #include "printer_detector.h"
 #include "printer_image_manager.h"
 #include "settings_manager.h"
@@ -203,6 +205,11 @@ int Application::run(int argc, char** argv) {
     // Store argv early for restart capability
     app_store_argv(argc, argv);
 
+#ifdef __ANDROID__
+    // Extract APK assets to internal storage before data root resolution
+    helix::android_extract_assets_if_needed();
+#endif
+
     // Ensure we're running from the project root
     ensure_project_root_cwd();
 
@@ -291,7 +298,10 @@ int Application::run(int argc, char** argv) {
     }
 
     // Initialize UpdateChecker before panel subjects (subjects must exist for XML binding)
-    UpdateChecker::instance().init();
+    // On Android, updates are managed by the Play Store — skip self-update system
+    if (!helix::is_android_platform()) {
+        UpdateChecker::instance().init();
+    }
 
     // Initialize CrashReporter (independent of telemetry)
     // Write mock crash file first if --mock-crash flag is set (requires --test)

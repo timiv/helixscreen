@@ -31,11 +31,13 @@
 #include "lvgl/src/xml/lv_xml.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
+#include "platform_info.h"
 #include "runtime_config.h"
 #include "static_panel_registry.h"
 #include "subject_managed_panel.h"
 #include "theme_manager.h"
 #include "wizard_config_paths.h"
+#include "wizard_step_logic.h"
 
 #include <spdlog/spdlog.h>
 
@@ -77,6 +79,9 @@ static bool touch_cal_step_skipped = false;
 
 // Track if language step (1) is being skipped - language already set
 static bool language_step_skipped = false;
+
+// Track if WiFi step (2) is being skipped - Android manages WiFi natively
+static bool wifi_step_skipped = false;
 
 // Track if AMS step (7) is being skipped - no AMS detected
 static bool ams_step_skipped = false;
@@ -375,41 +380,30 @@ lv_obj_t* ui_wizard_create(lv_obj_t* parent) {
 }
 
 /**
+ * Build WizardSkipFlags from current static skip state
+ */
+static helix::WizardSkipFlags get_current_skip_flags() {
+    return helix::WizardSkipFlags{
+        .touch_cal = touch_cal_step_skipped,
+        .language = language_step_skipped,
+        .wifi = wifi_step_skipped,
+        .ams = ams_step_skipped,
+        .led = led_step_skipped,
+        .filament = filament_step_skipped,
+        .probe = probe_step_skipped,
+        .input_shaper = input_shaper_step_skipped,
+    };
+}
+
+/**
  * Calculate display step number and total, accounting for skipped steps
+ * Delegates to tested wizard_step_logic functions
  */
 static void calculate_display_step(int internal_step, int& out_display_step,
                                    int& out_display_total) {
-    out_display_step = internal_step + 1; // Convert internal step (0-based) to 1-based display
-    if (touch_cal_step_skipped)
-        out_display_step--;
-    if (language_step_skipped && internal_step > 1)
-        out_display_step--;
-    if (ams_step_skipped && internal_step > 7)
-        out_display_step--;
-    if (led_step_skipped && internal_step > 8)
-        out_display_step--;
-    if (filament_step_skipped && internal_step > 9)
-        out_display_step--;
-    if (probe_step_skipped && internal_step > 10)
-        out_display_step--;
-    if (input_shaper_step_skipped && internal_step > 11)
-        out_display_step--;
-
-    out_display_total = 13; // Steps 0-12 = 13 total
-    if (touch_cal_step_skipped)
-        out_display_total--;
-    if (ams_step_skipped)
-        out_display_total--;
-    if (led_step_skipped)
-        out_display_total--;
-    if (filament_step_skipped)
-        out_display_total--;
-    if (probe_step_skipped)
-        out_display_total--;
-    if (input_shaper_step_skipped)
-        out_display_total--;
-    if (language_step_skipped)
-        out_display_total--;
+    auto skips = get_current_skip_flags();
+    out_display_step = helix::wizard_calculate_display_step(internal_step, skips);
+    out_display_total = helix::wizard_calculate_display_total(skips);
 }
 
 void ui_wizard_navigate_to_step(int step) {
@@ -426,6 +420,7 @@ void ui_wizard_navigate_to_step(int step) {
     if (step == 0) {
         touch_cal_step_skipped = false;
         language_step_skipped = false;
+        wifi_step_skipped = false;
         ams_step_skipped = false;
         led_step_skipped = false;
         filament_step_skipped = false;
@@ -446,6 +441,13 @@ void ui_wizard_navigate_to_step(int step) {
             step = 2;
             spdlog::debug("[Wizard] Skipping language step");
         }
+
+        // Auto-skip WiFi step on Android (WiFi managed by OS)
+        if (step == 2 && helix::is_android_platform()) {
+            wifi_step_skipped = true;
+            step = 3;
+            spdlog::debug("[Wizard] Skipping WiFi step (Android platform)");
+        }
     }
 
     // Calculate display step and total for progress indicator
@@ -462,6 +464,8 @@ void ui_wizard_navigate_to_step(int step) {
         min_step = 1;
     if (min_step == 1 && language_step_skipped)
         min_step = 2;
+    if (min_step == 2 && wifi_step_skipped)
+        min_step = 3;
     lv_subject_set_int(&wizard_back_visible, (step > min_step) ? 1 : 0);
 
     // Determine if this is the last step (summary is always step 12 internally)
@@ -573,9 +577,9 @@ static void ui_wizard_precalculate_skips() {
     }
 
     int total_skipped = (touch_cal_step_skipped ? 1 : 0) + (language_step_skipped ? 1 : 0) +
-                        (ams_step_skipped ? 1 : 0) + (led_step_skipped ? 1 : 0) +
-                        (filament_step_skipped ? 1 : 0) + (probe_step_skipped ? 1 : 0) +
-                        (input_shaper_step_skipped ? 1 : 0);
+                        (wifi_step_skipped ? 1 : 0) + (ams_step_skipped ? 1 : 0) +
+                        (led_step_skipped ? 1 : 0) + (filament_step_skipped ? 1 : 0) +
+                        (probe_step_skipped ? 1 : 0) + (input_shaper_step_skipped ? 1 : 0);
     spdlog::info("[Wizard] Pre-calculated skips: {} steps will be skipped, {} total steps",
                  total_skipped, 13 - total_skipped);
 
@@ -971,6 +975,8 @@ static void on_back_clicked(lv_event_t* e) {
         min_step = 1;
     if (min_step == 1 && language_step_skipped)
         min_step = 2;
+    if (min_step == 2 && wifi_step_skipped)
+        min_step = 3;
 
     if (current > min_step) {
         int prev_step = current - 1;
@@ -998,6 +1004,11 @@ static void on_back_clicked(lv_event_t* e) {
         // Skip AMS step (7) when going back if it was skipped
         if (prev_step == 7 && ams_step_skipped) {
             prev_step = 6;
+        }
+
+        // Skip WiFi step (2) when going back if it was skipped
+        if (prev_step == 2 && wifi_step_skipped) {
+            prev_step = 1;
         }
 
         // Skip language step (1) when going back if it was skipped
@@ -1045,6 +1056,13 @@ static void on_next_clicked(lv_event_t* e) {
         language_step_skipped = true;
         next_step = 2;
         spdlog::debug("[Wizard] Skipping language step (language already set)");
+    }
+
+    // Skip WiFi step (2) on Android
+    if (next_step == 2 && helix::is_android_platform()) {
+        wifi_step_skipped = true;
+        next_step = 3;
+        spdlog::debug("[Wizard] Skipping WiFi step (Android platform)");
     }
 
     // Pre-calculate all skip flags when leaving connection step (step 3)

@@ -1,0 +1,3 @@
+# Copy to local.properties and set your SDK/NDK paths
+sdk.dir=/path/to/Android/sdk
+# ndk.dir is usually auto-detected from sdk.dir

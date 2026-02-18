@@ -9,7 +9,7 @@
 
 #ifdef __APPLE__
 #include "wifi_backend_macos.h"
-#else
+#elif !defined(__ANDROID__)
 #include "wifi_backend_networkmanager.h"
 #include "wifi_backend_wpa_supplicant.h"
 #endif
@@ -39,6 +39,10 @@ std::unique_ptr<WifiBackend> WifiBackend::create(bool silent) {
     // In production mode, don't fallback to mock - WiFi is simply unavailable
     spdlog::warn("[WifiBackend] CoreWLAN backend failed: {} - WiFi unavailable",
                  start_result.technical_msg);
+    return nullptr;
+#elif defined(__ANDROID__)
+    // Android: WiFi managed by the OS, not by us
+    spdlog::info("[WifiBackend] Android platform - WiFi not managed natively");
     return nullptr;
 #else
     // Linux: Try NetworkManager first (fast probe, most distros use it)
