@@ -96,8 +96,9 @@ struct FilamentPathData {
     int error_segment = 0;               // Error location (0=none)
     int anim_progress = 0;               // Animation progress 0-100 (for segment transition)
     uint32_t filament_color = DEFAULT_FILAMENT_COLOR;
-    int32_t slot_overlap = 0; // Overlap between slots in pixels (for 5+ gates)
-    int32_t slot_width = 90;  // Dynamic slot width (set by AmsPanel)
+    int32_t slot_overlap = 0;     // Overlap between slots in pixels (for 5+ gates)
+    int32_t slot_width = 90;      // Dynamic slot width (set by AmsPanel)
+    int32_t slot_grid_offset = 0; // X offset from canvas edge to slot grid start
 
     // Per-slot filament state (for showing all installed filaments, not just active)
     static constexpr int MAX_SLOTS = 16;
@@ -202,20 +203,19 @@ static FilamentPathData* get_data(lv_obj_t* obj) {
 // Uses ABSOLUTE positioning with dynamic slot width from AmsPanel:
 //   slot_center[i] = card_padding + slot_width/2 + i * (slot_width - overlap)
 // Both slot_width and overlap are set by AmsPanel to match actual slot layout.
-// NOTE: ams_unit_card has style_pad_all="#space_sm" which offsets slot_grid content.
-// path_container has no padding, so we must add card_padding to align with slots.
-static int32_t get_slot_x(int slot_index, int slot_count, int32_t slot_width, int32_t overlap) {
-    // Card padding where slot_grid content starts (ams_unit_card has style_pad_all="#space_sm")
-    int32_t card_padding = theme_manager_get_spacing("space_sm");
-
+// Slot X positions must account for the card padding offset between the
+// ams_unit_card (which contains the slot grid with padding) and the
+// path_container (which has no padding but the same outer width).
+// The offset is stored in slot_grid_offset, set from actual layout measurements.
+static int32_t get_slot_x(int slot_index, int slot_count, int32_t slot_width, int32_t overlap,
+                          int32_t grid_offset) {
     if (slot_count <= 1) {
-        return card_padding + slot_width / 2;
+        return grid_offset + slot_width / 2;
     }
 
-    // Slot spacing = slot_width - overlap (slots move closer together with overlap)
     int32_t slot_spacing = slot_width - overlap;
 
-    return card_padding + slot_width / 2 + slot_index * slot_spacing;
+    return grid_offset + slot_width / 2 + slot_index * slot_spacing;
 }
 
 // Check if a segment should be drawn as "active" (filament present at or past it)
@@ -645,8 +645,8 @@ static void draw_parallel_topology(lv_event_t* e, FilamentPathData* data) {
 
     // Draw each tool as an independent column
     for (int i = 0; i < data->slot_count; i++) {
-        int32_t slot_x =
-            x_off + get_slot_x(i, data->slot_count, data->slot_width, data->slot_overlap);
+        int32_t slot_x = x_off + get_slot_x(i, data->slot_count, data->slot_width,
+                                            data->slot_overlap, data->slot_grid_offset);
         bool is_mounted = (i == data->active_slot);
 
         // Get filament color for this tool
@@ -681,11 +681,14 @@ static void draw_parallel_topology(lv_event_t* e, FilamentPathData* data) {
             noz_color = tool_color;
         }
 
+        // Docked toolheads rendered at reduced opacity to visually distinguish from active
+        lv_opa_t toolhead_opa = is_mounted ? LV_OPA_COVER : LV_OPA_40;
+
         // Use the proper nozzle renderers (same as hub topology)
         if (data->use_faceted_toolhead) {
-            draw_nozzle_faceted(layer, slot_x, toolhead_y, noz_color, tool_scale);
+            draw_nozzle_faceted(layer, slot_x, toolhead_y, noz_color, tool_scale, toolhead_opa);
         } else {
-            draw_nozzle_bambu(layer, slot_x, toolhead_y, noz_color, tool_scale);
+            draw_nozzle_bambu(layer, slot_x, toolhead_y, noz_color, tool_scale, toolhead_opa);
         }
 
         // Tool label (T0, T1, etc.) below nozzle
@@ -694,6 +697,7 @@ static void draw_parallel_topology(lv_event_t* e, FilamentPathData* data) {
             lv_draw_label_dsc_t label_dsc;
             lv_draw_label_dsc_init(&label_dsc);
             label_dsc.color = is_mounted ? theme_manager_get_color("success") : data->color_text;
+            label_dsc.opa = toolhead_opa;
             label_dsc.font = data->label_font;
             label_dsc.align = LV_TEXT_ALIGN_CENTER;
 
@@ -785,8 +789,8 @@ static void filament_path_draw_cb(lv_event_t* e) {
     // Shows all installed filaments' colors, not just the active slot
     // ========================================================================
     for (int i = 0; i < data->slot_count; i++) {
-        int32_t slot_x =
-            x_off + get_slot_x(i, data->slot_count, data->slot_width, data->slot_overlap);
+        int32_t slot_x = x_off + get_slot_x(i, data->slot_count, data->slot_width,
+                                            data->slot_overlap, data->slot_grid_offset);
         bool is_active_slot = (i == data->active_slot);
 
         // Determine line color and width for this slot's lane
@@ -1140,8 +1144,9 @@ static void filament_path_draw_cb(lv_event_t* e) {
         int32_t tip_x = center_x;
         if ((prev_seg <= PathSegment::PREP || fil_seg <= PathSegment::PREP) &&
             data->active_slot >= 0) {
-            int32_t slot_x = x_off + get_slot_x(data->active_slot, data->slot_count,
-                                                data->slot_width, data->slot_overlap);
+            int32_t slot_x =
+                x_off + get_slot_x(data->active_slot, data->slot_count, data->slot_width,
+                                   data->slot_overlap, data->slot_grid_offset);
             if (is_loading) {
                 // Moving from slot toward center
                 if (prev_seg <= PathSegment::PREP && fil_seg > PathSegment::PREP) {
@@ -1190,6 +1195,27 @@ static void filament_path_click_cb(lv_event_t* e) {
     int32_t x_off = obj_coords.x1;
     int32_t y_off = obj_coords.y1;
 
+    // For PARALLEL topology (tool changers), also accept clicks on the toolhead area
+    if (data->topology == static_cast<int>(PathTopology::PARALLEL) && data->slot_callback) {
+        constexpr float PARALLEL_TOOLHEAD_Y = 0.55f;
+        int32_t toolhead_y = y_off + (int32_t)(height * PARALLEL_TOOLHEAD_Y);
+        int32_t tool_scale = LV_MAX(6, data->extruder_scale * 2 / 3);
+        int32_t hit_radius_y = tool_scale * 4; // Generous vertical hit area around toolhead
+
+        if (abs(point.y - toolhead_y) < hit_radius_y) {
+            for (int i = 0; i < data->slot_count; i++) {
+                int32_t slot_x = x_off + get_slot_x(i, data->slot_count, data->slot_width,
+                                                    data->slot_overlap, data->slot_grid_offset);
+                int32_t hit_radius_x = LV_MAX(20, tool_scale * 3);
+                if (abs(point.x - slot_x) < hit_radius_x) {
+                    spdlog::debug("[FilamentPath] Toolhead {} clicked (parallel topology)", i);
+                    data->slot_callback(i, data->slot_user_data);
+                    return;
+                }
+            }
+        }
+    }
+
     // Check if click is in the entry area (top portion)
     int32_t entry_y = y_off + (int32_t)(height * ENTRY_Y_RATIO);
     int32_t prep_y = y_off + (int32_t)(height * PREP_Y_RATIO);
@@ -1210,8 +1236,8 @@ static void filament_path_click_cb(lv_event_t* e) {
     // Find which slot was clicked
     if (data->slot_callback) {
         for (int i = 0; i < data->slot_count; i++) {
-            int32_t slot_x =
-                x_off + get_slot_x(i, data->slot_count, data->slot_width, data->slot_overlap);
+            int32_t slot_x = x_off + get_slot_x(i, data->slot_count, data->slot_width,
+                                                data->slot_overlap, data->slot_grid_offset);
             if (abs(point.x - slot_x) < 20) {
                 spdlog::debug("[FilamentPath] Slot {} clicked", i);
                 data->slot_callback(i, data->slot_user_data);
@@ -1409,6 +1435,15 @@ void ui_filament_path_canvas_set_slot_width(lv_obj_t* obj, int32_t width) {
     if (data) {
         data->slot_width = LV_MAX(width, 20); // Minimum 20px
         spdlog::trace("[FilamentPath] Slot width set to {}px", data->slot_width);
+        lv_obj_invalidate(obj);
+    }
+}
+
+void ui_filament_path_canvas_set_slot_grid_offset(lv_obj_t* obj, int32_t offset) {
+    auto* data = get_data(obj);
+    if (data) {
+        data->slot_grid_offset = LV_MAX(offset, 0);
+        spdlog::trace("[FilamentPath] Slot grid offset set to {}px", data->slot_grid_offset);
         lv_obj_invalidate(obj);
     }
 }
