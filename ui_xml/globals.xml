@@ -187,9 +187,9 @@
 
     <!-- Icon buttons, back buttons -->
     <px name="button_height_sm_tiny" value="22"/>
-    <px name="button_height_sm_small" value="36"/>
+    <px name="button_height_sm_small" value="40"/>
     <px name="button_height_sm_medium" value="40"/>
-    <px name="button_height_sm_large" value="48"/>
+    <px name="button_height_sm_large" value="40"/>
 
     <!-- button_height is responsive: _small/_medium/_large registered as button_height based on screen size -->
     <px name="button_height_tiny" value="26"/>
