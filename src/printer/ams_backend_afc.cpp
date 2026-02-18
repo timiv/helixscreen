@@ -924,9 +924,9 @@ void AmsBackendAfc::parse_afc_stepper(const std::string& lane_name, const nlohma
         status_str = data["status"].get<std::string>();
     }
 
-    if (status_str == "Loaded" || tool_loaded) {
+    if (tool_loaded) {
         slot->status = SlotStatus::LOADED;
-    } else if (sensors.prep || sensors.load) {
+    } else if (status_str == "Loaded" || sensors.prep || sensors.load) {
         slot->status = SlotStatus::AVAILABLE;
     } else if (status_str == "None" || status_str.empty()) {
         slot->status = SlotStatus::EMPTY;
@@ -1465,24 +1465,30 @@ void AmsBackendAfc::parse_lane_data(const nlohmann::json& lane_data) {
         }
 
         // Parse loaded state
-        if (lane.contains("loaded") && lane["loaded"].is_boolean()) {
-            bool loaded = lane["loaded"].get<bool>();
-            if (loaded) {
-                slot.status = SlotStatus::LOADED;
-                system_info_.current_slot = static_cast<int>(i);
-                system_info_.filament_loaded = true;
+        // AFC "loaded" means hub-loaded, not toolhead-loaded
+        // Only tool_loaded == true means filament is at the extruder
+        bool tool_loaded = false;
+        if (lane.contains("tool_loaded") && lane["tool_loaded"].is_boolean()) {
+            tool_loaded = lane["tool_loaded"].get<bool>();
+        }
+
+        if (tool_loaded) {
+            slot.status = SlotStatus::LOADED;
+            system_info_.current_slot = static_cast<int>(i);
+            system_info_.filament_loaded = true;
+        } else if (lane.contains("loaded") && lane["loaded"].is_boolean() &&
+                   lane["loaded"].get<bool>()) {
+            // Hub-loaded: filament is present and ready, not at toolhead
+            slot.status = SlotStatus::AVAILABLE;
+        } else {
+            if (lane.contains("available") && lane["available"].is_boolean() &&
+                lane["available"].get<bool>()) {
+                slot.status = SlotStatus::AVAILABLE;
+            } else if (lane.contains("empty") && lane["empty"].is_boolean() &&
+                       lane["empty"].get<bool>()) {
+                slot.status = SlotStatus::EMPTY;
             } else {
-                // Check if filament is available (not loaded but present)
-                if (lane.contains("available") && lane["available"].is_boolean() &&
-                    lane["available"].get<bool>()) {
-                    slot.status = SlotStatus::AVAILABLE;
-                } else if (lane.contains("empty") && lane["empty"].is_boolean() &&
-                           lane["empty"].get<bool>()) {
-                    slot.status = SlotStatus::EMPTY;
-                } else {
-                    // Default to available if not explicitly empty
-                    slot.status = SlotStatus::AVAILABLE;
-                }
+                slot.status = SlotStatus::AVAILABLE;
             }
         }
 
