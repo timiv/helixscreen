@@ -7,11 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.10.4] - 2026-02-18
 
+Slicer-preferred progress, Klipper M117 display messages, interactive AMS toolheads, and a batch of AMS rendering and stability fixes.
+
+### Added
+- Slicer-preferred progress via `display_status` — uses slicer-reported percentage over file position when available (#122)
+- Klipper M117 display message shown on home panel print card (#124)
+- Clickable AMS toolheads with docked dimming for parallel topology
+- Per-lane eject and reset actions in AMS context menu
+- Opacity and dim support for nozzle renderers
+- Animated icons on controls panel
+
 ### Fixed
-- Touch input auto-detection scoring improved, fixing misdetection on multi-input systems (#117)
+- Stale "Print" button text when print state changes (#125)
+- Touch calibration wizard now shown for capacitive screens with ABS range mismatch (#123)
+- AMS backend priority: MMU preferred over toolchanger when both are present
+- AMS filament path lanes aligned with spool visual centers at all breakpoints
+- AMS nozzle unloaded color unified and tool changer filament segments corrected
+- AMS nozzle tip color changed to charcoal with idle path line fix
+- AMS mini status bar sizing no longer applies 2/3 height scaling
+- AMS toolchangers use `T{n}` gcode with click lockout during operations
+- AFC slots only marked LOADED when `tool_loaded` is true
+- Crash from NULL font pointer in AMS panel backend selector (#110)
+- Touch input auto-detection scoring improved for multi-input systems (#117)
 - `touch_device` config setting now read from the correct location
 - Stale thumbnail no longer persists when a new print is started externally
-- Crash from NULL font pointer in AMS panel backend selector (#110)
+- Self-update survives systemd cgroup kill (#118)
+- UI switch size preset initialized before optional parse
+- Filament panel left column layout flattened for proper flex_grow on temperature graph
+- Noisy `assign_spool` warning downgraded to trace for virtual tool mappings
+- Moonraker update manager release name uses tag-only format for compatibility
+- `systemctl restart` uses `--no-block` to eliminate race window during updates
+- Docker build uses GitHub mirror for zlib download
+
+### Changed
+- Crash reporting worker converted from JavaScript to TypeScript with GitHub App integration for dedup issue creation
 
 ## [0.10.3] - 2026-02-17
 
