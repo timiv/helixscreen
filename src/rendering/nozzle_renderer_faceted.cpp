@@ -401,9 +401,11 @@ void draw_nozzle_faceted(lv_layer_t* layer, int32_t cx, int32_t cy, lv_color_t f
     lv_color_t primary = lv_color_hex(0xD11D1D);
 
     // Nozzle tip color uses filament color when loaded
-    lv_color_t default_gray = lv_color_hex(0x808080);
+    // Detect "unloaded" by checking for known idle/nozzle colors
+    static constexpr uint32_t NOZZLE_UNLOADED = 0x3A3A3A;
     lv_color_t tip_color = filament_color;
-    bool has_filament = !lv_color_eq(filament_color, default_gray) &&
+    bool has_filament = !lv_color_eq(filament_color, lv_color_hex(NOZZLE_UNLOADED)) &&
+                        !lv_color_eq(filament_color, lv_color_hex(0x808080)) &&
                         !lv_color_eq(filament_color, lv_color_black());
 
     // Temporary buffer for scaled points
@@ -488,15 +490,18 @@ void draw_nozzle_faceted(lv_layer_t* layer, int32_t cx, int32_t cy, lv_color_t f
     // Nozzle tip indicator at bottom (shows filament color when loaded)
     // Position below the Stealthburner body (body bottom is ~Y=898)
     // Y=920 places the tip just below the housing where the nozzle emerges
-    int32_t nozzle_top_y = cy + (int32_t)((920 - 500) * scale);
+    // Offset +2px right, -4px up to align with the Stealthburner body's nozzle opening
+    int32_t tip_cx = cx - 1;
+    int32_t nozzle_top_y = cy + (int32_t)((920 - 500) * scale) - 6;
     int32_t nozzle_height = (int32_t)(40 * scale); // Small tip
     int32_t nozzle_top_width = (int32_t)(60 * scale);
     int32_t nozzle_bottom_width = (int32_t)(20 * scale);
 
     // Draw tapered nozzle tip using common renderer function
-    lv_color_t tip_left = has_filament ? nr_lighten(tip_color, 30) : nr_lighten(primary, 40);
-    lv_color_t tip_right = has_filament ? nr_darken(tip_color, 20) : nr_darken(primary, 20);
-    nr_draw_nozzle_tip(layer, cx, nozzle_top_y, nozzle_top_width, nozzle_bottom_width,
+    lv_color_t nozzle_metal = lv_color_hex(NOZZLE_UNLOADED);
+    lv_color_t tip_left = has_filament ? nr_lighten(tip_color, 30) : nr_lighten(nozzle_metal, 30);
+    lv_color_t tip_right = has_filament ? nr_darken(tip_color, 20) : nr_darken(nozzle_metal, 10);
+    nr_draw_nozzle_tip(layer, tip_cx, nozzle_top_y, nozzle_top_width, nozzle_bottom_width,
                        nozzle_height, tip_left, tip_right);
 
     // Bright glint at tip bottom
@@ -505,6 +510,6 @@ void draw_nozzle_faceted(lv_layer_t* layer, int32_t cx, int32_t cy, lv_color_t f
     glint_dsc.color = lv_color_hex(0xFFFFFF);
     glint_dsc.opa = LV_OPA_70;
     int32_t glint_y = nozzle_top_y + nozzle_height - 1;
-    lv_area_t glint = {cx - 1, glint_y, cx + 1, glint_y + 1};
+    lv_area_t glint = {tip_cx - 1, glint_y, tip_cx + 1, glint_y + 1};
     lv_draw_fill(layer, &glint_dsc, &glint);
 }

@@ -311,10 +311,6 @@
     <color name="filament_hub_border_light" value="#d8dee9"/>
     <!-- nord4 -->
     <color name="filament_hub_border_dark" value="#4c566a"/>
-    <!-- nord3 -->
-    <color name="filament_nozzle_light" value="#4c566a"/>
-    <!-- nord3 -->
-    <color name="filament_nozzle_dark" value="#81a1c1"/>
     <!-- nord9 -->
     <color name="filament_metal" value="#808890"/>
     <!-- Faceted toolhead base color (static - Voron-style red) -->

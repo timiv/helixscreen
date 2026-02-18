@@ -36,6 +36,9 @@ static constexpr int32_t DEFAULT_WIDTH = 300;
 static constexpr int32_t DEFAULT_HEIGHT = 200;
 static constexpr int DEFAULT_SLOT_COUNT = 4;
 
+// Nozzle tip color when no filament is loaded (light charcoal)
+static constexpr uint32_t NOZZLE_UNLOADED_COLOR = 0x3A3A3A;
+
 // Layout ratios (as fraction of widget height)
 // Entry points at very top to connect visually with slot grid above
 static constexpr float ENTRY_Y_RATIO =
@@ -161,8 +164,7 @@ static void load_theme_colors(FilamentPathData* data) {
         theme_manager_get_color(dark_mode ? "filament_hub_bg_dark" : "filament_hub_bg_light");
     data->color_hub_border = theme_manager_get_color(dark_mode ? "filament_hub_border_dark"
                                                                : "filament_hub_border_light");
-    data->color_nozzle =
-        theme_manager_get_color(dark_mode ? "filament_nozzle_dark" : "filament_nozzle_light");
+    data->color_nozzle = lv_color_hex(NOZZLE_UNLOADED_COLOR);
     data->color_text = theme_manager_get_color("text");
 
     // Get responsive sizing from theme
@@ -850,11 +852,13 @@ static void filament_path_draw_cb(lv_event_t* e) {
         if (data->topology == 1) { // HUB topology - each lane targets its own hub sensor
             int32_t hub_top = hub_y - hub_h / 2;
             // Space hub sensor dots evenly across the hub box width
-            int32_t hub_dot_spacing = (data->slot_count > 1)
-                                          ? (data->hub_width - 2 * sensor_r) / (data->slot_count - 1)
-                                          : 0;
-            int32_t hub_dot_x = center_x - (data->hub_width - 2 * sensor_r) / 2 + i * hub_dot_spacing;
-            if (data->slot_count == 1) hub_dot_x = center_x;
+            int32_t hub_dot_spacing =
+                (data->slot_count > 1) ? (data->hub_width - 2 * sensor_r) / (data->slot_count - 1)
+                                       : 0;
+            int32_t hub_dot_x =
+                center_x - (data->hub_width - 2 * sensor_r) / 2 + i * hub_dot_spacing;
+            if (data->slot_count == 1)
+                hub_dot_x = center_x;
 
             // Draw line from prep to hub sensor dot
             draw_line(layer, slot_x, prep_y + sensor_r, hub_dot_x, hub_top - sensor_r,
@@ -1070,9 +1074,16 @@ static void filament_path_draw_cb(lv_event_t* e) {
         }
 
         // Line from toolhead sensor to extruder (adjust gap for tall extruder body)
+        // Use toolhead color (idle gray when no filament) for the connecting line,
+        // not nozzle color which is always tinted
+        bool nozzle_has_filament =
+            data->bypass_active ||
+            (data->active_slot >= 0 && is_segment_active(PathSegment::NOZZLE, fil_seg));
+        lv_color_t noz_line_color = nozzle_has_filament ? noz_color : idle_color;
+        int32_t noz_line_width = nozzle_has_filament ? line_active : line_idle;
         int32_t extruder_half_height = data->extruder_scale * 2; // Half of body_height
         draw_vertical_line(layer, center_x, toolhead_y + sensor_r, nozzle_y - extruder_half_height,
-                           noz_color, line_active);
+                           noz_line_color, noz_line_width);
 
         // Extruder/print head icon (responsive size)
         // Draw nozzle first so heat glow can render on top

@@ -120,12 +120,7 @@ static void load_theme_colors(SystemPathData* data) {
         data->color_hub_border = theme_manager_get_color("border");
     }
 
-    data->color_nozzle =
-        theme_manager_get_color(dark_mode ? "filament_nozzle_dark" : "filament_nozzle_light");
-    if (data->color_nozzle.red == 0 && data->color_nozzle.green == 0 &&
-        data->color_nozzle.blue == 0) {
-        data->color_nozzle = theme_manager_get_color("text_muted");
-    }
+    data->color_nozzle = lv_color_hex(0x3A3A3A); // Light charcoal — unloaded nozzle tip
 
     data->color_text = theme_manager_get_color("text");
 
