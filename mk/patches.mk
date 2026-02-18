@@ -5,13 +5,10 @@
 # Handles automatic application of patches to LVGL and other dependencies
 
 # Files modified by LVGL patches (used by reset-patches)
+# XML patches are no longer needed — those sources are in lib/helix-xml with patches baked in
 LVGL_PATCHED_FILES := \
 	src/drivers/sdl/lv_sdl_window.c \
 	src/themes/default/lv_theme_default.c \
-	src/xml/parsers/lv_xml_image_parser.c \
-	src/xml/lv_xml_style.c \
-	src/xml/lv_xml.c \
-	src/xml/lv_xml.h \
 	src/drivers/display/fb/lv_linux_fbdev.c \
 	src/core/lv_refr.c \
 	src/core/lv_observer.c \
@@ -96,28 +93,6 @@ $(PATCHES_STAMP): $(PATCH_FILES) $(LVGL_HEAD) $(LIBHV_HEAD)
 	else \
 		echo "$(GREEN)✓ LVGL theme breakpoints patch already applied$(RESET)"; \
 	fi
-	$(Q)if git -C $(LVGL_DIR) diff --quiet src/xml/parsers/lv_xml_image_parser.c 2>/dev/null; then \
-		echo "$(YELLOW)→ Applying LVGL image parser contain/cover patch...$(RESET)"; \
-		if git -C $(LVGL_DIR) apply --check ../../patches/lvgl_image_parser_contain.patch 2>/dev/null; then \
-			git -C $(LVGL_DIR) apply ../../patches/lvgl_image_parser_contain.patch && \
-			echo "$(GREEN)✓ Image parser contain/cover patch applied$(RESET)"; \
-		else \
-			echo "$(YELLOW)⚠ Cannot apply patch (already applied or conflicts)$(RESET)"; \
-		fi \
-	else \
-		echo "$(GREEN)✓ LVGL image parser contain/cover patch already applied$(RESET)"; \
-	fi
-	$(Q)if git -C $(LVGL_DIR) diff --quiet src/xml/lv_xml_style.c 2>/dev/null; then \
-		echo "$(YELLOW)→ Applying LVGL translate percentage patch...$(RESET)"; \
-		if git -C $(LVGL_DIR) apply --check ../../patches/lvgl_translate_percent.patch 2>/dev/null; then \
-			git -C $(LVGL_DIR) apply ../../patches/lvgl_translate_percent.patch && \
-			echo "$(GREEN)✓ Translate percentage patch applied$(RESET)"; \
-		else \
-			echo "$(YELLOW)⚠ Cannot apply patch (already applied or conflicts)$(RESET)"; \
-		fi \
-	else \
-		echo "$(GREEN)✓ LVGL translate percentage patch already applied$(RESET)"; \
-	fi
 	$(Q)if git -C $(LVGL_DIR) diff --quiet src/drivers/display/fb/lv_linux_fbdev.c 2>/dev/null; then \
 		echo "$(YELLOW)→ Applying LVGL fbdev stride bpp detection patch...$(RESET)"; \
 		if git -C $(LVGL_DIR) apply --check ../../patches/lvgl_fbdev_stride_bpp.patch 2>/dev/null; then \
@@ -128,17 +103,6 @@ $(PATCHES_STAMP): $(PATCH_FILES) $(LVGL_HEAD) $(LIBHV_HEAD)
 		fi \
 	else \
 		echo "$(GREEN)✓ LVGL fbdev stride bpp detection patch already applied$(RESET)"; \
-	fi
-	$(Q)if git -C $(LVGL_DIR) diff --quiet src/xml/lv_xml.h 2>/dev/null; then \
-		echo "$(YELLOW)→ Applying LVGL XML silent const lookup patch...$(RESET)"; \
-		if git -C $(LVGL_DIR) apply --check ../../patches/lvgl_xml_const_silent.patch 2>/dev/null; then \
-			git -C $(LVGL_DIR) apply ../../patches/lvgl_xml_const_silent.patch && \
-			echo "$(GREEN)✓ XML silent const lookup patch applied$(RESET)"; \
-		else \
-			echo "$(YELLOW)⚠ Cannot apply patch (already applied or conflicts)$(RESET)"; \
-		fi \
-	else \
-		echo "$(GREEN)✓ LVGL XML silent const lookup patch already applied$(RESET)"; \
 	fi
 	$(Q)if git -C $(LVGL_DIR) diff --quiet src/core/lv_observer.c 2>/dev/null; then \
 		echo "$(YELLOW)→ Applying LVGL observer debug info patch...$(RESET)"; \

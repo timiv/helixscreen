@@ -219,8 +219,14 @@ LVGL_INC := -isystem $(LVGL_DIR) -isystem $(LVGL_DIR)/src
 ifeq ($(ENABLE_OPENGLES),yes)
     LVGL_INC += -isystem $(LVGL_DIR)/src/drivers/opengles/glad/include
 endif
-LVGL_SRCS := $(shell find $(LVGL_DIR)/src -name "*.c" 2>/dev/null)
+# Exclude XML and expat sources from LVGL — those are now in lib/helix-xml
+LVGL_SRCS := $(filter-out $(wildcard $(LVGL_DIR)/src/xml/*.c $(LVGL_DIR)/src/xml/parsers/*.c $(LVGL_DIR)/src/libs/expat/*.c),$(shell find $(LVGL_DIR)/src -name "*.c" 2>/dev/null))
 LVGL_OBJS := $(patsubst $(LVGL_DIR)/%.c,$(OBJ_DIR)/lvgl/%.o,$(LVGL_SRCS))
+
+# Helix XML engine (extracted from LVGL, with our patches baked in)
+HELIX_XML_DIR := lib/helix-xml
+HELIX_XML_SRCS := $(wildcard $(HELIX_XML_DIR)/src/xml/*.c $(HELIX_XML_DIR)/src/xml/parsers/*.c $(HELIX_XML_DIR)/src/libs/expat/*.c)
+HELIX_XML_OBJS := $(patsubst $(HELIX_XML_DIR)/%.c,$(OBJ_DIR)/helix-xml/%.o,$(HELIX_XML_SRCS))
 
 # lv_markdown (LVGL markdown widget)
 LV_MARKDOWN_DIR := lib/lv_markdown
