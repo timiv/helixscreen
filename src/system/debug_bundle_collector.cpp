@@ -42,33 +42,71 @@ json DebugBundleCollector::collect(const BundleOptions& options) {
     std::strftime(time_buf, sizeof(time_buf), "%Y-%m-%dT%H:%M:%SZ", std::gmtime(&time_t_now));
     bundle["timestamp"] = time_buf;
 
-    bundle["system"] = collect_system_info();
-    bundle["printer"] = collect_printer_info();
-
-    auto log_tail = collect_log_tail();
-    if (!log_tail.empty()) {
-        bundle["log_tail"] = log_tail;
+    try {
+        bundle["system"] = collect_system_info();
+    } catch (const std::exception& e) {
+        spdlog::warn("[DebugBundle] Failed to collect system info: {}", e.what());
+        bundle["system"] = json{{"error", e.what()}};
     }
 
-    auto crash_txt = collect_crash_txt();
-    if (!crash_txt.empty()) {
-        bundle["crash_txt"] = crash_txt;
+    try {
+        bundle["printer"] = collect_printer_info();
+    } catch (const std::exception& e) {
+        spdlog::warn("[DebugBundle] Failed to collect printer info: {}", e.what());
+        bundle["printer"] = json{{"error", e.what()}};
     }
 
-    bundle["settings"] = collect_sanitized_settings();
-    bundle["moonraker"] = collect_moonraker_info();
+    try {
+        auto log_tail = collect_log_tail();
+        if (!log_tail.empty()) {
+            bundle["log_tail"] = log_tail;
+        }
+    } catch (const std::exception& e) {
+        spdlog::warn("[DebugBundle] Failed to collect log tail: {}", e.what());
+    }
+
+    try {
+        auto crash_txt = collect_crash_txt();
+        if (!crash_txt.empty()) {
+            bundle["crash_txt"] = crash_txt;
+        }
+    } catch (const std::exception& e) {
+        spdlog::warn("[DebugBundle] Failed to collect crash.txt: {}", e.what());
+    }
+
+    try {
+        bundle["settings"] = collect_sanitized_settings();
+    } catch (const std::exception& e) {
+        spdlog::warn("[DebugBundle] Failed to collect settings: {}", e.what());
+        bundle["settings"] = json{{"error", e.what()}};
+    }
+
+    try {
+        bundle["moonraker"] = collect_moonraker_info();
+    } catch (const std::exception& e) {
+        spdlog::warn("[DebugBundle] Failed to collect moonraker info: {}", e.what());
+        bundle["moonraker"] = json{{"error", e.what()}};
+    }
 
     if (options.include_klipper_logs) {
-        auto klipper_log = collect_klipper_log_tail();
-        if (!klipper_log.empty()) {
-            bundle["klipper_log"] = klipper_log;
+        try {
+            auto klipper_log = collect_klipper_log_tail();
+            if (!klipper_log.empty()) {
+                bundle["klipper_log"] = klipper_log;
+            }
+        } catch (const std::exception& e) {
+            spdlog::warn("[DebugBundle] Failed to collect klipper log: {}", e.what());
         }
     }
 
     if (options.include_moonraker_logs) {
-        auto moonraker_log = collect_moonraker_log_tail();
-        if (!moonraker_log.empty()) {
-            bundle["moonraker_log"] = moonraker_log;
+        try {
+            auto moonraker_log = collect_moonraker_log_tail();
+            if (!moonraker_log.empty()) {
+                bundle["moonraker_log"] = moonraker_log;
+            }
+        } catch (const std::exception& e) {
+            spdlog::warn("[DebugBundle] Failed to collect moonraker log: {}", e.what());
         }
     }
 
@@ -260,6 +298,11 @@ std::string DebugBundleCollector::sanitize_value(const std::string& value) {
     if (value.empty())
         return value;
 
+    // Skip regex on very long strings to prevent ReDoS / performance issues
+    if (value.size() > 4096) {
+        return "[REDACTED_LONG_VALUE]";
+    }
+
     // Check webhook URLs first (full replacement)
     if (value.find("discord.com/api/webhooks") != std::string::npos ||
         value.find("hooks.slack.com") != std::string::npos ||
@@ -270,37 +313,48 @@ std::string DebugBundleCollector::sanitize_value(const std::string& value) {
         return "[REDACTED_WEBHOOK]";
     }
 
-    // Check for long token-like strings (40+ chars of hex/base64/alphanum with prefix)
-    static const std::regex token_re(R"(^(?:ghp_|gho_|glpat-|xoxb-|xoxp-)?[A-Za-z0-9+/=_-]{36,}$)");
-    if (std::regex_match(value, token_re)) {
-        return "[REDACTED_TOKEN]";
+    try {
+        // Check for long token-like strings (40+ chars of hex/base64/alphanum with prefix)
+        static const std::regex token_re(
+            R"(^(?:ghp_|gho_|glpat-|xoxb-|xoxp-)?[A-Za-z0-9+/=_-]{36,}$)");
+        if (std::regex_match(value, token_re)) {
+            return "[REDACTED_TOKEN]";
+        }
+
+        std::string result = value;
+
+        // Redact URL credentials: ://user:pass@ -> ://[REDACTED_CREDENTIALS]@
+        static const std::regex cred_url_re(R"(://[^@/\s]+:[^@/\s]+@)");
+        result = std::regex_replace(result, cred_url_re, "://[REDACTED_CREDENTIALS]@");
+
+        // Redact email addresses
+        static const std::regex email_re(R"(\b[\w.+-]+@[\w-]+\.[\w.]+\b)");
+        result = std::regex_replace(result, email_re, "[REDACTED_EMAIL]");
+
+        // Redact MAC addresses (aa:bb:cc:dd:ee:ff or AA-BB-CC-DD-EE-FF)
+        static const std::regex mac_re(R"(\b([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}\b)");
+        result = std::regex_replace(result, mac_re, "[REDACTED_MAC]");
+
+        return result;
+    } catch (const std::exception& e) {
+        spdlog::debug("[DebugBundle] sanitize_value regex failed: {}", e.what());
+        return value; // Return unsanitized rather than crash
     }
-
-    std::string result = value;
-
-    // Redact URL credentials: ://user:pass@ -> ://[REDACTED_CREDENTIALS]@
-    static const std::regex cred_url_re(R"(://[^@/\s]+:[^@/\s]+@)");
-    result = std::regex_replace(result, cred_url_re, "://[REDACTED_CREDENTIALS]@");
-
-    // Redact email addresses
-    static const std::regex email_re(R"(\b[\w.+-]+@[\w-]+\.[\w.]+\b)");
-    result = std::regex_replace(result, email_re, "[REDACTED_EMAIL]");
-
-    // Redact MAC addresses (aa:bb:cc:dd:ee:ff or AA-BB-CC-DD-EE-FF)
-    static const std::regex mac_re(R"(\b([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}\b)");
-    result = std::regex_replace(result, mac_re, "[REDACTED_MAC]");
-
-    return result;
 }
 
-json DebugBundleCollector::sanitize_json(const json& input) {
+json DebugBundleCollector::sanitize_json(const json& input, int depth) {
+    if (depth > 32) {
+        spdlog::debug("[DebugBundle] sanitize_json hit depth limit, passing through");
+        return input;
+    }
+
     if (input.is_object()) {
         json result = json::object();
         for (auto it = input.begin(); it != input.end(); ++it) {
             if (is_sensitive_key(it.key())) {
                 result[it.key()] = "[REDACTED]";
             } else {
-                result[it.key()] = sanitize_json(it.value());
+                result[it.key()] = sanitize_json(it.value(), depth + 1);
             }
         }
         return result;
@@ -309,7 +363,7 @@ json DebugBundleCollector::sanitize_json(const json& input) {
     if (input.is_array()) {
         json result = json::array();
         for (const auto& element : input) {
-            result.push_back(sanitize_json(element));
+            result.push_back(sanitize_json(element, depth + 1));
         }
         return result;
     }
@@ -415,22 +469,47 @@ json DebugBundleCollector::collect_moonraker_info() {
     spdlog::info("[DebugBundle] Collecting Moonraker info from {}", base_url);
 
     // Server info — version, components, klippy state
-    mr["server_info"] = sanitize_json(moonraker_get(base_url, "/server/info"));
+    try {
+        mr["server_info"] = sanitize_json(moonraker_get(base_url, "/server/info"));
+    } catch (const std::exception& e) {
+        spdlog::debug("[DebugBundle] server_info collection failed: {}", e.what());
+        mr["server_info"] = json{{"error", e.what()}};
+    }
 
     // Printer info — hostname, klipper version, state
-    mr["printer_info"] = sanitize_json(moonraker_get(base_url, "/printer/info"));
+    try {
+        mr["printer_info"] = sanitize_json(moonraker_get(base_url, "/printer/info"));
+    } catch (const std::exception& e) {
+        spdlog::debug("[DebugBundle] printer_info collection failed: {}", e.what());
+        mr["printer_info"] = json{{"error", e.what()}};
+    }
 
     // System info — OS, CPU, memory, network (heavy sanitization for MACs/IPs)
-    mr["system_info"] = sanitize_json(moonraker_get(base_url, "/machine/system_info"));
+    try {
+        mr["system_info"] = sanitize_json(moonraker_get(base_url, "/machine/system_info"));
+    } catch (const std::exception& e) {
+        spdlog::debug("[DebugBundle] system_info collection failed: {}", e.what());
+        mr["system_info"] = json{{"error", e.what()}};
+    }
 
     // Current printer state — temps, positions, fans, print progress
-    mr["printer_state"] = sanitize_json(
-        moonraker_get(base_url, "/printer/objects/query"
-                                "?heater_bed&extruder&print_stats&toolhead&motion_report"
-                                "&fan&display_status&virtual_sdcard"));
+    try {
+        mr["printer_state"] = sanitize_json(
+            moonraker_get(base_url, "/printer/objects/query"
+                                    "?heater_bed&extruder&print_stats&toolhead&motion_report"
+                                    "&fan&display_status&virtual_sdcard"));
+    } catch (const std::exception& e) {
+        spdlog::debug("[DebugBundle] printer_state collection failed: {}", e.what());
+        mr["printer_state"] = json{{"error", e.what()}};
+    }
 
     // Full Moonraker config — heavily sanitized
-    mr["config"] = sanitize_json(moonraker_get(base_url, "/server/config"));
+    try {
+        mr["config"] = sanitize_json(moonraker_get(base_url, "/server/config"));
+    } catch (const std::exception& e) {
+        spdlog::debug("[DebugBundle] config collection failed: {}", e.what());
+        mr["config"] = json{{"error", e.what()}};
+    }
 
     return mr;
 }

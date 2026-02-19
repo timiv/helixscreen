@@ -47,7 +47,7 @@ class DebugBundleCollector {
     static std::string sanitize_value(const std::string& value);
 
     /// Recursively strip sensitive keys from JSON (public for integration testing)
-    static nlohmann::json sanitize_json(const nlohmann::json& input);
+    static nlohmann::json sanitize_json(const nlohmann::json& input, int depth = 0);
 
     /// Gzip compression using zlib
     static std::vector<uint8_t> gzip_compress(const std::string& data);
