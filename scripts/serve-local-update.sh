@@ -38,10 +38,10 @@
 #
 # OPTIONS
 # -------
-#   --configure-pi   SSH into the Pi and write dev channel + dev_url into
-#                    ~/helixscreen/config/settings.json. Run once per Pi
-#                    (or after a factory reset). Requires passwordless SSH
-#                    or an SSH agent with the Pi's key loaded.
+#   --configure-pi   SSH into the Pi, write dev channel + dev_url into
+#                    ~/helixscreen/config/settings.json, and restart the
+#                    helixscreen service. Run once per Pi (or after a factory
+#                    reset). Requires passwordless sudo + SSH key access.
 #   --no-bump        Serve the exact version from VERSION.txt instead of
 #                    99.0.0. Useful if you manually set a higher version.
 #   --no-build       Skip package.sh and use the existing dist/ tarball.
@@ -175,7 +175,9 @@ print('  update/channel =', data['update']['channel'], '(dev)')
 print('  update/dev_url =', data['update']['dev_url'])
 \""
     echo ""
-    echo "[serve-local-update] Pi configured — restart helix-screen to pick up settings."
+    echo "[serve-local-update] Restarting helix-screen on ${PI_USER}@${PI_HOST} ..."
+    ssh "${PI_USER}@${PI_HOST}" "sudo systemctl restart helixscreen"
+    echo "[serve-local-update] helix-screen restarted."
     echo "  To revert: remove update/dev_url from ~/helixscreen/config/settings.json on the Pi."
     echo ""
 fi
