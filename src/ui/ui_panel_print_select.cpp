@@ -1339,6 +1339,13 @@ void PrintSelectPanel::on_activate() {
         get_name(), first_activation_, file_list_.size(), is_usb_active, (api_ != nullptr),
         files_changed_while_detail_open_);
 
+    // ALWAYS resume polling while panel is visible (must be before early returns)
+    if (file_poll_timer_) {
+        lv_timer_resume(file_poll_timer_);
+        lv_timer_reset(file_poll_timer_); // Reset so first poll is a full interval from now
+        spdlog::trace("[{}] File list polling resumed", get_name());
+    }
+
     // Skip refresh when returning from detail view if no files changed
     // This preserves scroll position by avoiding unnecessary repopulate
     if (!first_activation_ && !file_list_.empty() && !files_changed_while_detail_open_) {
@@ -1375,13 +1382,6 @@ void PrintSelectPanel::on_activate() {
         if (usb_source_) {
             usb_source_->refresh_files();
         }
-    }
-
-    // Resume file list polling while panel is visible
-    if (file_poll_timer_) {
-        lv_timer_resume(file_poll_timer_);
-        lv_timer_reset(file_poll_timer_); // Reset so first poll is a full interval from now
-        spdlog::trace("[{}] File list polling resumed", get_name());
     }
 }
 
