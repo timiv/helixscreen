@@ -561,8 +561,11 @@ extract_release() {
 
 # Remove backup of previous installation (call after service starts successfully)
 cleanup_old_install() {
-    if [ -d "${INSTALL_DIR}.old" ]; then
-        $(file_sudo "${INSTALL_DIR}.old") rm -rf "${INSTALL_DIR}.old"
-        log_info "Cleaned up previous installation backup"
-    fi
+    # Clean both the standard .old and any timestamped fallback backups
+    for _backup in "${INSTALL_DIR}.old" "${INSTALL_DIR}.old."*; do
+        if [ -d "$_backup" ]; then
+            rm -rf "$_backup" 2>/dev/null || $SUDO rm -rf "$_backup" 2>/dev/null || true
+            log_info "Cleaned up previous installation backup: $_backup"
+        fi
+    done
 }

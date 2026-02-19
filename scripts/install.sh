@@ -76,6 +76,7 @@ file_sudo() {
 CLEANUP_TMP=false
 CLEANUP_SERVICE=false
 BACKUP_CONFIG=""
+BACKUP_ENV=""
 ORIGINAL_INSTALL_EXISTS=false
 
 # Colors (if terminal supports it)
@@ -119,13 +120,8 @@ error_handler() {
     log_error "=========================================="
     echo ""
 
-    # Cleanup temporary files
-    if [ "$CLEANUP_TMP" = true ] && [ -d "$TMP_DIR" ]; then
-        log_info "Cleaning up temporary files..."
-        rm -rf "$TMP_DIR"
-    fi
-
     # If we backed up config and install failed, try to restore state
+    # NOTE: TMP_DIR cleanup happens AFTER restore — backups live in TMP_DIR
     if [ -n "$BACKUP_CONFIG" ] && [ -f "$BACKUP_CONFIG" ]; then
         log_info "Restoring backed up configuration..."
         if $(file_sudo "${INSTALL_DIR}") mkdir -p "${INSTALL_DIR}/config" 2>/dev/null; then
@@ -137,6 +133,18 @@ error_handler() {
         else
             log_warn "Could not create config directory. Backup saved at: $BACKUP_CONFIG"
         fi
+    fi
+    if [ -n "$BACKUP_ENV" ] && [ -f "$BACKUP_ENV" ]; then
+        if $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_ENV" "${INSTALL_DIR}/config/helixscreen.env" 2>/dev/null; then
+            log_success "helixscreen.env restored"
+        else
+            log_warn "Could not restore helixscreen.env. Backup saved at: $BACKUP_ENV"
+        fi
+    fi
+
+    # Cleanup temporary files after restores are done
+    if [ "$CLEANUP_TMP" = true ] && [ -d "$TMP_DIR" ]; then
+        rm -rf "$TMP_DIR"
     fi
 
     echo ""
@@ -2041,8 +2049,27 @@ extract_release() {
             log_info "Backed up existing configuration (legacy location)"
         fi
 
-        # Atomic swap: move old install to .old backup
-        if ! $(file_sudo "${INSTALL_DIR}") mv "${INSTALL_DIR}" "${INSTALL_DIR}.old"; then
+        # Backup helixscreen.env (preserves HELIX_DEBUG and other env customizations)
+        if [ -f "${INSTALL_DIR}/config/helixscreen.env" ]; then
+            BACKUP_ENV="${TMP_DIR}/helixscreen.env.backup"
+            cp "${INSTALL_DIR}/config/helixscreen.env" "$BACKUP_ENV"
+            log_info "Backed up existing helixscreen.env"
+        fi
+
+        # Choose backup dir name for atomic swap.
+        # Prefer INSTALL_DIR.old; if it exists and can't be removed (e.g. root-owned
+        # under NoNewPrivileges), fall back to a timestamped name so the swap succeeds.
+        INSTALL_BACKUP="${INSTALL_DIR}.old"
+        if [ -d "$INSTALL_BACKUP" ]; then
+            log_info "Removing stale backup from previous install..."
+            if ! rm -rf "$INSTALL_BACKUP" 2>/dev/null && ! $SUDO rm -rf "$INSTALL_BACKUP" 2>/dev/null; then
+                INSTALL_BACKUP="${INSTALL_DIR}.old.$(date +%s)"
+                log_warn "Could not remove stale .old dir (root-owned?); using $INSTALL_BACKUP instead"
+            fi
+        fi
+
+        # Atomic swap: move old install to backup
+        if ! $(file_sudo "${INSTALL_DIR}") mv "${INSTALL_DIR}" "$INSTALL_BACKUP"; then
             log_error "Failed to backup existing installation."
             rm -rf "$extract_dir"
             exit 1
@@ -2054,24 +2081,31 @@ extract_release() {
     if ! $(file_sudo "$(dirname "${INSTALL_DIR}")") mv "${new_install}" "${INSTALL_DIR}"; then
         log_error "Failed to install new release."
         # ROLLBACK: restore old installation
-        if [ -d "${INSTALL_DIR}.old" ]; then
+        if [ -d "${INSTALL_BACKUP:-}" ]; then
             log_warn "Rolling back to previous installation..."
-            if $(file_sudo "${INSTALL_DIR}.old") mv "${INSTALL_DIR}.old" "${INSTALL_DIR}"; then
+            # Remove partial new install that may block the rollback mv
+            [ -d "${INSTALL_DIR}" ] && $SUDO rm -rf "${INSTALL_DIR}"
+            if $SUDO mv "$INSTALL_BACKUP" "${INSTALL_DIR}"; then
                 log_warn "Rollback complete. Previous installation restored."
             else
-                log_error "CRITICAL: Rollback failed! Previous install at ${INSTALL_DIR}.old"
-                log_error "Manually restore with: mv ${INSTALL_DIR}.old ${INSTALL_DIR}"
+                log_error "CRITICAL: Rollback failed! Previous install at $INSTALL_BACKUP"
+                log_error "Manually restore with: mv $INSTALL_BACKUP ${INSTALL_DIR}"
             fi
         fi
         rm -rf "$extract_dir"
         exit 1
     fi
 
-    # Phase 6: Restore config
+    # Phase 6: Restore config and settings
     if [ -n "${BACKUP_CONFIG:-}" ] && [ -f "$BACKUP_CONFIG" ]; then
         $(file_sudo "${INSTALL_DIR}") mkdir -p "${INSTALL_DIR}/config"
         $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_CONFIG" "${INSTALL_DIR}/config/helixconfig.json"
         log_info "Restored existing configuration to config/"
+    fi
+    if [ -n "${BACKUP_ENV:-}" ] && [ -f "$BACKUP_ENV" ]; then
+        $(file_sudo "${INSTALL_DIR}") mkdir -p "${INSTALL_DIR}/config"
+        $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_ENV" "${INSTALL_DIR}/config/helixscreen.env"
+        log_info "Restored existing helixscreen.env to config/"
     fi
 
     # Cleanup
@@ -2081,10 +2115,13 @@ extract_release() {
 
 # Remove backup of previous installation (call after service starts successfully)
 cleanup_old_install() {
-    if [ -d "${INSTALL_DIR}.old" ]; then
-        $(file_sudo "${INSTALL_DIR}.old") rm -rf "${INSTALL_DIR}.old"
-        log_info "Cleaned up previous installation backup"
-    fi
+    # Clean both the standard .old and any timestamped fallback backups
+    for _backup in "${INSTALL_DIR}.old" "${INSTALL_DIR}.old."*; do
+        if [ -d "$_backup" ]; then
+            rm -rf "$_backup" 2>/dev/null || $SUDO rm -rf "$_backup" 2>/dev/null || true
+            log_info "Cleaned up previous installation backup: $_backup"
+        fi
+    done
 }
 
 # ============================================
@@ -2093,6 +2130,17 @@ cleanup_old_install() {
 
 #
 # SERVICE_NAME is defined in common.sh
+
+# Returns true if this process is running under the NoNewPrivileges systemd constraint.
+# When helix-screen self-updates, it spawns install.sh as a child process.  The
+# helixscreen.service unit has NoNewPrivileges=true, so ALL sudo calls in install.sh
+# will fail.  Callers use this to skip operations that require root (service file
+# copy, daemon-reload, systemctl start) and instead let update_checker.cpp restart
+# the process via exit(0), which the watchdog treats as "restart silently".
+_has_no_new_privs() {
+    [ -r /proc/self/status ] && grep -q '^NoNewPrivs:[[:space:]]*1' /proc/self/status 2>/dev/null
+}
+
 # Install service (dispatcher)
 # Calls install_service_systemd or install_service_sysv based on INIT_SYSTEM
 install_service() {
@@ -2115,6 +2163,20 @@ install_service_systemd() {
     if [ ! -f "$service_src" ]; then
         log_error "Service file not found: $service_src"
         log_error "The release package may be incomplete."
+        exit 1
+    fi
+
+    # Under NoNewPrivileges (self-update spawned by helix-screen), sudo is blocked and
+    # /etc/systemd/system/ is read-only in the service's mount namespace.  The service
+    # is already installed and correct — skip reinstall.  The process restart is handled
+    # by update_checker.cpp calling exit(0) after install.sh succeeds.
+    if _has_no_new_privs; then
+        if [ -f "$service_dest" ]; then
+            log_info "Skipping service reinstall (NoNewPrivileges; already installed)"
+            CLEANUP_SERVICE=true
+            return 0
+        fi
+        log_error "Service not installed and NoNewPrivileges prevents installation"
         exit 1
     fi
 
@@ -2214,6 +2276,14 @@ start_service() {
 start_service_systemd() {
     log_info "Enabling and starting HelixScreen (systemd)..."
 
+    # Under NoNewPrivileges, systemctl is blocked.  The restart is handled by
+    # update_checker.cpp: it calls exit(0) after we return, which the watchdog
+    # treats as "normal exit — restart silently".
+    if _has_no_new_privs; then
+        log_info "Skipping service start (NoNewPrivileges; restart via watchdog)"
+        return 0
+    fi
+
     if ! $SUDO systemctl enable "$SERVICE_NAME"; then
         log_error "Failed to enable ${SERVICE_NAME} service."
         exit 1
@@ -2279,20 +2349,28 @@ deploy_platform_hooks() {
         return 0
     fi
 
-    $SUDO mkdir -p "${install_dir}/platform"
-    $SUDO cp "$hooks_src" "${install_dir}/platform/hooks.sh"
-    $SUDO chmod +x "${install_dir}/platform/hooks.sh"
+    # Try without sudo first: during self-update INSTALL_DIR is pi-owned so no root
+    # is needed.  Fall back to sudo for fresh installs where the directory may be
+    # root-owned or not yet created.
+    mkdir -p "${install_dir}/platform" 2>/dev/null || $SUDO mkdir -p "${install_dir}/platform"
+    cp "$hooks_src" "${install_dir}/platform/hooks.sh" 2>/dev/null || $SUDO cp "$hooks_src" "${install_dir}/platform/hooks.sh"
+    chmod +x "${install_dir}/platform/hooks.sh" 2>/dev/null || $SUDO chmod +x "${install_dir}/platform/hooks.sh"
     log_info "Deployed platform hooks: $platform"
 }
 
 # Fix ownership of config directory for non-root Klipper users
 # Binaries stay root-owned for security; only config needs user write access
+# Note: when running from within helix-screen (NoNewPrivileges=true), sudo is
+# blocked. Files are already owned by the service user so the chown is a no-op
+# in that case — failure is non-fatal.
 fix_install_ownership() {
     local user="${KLIPPER_USER:-}"
     if [ -n "$user" ] && [ "$user" != "root" ] && [ -d "$INSTALL_DIR" ]; then
         log_info "Setting ownership to ${user}..."
         if [ -d "${INSTALL_DIR}/config" ]; then
-            $SUDO chown -R "${user}:${user}" "${INSTALL_DIR}/config"
+            if ! $SUDO chown -R "${user}:${user}" "${INSTALL_DIR}/config" 2>/dev/null; then
+                log_warn "Could not set ownership (sudo blocked by NoNewPrivileges — files already owned by service user)"
+            fi
         fi
     fi
 }
@@ -2384,6 +2462,7 @@ repo: prestonbrown/helixscreen
 path: ${INSTALL_DIR}
 persistent_files:
     config/helixconfig.json
+    config/helixscreen.env
     config/.disabled_services
 EOF
 }
@@ -2749,14 +2828,14 @@ uninstall() {
     for cache_dir in /root/.cache/helix /tmp/helix_thumbs /.cache/helix /data/helixscreen/cache /usr/data/helixscreen/cache; do
         if [ -d "$cache_dir" ] 2>/dev/null; then
             log_info "Removing cache: $cache_dir"
-            $(file_sudo "$cache_dir") rm -rf "$cache_dir"
+            $SUDO rm -rf "$cache_dir"
         fi
     done
     # Clean up /var/tmp helix files
     for tmp_pattern in /var/tmp/helix_*; do
         if [ -e "$tmp_pattern" ] 2>/dev/null; then
             log_info "Removing cache: $tmp_pattern"
-            $(file_sudo "$tmp_pattern") rm -rf "$tmp_pattern"
+            $SUDO rm -rf "$tmp_pattern"
         fi
     done
 
