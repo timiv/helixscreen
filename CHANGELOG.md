@@ -5,6 +5,33 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.10] - 2026-02-19
+
+### Added
+- Output pin LED backend for brightness-only chamber lights and enclosure LEDs — auto-detects `[output_pin]` devices with PWM slider or on/off toggle
+- Individual X and Y homing buttons in controls quick actions
+- Clear Spool context menu action for assigned-but-empty AMS slots
+- AFC version warning when firmware is below v1.0.35
+- Configurable Allwinner backlight ENABLE/DISABLE ioctls for broader SBC compatibility
+- Udev and polkit rules for non-root backlight and Wi-Fi access on Pi
+
+### Fixed
+- Self-update under systemd NoNewPrivileges — installer now correctly skips privileged operations during in-place updates
+- Installer preserves settings.json, helixscreen.env, and config across updates
+- Render thread crash from NULL draw buffer race condition
+- AFC unit topology now uses name-based matching instead of fragile index ordering
+- Toolchanger uses SELECT_TOOL instead of ASSIGN_TOOL to avoid remapping
+- Thumbnail paths resolved correctly for files in subdirectories
+- File browser poll timer resumes after returning to print selection panel
+- Timeouts added to long-running G-code calls to prevent UI hangs
+- Systemd service dependency cycle from multi-user.target removed
+- Self-restart uses `_exit(0)` instead of `exit(0)` to avoid background thread races
+- Mock sensor dots restored for AMS prep sensors
+
+### Changed
+- Update check cooldown reduced from 60 minutes to 10 minutes
+- SDL display hints cleaned up for better cross-platform performance
+
 ## [0.10.9] - 2026-02-19
 
 ### Added
@@ -786,6 +813,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.10.10]: https://github.com/prestonbrown/helixscreen/compare/v0.10.9...v0.10.10
 [0.10.9]: https://github.com/prestonbrown/helixscreen/compare/v0.10.8...v0.10.9
 [0.10.8]: https://github.com/prestonbrown/helixscreen/compare/v0.10.7...v0.10.8
 [0.10.7]: https://github.com/prestonbrown/helixscreen/compare/v0.10.6...v0.10.7
