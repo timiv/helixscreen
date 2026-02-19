@@ -133,7 +133,8 @@ static lv_obj_t* ensure_unit_row(AmsMiniStatusData* data, int unit_index) {
                               LV_FLEX_ALIGN_CENTER);
         lv_obj_set_style_pad_column(row->row_container, theme_manager_get_spacing("space_xxs"),
                                     LV_PART_MAIN);
-        lv_obj_set_size(row->row_container, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        lv_obj_set_width(row->row_container, LV_SIZE_CONTENT);
+        lv_obj_set_style_flex_grow(row->row_container, 1, LV_PART_MAIN);
     }
     return row->row_container;
 }
@@ -185,10 +186,21 @@ static void rebuild_bars(AmsMiniStatusData* data) {
         // Reset column padding (not used in column flow)
         lv_obj_set_style_pad_column(data->bars_container, 0, LV_PART_MAIN);
 
+        // Count visible rows (units with bars within max_visible)
+        int visible_rows = 0;
+        for (int u = 0; u < data->unit_count && u < 8; ++u) {
+            int row_slots = std::min(data->unit_rows[u].slot_count,
+                                     data->max_visible - data->unit_rows[u].first_slot);
+            if (row_slots > 0)
+                ++visible_rows;
+        }
+        if (visible_rows < 1)
+            visible_rows = 1;
+
         // Reduce bar height per row to fit stacked rows
-        int32_t row_gap_total = (data->unit_count - 1) * gap;
+        int32_t row_gap_total = (visible_rows - 1) * gap;
         int32_t available_height = effective_height - row_gap_total;
-        int32_t per_row_height = available_height / data->unit_count;
+        int32_t per_row_height = available_height / visible_rows;
         if (per_row_height < 12)
             per_row_height = 12; // Minimum per-row height
 
@@ -237,6 +249,10 @@ static void rebuild_bars(AmsMiniStatusData* data) {
                         lv_obj_set_parent(slot->col.container, row);
                     }
 
+                    // Override to fill row height (multi-unit responsive mode)
+                    lv_obj_set_height(slot->col.container, LV_PCT(100));
+                    lv_obj_set_style_flex_grow(slot->col.bar_bg, 1, LV_PART_MAIN);
+
                     lv_obj_remove_flag(slot->col.container, LV_OBJ_FLAG_HIDDEN);
                     apply_slot_style(slot);
                 } else {
@@ -246,7 +262,11 @@ static void rebuild_bars(AmsMiniStatusData* data) {
                 }
             }
 
-            lv_obj_remove_flag(row, LV_OBJ_FLAG_HIDDEN);
+            // Delete row if no visible bars (hidden rows still consume flex gap)
+            if (row_slots <= 0) {
+                lv_obj_delete(row);
+                data->unit_rows[u].row_container = nullptr;
+            }
         }
 
         spdlog::debug("[AmsMiniStatus] Multi-unit layout: {} units, {} total slots",
