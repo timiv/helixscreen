@@ -46,15 +46,15 @@ class DebugBundleCollector {
     /// Sanitize a string value for PII patterns (emails, credentials, webhooks, tokens, MACs)
     static std::string sanitize_value(const std::string& value);
 
+    /// Recursively strip sensitive keys from JSON (public for integration testing)
+    static nlohmann::json sanitize_json(const nlohmann::json& input);
+
     /// Gzip compression using zlib
     static std::vector<uint8_t> gzip_compress(const std::string& data);
 
   private:
     static constexpr const char* WORKER_URL = "https://crash.helixscreen.org/v1/debug-bundle";
     static constexpr const char* INGEST_API_KEY = "hx-tel-v1-a7f3c9e2d1b84056";
-
-    /// Recursively strip sensitive keys from JSON
-    static nlohmann::json sanitize_json(const nlohmann::json& input);
 
     /// Blocking HTTP GET to a Moonraker endpoint, returns parsed JSON or error object
     static nlohmann::json moonraker_get(const std::string& base_url, const std::string& endpoint,

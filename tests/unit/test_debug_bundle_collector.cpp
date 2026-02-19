@@ -273,3 +273,85 @@ TEST_CASE("DebugBundleCollector: collect includes moonraker section", "[debug-bu
     REQUIRE(bundle.contains("moonraker"));
     REQUIRE(bundle["moonraker"].is_object());
 }
+
+// ============================================================================
+// Realistic Moonraker config sanitization [debug-bundle][sanitize]
+// ============================================================================
+
+TEST_CASE("DebugBundleCollector: sanitize_json handles realistic moonraker config",
+          "[debug-bundle][sanitize]") {
+    // Simulate a realistic /server/config response with various PII
+    json config = R"({
+        "result": {
+            "config": {
+                "server": {
+                    "host": "0.0.0.0",
+                    "port": 7125,
+                    "klippy_uds_address": "/home/pi/printer_data/comms/klippy.sock"
+                },
+                "authorization": {
+                    "trusted_clients": ["192.168.1.0/24", "10.0.0.0/8"],
+                    "cors_domains": ["http://my-printer.local"]
+                },
+                "notifier my_telegram": {
+                    "url": "https://api.telegram.org/bot123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11/sendMessage",
+                    "events": ["error", "complete"],
+                    "body": "Printer notification for user@example.com"
+                },
+                "notifier my_discord": {
+                    "url": "https://discord.com/api/webhooks/1234567890/ABCdefGHIjklMNOpqrSTUvwxYZ",
+                    "events": ["error"]
+                },
+                "update_manager client mainsail": {
+                    "type": "web",
+                    "repo": "mainsail-crew/mainsail"
+                },
+                "power my_plug": {
+                    "type": "tplink_smartplug",
+                    "address": "192.168.1.50",
+                    "password": "my_plug_password"
+                },
+                "webcam my_camera": {
+                    "stream_url": "http://admin:camera_pass@192.168.1.60:8080/stream",
+                    "snapshot_url": "/webcam/?action=snapshot"
+                },
+                "spoolman": {
+                    "server": "http://192.168.1.100:7912"
+                }
+            }
+        }
+    })"_json;
+
+    json sanitized = helix::DebugBundleCollector::sanitize_json(config);
+
+    // Telegram URL should be fully redacted
+    std::string telegram_url =
+        sanitized["result"]["config"]["notifier my_telegram"]["url"].get<std::string>();
+    REQUIRE(telegram_url == "[REDACTED_WEBHOOK]");
+
+    // Discord webhook should be fully redacted
+    std::string discord_url =
+        sanitized["result"]["config"]["notifier my_discord"]["url"].get<std::string>();
+    REQUIRE(discord_url == "[REDACTED_WEBHOOK]");
+
+    // Email in body should be redacted
+    std::string body =
+        sanitized["result"]["config"]["notifier my_telegram"]["body"].get<std::string>();
+    REQUIRE(body.find("user@example.com") == std::string::npos);
+    REQUIRE(body.find("[REDACTED_EMAIL]") != std::string::npos);
+
+    // Password key should be redacted
+    std::string pw = sanitized["result"]["config"]["power my_plug"]["password"].get<std::string>();
+    REQUIRE(pw == "[REDACTED]");
+
+    // Camera URL with credentials should be redacted
+    std::string cam_url =
+        sanitized["result"]["config"]["webcam my_camera"]["stream_url"].get<std::string>();
+    REQUIRE(cam_url.find("admin") == std::string::npos);
+    REQUIRE(cam_url.find("camera_pass") == std::string::npos);
+
+    // Safe values should be preserved
+    REQUIRE(sanitized["result"]["config"]["server"]["port"] == 7125);
+    REQUIRE(sanitized["result"]["config"]["update_manager client mainsail"]["repo"] ==
+            "mainsail-crew/mainsail");
+}
