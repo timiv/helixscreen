@@ -128,6 +128,11 @@ echo "  Serving at   : $BASE_URL"
 echo "  Pi target    : ${PI_USER}@${PI_HOST}"
 echo ""
 
+# ── Git pull ──────────────────────────────────────────────────────────────────
+echo "[serve-local-update] Pulling latest changes..."
+git -C "$PROJECT_DIR" pull
+echo ""
+
 # ── Build ─────────────────────────────────────────────────────────────────────
 if [[ $BUILD -eq 1 ]]; then
     echo "[serve-local-update] Compiling pi binary (docker)..."
