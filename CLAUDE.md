@@ -2,7 +2,7 @@
 
 ## Quick Start
 
-**HelixScreen**: LVGL 9.4 touchscreen UI for Klipper 3D printers. Pattern: XML → Subjects → C++.
+**HelixScreen**: LVGL 9.5 touchscreen UI for Klipper 3D printers. XML engine in `lib/helix-xml/`. Pattern: XML → Subjects → C++.
 
 ```bash
 make -j                              # Build ONLY the program binary (NOT tests)

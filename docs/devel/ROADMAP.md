@@ -28,6 +28,13 @@
 
 ## Recently Completed
 
+### XML Engine Extraction & LVGL 9.5 Upgrade ✅
+**Completed:** 2026-02-18
+
+Extracted the LVGL XML engine into standalone `lib/helix-xml/` library and upgraded LVGL from 9.4-pre to v9.5.0, gaining 274 commits of improvements (blur, drop shadow, flex rounding fixes, memory leak fixes, gesture threshold API, slot support). XML patches baked permanently into helix-xml; LVGL patches regenerated for v9.5. New umbrella headers (`helix_xml.h`), standalone globals, and forward declaration files decouple helix-xml from LVGL internals.
+
+**Branch:** `feature/helix-xml` | **Plan:** `docs/devel/plans/2026-02-18-helix-xml-plan.md`
+
 ### Power Panel Integration ✅
 **Completed:** 2026-02-18
 
@@ -111,7 +118,7 @@ Remaining items for production readiness:
 ## What's Complete
 
 ### Core Architecture
-- LVGL 9.4 with declarative XML layouts (187 XML files)
+- LVGL 9.5 with declarative XML layouts via `lib/helix-xml/` (187 XML files)
 - Reactive Subject-Observer data binding
 - Design token system (no hardcoded colors/spacing)
 - RAII lifecycle management (PanelBase, ObserverGuard, SubscriptionGuard)
