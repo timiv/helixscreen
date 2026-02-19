@@ -5,6 +5,23 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.7] - 2026-02-18
+
+### Fixed
+- AMS context menu UX: hidden tool dropdown, auto-close on backup select, conflict toast, and infinity icon for unlimited backup
+- AMS Load/Unload/Eject buttons now work correctly from context menu
+- AMS filament sensor toasts suppressed during active load/unload operations
+- AFC `SET_RUNOUT` parameter corrected from `RUNOUT_LANE` to `RUNOUT`
+- AFC 'Loaded' hub status correctly mapped to available instead of loaded
+- AFC tip method detection from config with inline comment stripping
+- Spoolman polling log noise suppressed unless spool weights actually changed
+- Touch calibration wizard disabled ABS mismatch override for HDMI devices
+- Power device probe no longer shows error toast on printers without power component
+- Moonraker update manager switched from `type: zip` to `type: web` with systemd restart watcher
+
+### Changed
+- Removed dead AmsSlotEditPopup code replaced by context menu
+
 ## [0.10.6] - 2026-02-18
 
 ### Fixed
@@ -737,6 +754,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.10.7]: https://github.com/prestonbrown/helixscreen/compare/v0.10.6...v0.10.7
 [0.10.6]: https://github.com/prestonbrown/helixscreen/compare/v0.10.5...v0.10.6
 [0.10.5]: https://github.com/prestonbrown/helixscreen/compare/v0.10.4...v0.10.5
 [0.10.4]: https://github.com/prestonbrown/helixscreen/compare/v0.10.3...v0.10.4
