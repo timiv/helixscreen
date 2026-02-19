@@ -6,7 +6,7 @@
 /*********************
  *      INCLUDES
  *********************/
-#include "../../lvgl.h"
+#include <lvgl.h>
 #if LV_USE_XML && LV_USE_TRANSLATION
 
 #include "../others/translation/lv_translation_private.h"

@@ -14,8 +14,8 @@
 #include "ui_panel_settings.h"
 
 #include "app_globals.h"
+#include "helix-xml/src/xml/lv_xml.h"
 #include "lvgl/lvgl.h"
-#include "lvgl/src/xml/lv_xml.h"
 #include "overlay_base.h"
 #include "printer_state.h"
 

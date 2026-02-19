@@ -16,8 +16,8 @@
 #include "ui_event_safety.h"
 #include "ui_nav_manager.h"
 
+#include "helix-xml/src/xml/lv_xml.h"
 #include "lvgl/lvgl.h"
-#include "lvgl/src/xml/lv_xml.h"
 #include "static_panel_registry.h"
 
 #include <spdlog/spdlog.h>

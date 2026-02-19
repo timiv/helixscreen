@@ -633,11 +633,11 @@ void EmergencyStopOverlay::home_firmware_restart_clicked(lv_event_t*) {}
 // test the text_input widget's placeholder and max_length attributes.
 #include "ui_text_input.h"
 
-#include "lvgl/src/xml/lv_xml.h"
-#include "lvgl/src/xml/lv_xml_parser.h"
-#include "lvgl/src/xml/lv_xml_utils.h"
-#include "lvgl/src/xml/lv_xml_widget.h"
-#include "lvgl/src/xml/parsers/lv_xml_textarea_parser.h"
+#include "helix-xml/src/xml/lv_xml.h"
+#include "helix-xml/src/xml/lv_xml_parser.h"
+#include "helix-xml/src/xml/lv_xml_utils.h"
+#include "helix-xml/src/xml/lv_xml_widget.h"
+#include "helix-xml/src/xml/parsers/lv_xml_textarea_parser.h"
 
 // Magic value to identify text_input widgets
 static constexpr uintptr_t TEXT_INPUT_MAGIC = 0xBADC0DE0;

@@ -31,7 +31,7 @@
 #include "display_manager.h"
 #include "format_utils.h"
 #include "gcode_parser.h" // For extract_thumbnails_from_content (USB thumbnail fallback)
-#include "lvgl/src/xml/lv_xml.h"
+#include "helix-xml/src/xml/lv_xml.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h" // For ConnectionState enum
 #include "preprint_predictor.h"

@@ -61,8 +61,9 @@
 /*********************
  *      DEFINES
  *********************/
-#define xml_path_prefix LV_GLOBAL_DEFAULT()->xml_path_prefix
-#define lv_event_xml_store_timeline LV_GLOBAL_DEFAULT()->lv_event_xml_store_timeline
+#include "lv_xml_globals.h"
+#define xml_path_prefix lv_xml_path_prefix
+#define lv_event_xml_store_timeline lv_xml_event_store_timeline
 
 /**********************
  *      TYPEDEFS

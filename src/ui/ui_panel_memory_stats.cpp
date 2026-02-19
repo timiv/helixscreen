@@ -3,7 +3,7 @@
 
 #include "ui_panel_memory_stats.h"
 
-#include "lvgl/src/xml/lv_xml.h"
+#include "helix-xml/src/xml/lv_xml.h"
 #include "memory_utils.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"

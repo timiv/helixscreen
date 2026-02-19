@@ -6,7 +6,7 @@
 /*********************
  *      INCLUDES
  *********************/
-#include "../../lvgl.h"
+#include <lvgl.h>
 #if LV_USE_XML
 
 #include "lv_xml_base_types.h"

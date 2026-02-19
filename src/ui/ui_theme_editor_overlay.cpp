@@ -11,8 +11,8 @@
 #include "ui_nav_manager.h"
 #include "ui_toast_manager.h"
 
+#include "helix-xml/src/xml/lv_xml.h"
 #include "lvgl/src/others/translation/lv_translation.h"
-#include "lvgl/src/xml/lv_xml.h"
 #include "settings_manager.h"
 #include "theme_loader.h"
 #include "theme_manager.h"

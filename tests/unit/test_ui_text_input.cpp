@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "../lvgl_ui_test_fixture.h"
+#include "helix-xml/src/xml/lv_xml.h"
 #include "lvgl/lvgl.h"
-#include "lvgl/src/xml/lv_xml.h"
 
 #include "catch_amalgamated.hpp"
 

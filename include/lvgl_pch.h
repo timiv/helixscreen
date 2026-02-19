@@ -14,6 +14,9 @@
 // LVGL core headers (processed 200+ times without PCH)
 #include "lvgl/lvgl.h"
 
+// Helix XML engine (extracted from LVGL, standalone since v9.5 removed XML)
+#include "helix-xml/helix_xml.h"
+
 // Common STL headers used throughout the project
 #include <algorithm>
 #include <cmath>

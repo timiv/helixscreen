@@ -9,8 +9,9 @@
 #include "lv_xml_switch_parser.h"
 #if LV_USE_XML
 
-#include "../../../lvgl.h"
-#include "../../../lvgl_private.h"
+#include <lvgl.h>
+#include <lvgl_private.h>
+#include "../lv_xml_private.h"
 
 /*********************
  *      DEFINES

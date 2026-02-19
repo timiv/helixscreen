@@ -3,12 +3,12 @@
 
 #include "ui_switch.h"
 
+#include "helix-xml/src/xml/lv_xml.h"
+#include "helix-xml/src/xml/lv_xml_parser.h"
+#include "helix-xml/src/xml/lv_xml_style.h"
+#include "helix-xml/src/xml/lv_xml_widget.h"
+#include "helix-xml/src/xml/parsers/lv_xml_obj_parser.h"
 #include "lvgl/lvgl.h"
-#include "lvgl/src/xml/lv_xml.h"
-#include "lvgl/src/xml/lv_xml_parser.h"
-#include "lvgl/src/xml/lv_xml_style.h"
-#include "lvgl/src/xml/lv_xml_widget.h"
-#include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
 #include "sound_manager.h"
 #include "theme_manager.h"
 

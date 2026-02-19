@@ -22,7 +22,7 @@
 #include "ams_state.h"
 #include "ams_types.h"
 #include "app_globals.h"
-#include "lvgl/src/xml/lv_xml.h"
+#include "helix-xml/src/xml/lv_xml.h"
 #include "observer_factory.h"
 #include "printer_detector.h"
 #include "settings_manager.h"

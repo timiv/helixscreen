@@ -9,7 +9,7 @@
 #include "lv_xml_test.h"
 #if LV_USE_XML && LV_USE_TEST
 
-#include "../../lvgl.h"
+#include <lvgl.h>
 #include "lv_xml.h"
 #include "lv_xml_utils.h"
 #include "lv_xml_component_private.h"

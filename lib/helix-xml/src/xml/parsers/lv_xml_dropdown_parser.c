@@ -9,8 +9,9 @@
 #include "lv_xml_dropdown_parser.h"
 #if LV_USE_XML && LV_USE_DROPDOWN
 
-#include "../../../lvgl.h"
-#include "../../../lvgl_private.h"
+#include <lvgl.h>
+#include <lvgl_private.h>
+#include "../lv_xml_private.h"
 
 /*********************
  *      DEFINES

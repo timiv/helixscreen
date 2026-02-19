@@ -7,10 +7,10 @@
 #include "ui_fonts.h"
 
 #include "config.h"
+#include "helix-xml/src/libs/expat/expat.h"
+#include "helix-xml/src/xml/lv_xml.h"
 #include "lvgl/lvgl.h"
-#include "lvgl/src/libs/expat/expat.h"
 #include "lvgl/src/themes/lv_theme_private.h"
-#include "lvgl/src/xml/lv_xml.h"
 #include "settings_manager.h"
 #include "theme_loader.h"
 

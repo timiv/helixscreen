@@ -16,8 +16,8 @@
 #include "ui_panel_ams.h"
 
 #include "ams_state.h"
+#include "helix-xml/src/xml/lv_xml.h"
 #include "lvgl/lvgl.h"
-#include "lvgl/src/xml/lv_xml.h"
 #include "observer_factory.h"
 
 #include <spdlog/spdlog.h>

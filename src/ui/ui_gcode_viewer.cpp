@@ -25,9 +25,10 @@
 // FPS tracking constants (for diagnostic logging, not mode selection)
 constexpr size_t GCODE_FPS_WINDOW_SIZE = 10; // Rolling window of frame times
 
-#include <lvgl/src/xml/lv_xml_parser.h>
-#include <lvgl/src/xml/parsers/lv_xml_obj_parser.h>
 #include <spdlog/spdlog.h>
+
+#include <helix-xml/src/xml/lv_xml_parser.h>
+#include <helix-xml/src/xml/parsers/lv_xml_obj_parser.h>
 
 using namespace helix;
 

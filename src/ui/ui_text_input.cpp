@@ -17,13 +17,13 @@
 #include "ui_fonts.h"
 #include "ui_icon_codepoints.h"
 
+#include "helix-xml/src/xml/lv_xml.h"
+#include "helix-xml/src/xml/lv_xml_parser.h"
+#include "helix-xml/src/xml/lv_xml_utils.h"
+#include "helix-xml/src/xml/lv_xml_widget.h"
+#include "helix-xml/src/xml/parsers/lv_xml_textarea_parser.h"
 #include "lvgl/lvgl.h"
 #include "lvgl/src/core/lv_observer_private.h" // For lv_observer_t internals
-#include "lvgl/src/xml/lv_xml.h"
-#include "lvgl/src/xml/lv_xml_parser.h"
-#include "lvgl/src/xml/lv_xml_utils.h"
-#include "lvgl/src/xml/lv_xml_widget.h"
-#include "lvgl/src/xml/parsers/lv_xml_textarea_parser.h"
 
 #include <spdlog/spdlog.h>
 

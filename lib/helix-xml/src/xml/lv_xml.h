@@ -14,6 +14,7 @@ extern "C" {
  *      INCLUDES
  *********************/
 #include "../misc/lv_types.h"
+#include "lv_xml_types.h"
 
 #if LV_USE_XML
 #include "../misc/lv_event.h"

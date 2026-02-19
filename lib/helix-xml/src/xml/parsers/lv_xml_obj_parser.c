@@ -9,13 +9,15 @@
 #include "lv_xml_obj_parser.h"
 #if LV_USE_XML
 
-#include "../../../lvgl.h"
-#include "../../../lvgl_private.h"
+#include <lvgl.h>
+#include <lvgl_private.h>
+#include "../lv_xml_private.h"
 
 /*********************
  *      DEFINES
  *********************/
-#define lv_event_xml_store_timeline LV_GLOBAL_DEFAULT()->lv_event_xml_store_timeline
+#include "../lv_xml_globals.h"
+#define lv_event_xml_store_timeline lv_xml_event_store_timeline
 
 /**********************
  *      TYPEDEFS

@@ -5,7 +5,7 @@
 
 #include "ui_nav_manager.h"
 
-#include "lvgl/src/xml/lv_xml.h"
+#include "helix-xml/src/xml/lv_xml.h"
 #include "moonraker_api.h"
 #include "runtime_config.h"
 #include "static_panel_registry.h"

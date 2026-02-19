@@ -10,8 +10,9 @@
 #include "lv_xml_spinner_parser.h"
 #if LV_USE_XML && LV_USE_SPINNER
 
-#include "../../../lvgl.h"
-#include "../../../lvgl_private.h"
+#include <lvgl.h>
+#include <lvgl_private.h>
+#include "../lv_xml_private.h"
 
 /*********************
  *      DEFINES

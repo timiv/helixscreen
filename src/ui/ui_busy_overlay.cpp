@@ -6,8 +6,8 @@
 #include "ui_utils.h"
 
 #include "format_utils.h"
+#include "helix-xml/src/xml/lv_xml.h"
 #include "lvgl/lvgl.h"
-#include "lvgl/src/xml/lv_xml.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>

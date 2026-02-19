@@ -9,7 +9,7 @@
 #include "lv_xml_component.h"
 #if LV_USE_XML
 
-#include "../lvgl.h"
+#include <lvgl.h>
 #include "lv_xml_component_private.h"
 #include "lv_xml_private.h"
 #include "lv_xml_parser.h"
@@ -25,7 +25,8 @@
 /*********************
  *      DEFINES
  *********************/
-#define xml_path_prefix LV_GLOBAL_DEFAULT()->xml_path_prefix
+#include "lv_xml_globals.h"
+#define xml_path_prefix lv_xml_path_prefix
 
 /**********************
  *      TYPEDEFS

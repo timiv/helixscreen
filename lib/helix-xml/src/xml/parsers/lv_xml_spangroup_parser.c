@@ -9,8 +9,9 @@
 #include "lv_xml_spangroup_parser.h"
 #if LV_USE_XML && LV_USE_SPAN
 
-#include "../../../lvgl.h"
-#include "../../../lvgl_private.h"
+#include <lvgl.h>
+#include <lvgl_private.h>
+#include "../lv_xml_private.h"
 
 /*********************
  *      DEFINES

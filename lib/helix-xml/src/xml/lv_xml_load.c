@@ -21,7 +21,8 @@
  *      DEFINES
  *********************/
 
-#define xml_loads LV_GLOBAL_DEFAULT()->xml_loads
+#include "lv_xml_globals.h"
+#define xml_loads lv_xml_loads_ll
 #define PATH_PREFIX_BUF_SIZE 32
 #define PATH_PREFIX_FMT      "__LV_XML_%p"
 

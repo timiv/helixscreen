@@ -11,7 +11,7 @@
 #include "ui_update_queue.h"
 #include "ui_utils.h"
 
-#include "lvgl/src/xml/lv_xml.h"
+#include "helix-xml/src/xml/lv_xml.h"
 #include "runtime_config.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
