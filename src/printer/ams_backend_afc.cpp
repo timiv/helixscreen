@@ -4,7 +4,9 @@
 #include "ams_backend_afc.h"
 
 #include "ui_error_reporting.h"
+#include "ui_modal.h"
 #include "ui_notification.h"
+#include "ui_update_queue.h"
 
 #include "action_prompt_manager.h"
 #include "afc_defaults.h"
@@ -1293,6 +1295,25 @@ void AmsBackendAfc::detect_afc_version() {
                     }
                     spdlog::info("[AMS AFC] Detected AFC version: {} (lane_data DB: {})",
                                  afc_version_, has_lane_data_db_ ? "yes" : "no");
+
+                    // Warn if AFC version is older than minimum supported
+                    if (!version_at_least("1.0.35")) {
+                        auto* msg = new (std::nothrow)
+                            std::string(fmt::format("AFC version {} may have compatibility issues. "
+                                                    "Please upgrade to v1.0.35 or later.",
+                                                    afc_version_));
+                        if (msg) {
+                            spdlog::warn("[AMS AFC] {}", *msg);
+                            helix::ui::async_call(
+                                [](void* data) {
+                                    auto* m = static_cast<std::string*>(data);
+                                    helix::ui::modal_show_alert("AFC Version Warning", m->c_str(),
+                                                                ModalSeverity::Warning, "OK");
+                                    delete m;
+                                },
+                                msg);
+                        }
+                    }
                 }
             }
 
