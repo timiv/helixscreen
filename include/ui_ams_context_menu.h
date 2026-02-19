@@ -44,13 +44,14 @@ namespace helix::ui {
 class AmsContextMenu : public ContextMenu {
   public:
     enum class MenuAction {
-        CANCELLED,  ///< User dismissed menu without action
-        LOAD,       ///< Load filament from this slot
-        UNLOAD,     ///< Unload filament from toolhead
-        EJECT,      ///< Eject filament from lane (release spool)
-        RESET_LANE, ///< Reset lane to known-good state
-        EDIT,       ///< Edit slot properties
-        SPOOLMAN    ///< Assign Spoolman spool
+        CANCELLED,   ///< User dismissed menu without action
+        LOAD,        ///< Load filament from this slot
+        UNLOAD,      ///< Unload filament from toolhead
+        EJECT,       ///< Eject filament from lane (release spool)
+        RESET_LANE,  ///< Reset lane to known-good state
+        EDIT,        ///< Edit slot properties
+        CLEAR_SPOOL, ///< Clear assigned spool from empty slot
+        SPOOLMAN     ///< Assign Spoolman spool
     };
 
     using ActionCallback = std::function<void(MenuAction action, int slot_index)>;
@@ -120,7 +121,8 @@ class AmsContextMenu : public ContextMenu {
 
     // === Pending state for on_created ===
     bool pending_is_loaded_ = false;
-    bool eject_mode_ = false; ///< True when showing "Eject" instead of "Unload"
+    bool eject_mode_ = false;       ///< True when showing "Eject" instead of "Unload"
+    bool clear_spool_mode_ = false; ///< True when showing "Clear Spool" instead of "Spool Info"
 
     // === Event Handlers ===
     void handle_backdrop_clicked();

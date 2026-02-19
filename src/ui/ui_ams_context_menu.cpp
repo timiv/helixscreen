@@ -212,11 +212,29 @@ void AmsContextMenu::on_created(lv_obj_t* menu_obj) {
         }
     }
 
-    // Disable Spool Info button when slot is empty (no filament data to show)
+    // Handle Spool Info / Clear Spool button based on slot state
+    clear_spool_mode_ = false;
     if (!slot_has_filament) {
+        // Slot is empty — check if it still has an assigned spool
+        bool has_assignment = false;
+        if (backend_) {
+            SlotInfo slot_info = backend_->get_slot_info(slot_index);
+            has_assignment = (slot_info.spoolman_id > 0 || !slot_info.material.empty());
+        }
+
         lv_obj_t* btn_edit = lv_obj_find_by_name(menu_obj, "btn_edit");
-        if (btn_edit) {
-            lv_obj_add_state(btn_edit, LV_STATE_DISABLED);
+        if (has_assignment) {
+            // Show "Clear Spool" instead of disabled "Spool Info"
+            clear_spool_mode_ = true;
+            if (btn_edit) {
+                ui_button_set_text(btn_edit, lv_tr("Clear Spool"));
+                ui_button_set_icon(btn_edit, "close");
+            }
+        } else {
+            // Truly empty — disable the button
+            if (btn_edit) {
+                lv_obj_add_state(btn_edit, LV_STATE_DISABLED);
+            }
         }
     }
 
@@ -276,8 +294,13 @@ void AmsContextMenu::handle_reset_lane() {
 }
 
 void AmsContextMenu::handle_edit() {
-    spdlog::info("[AmsContextMenu] Edit requested for slot {}", get_item_index());
-    dispatch_ams_action(MenuAction::EDIT);
+    if (clear_spool_mode_) {
+        spdlog::info("[AmsContextMenu] Clear spool requested for slot {}", get_item_index());
+        dispatch_ams_action(MenuAction::CLEAR_SPOOL);
+    } else {
+        spdlog::info("[AmsContextMenu] Edit requested for slot {}", get_item_index());
+        dispatch_ams_action(MenuAction::EDIT);
+    }
 }
 
 // ============================================================================

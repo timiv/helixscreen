@@ -1642,6 +1642,34 @@ void AmsPanel::show_context_menu(int slot_index, lv_obj_t* near_widget, lv_point
                 show_edit_modal(slot);
                 break;
 
+            case helix::ui::AmsContextMenu::MenuAction::CLEAR_SPOOL:
+                if (!backend) {
+                    NOTIFY_WARNING("AMS not available");
+                    return;
+                }
+                {
+                    // Clear spool assignment: reset material/color/spool data, keep slot status
+                    SlotInfo cleared = backend->get_slot_info(slot);
+                    cleared.material.clear();
+                    cleared.color_rgb = AMS_DEFAULT_SLOT_COLOR;
+                    cleared.color_name.clear();
+                    cleared.multi_color_hexes.clear();
+                    cleared.brand.clear();
+                    cleared.spool_name.clear();
+                    cleared.spoolman_id = 0;
+                    cleared.remaining_weight_g = -1;
+                    cleared.total_weight_g = -1;
+                    auto error = backend->set_slot_info(slot, cleared);
+                    if (error.success()) {
+                        AmsState::instance().sync_from_backend();
+                        refresh_slots();
+                        NOTIFY_INFO("Slot {} spool cleared", slot + 1);
+                    } else {
+                        NOTIFY_ERROR("Clear failed: {}", error.user_msg);
+                    }
+                }
+                break;
+
             case helix::ui::AmsContextMenu::MenuAction::CANCELLED:
             default:
                 break;
