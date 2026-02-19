@@ -63,6 +63,10 @@ class DebugBundleCollector {
     /// Get the Moonraker HTTP base URL (from MoonrakerAPI if connected)
     static std::string get_moonraker_url();
 
+    /// Fetch the tail of a log file from Moonraker using HTTP Range requests
+    static std::string fetch_log_tail(const std::string& base_url, const std::string& endpoint,
+                                      int num_lines, int tail_bytes = 524288);
+
     /// Check if a key name matches a sensitive pattern
     static bool is_sensitive_key(const std::string& key);
 };

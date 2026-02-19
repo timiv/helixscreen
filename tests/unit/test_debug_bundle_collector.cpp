@@ -250,6 +250,20 @@ TEST_CASE("DebugBundleCollector: sanitize_value redacts MAC addresses",
     REQUIRE(result.find("[REDACTED_MAC]") != std::string::npos);
 }
 
+TEST_CASE("DebugBundleCollector: sanitize_value redacts Pushover and ntfy webhooks",
+          "[debug-bundle][sanitize]") {
+    auto pushover =
+        helix::DebugBundleCollector::sanitize_value("https://api.pushover.net/1/messages.json");
+    REQUIRE(pushover == "[REDACTED_WEBHOOK]");
+
+    auto ntfy = helix::DebugBundleCollector::sanitize_value("https://ntfy.sh/my-printer-alerts");
+    REQUIRE(ntfy == "[REDACTED_WEBHOOK]");
+
+    auto ifttt = helix::DebugBundleCollector::sanitize_value(
+        "https://maker.ifttt.com/trigger/print_done/with/key/abc123");
+    REQUIRE(ifttt == "[REDACTED_WEBHOOK]");
+}
+
 // ============================================================================
 // collect_moonraker_info() tests [debug-bundle][moonraker]
 // ============================================================================

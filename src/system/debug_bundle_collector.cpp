@@ -263,7 +263,10 @@ std::string DebugBundleCollector::sanitize_value(const std::string& value) {
     // Check webhook URLs first (full replacement)
     if (value.find("discord.com/api/webhooks") != std::string::npos ||
         value.find("hooks.slack.com") != std::string::npos ||
-        value.find("api.telegram.org/bot") != std::string::npos) {
+        value.find("api.telegram.org/bot") != std::string::npos ||
+        value.find("api.pushover.net") != std::string::npos ||
+        value.find("ntfy.sh/") != std::string::npos ||
+        value.find("maker.ifttt.com") != std::string::npos) {
         return "[REDACTED_WEBHOOK]";
     }
 
@@ -433,31 +436,56 @@ json DebugBundleCollector::collect_moonraker_info() {
 }
 
 // =============================================================================
-// Klipper / Moonraker log tails
+// Klipper / Moonraker log tails (via HTTP Range for memory safety)
 // =============================================================================
 
-std::string DebugBundleCollector::collect_klipper_log_tail(int num_lines) {
-    std::string base_url = get_moonraker_url();
-    if (base_url.empty())
-        return {};
-
+std::string DebugBundleCollector::fetch_log_tail(const std::string& base_url,
+                                                 const std::string& endpoint, int num_lines,
+                                                 int tail_bytes) {
     try {
         auto req = std::make_shared<HttpRequest>();
         req->method = HTTP_GET;
-        req->url = base_url + "/server/files/klippy.log";
+        req->url = base_url + endpoint;
         req->timeout = 15;
 
+        // Request only the last chunk using HTTP Range
+        // "bytes=-N" means "last N bytes of the file"
+        req->headers["Range"] = "bytes=-" + std::to_string(tail_bytes);
+
         auto resp = requests::request(req);
-        if (!resp || resp->status_code < 200 || resp->status_code >= 300) {
-            spdlog::debug("[DebugBundle] Failed to fetch klippy.log");
+        if (!resp) {
+            spdlog::debug("[DebugBundle] No response fetching {}", endpoint);
             return {};
         }
 
-        // Take last N lines
+        int status = static_cast<int>(resp->status_code);
+
+        // 206 = partial content (range honored), 200 = full file (range not supported)
+        if (status == 200) {
+            // Server returned the full file -- check size before processing
+            if (resp->body.size() > 5 * 1024 * 1024) {
+                spdlog::warn("[DebugBundle] {} is too large ({} bytes), skipping", endpoint,
+                             resp->body.size());
+                return {};
+            }
+        } else if (status != 206) {
+            spdlog::debug("[DebugBundle] HTTP {} fetching {}", status, endpoint);
+            return {};
+        }
+
+        // Take last N lines from the response
         std::istringstream stream(resp->body);
         std::deque<std::string> lines;
         std::string line;
+
+        // If we got a partial response (206), the first line is likely truncated -- skip it
+        bool skip_first = (status == 206);
+
         while (std::getline(stream, line)) {
+            if (skip_first) {
+                skip_first = false;
+                continue;
+            }
             lines.push_back(std::move(line));
             if (static_cast<int>(lines.size()) > num_lines) {
                 lines.pop_front();
@@ -468,58 +496,30 @@ std::string DebugBundleCollector::collect_klipper_log_tail(int num_lines) {
         for (size_t i = 0; i < lines.size(); ++i) {
             if (i > 0)
                 result << '\n';
-            // Sanitize each line for PII
             result << sanitize_value(lines[i]);
         }
 
-        spdlog::debug("[DebugBundle] Fetched {} klipper log lines", lines.size());
+        spdlog::debug("[DebugBundle] Fetched {} lines from {} (HTTP {})", lines.size(), endpoint,
+                      status);
         return result.str();
     } catch (const std::exception& e) {
-        spdlog::debug("[DebugBundle] Exception fetching klippy.log: {}", e.what());
+        spdlog::debug("[DebugBundle] Exception fetching {}: {}", endpoint, e.what());
         return {};
     }
+}
+
+std::string DebugBundleCollector::collect_klipper_log_tail(int num_lines) {
+    std::string base_url = get_moonraker_url();
+    if (base_url.empty())
+        return {};
+    return fetch_log_tail(base_url, "/server/files/klippy.log", num_lines);
 }
 
 std::string DebugBundleCollector::collect_moonraker_log_tail(int num_lines) {
     std::string base_url = get_moonraker_url();
     if (base_url.empty())
         return {};
-
-    try {
-        auto req = std::make_shared<HttpRequest>();
-        req->method = HTTP_GET;
-        req->url = base_url + "/server/files/moonraker.log";
-        req->timeout = 15;
-
-        auto resp = requests::request(req);
-        if (!resp || resp->status_code < 200 || resp->status_code >= 300) {
-            spdlog::debug("[DebugBundle] Failed to fetch moonraker.log");
-            return {};
-        }
-
-        std::istringstream stream(resp->body);
-        std::deque<std::string> lines;
-        std::string line;
-        while (std::getline(stream, line)) {
-            lines.push_back(std::move(line));
-            if (static_cast<int>(lines.size()) > num_lines) {
-                lines.pop_front();
-            }
-        }
-
-        std::ostringstream result;
-        for (size_t i = 0; i < lines.size(); ++i) {
-            if (i > 0)
-                result << '\n';
-            result << sanitize_value(lines[i]);
-        }
-
-        spdlog::debug("[DebugBundle] Fetched {} moonraker log lines", lines.size());
-        return result.str();
-    } catch (const std::exception& e) {
-        spdlog::debug("[DebugBundle] Exception fetching moonraker.log: {}", e.what());
-        return {};
-    }
+    return fetch_log_tail(base_url, "/server/files/moonraker.log", num_lines);
 }
 
 // =============================================================================
