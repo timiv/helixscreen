@@ -473,3 +473,181 @@ TEST_CASE_METHOD(HomeWidgetConfigFixture, "HomeWidgetConfig: set_enabled out of 
     wc.set_enabled(999, false);
     REQUIRE(wc.entries() == before);
 }
+
+// ============================================================================
+// Registry tests — field completeness
+// ============================================================================
+
+TEST_CASE("HomeWidgetRegistry: all defs have non-null required fields", "[home][widget_config]") {
+    const auto& defs = get_all_widget_defs();
+    for (const auto& def : defs) {
+        CAPTURE(def.id);
+        REQUIRE(def.id != nullptr);
+        REQUIRE(def.display_name != nullptr);
+        REQUIRE(def.icon != nullptr);
+        REQUIRE(def.description != nullptr);
+        REQUIRE(def.translation_tag != nullptr);
+        // hardware_gate_subject CAN be nullptr (always-available widgets)
+    }
+}
+
+TEST_CASE("HomeWidgetRegistry: all IDs are non-empty strings", "[home][widget_config]") {
+    const auto& defs = get_all_widget_defs();
+    for (const auto& def : defs) {
+        REQUIRE(std::string_view(def.id).size() > 0);
+        REQUIRE(std::string_view(def.display_name).size() > 0);
+        REQUIRE(std::string_view(def.icon).size() > 0);
+        REQUIRE(std::string_view(def.description).size() > 0);
+    }
+}
+
+TEST_CASE("HomeWidgetRegistry: can find every registered widget by ID", "[home][widget_config]") {
+    const auto& defs = get_all_widget_defs();
+    for (const auto& def : defs) {
+        const auto* found = find_widget_def(def.id);
+        REQUIRE(found != nullptr);
+        REQUIRE(found->id == std::string_view(def.id));
+    }
+}
+
+TEST_CASE("HomeWidgetRegistry: known hardware-gated widgets have gate subjects",
+          "[home][widget_config]") {
+    // These widgets require specific hardware
+    const char* gated[] = {"power", "ams", "led", "humidity", "width_sensor", "probe", "filament"};
+    for (const auto* id : gated) {
+        CAPTURE(id);
+        const auto* def = find_widget_def(id);
+        REQUIRE(def != nullptr);
+        REQUIRE(def->hardware_gate_subject != nullptr);
+    }
+}
+
+TEST_CASE("HomeWidgetRegistry: always-available widgets have no gate subject",
+          "[home][widget_config]") {
+    const char* always[] = {"network", "firmware_restart", "temperature", "notifications"};
+    for (const auto* id : always) {
+        CAPTURE(id);
+        const auto* def = find_widget_def(id);
+        REQUIRE(def != nullptr);
+        REQUIRE(def->hardware_gate_subject == nullptr);
+    }
+}
+
+// ============================================================================
+// Config tests — reorder edge cases
+// ============================================================================
+
+TEST_CASE_METHOD(HomeWidgetConfigFixture, "HomeWidgetConfig: reorder to last position works",
+                 "[home][widget_config]") {
+    setup_empty_config();
+    HomeWidgetConfig wc(config);
+    wc.load();
+
+    size_t last = wc.entries().size() - 1;
+    std::string moved_id = wc.entries()[0].id;
+    wc.reorder(0, last);
+
+    REQUIRE(wc.entries()[last].id == moved_id);
+}
+
+TEST_CASE_METHOD(HomeWidgetConfigFixture, "HomeWidgetConfig: reorder from last to first works",
+                 "[home][widget_config]") {
+    setup_empty_config();
+    HomeWidgetConfig wc(config);
+    wc.load();
+
+    size_t last = wc.entries().size() - 1;
+    std::string moved_id = wc.entries()[last].id;
+    wc.reorder(last, 0);
+
+    REQUIRE(wc.entries()[0].id == moved_id);
+}
+
+TEST_CASE_METHOD(HomeWidgetConfigFixture,
+                 "HomeWidgetConfig: reorder preserves enabled state of moved item",
+                 "[home][widget_config]") {
+    setup_empty_config();
+    HomeWidgetConfig wc(config);
+    wc.load();
+
+    wc.set_enabled(3, false);
+    std::string moved_id = wc.entries()[3].id;
+    wc.reorder(3, 0);
+
+    REQUIRE(wc.entries()[0].id == moved_id);
+    REQUIRE(wc.entries()[0].enabled == false);
+}
+
+TEST_CASE_METHOD(HomeWidgetConfigFixture,
+                 "HomeWidgetConfig: multiple reorders produce correct final order",
+                 "[home][widget_config]") {
+    setup_empty_config();
+    HomeWidgetConfig wc(config);
+    wc.load();
+
+    // Capture IDs for first 4
+    std::string id0 = wc.entries()[0].id;
+    std::string id1 = wc.entries()[1].id;
+    std::string id2 = wc.entries()[2].id;
+    std::string id3 = wc.entries()[3].id;
+
+    // Move 0→2, then 3→1
+    wc.reorder(0, 2); // [id1, id2, id0, id3, ...]
+    wc.reorder(3, 1); // [id1, id3, id2, id0, ...]
+
+    REQUIRE(wc.entries()[0].id == id1);
+    REQUIRE(wc.entries()[1].id == id3);
+    REQUIRE(wc.entries()[2].id == id2);
+    REQUIRE(wc.entries()[3].id == id0);
+}
+
+// ============================================================================
+// Config tests — save-load round trip with reorder
+// ============================================================================
+
+TEST_CASE_METHOD(HomeWidgetConfigFixture,
+                 "HomeWidgetConfig: reorder + toggle + save + reload preserves everything",
+                 "[home][widget_config]") {
+    setup_empty_config();
+
+    HomeWidgetConfig wc1(config);
+    wc1.load();
+
+    // Do several operations
+    wc1.set_enabled(0, false);
+    wc1.set_enabled(4, false);
+    wc1.reorder(2, 8);
+    wc1.reorder(0, 5);
+    wc1.save();
+
+    // Reload
+    HomeWidgetConfig wc2(config);
+    wc2.load();
+
+    REQUIRE(wc1.entries().size() == wc2.entries().size());
+    for (size_t i = 0; i < wc1.entries().size(); ++i) {
+        CAPTURE(i);
+        REQUIRE(wc1.entries()[i].id == wc2.entries()[i].id);
+        REQUIRE(wc1.entries()[i].enabled == wc2.entries()[i].enabled);
+    }
+}
+
+// ============================================================================
+// Config tests — empty array in JSON
+// ============================================================================
+
+TEST_CASE_METHOD(HomeWidgetConfigFixture,
+                 "HomeWidgetConfig: empty array in JSON falls back to defaults",
+                 "[home][widget_config]") {
+    setup_with_widgets(json::array());
+
+    HomeWidgetConfig wc(config);
+    wc.load();
+
+    const auto& defs = get_all_widget_defs();
+    REQUIRE(wc.entries().size() == defs.size());
+    for (size_t i = 0; i < defs.size(); ++i) {
+        REQUIRE(wc.entries()[i].id == defs[i].id);
+        REQUIRE(wc.entries()[i].enabled == true);
+    }
+}
