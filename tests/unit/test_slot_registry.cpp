@@ -126,3 +126,168 @@ TEST_CASE("SlotRegistry multi-unit initialization", "[slot_registry][init]") {
         REQUIRE(reg.name_of(7) == "lane7");
     }
 }
+
+TEST_CASE("SlotRegistry reorganize sorts units alphabetically", "[slot_registry][reorganize]") {
+    SlotRegistry reg;
+
+    // Initialize in non-alphabetical order
+    std::vector<std::pair<std::string, std::vector<std::string>>> units = {
+        {"Zebra", {"z0", "z1"}},
+        {"Alpha", {"a0", "a1"}},
+    };
+    reg.initialize_units(units);
+
+    // Verify initial order (as given)
+    REQUIRE(reg.unit(0).name == "Zebra");
+    REQUIRE(reg.get(0)->backend_name == "z0");
+
+    // Reorganize with same data — should sort alphabetically
+    std::map<std::string, std::vector<std::string>> unit_map = {
+        {"Zebra", {"z0", "z1"}},
+        {"Alpha", {"a0", "a1"}},
+    };
+    reg.reorganize(unit_map);
+
+    SECTION("units sorted alphabetically") {
+        REQUIRE(reg.unit(0).name == "Alpha");
+        REQUIRE(reg.unit(1).name == "Zebra");
+    }
+
+    SECTION("slots reindexed to match") {
+        REQUIRE(reg.get(0)->backend_name == "a0");
+        REQUIRE(reg.get(1)->backend_name == "a1");
+        REQUIRE(reg.get(2)->backend_name == "z0");
+        REQUIRE(reg.get(3)->backend_name == "z1");
+    }
+
+    SECTION("reverse maps rebuilt") {
+        REQUIRE(reg.index_of("a0") == 0);
+        REQUIRE(reg.index_of("z0") == 2);
+        REQUIRE(reg.name_of(0) == "a0");
+    }
+}
+
+TEST_CASE("SlotRegistry reorganize preserves slot data", "[slot_registry][reorganize]") {
+    SlotRegistry reg;
+
+    // Initialize, then set some slot state
+    reg.initialize("Unit_A", {"s0", "s1", "s2"});
+    reg.get_mut(1)->info.color_rgb = 0xFF0000;
+    reg.get_mut(1)->info.material = "PLA";
+    reg.get_mut(1)->info.status = SlotStatus::AVAILABLE;
+    reg.get_mut(1)->sensors.prep = true;
+    reg.get_mut(1)->sensors.load = true;
+    reg.get_mut(1)->endless_spool_backup = 2;
+
+    // Reorganize into 2 units — s1 moves from index 1 to a new position
+    std::map<std::string, std::vector<std::string>> unit_map = {
+        {"Unit_B", {"s1"}},       // s1 now at global 0 (Unit_B sorts before Unit_Z)
+        {"Unit_Z", {"s0", "s2"}}, // s0 at global 1, s2 at global 2
+    };
+    reg.reorganize(unit_map);
+
+    SECTION("s1 data preserved at new position") {
+        const auto* entry = reg.find_by_name("s1");
+        REQUIRE(entry != nullptr);
+        REQUIRE(entry->global_index == 0); // moved from 1 to 0
+        REQUIRE(entry->info.color_rgb == 0xFF0000);
+        REQUIRE(entry->info.material == "PLA");
+        REQUIRE(entry->info.status == SlotStatus::AVAILABLE);
+        REQUIRE(entry->sensors.prep == true);
+        REQUIRE(entry->sensors.load == true);
+        REQUIRE(entry->endless_spool_backup == 2);
+    }
+
+    SECTION("indices and unit membership updated") {
+        const auto* s1 = reg.find_by_name("s1");
+        REQUIRE(s1->unit_index == 0);
+        REQUIRE(s1->info.slot_index == 0); // unit-local
+
+        const auto* s0 = reg.find_by_name("s0");
+        REQUIRE(s0->global_index == 1);
+        REQUIRE(s0->unit_index == 1);
+        REQUIRE(s0->info.slot_index == 0); // first in Unit_Z
+    }
+}
+
+TEST_CASE("SlotRegistry reorganize with new and removed slots", "[slot_registry][reorganize]") {
+    SlotRegistry reg;
+
+    reg.initialize("Unit", {"s0", "s1", "s2"});
+    reg.get_mut(0)->info.color_rgb = 0xAAAAAA;
+
+    // Reorganize: s1 removed, s3 added
+    std::map<std::string, std::vector<std::string>> unit_map = {
+        {"Unit", {"s0", "s2", "s3"}},
+    };
+    reg.reorganize(unit_map);
+
+    SECTION("s0 preserved") {
+        REQUIRE(reg.find_by_name("s0")->info.color_rgb == 0xAAAAAA);
+    }
+
+    SECTION("s1 removed") {
+        REQUIRE(reg.find_by_name("s1") == nullptr);
+        REQUIRE(reg.index_of("s1") == -1);
+    }
+
+    SECTION("s3 added with defaults") {
+        const auto* s3 = reg.find_by_name("s3");
+        REQUIRE(s3 != nullptr);
+        REQUIRE(s3->info.status == SlotStatus::UNKNOWN);
+    }
+
+    SECTION("slot count updated") {
+        REQUIRE(reg.slot_count() == 3);
+    }
+}
+
+TEST_CASE("SlotRegistry idempotent reorganize", "[slot_registry][reorganize]") {
+    SlotRegistry reg;
+
+    std::map<std::string, std::vector<std::string>> unit_map = {
+        {"Alpha", {"a0", "a1"}},
+        {"Beta", {"b0", "b1"}},
+    };
+
+    reg.initialize("temp", {"a0", "a1", "b0", "b1"});
+    reg.get_mut(0)->info.color_rgb = 0x112233;
+    reg.reorganize(unit_map);
+
+    // Capture state
+    auto color_before = reg.get(0)->info.color_rgb;
+    auto name_before = reg.get(0)->backend_name;
+
+    // Reorganize again with same layout
+    reg.reorganize(unit_map);
+
+    REQUIRE(reg.get(0)->info.color_rgb == color_before);
+    REQUIRE(reg.get(0)->backend_name == name_before);
+}
+
+TEST_CASE("SlotRegistry matches_layout", "[slot_registry][reorganize]") {
+    SlotRegistry reg;
+
+    std::map<std::string, std::vector<std::string>> layout = {
+        {"A", {"s0", "s1"}},
+        {"B", {"s2", "s3"}},
+    };
+
+    reg.initialize("temp", {"s0", "s1", "s2", "s3"});
+    reg.reorganize(layout);
+
+    REQUIRE(reg.matches_layout(layout));
+
+    // Different slot in a unit
+    std::map<std::string, std::vector<std::string>> different = {
+        {"A", {"s0", "s1"}},
+        {"B", {"s2", "s99"}},
+    };
+    REQUIRE_FALSE(reg.matches_layout(different));
+
+    // Different unit count
+    std::map<std::string, std::vector<std::string>> fewer_units = {
+        {"A", {"s0", "s1", "s2", "s3"}},
+    };
+    REQUIRE_FALSE(reg.matches_layout(fewer_units));
+}
