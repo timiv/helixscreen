@@ -291,3 +291,61 @@ TEST_CASE("SlotRegistry matches_layout", "[slot_registry][reorganize]") {
     };
     REQUIRE_FALSE(reg.matches_layout(fewer_units));
 }
+
+TEST_CASE("SlotRegistry tool mapping", "[slot_registry][tool_mapping]") {
+    SlotRegistry reg;
+    reg.initialize("Unit", {"s0", "s1", "s2", "s3"});
+
+    SECTION("no mapping by default") {
+        REQUIRE(reg.tool_for_slot(0) == -1);
+        REQUIRE(reg.slot_for_tool(0) == -1);
+    }
+
+    SECTION("set and get single mapping") {
+        reg.set_tool_mapping(2, 5);
+        REQUIRE(reg.tool_for_slot(2) == 5);
+        REQUIRE(reg.slot_for_tool(5) == 2);
+        REQUIRE(reg.get(2)->info.mapped_tool == 5);
+    }
+
+    SECTION("remapping a tool clears previous") {
+        reg.set_tool_mapping(0, 3);
+        reg.set_tool_mapping(1, 3); // T3 moves from slot 0 to slot 1
+        REQUIRE(reg.slot_for_tool(3) == 1);
+        REQUIRE(reg.tool_for_slot(0) == -1); // cleared
+        REQUIRE(reg.tool_for_slot(1) == 3);
+    }
+
+    SECTION("bulk set_tool_map") {
+        // TTG-style: tool_to_slot[0]=2, tool_to_slot[1]=0, tool_to_slot[2]=3, tool_to_slot[3]=1
+        reg.set_tool_map({2, 0, 3, 1});
+        REQUIRE(reg.slot_for_tool(0) == 2);
+        REQUIRE(reg.slot_for_tool(1) == 0);
+        REQUIRE(reg.slot_for_tool(2) == 3);
+        REQUIRE(reg.slot_for_tool(3) == 1);
+        REQUIRE(reg.tool_for_slot(2) == 0);
+        REQUIRE(reg.tool_for_slot(0) == 1);
+    }
+
+    SECTION("tool mapping survives reorganize") {
+        reg.set_tool_mapping(1, 7);
+
+        std::map<std::string, std::vector<std::string>> unit_map = {
+            {"B", {"s2", "s3"}},
+            {"A", {"s0", "s1"}},
+        };
+        reg.reorganize(unit_map);
+
+        // s1 moved — verify via name lookup
+        const auto* s1 = reg.find_by_name("s1");
+        REQUIRE(s1->info.mapped_tool == 7);
+        REQUIRE(reg.slot_for_tool(7) == s1->global_index);
+    }
+
+    SECTION("invalid indices") {
+        REQUIRE(reg.tool_for_slot(-1) == -1);
+        REQUIRE(reg.tool_for_slot(99) == -1);
+        REQUIRE(reg.slot_for_tool(-1) == -1);
+        REQUIRE(reg.slot_for_tool(99) == -1);
+    }
+}
