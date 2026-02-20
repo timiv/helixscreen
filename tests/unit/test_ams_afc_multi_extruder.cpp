@@ -103,6 +103,8 @@ class AmsBackendAfcMultiExtruderHelper : public AmsBackendAfc {
             config.backup_slot = -1;
             endless_spool_configs_.push_back(config);
         }
+        // Initialize registry alongside legacy structures
+        slots_.initialize("Box Turtle 1", lane_names_);
     }
 
     // Set discovered lanes (delegates to base)

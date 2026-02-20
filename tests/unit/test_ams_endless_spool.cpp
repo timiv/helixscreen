@@ -257,6 +257,8 @@ class AmsBackendAfcEndlessSpoolHelper : public AmsBackendAfc {
             config.backup_slot = -1;
             endless_spool_configs_.push_back(config);
         }
+        // Initialize registry alongside legacy structures
+        slots_.initialize("AFC Test Unit", lane_names_);
     }
 
     // G-code capture for verification

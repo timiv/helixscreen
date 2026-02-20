@@ -69,6 +69,8 @@ class AmsBackendAfcTestHelper : public AmsBackendAfc {
             lane_names_.push_back(name);
             lane_name_to_index_[name] = i;
         }
+        // Initialize registry alongside legacy structures
+        slots_.initialize("AFC Test Unit", lane_names_);
         // Reset lane sensors
         for (int i = 0; i < 16; ++i) {
             lane_sensors_[i] = LaneSensors{};
@@ -84,6 +86,8 @@ class AmsBackendAfcTestHelper : public AmsBackendAfc {
             lane_names_.push_back(name);
             lane_name_to_index_[name] = i;
         }
+        // Initialize registry alongside legacy structures
+        slots_.initialize("AFC Test Unit", lane_names_);
         for (int i = 0; i < 16; ++i) {
             lane_sensors_[i] = LaneSensors{};
         }
@@ -93,18 +97,27 @@ class AmsBackendAfcTestHelper : public AmsBackendAfc {
         if (lane_index >= 0 && lane_index < 16) {
             lane_sensors_[lane_index].prep = state;
         }
+        auto* entry = slots_.get_mut(lane_index);
+        if (entry)
+            entry->sensors.prep = state;
     }
 
     void set_lane_load_sensor(int lane_index, bool state) {
         if (lane_index >= 0 && lane_index < 16) {
             lane_sensors_[lane_index].load = state;
         }
+        auto* entry = slots_.get_mut(lane_index);
+        if (entry)
+            entry->sensors.load = state;
     }
 
     void set_lane_loaded_to_hub(int lane_index, bool state) {
         if (lane_index >= 0 && lane_index < 16) {
             lane_sensors_[lane_index].loaded_to_hub = state;
         }
+        auto* entry = slots_.get_mut(lane_index);
+        if (entry)
+            entry->sensors.loaded_to_hub = state;
     }
 
     void set_running(bool state) {
@@ -168,10 +181,13 @@ class AmsBackendAfcTestHelper : public AmsBackendAfc {
         system_info_.units.push_back(unit);
         system_info_.total_slots = count;
         lanes_initialized_ = true;
+        // Initialize registry alongside legacy structures
+        slots_.initialize("Box Turtle 1", lane_names_);
     }
 
     SlotInfo* get_mutable_slot(int slot_index) {
-        return system_info_.get_slot_global(slot_index);
+        auto* entry = slots_.get_mut(slot_index);
+        return entry ? &entry->info : nullptr;
     }
 
     // Initialize endless spool configs for reset testing
@@ -182,6 +198,7 @@ class AmsBackendAfcTestHelper : public AmsBackendAfc {
             config.slot_index = i;
             config.backup_slot = -1;
             endless_spool_configs_.push_back(config);
+            slots_.set_backup(i, -1);
         }
     }
 
@@ -190,6 +207,7 @@ class AmsBackendAfcTestHelper : public AmsBackendAfc {
         if (slot >= 0 && slot < static_cast<int>(endless_spool_configs_.size())) {
             endless_spool_configs_[slot].backup_slot = backup;
         }
+        slots_.set_backup(slot, backup);
     }
 
     // Set up multi-unit configuration and trigger reorganize
@@ -265,14 +283,14 @@ class AmsBackendAfcTestHelper : public AmsBackendAfc {
         return system_info_.tool_to_slot_map;
     }
 
-    const std::vector<helix::printer::EndlessSpoolConfig>& get_endless_spool_configs() const {
-        return endless_spool_configs_;
+    std::vector<helix::printer::EndlessSpoolConfig> get_endless_spool_configs() const {
+        return get_endless_spool_config();
     }
 
     // Get mapped_tool from a slot
     int get_slot_mapped_tool(int slot_index) const {
-        const auto* slot = system_info_.get_slot_global(slot_index);
-        return slot ? slot->mapped_tool : -1;
+        const auto* entry = slots_.get(slot_index);
+        return entry ? entry->info.mapped_tool : -1;
     }
 
     // Event tracking
@@ -300,9 +318,20 @@ class AmsBackendAfcTestHelper : public AmsBackendAfc {
         return "";
     }
 
-    // Phase 2: Access to extended parsing state
-    const LaneSensors& get_lane_sensors(int index) const {
-        return lane_sensors_[index];
+    // Phase 2: Access to extended parsing state (reads from registry)
+    LaneSensors get_lane_sensors(int index) const {
+        const auto* entry = slots_.get(index);
+        if (entry) {
+            LaneSensors s;
+            s.prep = entry->sensors.prep;
+            s.load = entry->sensors.load;
+            s.loaded_to_hub = entry->sensors.loaded_to_hub;
+            s.buffer_status = entry->sensors.buffer_status;
+            s.filament_status = entry->sensors.filament_status;
+            s.dist_hub = entry->sensors.dist_hub;
+            return s;
+        }
+        return lane_sensors_[index]; // fallback to legacy
     }
     bool get_hub_sensor() const {
         // Returns true if any hub sensor is triggered (backward compat)
@@ -1598,7 +1627,7 @@ TEST_CASE("AFC device action reset_motor dispatches gcode", "[ams][afc][device_a
     auto result = helper.execute_device_action("reset_motor");
 
     REQUIRE(result.success());
-    REQUIRE(helper.has_gcode("AFC_RESET_MOTOR_TIME"));
+    REQUIRE(helper.has_gcode_starting_with("AFC_RESET_MOTOR_TIME"));
 }
 
 TEST_CASE("AFC device action led toggle on when off", "[ams][afc][device_actions][phase3]") {

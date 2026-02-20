@@ -45,6 +45,8 @@ class HubSensorTestHelper : public AmsBackendAfc {
         system_info_.units.push_back(unit);
         system_info_.total_slots = count;
         lanes_initialized_ = true;
+        // Initialize registry alongside legacy structures
+        slots_.initialize("Turtle_1", lane_names_);
     }
 
     void set_discovered_hubs(const std::vector<std::string>& hubs) {

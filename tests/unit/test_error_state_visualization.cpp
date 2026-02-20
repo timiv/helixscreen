@@ -207,6 +207,8 @@ class AfcErrorStateHelper : public AmsBackendAfc {
         system_info_.units.push_back(unit);
         system_info_.total_slots = count;
         lanes_initialized_ = true;
+        // Initialize registry alongside legacy structures
+        slots_.initialize("Box Turtle 1", lane_names_);
 
         // Initialize lane sensors
         for (int i = 0; i < 16; ++i) {
@@ -243,11 +245,13 @@ class AfcErrorStateHelper : public AmsBackendAfc {
     }
 
     const SlotInfo* get_slot(int idx) const {
-        return system_info_.get_slot_global(idx);
+        const auto* entry = slots_.get(idx);
+        return entry ? &entry->info : nullptr;
     }
 
     SlotInfo* get_slot_mut(int idx) {
-        return system_info_.get_slot_global(idx);
+        auto* entry = slots_.get_mut(idx);
+        return entry ? &entry->info : nullptr;
     }
 
     AmsSystemInfo& get_system_info_mut() {
