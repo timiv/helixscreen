@@ -414,3 +414,58 @@ TEST_CASE("SlotRegistry endless spool", "[slot_registry][endless_spool]") {
         REQUIRE(reg.backup_for_slot(99) == -1);
     }
 }
+
+TEST_CASE("SlotRegistry mixed topology slot index correctness", "[slot_registry][regression]") {
+    // Reproduces the production bug: 6-toolhead mixed system
+    // Box Turtle (4 lanes PARALLEL) + 2 OpenAMS (4 lanes HUB each)
+    // AFC discovery order may differ from alphabetical sort order
+
+    SlotRegistry reg;
+
+    // Simulate AFC discovery order (may NOT be alphabetical)
+    std::vector<std::pair<std::string, std::vector<std::string>>> discovery_order = {
+        {"OpenAMS AMS_1", {"lane4", "lane5", "lane6", "lane7"}},
+        {"OpenAMS AMS_2", {"lane8", "lane9", "lane10", "lane11"}},
+        {"Box_Turtle Turtle_1", {"lane0", "lane1", "lane2", "lane3"}},
+    };
+    reg.initialize_units(discovery_order);
+
+    // Now reorganize (sorts alphabetically)
+    std::map<std::string, std::vector<std::string>> unit_map = {
+        {"Box_Turtle Turtle_1", {"lane0", "lane1", "lane2", "lane3"}},
+        {"OpenAMS AMS_1", {"lane4", "lane5", "lane6", "lane7"}},
+        {"OpenAMS AMS_2", {"lane8", "lane9", "lane10", "lane11"}},
+    };
+    reg.reorganize(unit_map);
+
+    SECTION("Box Turtle sorts first") {
+        REQUIRE(reg.unit(0).name == "Box_Turtle Turtle_1");
+        REQUIRE(reg.unit(0).first_slot == 0);
+    }
+
+    SECTION("AMS_1 starts at global index 4") {
+        REQUIRE(reg.unit(1).name == "OpenAMS AMS_1");
+        REQUIRE(reg.unit(1).first_slot == 4);
+        REQUIRE(reg.name_of(4) == "lane4");
+    }
+
+    SECTION("AMS_2 starts at global index 8") {
+        REQUIRE(reg.unit(2).name == "OpenAMS AMS_2");
+        REQUIRE(reg.unit(2).first_slot == 8);
+        REQUIRE(reg.name_of(11) == "lane11");
+    }
+
+    SECTION("every slot resolves to correct lane name") {
+        for (int i = 0; i < 12; ++i) {
+            std::string expected = "lane" + std::to_string(i);
+            REQUIRE(reg.name_of(i) == expected);
+        }
+    }
+
+    SECTION("reverse lookup also correct") {
+        for (int i = 0; i < 12; ++i) {
+            std::string name = "lane" + std::to_string(i);
+            REQUIRE(reg.index_of(name) == i);
+        }
+    }
+}
