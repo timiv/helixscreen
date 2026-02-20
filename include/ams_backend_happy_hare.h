@@ -259,23 +259,14 @@ class AmsBackendHappyHare : public AmsBackend {
     SubscriptionGuard subscription_;   ///< RAII subscription (auto-unsubscribes)
 
     // Cached MMU state
-    AmsSystemInfo system_info_; ///< Current system state (non-slot fields only after migration)
+    AmsSystemInfo system_info_;          ///< Non-slot fields (action, current_tool, etc.)
     helix::printer::SlotRegistry slots_; ///< Single source of truth for per-slot state
-    bool gates_initialized_{false};      ///< Have we seen gate_status yet?
     int num_units_{1};                   ///< Number of physical units (default 1)
 
     // Path visualization state
     int filament_pos_{0};                          ///< Happy Hare filament_pos value
     PathSegment error_segment_{PathSegment::NONE}; ///< Inferred error location
 
-    // Per-gate sensor state (from printer.mmu.sensors dict)
-    struct GateSensorState {
-        bool has_pre_gate_sensor = false; ///< Pre-gate sensor configured for this gate
-        bool pre_gate_triggered = false; ///< Pre-gate sensor currently triggered (filament present)
-    };
-    std::vector<GateSensorState> gate_sensors_;
-
     // Error state tracking
     std::string reason_for_pause_; ///< Last reason_for_pause from MMU (descriptive error text)
-    int errored_slot_{-1};         ///< Slot that was in error state (-1 = none)
 };

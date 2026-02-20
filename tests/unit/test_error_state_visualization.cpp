@@ -452,7 +452,6 @@ class HappyHareErrorStateHelper : public AmsBackendHappyHare {
 
         system_info_.units.push_back(unit);
         system_info_.total_slots = count;
-        gates_initialized_ = true;
 
         // Initialize SlotRegistry to match
         std::vector<std::string> slot_names;

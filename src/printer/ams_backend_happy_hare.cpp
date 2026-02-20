@@ -9,7 +9,6 @@
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>
 
-#include <algorithm>
 #include <sstream>
 
 using namespace helix;
@@ -363,7 +362,7 @@ void AmsBackendHappyHare::parse_mmu_state(const nlohmann::json& mmu_data) {
             error_segment_ = PathSegment::NONE;
             reason_for_pause_.clear();
 
-            // Clear slot errors on all slots (replaces errored_slot_ tracking)
+            // Clear slot errors on all slots
             for (int i = 0; i < slots_.slot_count(); ++i) {
                 auto* entry = slots_.get_mut(i);
                 if (entry && entry->info.error.has_value()) {
@@ -371,7 +370,6 @@ void AmsBackendHappyHare::parse_mmu_state(const nlohmann::json& mmu_data) {
                     spdlog::debug("[AMS HappyHare] Cleared error on slot {}", i);
                 }
             }
-            errored_slot_ = -1;
         }
 
         // Set slot error when entering error state
@@ -391,8 +389,7 @@ void AmsBackendHappyHare::parse_mmu_state(const nlohmann::json& mmu_data) {
                     }
                     err.severity = SlotError::ERROR;
                     entry->info.error = err;
-                    errored_slot_ = system_info_.current_slot;
-                    spdlog::debug("[AMS HappyHare] Error on slot {}: {}", errored_slot_,
+                    spdlog::debug("[AMS HappyHare] Error on slot {}: {}", system_info_.current_slot,
                                   err.message);
                 }
             }
@@ -444,7 +441,7 @@ void AmsBackendHappyHare::parse_mmu_state(const nlohmann::json& mmu_data) {
         int gate_count = static_cast<int>(gate_status.size());
 
         // Initialize gates if this is the first time we see gate_status
-        if (!gates_initialized_ && gate_count > 0) {
+        if (!slots_.is_initialized() && gate_count > 0) {
             initialize_gates(gate_count);
         }
 
@@ -600,9 +597,7 @@ void AmsBackendHappyHare::initialize_gates(int gate_count) {
         unit.has_encoder = true;
         unit.has_toolhead_sensor = true;
         // has_slot_sensors starts false; updated when sensor data arrives in parse_mmu_state()
-        unit.has_slot_sensors =
-            std::any_of(gate_sensors_.begin(), gate_sensors_.end(),
-                        [](const GateSensorState& g) { return g.has_pre_gate_sensor; });
+        unit.has_slot_sensors = false;
         unit.has_hub_sensor = true; // HH selector functions as hub equivalent
 
         for (int i = 0; i < unit_gates; ++i) {
@@ -621,11 +616,6 @@ void AmsBackendHappyHare::initialize_gates(int gate_count) {
     }
 
     system_info_.total_slots = gate_count;
-
-    // Ensure gate_sensors_ is large enough for all gates
-    if (static_cast<int>(gate_sensors_.size()) < gate_count) {
-        gate_sensors_.resize(gate_count);
-    }
 
     // Initialize tool-to-gate mapping (1:1 default)
     system_info_.tool_to_slot_map.clear();
@@ -655,8 +645,6 @@ void AmsBackendHappyHare::initialize_gates(int gate_count) {
         }
         slots_.initialize_units(units);
     }
-
-    gates_initialized_ = true;
 }
 
 void AmsBackendHappyHare::query_tip_method_from_config() {

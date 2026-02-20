@@ -45,7 +45,6 @@ class AmsBackendHappyHareTestHelper : public AmsBackendHappyHare {
 
         system_info_.units.push_back(unit);
         system_info_.total_slots = count;
-        gates_initialized_ = true;
 
         // Also initialize tool_to_slot_map for reset_tool_mappings tests
         system_info_.tool_to_slot_map.clear();
