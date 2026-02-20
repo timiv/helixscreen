@@ -357,7 +357,7 @@ class BacklightBackendAllwinner : public BacklightBackend {
 
             // Set brightness level
             args[1] = static_cast<unsigned long>(brightness);
-            ret = ioctl(fd.get(), DISP_LCD_SET_BRIGHTNESS, args);
+            int ret = ioctl(fd.get(), DISP_LCD_SET_BRIGHTNESS, args);
             if (ret < 0) {
                 int err = errno;
                 spdlog::warn("[Backlight-Allwinner] ioctl SET_BRIGHTNESS failed: {}",
