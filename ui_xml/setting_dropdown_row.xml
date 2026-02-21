@@ -16,6 +16,7 @@
     <prop name="options" type="string" default=""/>
     <prop name="callback" type="string" default=""/>
     <prop name="disabled" type="string" default=""/>
+    <prop name="dropdown_width" type="string" default="33%"/>
   </api>
   <!-- Styles for disabled state binding -->
   <styles>
@@ -41,7 +42,7 @@
     </lv_obj>
     <!-- Right side: Dropdown -->
     <lv_dropdown name="dropdown"
-                 width="33%" height="content" options="$options" style_radius="#border_radius" style_border_width="0">
+                 width="$dropdown_width" height="content" options="$options" style_radius="#border_radius" style_border_width="0">
       <bind_state_if_eq subject="$disabled" state="disabled" ref_value="1"/>
       <event_cb trigger="value_changed" callback="$callback"/>
     </lv_dropdown>

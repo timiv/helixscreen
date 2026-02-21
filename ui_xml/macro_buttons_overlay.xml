@@ -29,43 +29,45 @@
       <!-- Load Filament -->
       <setting_dropdown_row name="row_load_filament"
                             label="Load Filament" label_tag="Load Filament" icon="arrow_down" description="Macro to load filament into extruder" description_tag="Macro to load filament into extruder"
-                            callback="on_load_filament_changed"/>
+                            dropdown_width="content" callback="on_load_filament_changed"/>
       <!-- Unload Filament -->
       <setting_dropdown_row name="row_unload_filament"
                             label="Unload Filament" label_tag="Unload Filament" icon="tray_arrow_up"
-                            description="Macro to unload filament from extruder" description_tag="Macro to unload filament from extruder" callback="on_unload_filament_changed"/>
+                            description="Macro to unload filament from extruder" description_tag="Macro to unload filament from extruder"
+                            dropdown_width="content" callback="on_unload_filament_changed"/>
       <!-- Purge -->
       <setting_dropdown_row name="row_purge"
                             label="Purge" label_tag="Purge" icon="water" description="Macro to purge/prime the nozzle" description_tag="Macro to purge/prime the nozzle"
-                            callback="on_purge_changed"/>
+                            dropdown_width="content" callback="on_purge_changed"/>
       <!-- Pause -->
       <setting_dropdown_row name="row_pause"
                             label="Pause" label_tag="Pause" icon="pause" description="Macro to pause an active print" description_tag="Macro to pause an active print"
-                            callback="on_pause_changed"/>
+                            dropdown_width="content" callback="on_pause_changed"/>
       <!-- Resume -->
       <setting_dropdown_row name="row_resume"
                             label="Resume" label_tag="Resume" icon="play" description="Macro to resume a paused print" description_tag="Macro to resume a paused print"
-                            callback="on_resume_changed"/>
+                            dropdown_width="content" callback="on_resume_changed"/>
       <!-- Cancel -->
       <setting_dropdown_row name="row_cancel"
                             label="Cancel" label_tag="Cancel" icon="cancel" description="Macro to cancel an active print" description_tag="Macro to cancel an active print"
-                            callback="on_cancel_changed"/>
+                            dropdown_width="content" callback="on_cancel_changed"/>
       <!-- Bed Mesh -->
       <setting_dropdown_row name="row_bed_mesh"
                             label="Bed Mesh" label_tag="Bed Mesh" icon="grid_large" description="Macro for bed mesh calibration" description_tag="Macro for bed mesh calibration"
-                            callback="on_bed_mesh_changed"/>
+                            dropdown_width="content" callback="on_bed_mesh_changed"/>
       <!-- Bed Level -->
       <setting_dropdown_row name="row_bed_level"
                             label="Bed Level" label_tag="Bed Level" icon="axis_z_arrow"
-                            description="Macro for physical bed leveling (QGL/Z-Tilt)" description_tag="Macro for physical bed leveling (QGL/Z-Tilt)" callback="on_bed_level_changed"/>
+                            description="Macro for physical bed leveling (QGL/Z-Tilt)" description_tag="Macro for physical bed leveling (QGL/Z-Tilt)"
+                            dropdown_width="content" callback="on_bed_level_changed"/>
       <!-- Clean Nozzle -->
       <setting_dropdown_row name="row_clean_nozzle"
                             label="Clean Nozzle" label_tag="Clean Nozzle" icon="refresh" description="Macro to clean/wipe the nozzle" description_tag="Macro to clean/wipe the nozzle"
-                            callback="on_clean_nozzle_changed"/>
+                            dropdown_width="content" callback="on_clean_nozzle_changed"/>
       <!-- Heat Soak -->
       <setting_dropdown_row name="row_heat_soak"
                             label="Heat Soak" label_tag="Heat Soak" icon="radiator" description="Macro for chamber/bed heat soak" description_tag="Macro for chamber/bed heat soak"
-                            callback="on_heat_soak_changed"/>
+                            dropdown_width="content" callback="on_heat_soak_changed"/>
       <!-- ================================================================== -->
       <!-- INFO NOTE -->
       <!-- ================================================================== -->
