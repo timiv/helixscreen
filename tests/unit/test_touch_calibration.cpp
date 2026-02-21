@@ -490,6 +490,14 @@ TEST_CASE("TouchCalibration: is_resistive_touchscreen_name",
         REQUIRE(is_resistive_touchscreen_name("SUN4I-TS") == true);
     }
 
+    SECTION("NS2009 I2C resistive (Nebula Pad)") {
+        REQUIRE(is_resistive_touchscreen_name("ns2009") == true);
+    }
+
+    SECTION("NS2016 I2C resistive") {
+        REQUIRE(is_resistive_touchscreen_name("NS2016") == true);
+    }
+
     // --- Capacitive controllers that do NOT need calibration ---
 
     SECTION("Goodix capacitive") {
@@ -532,6 +540,10 @@ TEST_CASE("TouchCalibration: device_needs_calibration",
 
     SECTION("Generic resistive touch panel needs calibration") {
         REQUIRE(device_needs_calibration("rtp", "", true) == true);
+    }
+
+    SECTION("NS2009 I2C resistive needs calibration") {
+        REQUIRE(device_needs_calibration("ns2009", "input/ts", true) == true);
     }
 
     // --- Capacitive touchscreens do NOT need calibration ---

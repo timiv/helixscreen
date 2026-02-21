@@ -90,7 +90,13 @@ For neopixel, dotstar, and other Klipper-native strips:
 - **Color swatch**: Shows the actual output color (base color adjusted by brightness)
 - **Turn Off**: Stops any active effects and turns off the selected strip
 
-> **Note:** Strips that don't support color (like single-channel PWM LEDs) show brightness controls only.
+### Output Pin Lights
+
+For `[output_pin]` lights (auto-detected by name — see [LED Settings](settings/led-settings.md#output-pin-lights-brightness-only)):
+
+- **Brightness slider**: 0–100% for PWM pins
+- **On/Off toggle**: For non-PWM pins
+- Color controls are hidden since output pins don't support color
 
 ### LED Effects
 

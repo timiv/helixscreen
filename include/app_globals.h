@@ -148,6 +148,14 @@ void app_store_argv(int argc, char** argv);
 void app_request_quit();
 
 /**
+ * @brief Signal-safe version of app_request_quit()
+ *
+ * Only sets the quit flag without calling spdlog or any other
+ * non-async-signal-safe function. Use this from signal handlers.
+ */
+void app_request_quit_signal_safe();
+
+/**
  * @brief Request application restart
  *
  * Forks a new process and exec's the same binary with the same arguments.

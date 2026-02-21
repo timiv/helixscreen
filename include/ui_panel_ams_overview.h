@@ -6,6 +6,7 @@
 #include "ui_ams_context_menu.h"
 #include "ui_ams_detail.h"
 #include "ui_ams_edit_modal.h"
+#include "ui_ams_sidebar.h"
 #include "ui_observer_guard.h"
 #include "ui_panel_base.h"
 
@@ -131,6 +132,9 @@ class AmsOverviewPanel : public PanelBase {
     void refresh_bypass_display();
     void show_edit_modal(int slot_index);
     static void on_bypass_spool_clicked(void* user_data);
+
+    // === Sidebar ===
+    std::unique_ptr<helix::ui::AmsOperationSidebar> sidebar_;
 
     // === Event Handling ===
     static void on_unit_card_clicked(lv_event_t* e);

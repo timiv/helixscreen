@@ -5,15 +5,13 @@
 
 #include "ui_ams_context_menu.h"
 #include "ui_ams_detail.h"
-#include "ui_ams_dryer_card.h"
 #include "ui_ams_edit_modal.h"
 #include "ui_ams_loading_error_modal.h"
-#include "ui_color_picker.h"
+#include "ui_ams_sidebar.h"
 #include "ui_observer_guard.h"
 #include "ui_panel_base.h"
 
 #include "ams_state.h"
-#include "ams_step_operation.h"
 #include "ams_types.h" // For SlotInfo
 
 #include <memory>
@@ -127,8 +125,8 @@ class AmsPanel : public PanelBase {
 
     std::unique_ptr<helix::ui::AmsContextMenu> context_menu_;      ///< Slot context menu
     std::unique_ptr<helix::ui::AmsEditModal> edit_modal_;          ///< Edit filament modal
-    std::unique_ptr<helix::ui::AmsDryerCard> dryer_card_;          ///< Dryer card and modal
     std::unique_ptr<helix::ui::AmsLoadingErrorModal> error_modal_; ///< Loading error modal
+    std::unique_ptr<helix::ui::AmsOperationSidebar> sidebar_;      ///< Shared sidebar component
 
     // === Observers (RAII cleanup via ObserverGuard) ===
 
@@ -138,7 +136,6 @@ class AmsPanel : public PanelBase {
     ObserverGuard slot_count_observer_;
     ObserverGuard path_segment_observer_;
     ObserverGuard path_topology_observer_;
-    ObserverGuard extruder_temp_observer_;  ///< For preheat completion detection
     ObserverGuard backend_count_observer_;  ///< For backend selector visibility
     ObserverGuard external_spool_observer_; ///< Reactive updates when external spool color changes
 
@@ -147,28 +144,10 @@ class AmsPanel : public PanelBase {
     int scoped_unit_index_ = -1;    ///< Unit scope: -1 = all units, >=0 = specific unit
     int current_slot_count_ = 0;    ///< Number of slots currently created
     lv_obj_t* slot_grid_ = nullptr; ///< Container for dynamically created slots
-    // === Preheat State for Filament Loading ===
-
-    int pending_load_slot_ = -1;                  ///< Slot awaiting preheat completion (-1 = none)
-    int pending_load_target_temp_ = 0;            ///< Target temp for pending load (°C)
-    bool ui_initiated_heat_ = false;              ///< True if UI heated for this load (for cooling)
-    AmsAction prev_ams_action_ = AmsAction::IDLE; ///< Previous action for transition detection
-
-    // === Step Progress Operation Type ===
-
-    StepOperationType current_operation_type_ =
-        StepOperationType::LOAD_FRESH; ///< Current operation
-    int current_step_count_ = 4;       ///< Steps in current
-    int target_load_slot_ = -1;        ///< Target slot for current operation (for pulse animation)
 
     // === Filament Path Canvas ===
 
     lv_obj_t* path_canvas_ = nullptr; ///< Filament path visualization widget
-
-    // === Step Progress Widget ===
-
-    lv_obj_t* step_progress_ = nullptr;           ///< Step progress stepper widget
-    lv_obj_t* step_progress_container_ = nullptr; ///< Container for step progress
 
     // === Endless Spool Arrows Canvas ===
 
@@ -187,28 +166,10 @@ class AmsPanel : public PanelBase {
 
     void setup_system_header();
     void setup_slots();
-    void setup_action_buttons();
-    void setup_status_display();
     void setup_path_canvas();
     void update_path_canvas_from_backend();
     void setup_endless_arrows();
     void update_endless_arrows_from_backend();
-    void setup_step_progress();
-    void update_step_progress(AmsAction action);
-    void recreate_step_progress_for_operation(StepOperationType op_type);
-    int get_step_index_for_action(AmsAction action, StepOperationType op_type);
-
-    /**
-     * @brief Start an operation with known type and target slot
-     *
-     * Called BEFORE backend operation to set up correct step progress
-     * and start pulse animation on target slot. This avoids heuristic
-     * detection which can fail due to brief IDLE states between phases.
-     *
-     * @param op_type The type of operation (LOAD_FRESH, LOAD_SWAP, UNLOAD)
-     * @param target_slot Slot index being loaded/unloaded
-     */
-    void start_operation(StepOperationType op_type, int target_slot);
 
     /**
      * @brief Create slot widgets dynamically based on slot count
@@ -226,15 +187,11 @@ class AmsPanel : public PanelBase {
 
     void update_slot_colors();
     void update_slot_status(int slot_index);
-    void update_action_display(AmsAction action);
     void update_current_slot_highlight(int slot_index);
-    void update_current_loaded_display(int slot_index);
 
     // === Event Callbacks (static trampolines) ===
 
     static void on_slot_clicked(lv_event_t* e);
-    static void on_unload_clicked(lv_event_t* e);
-    static void on_reset_clicked(lv_event_t* e);
 
     // === Observer Callbacks ===
     // on_action_changed migrated to lambda observer factory
@@ -259,57 +216,6 @@ class AmsPanel : public PanelBase {
 
     void sync_spoolman_active_spool();
 
-    // === Preheat Logic for Filament Loading ===
-
-    /**
-     * @brief Get the temperature to use for loading filament from a slot
-     *
-     * Priority: SlotInfo::nozzle_temp_min > FilamentDatabase lookup > DEFAULT_LOAD_PREHEAT_TEMP
-     *
-     * @param slot_index Slot index to get load temperature for
-     * @return Target temperature in degrees Celsius
-     */
-    int get_load_temp_for_slot(int slot_index);
-
-    /**
-     * @brief Handle load request with automatic preheat if needed
-     *
-     * If the extruder is already hot enough, loads immediately.
-     * Otherwise, starts preheating and defers load until temperature reached.
-     *
-     * @param slot_index Slot to load from
-     */
-    void handle_load_with_preheat(int slot_index);
-
-    /**
-     * @brief Check if pending load can proceed (called when temperature updates)
-     *
-     * Called by extruder temperature observer. If a load is pending and
-     * the extruder has reached target temperature, triggers the load.
-     */
-    void check_pending_load();
-
-    /**
-     * @brief Handle load completion - turn off heater if UI initiated it
-     *
-     * Called when AMS action transitions from LOADING to IDLE.
-     * If the UI initiated the preheat (ui_initiated_heat_), turns off the extruder
-     * heater to save energy and prevent filament damage.
-     */
-    void handle_load_complete();
-
-    /**
-     * @brief Show visual feedback during UI-managed preheat
-     *
-     * Displays step progress at step 0 (Heat nozzle) and updates status text
-     * to show the heating target temperature. Called when handle_load_with_preheat()
-     * starts heating.
-     *
-     * @param slot_index Slot that will be loaded after preheat
-     * @param target_temp Target temperature in °C
-     */
-    void show_preheat_feedback(int slot_index, int target_temp);
-
     // === UI Module Helpers (internal, show modals with callbacks) ===
 
     void show_context_menu(int slot_index, lv_obj_t* near_widget, lv_point_t click_pt);
@@ -319,9 +225,6 @@ class AmsPanel : public PanelBase {
     // === Action Handlers (public for XML event callbacks) ===
   public:
     void handle_slot_tap(int slot_index, lv_point_t click_pt);
-    void handle_unload();
-    void handle_reset();
-    void handle_bypass_toggle();
 };
 
 /**

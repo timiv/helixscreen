@@ -16,6 +16,7 @@ struct HomeWidgetDef {
     const char* description;           // Short description for settings overlay
     const char* translation_tag;       // For i18n
     const char* hardware_gate_subject; // nullptr = always available
+    bool default_enabled = true;       // Whether enabled in fresh/default config
 };
 
 const std::vector<HomeWidgetDef>& get_all_widget_defs();

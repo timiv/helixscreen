@@ -26,6 +26,7 @@
 
 #include <cerrno>
 #include <climits>
+#include <csignal>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -52,8 +53,8 @@ static SubjectManager g_subjects;
 static lv_subject_t g_notification_subject;
 static lv_subject_t g_show_beta_features_subject;
 
-// Application quit flag
-static bool g_quit_requested = false;
+// Application quit flag (volatile sig_atomic_t for async-signal-safety)
+static volatile sig_atomic_t g_quit_requested = 0;
 
 // Wizard active flag
 static bool g_wizard_active = false;
@@ -199,7 +200,11 @@ void app_store_argv(int argc, char** argv) {
 
 void app_request_quit() {
     spdlog::info("[App Globals] Application quit requested");
-    g_quit_requested = true;
+    g_quit_requested = 1;
+}
+
+void app_request_quit_signal_safe() {
+    g_quit_requested = 1;
 }
 
 void app_request_restart() {
@@ -208,7 +213,7 @@ void app_request_restart() {
     if (g_stored_argv.empty() || g_executable_path.empty()) {
         spdlog::error(
             "[App Globals] Cannot restart: argv not stored. Call app_store_argv() at startup.");
-        g_quit_requested = true; // Fall back to quit
+        g_quit_requested = 1; // Fall back to quit
         return;
     }
 
@@ -219,7 +224,7 @@ void app_request_restart() {
     if (pid < 0) {
         // Fork failed
         spdlog::error("[App Globals] Fork failed during restart: {}", strerror(errno));
-        g_quit_requested = true; // Fall back to quit
+        g_quit_requested = 1; // Fall back to quit
         return;
     }
 
@@ -237,12 +242,12 @@ void app_request_restart() {
 
     // Parent process - signal main loop to exit cleanly
     spdlog::info("[App Globals] Forked new process (PID {}), parent exiting", pid);
-    g_quit_requested = true;
+    g_quit_requested = 1;
 
 #else
     // Unsupported platform - fall back to quit
     spdlog::warn("[App Globals] Restart not supported on this platform, falling back to quit");
-    g_quit_requested = true;
+    g_quit_requested = 1;
 #endif
 }
 
@@ -262,7 +267,7 @@ void app_request_restart_service() {
 }
 
 bool app_quit_requested() {
-    return g_quit_requested;
+    return g_quit_requested != 0;
 }
 
 bool is_wizard_active() {

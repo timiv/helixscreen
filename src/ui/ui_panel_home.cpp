@@ -194,31 +194,11 @@ void HomePanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "printer_manager_clicked_cb", printer_manager_clicked_cb);
     lv_xml_register_event_cb(nullptr, "ams_clicked_cb", ams_clicked_cb);
 
-    // Computed subject for filament status visibility:
-    // Show when sensors exist AND (no AMS OR bypass active)
-    // NOTE: Must be initialized BEFORE creating observers that call
-    // update_filament_status_visibility()
-    UI_MANAGED_SUBJECT_INT(show_filament_status_, 0, "show_filament_status", subjects_);
-
     // Subscribe to AmsState slot_count to show/hide AMS indicator
     // AmsState::init_subjects() is called in main.cpp before us
-    // NOTE: Observer callback may fire immediately - show_filament_status_ must be initialized
-    // first
     ams_slot_count_observer_ = observe_int_sync<HomePanel>(
         AmsState::instance().get_slot_count_subject(), this,
         [](HomePanel* self, int slot_count) { self->update_ams_indicator(slot_count); });
-
-    // Observe inputs that affect filament status visibility
-    ams_bypass_observer_ = observe_int_sync<HomePanel>(
-        AmsState::instance().get_bypass_active_subject(), this,
-        [](HomePanel* self, int /*bypass*/) { self->update_filament_status_visibility(); });
-    filament_sensor_count_observer_ = observe_int_sync<HomePanel>(
-        helix::FilamentSensorManager::instance().get_sensor_count_subject(), this,
-        [](HomePanel* self, int /*count*/) { self->update_filament_status_visibility(); });
-
-    // Compute initial visibility (observers may have already fired, but this ensures correct
-    // initial state)
-    update_filament_status_visibility();
 
     subjects_initialized_ = true;
 
@@ -1427,32 +1407,8 @@ void HomePanel::set_light(bool is_on) {
 }
 
 void HomePanel::update_ams_indicator(int /* slot_count */) {
-    // AMS mini status widget auto-updates via observers bound to AmsState.
-    // This method only needs to update filament status visibility.
-    update_filament_status_visibility();
-}
-
-void HomePanel::update_filament_status_visibility() {
-    // Computed subject: show filament status when sensors exist AND (no AMS OR bypass active)
-    int sensor_count =
-        lv_subject_get_int(helix::FilamentSensorManager::instance().get_sensor_count_subject());
-    int ams_slot_count = lv_subject_get_int(AmsState::instance().get_slot_count_subject());
-    int bypass_active = lv_subject_get_int(AmsState::instance().get_bypass_active_subject());
-
-    bool has_sensors = sensor_count > 0;
-    bool has_ams = ams_slot_count > 0;
-    bool in_bypass = bypass_active != 0;
-
-    // Show filament status if: has sensors AND (no AMS OR bypass mode active)
-    bool show = has_sensors && (!has_ams || in_bypass);
-    int new_value = show ? 1 : 0;
-
-    if (lv_subject_get_int(&show_filament_status_) != new_value) {
-        lv_subject_set_int(&show_filament_status_, new_value);
-        spdlog::debug("[{}] Filament status visibility: {} (sensors={}, ams={}, bypass={})",
-                      get_name(), show ? "shown" : "hidden", sensor_count, ams_slot_count,
-                      bypass_active);
-    }
+    // AMS mini status widget auto-updates via observers bound to AmsState subjects.
+    // No additional work needed here.
 }
 
 // ============================================================================

@@ -149,6 +149,7 @@
 #endif
 
 #include <cerrno>
+#include <csignal>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -182,6 +183,16 @@ void invalidate_all_recursive(lv_obj_t* obj) {
     for (uint32_t i = 0; i < child_cnt; i++) {
         invalidate_all_recursive(lv_obj_get_child(obj, i));
     }
+}
+
+/**
+ * @brief Signal handler for SIGINT/SIGTERM — requests graceful quit
+ *
+ * Uses app_request_quit_signal_safe() which only sets the volatile quit
+ * flag, avoiding spdlog and other non-async-signal-safe calls.
+ */
+void graceful_quit_signal_handler(int /*sig*/) {
+    app_request_quit_signal_safe();
 }
 
 } // namespace
@@ -224,6 +235,12 @@ int Application::run(int argc, char** argv) {
     if (!get_runtime_config()->is_test_mode()) {
         crash_handler::install("config/crash.txt");
     }
+
+    // Install graceful shutdown signal handlers (Ctrl+C, kill)
+    // When running under the watchdog, SIGINT/SIGTERM are handled there.
+    // When running standalone (e.g., --test), these allow clean shutdown.
+    std::signal(SIGINT, graceful_quit_signal_handler);
+    std::signal(SIGTERM, graceful_quit_signal_handler);
 
     // Phase 2: Initialize config system
     if (!init_config()) {
@@ -1995,6 +2012,14 @@ int Application::main_loop() {
         m_loop_handler.on_frame(current_tick);
 
         handle_keyboard_shortcuts();
+
+        // Break immediately if quit was requested (e.g., Cmd+Q) to avoid
+        // running lv_timer_handler() with stale queued callbacks that may
+        // reference destroyed objects (e.g., update_button_text_contrast
+        // on a button whose user_data was freed by Modal destruction).
+        if (app_quit_requested()) {
+            break;
+        }
 
         // Auto-screenshot
         if (m_loop_handler.should_take_screenshot()) {

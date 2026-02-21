@@ -202,14 +202,9 @@ class HomePanel : public PanelBase {
     ObserverGuard led_state_observer_;
     ObserverGuard led_brightness_observer_;
     ObserverGuard ams_slot_count_observer_;
-    ObserverGuard ams_bypass_observer_;
-    ObserverGuard filament_sensor_count_observer_;
 
     // Observers for widget hardware gate subjects — triggers populate_widgets() on change
     std::vector<ObserverGuard> widget_gate_observers_;
-
-    // Computed subject: show filament status when sensors exist AND (no AMS OR bypass active)
-    lv_subject_t show_filament_status_;
 
     // Print card observers (for showing progress during active print)
     ObserverGuard print_state_observer_;
@@ -233,7 +228,6 @@ class HomePanel : public PanelBase {
     int cached_extruder_target_ = 0;
 
     void update_ams_indicator(int slot_count);
-    void update_filament_status_visibility();
 
     // Print card update methods
     void on_print_state_changed(helix::PrintJobState state);

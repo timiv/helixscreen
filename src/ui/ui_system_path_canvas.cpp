@@ -12,6 +12,7 @@
 #include "helix-xml/src/xml/parsers/lv_xml_obj_parser.h"
 #include "lvgl/lvgl.h"
 #include "nozzle_renderer_bambu.h"
+#include "nozzle_renderer_faceted.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -103,6 +104,9 @@ struct SystemPathData {
     int32_t border_radius = 6;
     int32_t extruder_scale = 10;
     const lv_font_t* label_font = nullptr;
+
+    // Toolhead style
+    bool use_faceted_toolhead = false; // false = Bambu-style, true = Stealthburner/faceted
 };
 
 // Registry of widget data
@@ -161,16 +165,12 @@ static void load_theme_colors(SystemPathData* data) {
 // Drawing Helpers
 // ============================================================================
 
-// Color manipulation helpers
-static lv_color_t sp_darken(lv_color_t c, uint8_t amt) {
-    return lv_color_make(c.red > amt ? c.red - amt : 0, c.green > amt ? c.green - amt : 0,
-                         c.blue > amt ? c.blue - amt : 0);
+// Color manipulation — use shared utilities from ui_spool_drawing.h
+static inline lv_color_t sp_darken(lv_color_t c, uint8_t amt) {
+    return ui_color_darken(c, amt);
 }
-
-static lv_color_t sp_lighten(lv_color_t c, uint8_t amt) {
-    return lv_color_make((c.red + amt > 255) ? 255 : c.red + amt,
-                         (c.green + amt > 255) ? 255 : c.green + amt,
-                         (c.blue + amt > 255) ? 255 : c.blue + amt);
+static inline lv_color_t sp_lighten(lv_color_t c, uint8_t amt) {
+    return ui_color_lighten(c, amt);
 }
 
 static void draw_flat_line(lv_layer_t* layer, int32_t x1, int32_t y1, int32_t x2, int32_t y2,
@@ -191,14 +191,15 @@ static void draw_flat_line(lv_layer_t* layer, int32_t x1, int32_t y1, int32_t x2
 
 // 3D tube effect: shadow → body → highlight (same approach as filament_path_canvas)
 static void draw_tube_line(lv_layer_t* layer, int32_t x1, int32_t y1, int32_t x2, int32_t y2,
-                           lv_color_t color, int32_t width) {
+                           lv_color_t color, int32_t width, bool cap_start = true,
+                           bool cap_end = true) {
     // Shadow: wider, darker
     int32_t shadow_extra = LV_MAX(2, width / 2);
     lv_color_t shadow_color = sp_darken(color, 35);
-    draw_flat_line(layer, x1, y1, x2, y2, shadow_color, width + shadow_extra);
+    draw_flat_line(layer, x1, y1, x2, y2, shadow_color, width + shadow_extra, cap_start, cap_end);
 
     // Body
-    draw_flat_line(layer, x1, y1, x2, y2, color, width);
+    draw_flat_line(layer, x1, y1, x2, y2, color, width, cap_start, cap_end);
 
     // Highlight: narrower, lighter, offset toward top-left light source
     int32_t hl_width = LV_MAX(1, width * 2 / 5);
@@ -226,12 +227,13 @@ static void draw_tube_line(lv_layer_t* layer, int32_t x1, int32_t y1, int32_t x2
     }
 
     draw_flat_line(layer, x1 + offset_x, y1 + offset_y, x2 + offset_x, y2 + offset_y, hl_color,
-                   hl_width);
+                   hl_width, cap_start, cap_end);
 }
 
 static void draw_vertical_line(lv_layer_t* layer, int32_t x, int32_t y1, int32_t y2,
-                               lv_color_t color, int32_t width) {
-    draw_tube_line(layer, x, y1, x, y2, color, width);
+                               lv_color_t color, int32_t width, bool cap_start = true,
+                               bool cap_end = true) {
+    draw_tube_line(layer, x, y1, x, y2, color, width, cap_start, cap_end);
 }
 
 static void draw_line(lv_layer_t* layer, int32_t x1, int32_t y1, int32_t x2, int32_t y2,
@@ -248,7 +250,7 @@ static constexpr int CURVE_SEGMENTS = 16;
 //   CP2 controls arrival angle (above end → arrives from above)
 static void draw_curved_tube(lv_layer_t* layer, int32_t x0, int32_t y0, int32_t cx1, int32_t cy1,
                              int32_t cx2, int32_t cy2, int32_t x1, int32_t y1, lv_color_t color,
-                             int32_t width) {
+                             int32_t width, bool cap_start = true, bool cap_end = true) {
     struct Pt {
         int32_t x, y;
     };
@@ -257,7 +259,6 @@ static void draw_curved_tube(lv_layer_t* layer, int32_t x0, int32_t y0, int32_t 
     for (int i = 1; i <= CURVE_SEGMENTS; i++) {
         float t = (float)i / CURVE_SEGMENTS;
         float inv = 1.0f - t;
-        // Cubic bezier: P(t) = (1-t)^3*P0 + 3*(1-t)^2*t*C1 + 3*(1-t)*t^2*C2 + t^3*P1
         float b0 = inv * inv * inv;
         float b1 = 3.0f * inv * inv * t;
         float b2 = 3.0f * inv * t * t;
@@ -266,18 +267,23 @@ static void draw_curved_tube(lv_layer_t* layer, int32_t x0, int32_t y0, int32_t 
                   (int32_t)(b0 * y0 + b1 * cy1 + b2 * cy2 + b3 * y1)};
     }
 
-    // All passes use round caps — opaque overdraw at joints is invisible
+    // Round caps between interior segments (overdraw is invisible since same color).
+    // Optionally suppress start/end caps at junction with adjacent straight segments.
     // Pass 1: Shadow
     int32_t shadow_extra = LV_MAX(2, width / 2);
     lv_color_t shadow_color = sp_darken(color, 35);
     for (int i = 0; i < CURVE_SEGMENTS; i++) {
+        bool cs = (i == 0) ? cap_start : true;
+        bool ce = (i == CURVE_SEGMENTS - 1) ? cap_end : true;
         draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, shadow_color,
-                       width + shadow_extra);
+                       width + shadow_extra, cs, ce);
     }
 
     // Pass 2: Body
     for (int i = 0; i < CURVE_SEGMENTS; i++) {
-        draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, color, width);
+        bool cs = (i == 0) ? cap_start : true;
+        bool ce = (i == CURVE_SEGMENTS - 1) ? cap_end : true;
+        draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, color, width, cs, ce);
     }
 
     // Pass 3: Highlight
@@ -304,8 +310,10 @@ static void draw_curved_tube(lv_layer_t* layer, int32_t x0, int32_t y0, int32_t 
         offset_y = (int32_t)(py * off_amount);
     }
     for (int i = 0; i < CURVE_SEGMENTS; i++) {
+        bool cs = (i == 0) ? cap_start : true;
+        bool ce = (i == CURVE_SEGMENTS - 1) ? cap_end : true;
         draw_flat_line(layer, pts[i].x + offset_x, pts[i].y + offset_y, pts[i + 1].x + offset_x,
-                       pts[i + 1].y + offset_y, hl_color, hl_width);
+                       pts[i + 1].y + offset_y, hl_color, hl_width, cs, ce);
     }
 }
 
@@ -390,19 +398,23 @@ static int build_routed_path(RoutePt* pts, int32_t sx, int32_t sy, int32_t ex, i
 
 // Draw 3D tube along a polyline (multi-pass: shadow → body → highlight)
 static void draw_tube_polyline(lv_layer_t* layer, const RoutePt* pts, int count, lv_color_t color,
-                               int32_t width) {
+                               int32_t width, bool cap_start = true, bool cap_end = true) {
     if (count < 2)
         return;
 
     int32_t shadow_extra = LV_MAX(2, width / 2);
     lv_color_t shadow_color = sp_darken(color, 35);
     for (int i = 0; i < count - 1; i++) {
+        bool cs = (i == 0) ? cap_start : true;
+        bool ce = (i == count - 2) ? cap_end : true;
         draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, shadow_color,
-                       width + shadow_extra);
+                       width + shadow_extra, cs, ce);
     }
 
     for (int i = 0; i < count - 1; i++) {
-        draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, color, width);
+        bool cs = (i == 0) ? cap_start : true;
+        bool ce = (i == count - 2) ? cap_end : true;
+        draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, color, width, cs, ce);
     }
 
     // Highlight: consistent left offset (light from upper-left)
@@ -410,18 +422,21 @@ static void draw_tube_polyline(lv_layer_t* layer, const RoutePt* pts, int count,
     lv_color_t hl_color = sp_lighten(color, 44);
     int32_t hl_off = width / 4 + 1;
     for (int i = 0; i < count - 1; i++) {
+        bool cs = (i == 0) ? cap_start : true;
+        bool ce = (i == count - 2) ? cap_end : true;
         draw_flat_line(layer, pts[i].x + hl_off, pts[i].y, pts[i + 1].x + hl_off, pts[i + 1].y,
-                       hl_color, hl_width);
+                       hl_color, hl_width, cs, ce);
     }
 }
 
 // Draw a routed tube: vert → arc → horiz → arc → vert
 static void draw_routed_tube(lv_layer_t* layer, int32_t sx, int32_t sy, int32_t ex, int32_t ey,
-                             int32_t horiz_y, int32_t arc_r, lv_color_t color, int32_t width) {
+                             int32_t horiz_y, int32_t arc_r, lv_color_t color, int32_t width,
+                             bool cap_start = true, bool cap_end = true) {
     constexpr int MAX_PTS = 2 + ARC_STEPS + 1 + ARC_STEPS + 1;
     RoutePt pts[MAX_PTS];
     int n = build_routed_path(pts, sx, sy, ex, ey, horiz_y, arc_r);
-    draw_tube_polyline(layer, pts, n, color, width);
+    draw_tube_polyline(layer, pts, n, color, width, cap_start, cap_end);
 }
 
 // Push-to-connect fitting: shadow/highlight matching tube language
@@ -707,13 +722,14 @@ static void system_path_draw_cb(lv_event_t* e) {
                         draw_vertical_line(layer, unit_x, entry_y, sensor_dot_y - sensor_r,
                                            line_color, line_w);
                         draw_vertical_line(layer, unit_x, sensor_dot_y + sensor_r, hub_merge_y,
-                                           line_color, line_w);
+                                           line_color, line_w, true, /*cap_end=*/false);
                         bool filled = data->unit_hub_triggered[i];
                         lv_color_t dot_color =
                             filled ? (is_active ? active_color_lv : idle_color) : idle_color;
                         draw_sensor_dot(layer, unit_x, sensor_dot_y, dot_color, filled, sensor_r);
                     } else {
-                        draw_vertical_line(layer, unit_x, entry_y, hub_merge_y, line_color, line_w);
+                        draw_vertical_line(layer, unit_x, entry_y, hub_merge_y, line_color, line_w,
+                                           true, /*cap_end=*/false);
                     }
 
                     int32_t dist = unit_x > tool_x ? (unit_x - tool_x) : (tool_x - unit_x);
@@ -829,7 +845,8 @@ static void system_path_draw_cb(lv_event_t* e) {
                 horiz_y = LV_CLAMP(horiz_y, route.start_y + arc_r + 2, route.end_y - arc_r - 2);
 
                 draw_routed_tube(layer, route.start_x, route.start_y, route.end_x, route.end_y,
-                                 horiz_y, arc_r, route_color, route_w);
+                                 horiz_y, arc_r, route_color, route_w,
+                                 /*cap_start=*/false);
             } else {
                 // PARALLEL: idx 0 (leftmost end_x) at par_bot_y (lowest),
                 // idx N-1 (rightmost end_x) at par_top_y (highest)
@@ -839,7 +856,8 @@ static void system_path_draw_cb(lv_event_t* e) {
                 horiz_y = LV_CLAMP(horiz_y, route.start_y + arc_r + 2, route.end_y - arc_r - 2);
 
                 draw_routed_tube(layer, route.start_x, route.start_y, route.end_x, route.end_y,
-                                 horiz_y, arc_r, route_color, route_w);
+                                 horiz_y, arc_r, route_color, route_w,
+                                 /*cap_start=*/false);
             }
         }
 
@@ -871,7 +889,11 @@ static void system_path_draw_cb(lv_event_t* e) {
             bool is_active_tool = (t == data->active_tool) && data->filament_loaded;
 
             lv_color_t noz_color = is_active_tool ? active_color_lv : nozzle_color;
-            draw_nozzle_bambu(layer, tool_x, tools_y, noz_color, small_scale);
+            if (data->use_faceted_toolhead) {
+                draw_nozzle_faceted(layer, tool_x, tools_y, noz_color, small_scale);
+            } else {
+                draw_nozzle_bambu(layer, tool_x, tools_y, noz_color, small_scale);
+            }
 
             // Tool badge below nozzle — use pre-formatted label from data
             if (data->label_font && t < SystemPathData::MAX_TOOLS) {
@@ -913,17 +935,20 @@ static void system_path_draw_cb(lv_event_t* e) {
             bool has_sensor = data->unit_has_hub_sensor[i];
             int32_t sensor_dot_y = entry_y + (merge_y - entry_y) * 3 / 5;
 
+            // Suppress end cap on last straight segment and start cap on curve
+            // to eliminate visible endcap seam at straight→curve junction
             if (has_sensor) {
                 draw_vertical_line(layer, unit_x, entry_y, sensor_dot_y - sensor_r, line_color,
                                    line_w);
                 draw_vertical_line(layer, unit_x, sensor_dot_y + sensor_r, merge_y, line_color,
-                                   line_w);
+                                   line_w, true, /*cap_end=*/false);
                 bool filled = data->unit_hub_triggered[i];
                 lv_color_t dot_color =
                     filled ? (is_active ? active_color_lv : idle_color) : idle_color;
                 draw_sensor_dot(layer, unit_x, sensor_dot_y, dot_color, filled, sensor_r);
             } else {
-                draw_vertical_line(layer, unit_x, entry_y, merge_y, line_color, line_w);
+                draw_vertical_line(layer, unit_x, entry_y, merge_y, line_color, line_w, true,
+                                   /*cap_end=*/false);
             }
 
             // S-curve from unit to hub — CPs at ~86% for vertical ends
@@ -931,7 +956,8 @@ static void system_path_draw_cb(lv_event_t* e) {
                 int32_t end_y_hub = hub_y - hub_h / 2;
                 int32_t drop = end_y_hub - merge_y;
                 draw_curved_tube(layer, unit_x, merge_y, unit_x, merge_y + drop * 6 / 7, center_x,
-                                 end_y_hub - drop * 6 / 7, center_x, end_y_hub, line_color, line_w);
+                                 end_y_hub - drop * 6 / 7, center_x, end_y_hub, line_color, line_w,
+                                 /*cap_start=*/false);
             }
         }
 
@@ -1038,7 +1064,11 @@ static void system_path_draw_cb(lv_event_t* e) {
                 noz_color = active_color_lv;
             }
 
-            draw_nozzle_bambu(layer, center_x, nozzle_y, noz_color, data->extruder_scale);
+            if (data->use_faceted_toolhead) {
+                draw_nozzle_faceted(layer, center_x, nozzle_y, noz_color, data->extruder_scale);
+            } else {
+                draw_nozzle_bambu(layer, center_x, nozzle_y, noz_color, data->extruder_scale);
+            }
 
             // Virtual tool badge beneath nozzle — only when multiple slots feed one toolhead
             if (data->total_tools <= 1 && data->current_tool >= 0 && data->label_font) {
@@ -1096,6 +1126,7 @@ static void on_system_path_clicked(lv_event_t* e) {
         abs(point.y - data->bypass_spool_y) < box_h) {
         spdlog::debug("[SystemPath] Bypass spool box clicked");
         data->bypass_callback(data->bypass_user_data);
+        return;
     }
 }
 
@@ -1395,6 +1426,14 @@ void ui_system_path_canvas_set_bypass_callback(lv_obj_t* obj, system_path_bypass
     if (data) {
         data->bypass_callback = cb;
         data->bypass_user_data = user_data;
+    }
+}
+
+void ui_system_path_canvas_set_faceted_toolhead(lv_obj_t* obj, bool faceted) {
+    auto* data = get_data(obj);
+    if (data && data->use_faceted_toolhead != faceted) {
+        data->use_faceted_toolhead = faceted;
+        lv_obj_invalidate(obj);
     }
 }
 

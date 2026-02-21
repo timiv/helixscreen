@@ -922,7 +922,7 @@ static BezierPt bezier_eval(int32_t x0, int32_t y0, int32_t cx1, int32_t cy1, in
 // visible joints between bezier segments.
 static void draw_curved_tube(lv_layer_t* layer, int32_t x0, int32_t y0, int32_t cx1, int32_t cy1,
                              int32_t cx2, int32_t cy2, int32_t x1, int32_t y1, lv_color_t color,
-                             int32_t width) {
+                             int32_t width, bool cap_start = true, bool cap_end = true) {
     // Pre-compute all bezier points
     BezierPt pts[CURVE_SEGMENTS + 1];
     pts[0] = {x0, y0};
@@ -930,23 +930,28 @@ static void draw_curved_tube(lv_layer_t* layer, int32_t x0, int32_t y0, int32_t 
         pts[i] = bezier_eval(x0, y0, cx1, cy1, cx2, cy2, x1, y1, (float)i / CURVE_SEGMENTS);
     }
 
-    // Pass 1: Shadow (wider, darker) — round caps OK, opaque overdraw is invisible
+    // Round caps between interior segments (overdraw is invisible since same color).
+    // Optionally suppress start/end caps at junction with adjacent straight segments.
+    // Pass 1: Shadow
     int32_t shadow_extra = LV_MAX(2, width / 2);
     lv_color_t shadow_color = ph_darken(color, 35);
     for (int i = 0; i < CURVE_SEGMENTS; i++) {
+        bool cs = (i == 0) ? cap_start : true;
+        bool ce = (i == CURVE_SEGMENTS - 1) ? cap_end : true;
         draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, shadow_color,
-                       width + shadow_extra);
+                       width + shadow_extra, cs, ce);
     }
 
     // Pass 2: Body
     for (int i = 0; i < CURVE_SEGMENTS; i++) {
-        draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, color, width);
+        bool cs = (i == 0) ? cap_start : true;
+        bool ce = (i == CURVE_SEGMENTS - 1) ? cap_end : true;
+        draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, color, width, cs, ce);
     }
 
     // Pass 3: Highlight (use average curve direction for consistent offset)
     int32_t hl_width = LV_MAX(1, width * 2 / 5);
     lv_color_t hl_color = ph_lighten(color, 44);
-    // Overall direction from start to end for a consistent highlight offset
     int32_t dx = x1 - x0;
     int32_t dy = y1 - y0;
     int32_t offset_x = 0;
@@ -968,8 +973,10 @@ static void draw_curved_tube(lv_layer_t* layer, int32_t x0, int32_t y0, int32_t 
         offset_y = (int32_t)(py * off_amount);
     }
     for (int i = 0; i < CURVE_SEGMENTS; i++) {
+        bool cs = (i == 0) ? cap_start : true;
+        bool ce = (i == CURVE_SEGMENTS - 1) ? cap_end : true;
         draw_flat_line(layer, pts[i].x + offset_x, pts[i].y + offset_y, pts[i + 1].x + offset_x,
-                       pts[i + 1].y + offset_y, hl_color, hl_width);
+                       pts[i + 1].y + offset_y, hl_color, hl_width, cs, ce);
     }
 }
 
@@ -977,31 +984,41 @@ static void draw_curved_tube(lv_layer_t* layer, int32_t x0, int32_t y0, int32_t 
 // Same layer-by-layer approach for smooth joints.
 static void draw_curved_hollow_tube(lv_layer_t* layer, int32_t x0, int32_t y0, int32_t cx1,
                                     int32_t cy1, int32_t cx2, int32_t cy2, int32_t x1, int32_t y1,
-                                    lv_color_t wall_color, lv_color_t bg_color, int32_t width) {
+                                    lv_color_t wall_color, lv_color_t bg_color, int32_t width,
+                                    bool cap_start = true, bool cap_end = true) {
     BezierPt pts[CURVE_SEGMENTS + 1];
     pts[0] = {x0, y0};
     for (int i = 1; i <= CURVE_SEGMENTS; i++) {
         pts[i] = bezier_eval(x0, y0, cx1, cy1, cx2, cy2, x1, y1, (float)i / CURVE_SEGMENTS);
     }
 
-    // All passes use round caps — opaque overdraw at joints is invisible
+    // Round caps between interior segments (overdraw is invisible since same color).
+    // Optionally suppress start/end caps at junction with adjacent straight segments.
     // Pass 1: Shadow
     int32_t shadow_extra = LV_MAX(2, width / 2);
     lv_color_t shadow_color = ph_darken(wall_color, 25);
     for (int i = 0; i < CURVE_SEGMENTS; i++) {
+        bool cs = (i == 0) ? cap_start : true;
+        bool ce = (i == CURVE_SEGMENTS - 1) ? cap_end : true;
         draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, shadow_color,
-                       width + shadow_extra);
+                       width + shadow_extra, cs, ce);
     }
 
     // Pass 2: Tube wall
     for (int i = 0; i < CURVE_SEGMENTS; i++) {
-        draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, wall_color, width);
+        bool cs = (i == 0) ? cap_start : true;
+        bool ce = (i == CURVE_SEGMENTS - 1) ? cap_end : true;
+        draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, wall_color, width, cs,
+                       ce);
     }
 
     // Pass 3: Bore (background fill)
     int32_t bore_width = LV_MAX(1, width - 2);
     for (int i = 0; i < CURVE_SEGMENTS; i++) {
-        draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, bg_color, bore_width);
+        bool cs = (i == 0) ? cap_start : true;
+        bool ce = (i == CURVE_SEGMENTS - 1) ? cap_end : true;
+        draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, bg_color, bore_width,
+                       cs, ce);
     }
 
     // Pass 4: Highlight
@@ -1028,8 +1045,10 @@ static void draw_curved_hollow_tube(lv_layer_t* layer, int32_t x0, int32_t y0, i
         offset_y = (int32_t)(py * off_amount);
     }
     for (int i = 0; i < CURVE_SEGMENTS; i++) {
+        bool cs = (i == 0) ? cap_start : true;
+        bool ce = (i == CURVE_SEGMENTS - 1) ? cap_end : true;
         draw_flat_line(layer, pts[i].x + offset_x, pts[i].y + offset_y, pts[i + 1].x + offset_x,
-                       pts[i + 1].y + offset_y, hl_color, hl_width);
+                       pts[i + 1].y + offset_y, hl_color, hl_width, cs, ce);
     }
 }
 
@@ -1242,26 +1261,41 @@ static void draw_parallel_topology(lv_event_t* e, FilamentPathData* data) {
             draw_nozzle_bambu(layer, slot_x, toolhead_y, noz_color, tool_scale, toolhead_opa);
         }
 
-        // Tool label (T0, T1, etc.) below nozzle
-        // Mounted tool gets green highlight, others get normal text color
+        // Tool badge (T0, T1, etc.) below nozzle — matches system_path_canvas style
         if (data->label_font) {
+            char tool_label[16];
+            snprintf(tool_label, sizeof(tool_label), "T%d", i);
+
+            int32_t font_h = lv_font_get_line_height(data->label_font);
+            int32_t label_len = (int32_t)strlen(tool_label);
+            int32_t badge_w = LV_MAX(24, label_len * (font_h * 3 / 5) + 6);
+            int32_t badge_h = font_h + 4;
+            int32_t badge_top = toolhead_y + tool_scale * 3 + 4;
+            int32_t badge_left = slot_x - badge_w / 2;
+
+            // Badge background (rounded rect)
+            lv_area_t badge_area = {badge_left, badge_top, badge_left + badge_w,
+                                    badge_top + badge_h};
+            lv_draw_fill_dsc_t fill_dsc;
+            lv_draw_fill_dsc_init(&fill_dsc);
+            fill_dsc.color = data->color_idle;
+            fill_dsc.opa = (lv_opa_t)LV_MIN(200, toolhead_opa);
+            fill_dsc.radius = 4;
+            lv_draw_fill(layer, &fill_dsc, &badge_area);
+
+            // Badge text
             lv_draw_label_dsc_t label_dsc;
             lv_draw_label_dsc_init(&label_dsc);
             label_dsc.color = is_mounted ? theme_manager_get_color("success") : data->color_text;
             label_dsc.opa = toolhead_opa;
             label_dsc.font = data->label_font;
             label_dsc.align = LV_TEXT_ALIGN_CENTER;
-
-            char tool_label[16];
-            snprintf(tool_label, sizeof(tool_label), "T%d", i);
             label_dsc.text = tool_label;
-            label_dsc.text_local = 1; // Text is on stack, copy it
+            label_dsc.text_local = 1;
 
-            // Position label below nozzle tip
-            int32_t font_h = lv_font_get_line_height(data->label_font);
-            int32_t label_y = toolhead_y + tool_scale * 3 + 4; // Below nozzle tip
-            lv_area_t label_area = {slot_x - 20, label_y, slot_x + 20, label_y + font_h};
-            lv_draw_label(layer, &label_dsc, &label_area);
+            lv_area_t text_area = {badge_left, badge_top + 2, badge_left + badge_w,
+                                   badge_top + 2 + font_h};
+            lv_draw_label(layer, &label_dsc, &text_area);
         }
     }
 }
@@ -1424,6 +1458,7 @@ static void filament_path_draw_cb(lv_event_t* e) {
 
             // Draw curved tube from prep to hub sensor dot
             // S-curve: CP1 below start (departs downward), CP2 above end (arrives from top)
+            // cap_start=false eliminates visible endcap seam at straight→curve junction
             int32_t start_y = prep_y + sensor_r;
             int32_t end_y = hub_top - sensor_r;
             int32_t drop = end_y - start_y;
@@ -1433,12 +1468,13 @@ static void filament_path_draw_cb(lv_event_t* e) {
             int32_t cp2_y = end_y - drop * 2 / 5;
             if (merge_is_idle) {
                 draw_curved_hollow_tube(layer, slot_x, start_y, cp1_x, cp1_y, cp2_x, cp2_y,
-                                        hub_dot_x, end_y, idle_color, bg_color, line_active);
+                                        hub_dot_x, end_y, idle_color, bg_color, line_active,
+                                        /*cap_start=*/false);
             } else {
                 draw_glow_curve(layer, slot_x, start_y, cp1_x, cp1_y, cp2_x, cp2_y, hub_dot_x,
                                 end_y, merge_line_color, lane_width);
                 draw_curved_tube(layer, slot_x, start_y, cp1_x, cp1_y, cp2_x, cp2_y, hub_dot_x,
-                                 end_y, merge_line_color, lane_width);
+                                 end_y, merge_line_color, lane_width, /*cap_start=*/false);
             }
 
             // Draw hub sensor dot - colored with filament color if loaded to hub
@@ -1473,12 +1509,13 @@ static void filament_path_draw_cb(lv_event_t* e) {
             int32_t cp2_y = merge_y - drop_other * 2 / 5;
             if (merge_is_idle) {
                 draw_curved_hollow_tube(layer, slot_x, start_y_other, cp1_x, cp1_y, cp2_x, cp2_y,
-                                        center_x, merge_y, idle_color, bg_color, line_active);
+                                        center_x, merge_y, idle_color, bg_color, line_active,
+                                        /*cap_start=*/false);
             } else {
                 draw_glow_curve(layer, slot_x, start_y_other, cp1_x, cp1_y, cp2_x, cp2_y, center_x,
                                 merge_y, merge_line_color, lane_width);
                 draw_curved_tube(layer, slot_x, start_y_other, cp1_x, cp1_y, cp2_x, cp2_y, center_x,
-                                 merge_y, merge_line_color, lane_width);
+                                 merge_y, merge_line_color, lane_width, /*cap_start=*/false);
             }
         }
     }

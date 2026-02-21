@@ -59,8 +59,9 @@ void HomeWidgetConfig::load() {
     // Append any new widgets from registry that are not in saved config
     for (const auto& def : get_all_widget_defs()) {
         if (seen_ids.count(def.id) == 0) {
-            spdlog::debug("[HomeWidgetConfig] Appending new widget: {}", def.id);
-            entries_.push_back({def.id, true});
+            spdlog::debug("[HomeWidgetConfig] Appending new widget: {} (default_enabled={})",
+                          def.id, def.default_enabled);
+            entries_.push_back({def.id, def.default_enabled});
         }
     }
 
@@ -117,7 +118,7 @@ std::vector<HomeWidgetEntry> HomeWidgetConfig::build_defaults() {
     const auto& defs = get_all_widget_defs();
     defaults.reserve(defs.size());
     for (const auto& def : defs) {
-        defaults.push_back({def.id, true});
+        defaults.push_back({def.id, def.default_enabled});
     }
     return defaults;
 }

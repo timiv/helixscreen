@@ -8,11 +8,12 @@ Tap **LED Settings** in the Printer section to open the LED configuration overla
 
 ## Supported LED Types
 
-HelixScreen auto-detects your LED hardware from Klipper and Moonraker. Four types of lighting are supported:
+HelixScreen auto-detects your LED hardware from Klipper and Moonraker. Five types of lighting are supported:
 
 | Type | Examples | How It's Detected |
 |------|----------|-------------------|
 | **Klipper native strips** | Neopixel (WS2812, SK6812), Dotstar (APA102), PCA9632, GPIO LEDs | Automatically from your Klipper config |
+| **Output pin lights** | Single-channel PWM or on/off lights via `[output_pin]` | Auto-detected from pins with "light", "led", or "lamp" in the name |
 | **WLED strips** | Network-attached WLED controllers | From Moonraker's WLED configuration |
 | **LED effects** | Animated effects (breathing, rainbow, etc.) | Requires the [klipper-led_effect](https://github.com/julianschill/klipper-led_effect) plugin |
 | **Macro devices** | Any Klipper macro that controls lights | User-configured (see [Macro Devices](#macro-devices) below) |
@@ -121,6 +122,21 @@ color_order: GRB
 ```
 
 Restart Klipper, then open **Settings > LED Settings** — the strip appears automatically. Select it and you'll get full color and brightness control.
+
+### Output Pin Lights (Brightness-Only)
+
+If your chamber light or enclosure LED is connected to a `[output_pin]` in Klipper, HelixScreen can control it directly — no macro device needed.
+
+```ini
+[output_pin chamber_light]
+pin: PA9
+pwm: true
+value: 0
+```
+
+Pins with "light", "led", or "lamp" in their name are auto-detected. PWM pins get a brightness slider (0–100%); non-PWM pins get a simple on/off toggle. Color controls are hidden since output pins don't support color.
+
+> **Note:** If your output pin doesn't have one of those keywords in its name, you can still control it by adding it as a [Macro Device](#macro-devices) instead.
 
 ### WLED Network Strips
 

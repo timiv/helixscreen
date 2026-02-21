@@ -5,6 +5,41 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.11] - 2026-02-20
+
+### Added
+- Customizable home panel widgets with drag-to-reorder — choose which widgets appear and arrange them to your preference
+- External spool support — set filament type and color for the bypass/direct-drive spool, visible in system path canvas and detail views with Spoolman quick-assign
+- SlotRegistry unified slot state management across all AMS backends (AFC, Happy Hare, ValgACE, mock)
+- 3D tube rendering for filament paths with curved routing, glow effects, and flow particle animations
+- Pipe-routed tube drawing with cable-harness nesting for multi-tool overview
+- Pulse animation on target slot during filament swap
+- Infimech TX printer support (#139)
+- Sovol SV06 printer image
+
+### Fixed
+- Graceful shutdown on SIGINT/SIGTERM — no more crash on quit
+- Filament subjects now update on first Moonraker status even when state matches defaults
+- AMS endcap seam eliminated at straight-to-curve tube junctions
+- AMS per-unit topology for filament segment in mixed mode
+- AMS layout matching works regardless of initialization order
+- AMS context menu positioning and badge sizing for 2-digit slots and tools
+- AMS global slot numbering and detail view swatch color
+- AFC virtual bypass sensor toggle uses correct sensor name
+- Stealthburner polygon centering offset corrected
+- Wi-Fi SSID retrieved from wifi list instead of invalid device field
+- ABS mismatch detection re-enabled with generic HID range exclusion (#135, #137)
+- Default print completion alert changed from notification to alert
+- Installer drops unnecessary sudo from systemctl checks and adds polkit error handling
+- Home panel falls back to generic printer image when file missing
+- Home panel uses filament sensor count for hardware-dependent widget gating
+
+### Changed
+- AMS overview uses Stealthburner toolhead for Voron printers
+- AMS detail view uses badge-style tool labels
+- Sensor rows use status_pill component for type badges
+- AMS sidebar extracted as shared component across panel types
+
 ## [0.10.10] - 2026-02-19
 
 ### Added
@@ -813,6 +848,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.10.11]: https://github.com/prestonbrown/helixscreen/compare/v0.10.10...v0.10.11
 [0.10.10]: https://github.com/prestonbrown/helixscreen/compare/v0.10.9...v0.10.10
 [0.10.9]: https://github.com/prestonbrown/helixscreen/compare/v0.10.8...v0.10.9
 [0.10.8]: https://github.com/prestonbrown/helixscreen/compare/v0.10.7...v0.10.8

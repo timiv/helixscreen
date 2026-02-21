@@ -5,7 +5,7 @@
 
 #include "ui_ams_context_menu.h"
 #include "ui_ams_detail.h"
-#include "ui_ams_device_operations_overlay.h"
+#include "ui_ams_sidebar.h"
 #include "ui_ams_slot.h"
 #include "ui_ams_slot_layout.h"
 #include "ui_error_reporting.h"
@@ -33,7 +33,6 @@
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
-#include <functional>
 #include <memory>
 
 using namespace helix;
@@ -63,7 +62,7 @@ static constexpr int32_t DETAIL_ZOOM_SCALE_MIN = 64;
 /// Zoom animation end scale (100% = 256/256)
 static constexpr int32_t DETAIL_ZOOM_SCALE_MAX = 256;
 
-// Global instance pointer for XML callback access
+// Global instance pointer for XML callback access (used by back button and animation callbacks)
 static std::atomic<AmsOverviewPanel*> g_overview_panel_instance{nullptr};
 
 /// Set a label to "N slots" text, with null-safety
@@ -74,59 +73,6 @@ static void set_slot_count_label(lv_obj_t* label, int slot_count) {
     char buf[16];
     snprintf(buf, sizeof(buf), "%d slots", slot_count);
     lv_label_set_text(label, buf);
-}
-
-// ============================================================================
-// XML Event Callback Wrappers
-// ============================================================================
-
-static void on_settings_clicked_xml(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[AMS Overview] on_settings_clicked");
-    LV_UNUSED(e);
-
-    spdlog::info("[AMS Overview] Opening AMS Device Operations overlay");
-
-    auto& overlay = helix::ui::get_ams_device_operations_overlay();
-    if (!overlay.are_subjects_initialized()) {
-        overlay.init_subjects();
-        overlay.register_callbacks();
-    }
-
-    auto* target = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    lv_obj_t* parent = lv_obj_get_screen(target);
-    overlay.show(parent);
-
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-/// Execute a backend operation with standard error handling
-static void dispatch_backend_op(const char* op_name,
-                                std::function<AmsError(AmsBackend*)> operation) {
-    AmsBackend* backend = AmsState::instance().get_backend();
-    if (!backend) {
-        NOTIFY_WARNING("AMS not available");
-        return;
-    }
-
-    spdlog::info("[AMS Overview] {} requested", op_name);
-    AmsError error = operation(backend);
-    if (error.result != AmsResult::SUCCESS) {
-        NOTIFY_ERROR("{} failed: {}", op_name, error.user_msg);
-    }
-}
-
-static void on_unload_clicked_xml(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[AMS Overview] on_unload_clicked");
-    LV_UNUSED(e);
-    dispatch_backend_op("Unload", [](AmsBackend* b) { return b->unload_filament(); });
-    LVGL_SAFE_EVENT_CB_END();
-}
-
-static void on_reset_clicked_xml(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[AMS Overview] on_reset_clicked");
-    LV_UNUSED(e);
-    dispatch_backend_op("Reset", [](AmsBackend* b) { return b->reset(); });
-    LVGL_SAFE_EVENT_CB_END();
 }
 
 // ============================================================================
@@ -208,6 +154,9 @@ void AmsOverviewPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         system_path_ = ui_system_path_canvas_create(system_path_area_);
         if (system_path_) {
             lv_obj_set_size(system_path_, LV_PCT(100), LV_PCT(100));
+            if (PrinterDetector::is_voron_printer()) {
+                ui_system_path_canvas_set_faceted_toolhead(system_path_, true);
+            }
             spdlog::debug("[{}] Created system path canvas", get_name());
         }
     }
@@ -218,20 +167,13 @@ void AmsOverviewPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     detail_widgets_ = ams_detail_find_widgets(detail_unit);
     detail_path_canvas_ = lv_obj_find_by_name(panel_, "detail_path_canvas");
 
-    // Store global instance for callback access
+    // Store global instance for callback access (back button + animation callbacks)
     g_overview_panel_instance.store(this);
 
-    // Hide settings button when backend has no device sections (e.g. tool changers)
-    auto* backend = AmsState::instance().get_backend(0);
-    lv_obj_t* btn_settings = lv_obj_find_by_name(panel_, "btn_settings");
-    if (btn_settings && backend) {
-        auto sections = backend->get_device_sections();
-        if (sections.empty()) {
-            lv_obj_add_flag(btn_settings, LV_OBJ_FLAG_HIDDEN);
-        } else {
-            lv_obj_remove_flag(btn_settings, LV_OBJ_FLAG_HIDDEN);
-        }
-    }
+    // Set up the shared sidebar component
+    sidebar_ = std::make_unique<helix::ui::AmsOperationSidebar>(printer_state_, api_);
+    sidebar_->setup(panel_);
+    sidebar_->init_observers();
 
     // Initial population from backend state
     refresh_units();
@@ -243,6 +185,9 @@ void AmsOverviewPanel::on_activate() {
     spdlog::debug("[{}] Activated - syncing from backend", get_name());
 
     AmsState::instance().sync_from_backend();
+
+    if (sidebar_)
+        sidebar_->sync_from_state();
 
     if (detail_unit_index_ >= 0) {
         // Re-entering while in detail mode — refresh the detail slots
@@ -566,23 +511,8 @@ void AmsOverviewPanel::refresh_system_path(const AmsSystemInfo& info, int curren
         ui_system_path_canvas_set_toolhead_sensor(system_path_, has_toolhead, toolhead_triggered);
     }
 
-    // Update currently loaded swatch color (imperative — color subject is int, not CSS)
-    if (panel_) {
-        lv_obj_t* swatch = lv_obj_find_by_name(panel_, "loaded_swatch");
-        if (swatch) {
-            lv_color_t color = lv_color_hex(static_cast<uint32_t>(
-                lv_subject_get_int(AmsState::instance().get_current_color_subject())));
-            lv_obj_set_style_bg_color(swatch, color, 0);
-            lv_obj_set_style_border_color(swatch, color, 0);
-        }
-    }
-
-    // Set status text from action detail subject (drawn to left of nozzle)
-    lv_subject_t* action_subject = AmsState::instance().get_ams_action_detail_subject();
-    if (action_subject) {
-        const char* action_text = lv_subject_get_string(action_subject);
-        ui_system_path_canvas_set_status_text(system_path_, action_text);
-    }
+    // Status text now shown in shared sidebar component (ams_sidebar.xml)
+    // No longer drawn on the canvas to avoid duplication
 
     ui_system_path_canvas_refresh(system_path_);
 }
@@ -664,17 +594,6 @@ void AmsOverviewPanel::refresh_detail_if_needed() {
     // Always update path canvas — segment/action changes need to propagate
     // even when slot count hasn't changed (e.g., load/unload animations)
     setup_detail_path_canvas(unit, info);
-
-    // Update loaded swatch color (also done in refresh_system_path for overview mode)
-    if (panel_) {
-        lv_obj_t* swatch = lv_obj_find_by_name(panel_, "loaded_swatch");
-        if (swatch) {
-            lv_color_t color = lv_color_hex(static_cast<uint32_t>(
-                lv_subject_get_int(AmsState::instance().get_current_color_subject())));
-            lv_obj_set_style_bg_color(swatch, color, 0);
-            lv_obj_set_style_border_color(swatch, color, 0);
-        }
-    }
 }
 
 void AmsOverviewPanel::show_unit_detail(int unit_index) {
@@ -914,6 +833,9 @@ void AmsOverviewPanel::clear_panel_reference() {
     slots_version_observer_.reset();
     external_spool_observer_.reset();
 
+    // Clean up sidebar before clearing panel references
+    sidebar_.reset();
+
     // Clear global instance pointer
     g_overview_panel_instance.store(nullptr);
 
@@ -954,10 +876,11 @@ static void ensure_overview_registered() {
 
     spdlog::info("[AMS Overview] Lazy-registering XML component");
 
-    // Register XML event callbacks before component registration
-    lv_xml_register_event_cb(nullptr, "on_ams_overview_settings_clicked", on_settings_clicked_xml);
-    lv_xml_register_event_cb(nullptr, "on_ams_overview_unload_clicked", on_unload_clicked_xml);
-    lv_xml_register_event_cb(nullptr, "on_ams_overview_reset_clicked", on_reset_clicked_xml);
+    // Register sidebar and dryer card callbacks before component registration
+    helix::ui::AmsOperationSidebar::register_callbacks_static();
+    helix::ui::AmsDryerCard::register_callbacks_static();
+
+    // Register back button callback for detail view
     lv_xml_register_event_cb(nullptr, "on_ams_overview_back_clicked", [](lv_event_t* e) {
         LV_UNUSED(e);
         AmsOverviewPanel* panel = g_overview_panel_instance.load();
@@ -980,6 +903,9 @@ static void ensure_overview_registered() {
     lv_xml_register_component_from_file("A:ui_xml/components/ams_loaded_card.xml");
     lv_xml_register_component_from_file("A:ui_xml/ams_context_menu.xml");
     lv_xml_register_component_from_file("A:ui_xml/ams_unit_card.xml");
+    lv_xml_register_component_from_file("A:ui_xml/ams_dryer_card.xml");
+    lv_xml_register_component_from_file("A:ui_xml/dryer_presets_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/components/ams_sidebar.xml");
     lv_xml_register_component_from_file("A:ui_xml/ams_overview_panel.xml");
 
     s_overview_registered = true;
@@ -1095,41 +1021,8 @@ void AmsOverviewPanel::show_detail_context_menu(int slot_index, lv_obj_t* near_w
 
             switch (action) {
             case helix::ui::AmsContextMenu::MenuAction::LOAD:
-                if (!backend) {
-                    NOTIFY_WARNING("AMS not available");
-                    return;
-                }
-                {
-                    AmsSystemInfo info = backend->get_system_info();
-                    if (info.action != AmsAction::IDLE && info.action != AmsAction::ERROR) {
-                        NOTIFY_WARNING("AMS is busy: {}", ams_action_to_string(info.action));
-                        return;
-                    }
-
-                    AmsError error;
-                    // If filament is already loaded from a DIFFERENT slot, use tool change
-                    // (unload-then-load) so the segment animation plays properly
-                    if (info.current_slot >= 0 && info.current_slot != slot) {
-                        const SlotInfo* slot_info = info.get_slot_global(slot);
-                        if (slot_info && slot_info->mapped_tool >= 0) {
-                            spdlog::info("[AmsOverview] Swapping slot {} -> {} via tool "
-                                         "change T{}",
-                                         info.current_slot, slot, slot_info->mapped_tool);
-                            error = backend->change_tool(slot_info->mapped_tool);
-                        } else {
-                            // Fallback: unload first
-                            spdlog::info("[AmsOverview] Unloading slot {} before loading {}",
-                                         info.current_slot, slot);
-                            error = backend->unload_filament();
-                        }
-                    } else {
-                        spdlog::info("[AmsOverview] Fresh load to slot {} (current_slot={})", slot,
-                                     info.current_slot);
-                        error = backend->load_filament(slot);
-                    }
-                    if (error.result != AmsResult::SUCCESS) {
-                        NOTIFY_ERROR("Load failed: {}", error.user_msg);
-                    }
+                if (sidebar_) {
+                    sidebar_->handle_load_with_preheat(slot);
                 }
                 break;
 

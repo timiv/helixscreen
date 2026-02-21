@@ -25,11 +25,7 @@
         <icon src="water" size="sm" variant="primary"/>
         <text_body name="name_label" text="$sensor_name"/>
         <!-- Type badge -->
-        <lv_obj height="content"
-                style_bg_color="#text_muted" style_bg_opa="40" style_radius="#border_radius" style_pad_left="#space_sm"
-                style_pad_right="#space_sm" style_pad_top="#space_xxs" style_pad_bottom="#space_xxs" scrollable="false">
-          <text_small name="type_label" text="$sensor_type"/>
-        </lv_obj>
+        <status_pill name="type_label" text="$sensor_type" variant="muted"/>
       </lv_obj>
       <!-- Right: Enable toggle -->
       <lv_obj height="content"
