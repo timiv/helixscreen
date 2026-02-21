@@ -95,6 +95,77 @@ void carousel_scroll_end_cb(lv_event_t* e) {
 }
 
 /**
+ * @brief Auto-advance timer callback — advances to the next page
+ *
+ * Skips advancement if the user is currently touching the carousel.
+ * Relies on goto_page wrap logic for looping behavior.
+ */
+void auto_advance_cb(lv_timer_t* timer) {
+    lv_obj_t* carousel = static_cast<lv_obj_t*>(lv_timer_get_user_data(timer));
+    if (!carousel) {
+        return;
+    }
+
+    CarouselState* state = ui_carousel_get_state(carousel);
+    if (!state || state->user_touching) {
+        return;
+    }
+
+    ui_carousel_goto_page(carousel, state->current_page + 1, true);
+}
+
+/**
+ * @brief Touch press handler — pauses auto-advance while user is interacting
+ */
+void carousel_press_cb(lv_event_t* e) {
+    lv_obj_t* scroll = lv_event_get_target_obj(e);
+    if (!scroll) {
+        return;
+    }
+
+    lv_obj_t* container = lv_obj_get_parent(scroll);
+    if (!container) {
+        return;
+    }
+
+    CarouselState* state = static_cast<CarouselState*>(lv_obj_get_user_data(container));
+    if (!state || state->magic != CarouselState::MAGIC) {
+        return;
+    }
+
+    state->user_touching = true;
+    if (state->auto_timer) {
+        lv_timer_pause(state->auto_timer);
+    }
+}
+
+/**
+ * @brief Touch release handler — resumes auto-advance after user stops interacting
+ */
+void carousel_release_cb(lv_event_t* e) {
+    lv_obj_t* scroll = lv_event_get_target_obj(e);
+    if (!scroll) {
+        return;
+    }
+
+    lv_obj_t* container = lv_obj_get_parent(scroll);
+    if (!container) {
+        return;
+    }
+
+    CarouselState* state = static_cast<CarouselState*>(lv_obj_get_user_data(container));
+    if (!state || state->magic != CarouselState::MAGIC) {
+        return;
+    }
+
+    state->user_touching = false;
+    if (state->auto_timer) {
+        lv_timer_reset(state->auto_timer);
+        lv_timer_resume(state->auto_timer);
+    }
+}
+
+/**
  * @brief DELETE event handler — cleans up CarouselState and auto-scroll timer
  */
 void carousel_delete_cb(lv_event_t* e) {
@@ -177,6 +248,10 @@ void* ui_carousel_create(lv_xml_parser_state_t* state, const char** /*attrs*/) {
     // Register scroll-end handler for page tracking from swipe gestures
     lv_obj_add_event_cb(scroll, carousel_scroll_end_cb, LV_EVENT_SCROLL_END, nullptr);
 
+    // Register touch handlers for auto-advance pause/resume
+    lv_obj_add_event_cb(scroll, carousel_press_cb, LV_EVENT_PRESSED, nullptr);
+    lv_obj_add_event_cb(scroll, carousel_release_cb, LV_EVENT_RELEASED, nullptr);
+
     spdlog::trace("[ui_carousel] Created carousel widget");
     return container;
 }
@@ -234,6 +309,11 @@ void ui_carousel_apply(lv_xml_parser_state_t* state, const char** attrs) {
         } else {
             spdlog::warn("[ui_carousel] Subject '{}' not found", subject_name);
         }
+    }
+
+    // Start auto-advance timer if configured
+    if (cstate->auto_scroll_ms > 0) {
+        ui_carousel_start_auto_advance(container);
     }
 
     spdlog::trace("[ui_carousel] Applied: wrap={} auto_scroll={}ms indicators={}", cstate->wrap,
@@ -365,4 +445,38 @@ void ui_carousel_rebuild_indicators(lv_obj_t* carousel) {
     update_indicators(state);
 
     spdlog::trace("[ui_carousel] Rebuilt indicators ({} dots)", count);
+}
+
+void ui_carousel_start_auto_advance(lv_obj_t* carousel) {
+    CarouselState* state = ui_carousel_get_state(carousel);
+    if (!state) {
+        return;
+    }
+
+    // Stop any existing timer first
+    if (state->auto_timer) {
+        lv_timer_delete(state->auto_timer);
+        state->auto_timer = nullptr;
+    }
+
+    if (state->auto_scroll_ms <= 0) {
+        return;
+    }
+
+    state->auto_timer =
+        lv_timer_create(auto_advance_cb, static_cast<uint32_t>(state->auto_scroll_ms), carousel);
+    spdlog::trace("[ui_carousel] Started auto-advance timer ({}ms)", state->auto_scroll_ms);
+}
+
+void ui_carousel_stop_auto_advance(lv_obj_t* carousel) {
+    CarouselState* state = ui_carousel_get_state(carousel);
+    if (!state) {
+        return;
+    }
+
+    if (state->auto_timer) {
+        lv_timer_delete(state->auto_timer);
+        state->auto_timer = nullptr;
+        spdlog::trace("[ui_carousel] Stopped auto-advance timer");
+    }
 }

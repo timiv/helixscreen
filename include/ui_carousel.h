@@ -89,3 +89,19 @@ void ui_carousel_add_item(lv_obj_t* carousel, lv_obj_t* item);
  * @param carousel The carousel container object
  */
 void ui_carousel_rebuild_indicators(lv_obj_t* carousel);
+
+/**
+ * @brief Start auto-advancing the carousel on a timer
+ *
+ * Uses auto_scroll_ms from CarouselState for the interval.
+ * Stops any existing timer first. No-op if auto_scroll_ms <= 0.
+ *
+ * @param carousel The carousel container object
+ */
+void ui_carousel_start_auto_advance(lv_obj_t* carousel);
+
+/**
+ * @brief Stop the auto-advance timer
+ * @param carousel The carousel container object
+ */
+void ui_carousel_stop_auto_advance(lv_obj_t* carousel);

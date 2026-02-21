@@ -13,6 +13,9 @@
 
 #include "../catch_amalgamated.hpp"
 
+// Needed to access lv_timer_t internals for direct callback invocation in tests
+#include "lib/lvgl/src/misc/lv_timer_private.h"
+
 // ============================================================================
 // Task 2: Basic state and creation tests
 // ============================================================================
@@ -251,6 +254,133 @@ TEST_CASE_METHOD(LVGLTestFixture, "Carousel indicator dots", "[carousel]") {
         lv_obj_t* dot1 = lv_obj_get_child(cs->indicator_row, 1);
         REQUIRE(lv_obj_get_style_bg_opa(dot0, LV_PART_MAIN) < LV_OPA_COVER);
         REQUIRE(lv_obj_get_style_bg_opa(dot1, LV_PART_MAIN) == LV_OPA_COVER);
+    }
+
+    delete cs;
+    lv_obj_set_user_data(container, nullptr);
+}
+
+// ============================================================================
+// Task 6: Wrap-around behavior tests
+// ============================================================================
+
+TEST_CASE_METHOD(LVGLTestFixture, "Carousel wrap-around behavior", "[carousel][wrap]") {
+    lv_obj_t* container = lv_obj_create(test_screen());
+    lv_obj_set_size(container, 400, 300);
+    CarouselState* cs = new CarouselState();
+    cs->scroll_container = lv_obj_create(container);
+    lv_obj_set_size(cs->scroll_container, 400, 280);
+    cs->indicator_row = lv_obj_create(container);
+    lv_obj_set_flex_flow(cs->indicator_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_user_data(container, cs);
+
+    for (int i = 0; i < 3; i++) {
+        ui_carousel_add_item(container, lv_obj_create(test_screen()));
+    }
+
+    SECTION("wrap=true: forward past end wraps to start") {
+        cs->wrap = true;
+        ui_carousel_goto_page(container, 3, false);
+        REQUIRE(ui_carousel_get_current_page(container) == 0);
+    }
+
+    SECTION("wrap=true: backward past start wraps to end") {
+        cs->wrap = true;
+        ui_carousel_goto_page(container, -1, false);
+        REQUIRE(ui_carousel_get_current_page(container) == 2);
+    }
+
+    SECTION("wrap=true: large positive index wraps correctly") {
+        cs->wrap = true;
+        ui_carousel_goto_page(container, 7, false); // 7 % 3 = 1
+        REQUIRE(ui_carousel_get_current_page(container) == 1);
+    }
+
+    SECTION("wrap=true: large negative index wraps correctly") {
+        cs->wrap = true;
+        ui_carousel_goto_page(container, -4, false); // (-4 % 3 + 3) % 3 = 2
+        REQUIRE(ui_carousel_get_current_page(container) == 2);
+    }
+
+    SECTION("wrap=false: clamps at end") {
+        cs->wrap = false;
+        ui_carousel_goto_page(container, 99, false);
+        REQUIRE(ui_carousel_get_current_page(container) == 2);
+    }
+
+    SECTION("wrap=false: clamps at start") {
+        cs->wrap = false;
+        ui_carousel_goto_page(container, -5, false);
+        REQUIRE(ui_carousel_get_current_page(container) == 0);
+    }
+
+    delete cs;
+    lv_obj_set_user_data(container, nullptr);
+}
+
+// ============================================================================
+// Task 7: Auto-advance timer tests
+// ============================================================================
+
+TEST_CASE_METHOD(LVGLTestFixture, "Carousel auto-advance timer", "[carousel][timer]") {
+    lv_obj_t* container = lv_obj_create(test_screen());
+    lv_obj_set_size(container, 400, 300);
+    CarouselState* cs = new CarouselState();
+    cs->wrap = true;
+    cs->auto_scroll_ms = 1000;
+    cs->scroll_container = lv_obj_create(container);
+    lv_obj_set_size(cs->scroll_container, 400, 280);
+    cs->indicator_row = lv_obj_create(container);
+    lv_obj_set_flex_flow(cs->indicator_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_user_data(container, cs);
+
+    for (int i = 0; i < 3; i++) {
+        ui_carousel_add_item(container, lv_obj_create(test_screen()));
+    }
+
+    SECTION("start creates timer") {
+        ui_carousel_start_auto_advance(container);
+        REQUIRE(cs->auto_timer != nullptr);
+        ui_carousel_stop_auto_advance(container);
+    }
+
+    SECTION("stop deletes timer") {
+        ui_carousel_start_auto_advance(container);
+        REQUIRE(cs->auto_timer != nullptr);
+        ui_carousel_stop_auto_advance(container);
+        REQUIRE(cs->auto_timer == nullptr);
+    }
+
+    SECTION("zero interval is no-op") {
+        cs->auto_scroll_ms = 0;
+        ui_carousel_start_auto_advance(container);
+        REQUIRE(cs->auto_timer == nullptr);
+    }
+
+    SECTION("timer callback advances page") {
+        ui_carousel_start_auto_advance(container);
+        REQUIRE(cs->current_page == 0);
+        // Manually invoke the timer callback to simulate a timer fire,
+        // since lv_timer_handler_safe() skips repeating timers in tests
+        REQUIRE(cs->auto_timer != nullptr);
+        REQUIRE(cs->auto_timer->timer_cb != nullptr);
+        cs->auto_timer->timer_cb(cs->auto_timer);
+        REQUIRE(cs->current_page == 1);
+        cs->auto_timer->timer_cb(cs->auto_timer);
+        REQUIRE(cs->current_page == 2);
+        ui_carousel_stop_auto_advance(container);
+    }
+
+    SECTION("timer skips advance when user is touching") {
+        ui_carousel_start_auto_advance(container);
+        cs->user_touching = true;
+        REQUIRE(cs->auto_timer->timer_cb != nullptr);
+        cs->auto_timer->timer_cb(cs->auto_timer);
+        REQUIRE(cs->current_page == 0); // Should not advance
+        cs->user_touching = false;
+        cs->auto_timer->timer_cb(cs->auto_timer);
+        REQUIRE(cs->current_page == 1); // Should advance now
+        ui_carousel_stop_auto_advance(container);
     }
 
     delete cs;
