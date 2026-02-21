@@ -677,13 +677,20 @@ TEST_CASE("KlipperConfigParser: whitespace trimming on key and value", "[klipper
     REQUIRE(parser.get("section", "key_with_spaces") == "value_with_spaces");
 }
 
-TEST_CASE("KlipperConfigParser: trailing comments are NOT treated as inline comments",
-          "[klipper_config]") {
+TEST_CASE("KlipperConfigParser: inline comments stripped with space-hash", "[klipper_config]") {
     KlipperConfigParser parser;
-    // Klipper does NOT support inline comments - the # is part of the value
-    std::string content = "[section]\npin: PA0 # this is part of the value\n";
+    // Klipper (Python configparser) treats " #" as inline comment start
+    std::string content = "[section]\npin: PA0 # this is a comment\n";
     REQUIRE(parser.parse(content));
-    REQUIRE(parser.get("section", "pin") == "PA0 # this is part of the value");
+    REQUIRE(parser.get("section", "pin") == "PA0");
+}
+
+TEST_CASE("KlipperConfigParser: bare hash without space is NOT a comment", "[klipper_config]") {
+    KlipperConfigParser parser;
+    // Bare "#" without preceding space is part of the value (e.g. colors)
+    std::string content = "[section]\ncolor: #FF0000\n";
+    REQUIRE(parser.parse(content));
+    REQUIRE(parser.get("section", "color") == "#FF0000");
 }
 
 TEST_CASE("KlipperConfigParser: key with empty value after separator", "[klipper_config]") {

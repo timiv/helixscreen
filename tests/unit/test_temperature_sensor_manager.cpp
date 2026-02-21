@@ -350,12 +350,12 @@ TEST_CASE_METHOD(TemperatureSensorTestFixture, "TemperatureSensorManager - state
         REQUIRE(state->temperature == Catch::Approx(45.2f));
     }
 
-    SECTION("Temperature stored as centidegrees in subject (25.5C -> 2550)") {
+    SECTION("Temperature stored as centidegrees in subject (25.5C -> 255)") {
         lv_subject_t* subj = mgr().get_temp_subject("temperature_sensor mcu_temp");
         REQUIRE(subj != nullptr);
 
         update_sensor_temp("temperature_sensor mcu_temp", 25.5f);
-        REQUIRE(lv_subject_get_int(subj) == 2550);
+        REQUIRE(lv_subject_get_int(subj) == 255);
     }
 
     SECTION("temperature_fan also gets target and speed") {

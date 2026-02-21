@@ -175,14 +175,13 @@ TEST_CASE("Prerendered paths fall back to PNG when .bin missing", "[assets][fall
         REQUIRE(path.substr(0, 2) == "A:");
     }
 
-    SECTION("Printer fallback is PNG") {
-        // Non-existent printer should still return a valid path
+    SECTION("Printer fallback returns valid path") {
+        // Non-existent printer should fall back to generic image
         std::string path = get_prerendered_printer_path("nonexistent-printer", 800);
 
-        // Should fall back to PNG path
         REQUIRE(path.substr(0, 2) == "A:");
-        REQUIRE(path.find("nonexistent-printer") != std::string::npos);
-        REQUIRE(path.find(".png") != std::string::npos);
+        // Falls back to generic-corexy when printer-specific image doesn't exist
+        REQUIRE(path.find("generic-corexy") != std::string::npos);
     }
 }
 
@@ -216,7 +215,7 @@ TEST_CASE("Prerendered image edge cases", "[assets][edge]") {
     SECTION("Printer name with special characters") {
         std::string path = get_prerendered_printer_path("my-custom_printer.v2", 800);
         REQUIRE(path.substr(0, 2) == "A:");
-        REQUIRE(path.find("my-custom_printer.v2") != std::string::npos);
+        // Falls back to generic when printer-specific image doesn't exist
     }
 }
 

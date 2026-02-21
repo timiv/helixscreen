@@ -93,15 +93,15 @@ TEST_CASE("SpoolWizardOverlay can_proceed starts as false", "[spool_wizard]") {
 
 TEST_CASE("SpoolWizardOverlay step label updates correctly", "[spool_wizard]") {
     SpoolWizardOverlay wizard;
-    CHECK(wizard.step_label() == "Step 1 of 3");
+    CHECK(wizard.step_label() == "New Spool: Step 1 of 3");
 
     wizard.set_can_proceed(true);
     wizard.navigate_next();
-    CHECK(wizard.step_label() == "Step 2 of 3");
+    CHECK(wizard.step_label() == "New Spool: Step 2 of 3");
 
     wizard.set_can_proceed(true);
     wizard.navigate_next();
-    CHECK(wizard.step_label() == "Step 3 of 3");
+    CHECK(wizard.step_label() == "New Spool: Step 3 of 3");
 }
 
 // ============================================================================

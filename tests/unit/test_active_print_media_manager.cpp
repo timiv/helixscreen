@@ -106,9 +106,9 @@ class ActivePrintMediaManagerTestFixture {
     void set_print_filename(const std::string& filename) {
         json status = {{"print_stats", {{"filename", filename}}}};
         state_.update_from_status(status);
-        // Process queued UI updates - call drain_queue directly instead of lv_timer_handler
-        // to avoid potential infinite loops from the 1ms timer period
-        UpdateQueueTestAccess::drain(helix::ui::UpdateQueue::instance());
+        // Drain all queued UI updates, including nested queue_update calls from
+        // deferred observers (observer → handler → display filename setter)
+        UpdateQueueTestAccess::drain_all(helix::ui::UpdateQueue::instance());
     }
 
     // Get current print_filename (raw)
