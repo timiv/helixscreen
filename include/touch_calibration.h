@@ -126,6 +126,7 @@ inline bool is_resistive_touchscreen_name(const std::string& name) {
     static const char* patterns[] = {"rtp",   // Resistive touch panel
                                      "sun4i", // Allwinner resistive controller (AD5M)
                                      "tsc",   // Generic resistive touch screen controller
+                                     "ns20",  // NS2009/NS2016 I2C resistive ADC (Nebula Pad)
                                      nullptr};
 
     std::string lower_name = name;
