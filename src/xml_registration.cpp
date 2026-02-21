@@ -7,6 +7,7 @@
 #include "ui_ams_device_operations_overlay.h"
 #include "ui_ams_device_section_detail_overlay.h"
 #include "ui_button.h"
+#include "ui_carousel.h"
 #include "ui_confetti.h"
 #include "ui_fan_dial.h"
 #include "ui_fonts.h"
@@ -143,6 +144,7 @@ void register_xml_components() {
     ui_button_init();             // <ui_button> with variant styles and auto-contrast
     ui_markdown_init();           // <ui_markdown> with theme-aware markdown rendering
     ui_notification_badge_init(); // <notification_badge> with auto-contrast text
+    ui_carousel_init();           // <ui_carousel> horizontal scroll-snap carousel
     ui_confetti_init();           // <ui_confetti> celebration animation canvas
 
     // Register no-op callback and subject for optional handlers in XML components
