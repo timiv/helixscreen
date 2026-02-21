@@ -31,7 +31,17 @@ const bool s_registered = [] {
 } // namespace
 
 using namespace helix;
-using helix::ui::temperature::centi_to_degrees;
+using helix::ui::temperature::centi_to_degrees_f;
+using helix::ui::temperature::format_temperature_f;
+
+/// Strip redundant " Temperature" suffix — the widget context already implies it
+static void strip_temperature_suffix(std::string& name) {
+    const std::string suffix = " Temperature";
+    if (name.size() > suffix.size() &&
+        name.compare(name.size() - suffix.size(), suffix.size(), suffix) == 0) {
+        name.erase(name.size() - suffix.size());
+    }
+}
 
 // File-local helper: get the shared PanelWidgetConfig instance
 static helix::PanelWidgetConfig& get_widget_config_ref() {
@@ -52,6 +62,7 @@ ThermistorWidget::~ThermistorWidget() {
 void ThermistorWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
     widget_obj_ = widget_obj;
     parent_screen_ = parent_screen;
+    *alive_ = true;
 
     if (widget_obj_) {
         lv_obj_set_user_data(widget_obj_, this);
@@ -76,9 +87,13 @@ void ThermistorWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
         auto& tsm = helix::sensors::TemperatureSensorManager::instance();
         lv_subject_t* subject = tsm.get_temp_subject(selected_sensor_);
         if (subject) {
+            std::weak_ptr<bool> weak_alive = alive_;
             temp_observer_ = helix::ui::observe_int_sync<ThermistorWidget>(
-                subject, this,
-                [](ThermistorWidget* self, int temp) { self->on_temp_changed(temp); });
+                subject, this, [weak_alive](ThermistorWidget* self, int temp) {
+                    if (weak_alive.expired())
+                        return;
+                    self->on_temp_changed(temp);
+                });
         }
         update_display();
     }
@@ -88,6 +103,7 @@ void ThermistorWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
 }
 
 void ThermistorWidget::detach() {
+    *alive_ = false;
     dismiss_sensor_picker();
     temp_observer_.reset();
 
@@ -128,11 +144,18 @@ void ThermistorWidget::select_sensor(const std::string& klipper_name) {
         }
     }
 
+    strip_temperature_suffix(display_name_);
+
     // Subscribe to this sensor's temperature subject
     lv_subject_t* subject = tsm.get_temp_subject(klipper_name);
     if (subject) {
+        std::weak_ptr<bool> weak_alive = alive_;
         temp_observer_ = helix::ui::observe_int_sync<ThermistorWidget>(
-            subject, this, [](ThermistorWidget* self, int temp) { self->on_temp_changed(temp); });
+            subject, this, [weak_alive](ThermistorWidget* self, int temp) {
+                if (weak_alive.expired())
+                    return;
+                self->on_temp_changed(temp);
+            });
     } else {
         spdlog::warn("[ThermistorWidget] No subject for sensor: {}", klipper_name);
     }
@@ -144,14 +167,14 @@ void ThermistorWidget::select_sensor(const std::string& klipper_name) {
 }
 
 void ThermistorWidget::on_temp_changed(int centidegrees) {
-    int deg = centi_to_degrees(centidegrees);
-    helix::ui::temperature::format_temperature(deg, temp_buffer_, sizeof(temp_buffer_));
+    float deg = centi_to_degrees_f(centidegrees);
+    format_temperature_f(deg, temp_buffer_, sizeof(temp_buffer_));
 
     if (temp_label_) {
         lv_label_set_text(temp_label_, temp_buffer_);
     }
 
-    spdlog::trace("[ThermistorWidget] {} = {}°C", display_name_, deg);
+    spdlog::trace("[ThermistorWidget] {} = {:.1f}°C", display_name_, deg);
 }
 
 void ThermistorWidget::update_display() {
@@ -164,9 +187,8 @@ void ThermistorWidget::update_display() {
             auto& tsm = helix::sensors::TemperatureSensorManager::instance();
             lv_subject_t* subject = tsm.get_temp_subject(selected_sensor_);
             if (subject) {
-                int centi = lv_subject_get_int(subject);
-                int deg = centi_to_degrees(centi);
-                helix::ui::temperature::format_temperature(deg, temp_buffer_, sizeof(temp_buffer_));
+                float deg = centi_to_degrees_f(lv_subject_get_int(subject));
+                format_temperature_f(deg, temp_buffer_, sizeof(temp_buffer_));
                 lv_label_set_text(temp_label_, temp_buffer_);
             } else {
                 lv_label_set_text(temp_label_, "--\xC2\xB0"
@@ -201,6 +223,7 @@ void ThermistorWidget::load_config() {
             }
         }
 
+        strip_temperature_suffix(display_name_);
         spdlog::debug("[ThermistorWidget] Loaded config: sensor={}", selected_sensor_);
     }
 }

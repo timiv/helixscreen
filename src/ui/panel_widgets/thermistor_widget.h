@@ -7,6 +7,7 @@
 
 #include "panel_widget.h"
 
+#include <memory>
 #include <string>
 
 namespace helix {
@@ -48,6 +49,7 @@ class ThermistorWidget : public PanelWidget {
     std::string selected_sensor_; // klipper_name (e.g., "temperature_sensor mcu_temp")
     std::string display_name_;    // Pretty name for label
     ObserverGuard temp_observer_;
+    std::shared_ptr<bool> alive_ = std::make_shared<bool>(false);
     char temp_buffer_[16] = {};
 
     // Sensor picker context menu
