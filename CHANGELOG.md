@@ -5,6 +5,48 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.12] - 2026-02-21
+
+A stability and polish release focused on crash fixes, responsive UI improvements, and internal refactoring. The home panel widget system is now fully decoupled from HomePanel, keyboard input is more reliable, and several threading bugs have been resolved.
+
+### Added
+- Carousel widget component with wrap-around, auto-advance timer, indicator dots, and scroll detection
+- Thermistor widget for monitoring custom temperature sensors on the home panel
+- Responsive breakpoint subject (`ui_breakpoint`) for reactive visibility changes across screen sizes
+- `HELIX_LOG_LEVEL` env var and `--log-level` CLI flag for fine-grained log control
+- `HELIX_DPI` env var for overriding display DPI
+- `HELIX_SKIP_SPLASH` env var to bypass splash screen
+- Long-press auto-insert for alternate keyboard characters
+- DWARF debug info pipeline for better crash backtrace resolution
+
+### Fixed
+- AFC mutex deadlock when error messages were emitted during state parsing
+- Startup deadlock and shutdown race condition in mock mode
+- Keyboard backspace and character insertion broken when cursor is mid-string
+- Keyboard crash when textarea widget is deleted while keyboard is open
+- Framebuffer stomping between splash screen and main process on Pi
+- Kernel console text bleeding through LVGL UI on framebuffer devices
+- Carousel wrap setting ignored in scroll end callback
+- Resistive touchscreen detection for NS2009/NS2016 controllers (#135)
+- Fan status hidden on tiny screens
+- Slider row padding increased to prevent handle clipping
+- Dropdown rows now wrap text responsively in settings
+- Network item click handling uses correct event target
+- Soft keyboard registered for hidden network modal inputs
+- Self-update handles NoNewPrivileges; stale `.old` files cleaned on startup
+- Installer polkit rules no longer contain untemplated placeholders
+- `enP*` interface naming cleaned up (#145)
+
+### Changed
+- Home panel widgets fully decoupled from HomePanel — PanelWidget system with self-registration, per-panel config, and independent lifecycle
+- AMS backends share extracted `AmsSubscriptionBackend` base class
+- MoonrakerAPI split: `MoonrakerHistoryAPI` and `MoonrakerSpoolmanAPI` extracted
+- Settings consumers migrated to domain-specific managers (Display, System, Input, Audio, Safety)
+- Panels and overlays migrated to batch callback registration
+- Temperature formatting consolidated into `ui_temperature_utils`
+- Observer factory adopted across all remaining legacy observers
+- Shell test suite optimized from ~4 min to ~90s
+
 ## [0.10.11] - 2026-02-20
 
 ### Added
@@ -848,6 +890,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.10.12]: https://github.com/prestonbrown/helixscreen/compare/v0.10.11...v0.10.12
 [0.10.11]: https://github.com/prestonbrown/helixscreen/compare/v0.10.10...v0.10.11
 [0.10.10]: https://github.com/prestonbrown/helixscreen/compare/v0.10.9...v0.10.10
 [0.10.9]: https://github.com/prestonbrown/helixscreen/compare/v0.10.8...v0.10.9
