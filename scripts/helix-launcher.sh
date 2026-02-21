@@ -41,6 +41,12 @@ set -e
 # Hide the Linux console text cursor (visible as a blinking block on fbdev)
 setterm --cursor off 2>/dev/null || printf '\033[?25l' > /dev/tty1 2>/dev/null || true
 
+# Unbind the kernel console from the framebuffer so it doesn't paint text
+# over the UI. This affects vtcon1 (the fbcon driver); vtcon0 is the dummy.
+for vtcon in /sys/class/vtconsole/vtcon*/bind; do
+    [ -f "$vtcon" ] && echo 0 > "$vtcon" 2>/dev/null || true
+done
+
 # Parse launcher-specific arguments (POSIX-compatible, no arrays)
 # Passthrough args stored as space-separated string
 # CLI flags take priority over env vars; env vars are applied after env file sourcing below
