@@ -18,16 +18,10 @@ using namespace helix;
 // ============================================================================
 
 AmsBackendToolChanger::AmsBackendToolChanger(MoonrakerAPI* api, MoonrakerClient* client)
-    : api_(api), client_(client) {
+    : AmsSubscriptionBackend(api, client) {
     // Initialize system info with tool changer defaults
     system_info_.type = AmsType::TOOL_CHANGER;
     system_info_.type_name = "Tool Changer";
-    system_info_.version = "unknown";
-    system_info_.current_tool = -1;
-    system_info_.current_slot = -1;
-    system_info_.filament_loaded = false;
-    system_info_.action = AmsAction::IDLE;
-    system_info_.total_slots = 0;
 
     // Tool changer capabilities
     system_info_.supports_endless_spool = false; // Not applicable
@@ -51,111 +45,28 @@ void AmsBackendToolChanger::set_discovered_tools(std::vector<std::string> tool_n
     spdlog::info("[AMS ToolChanger] Set {} discovered tools", tool_names_.size());
 }
 
-AmsBackendToolChanger::~AmsBackendToolChanger() {
-    // Release subscription guard without trying to unsubscribe
-    // (MoonrakerClient may already be destroyed during static destruction)
-    subscription_.release();
-}
+// Destructor not needed -- base class handles subscription cleanup
 
 // ============================================================================
 // Lifecycle Management
 // ============================================================================
 
-AmsError AmsBackendToolChanger::start() {
-    bool should_emit = false;
-
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        if (running_) {
-            return AmsErrorHelper::success();
-        }
-
-        if (!client_) {
-            spdlog::error("[AMS ToolChanger] Cannot start: MoonrakerClient is null");
-            return AmsErrorHelper::not_connected("MoonrakerClient not provided");
-        }
-
-        if (!api_) {
-            spdlog::error("[AMS ToolChanger] Cannot start: MoonrakerAPI is null");
-            return AmsErrorHelper::not_connected("MoonrakerAPI not provided");
-        }
-
-        if (tool_names_.empty()) {
-            spdlog::error("[AMS ToolChanger] Cannot start: No tools discovered. "
-                          "Call set_discovered_tools() before start()");
-            return AmsErrorHelper::not_connected("No tools discovered");
-        }
-
-        // Register for status update notifications from Moonraker
-        // Tool changer state comes via notify_status_update when toolchanger.* changes
-        SubscriptionId id = client_->register_notify_update(
-            [this](const nlohmann::json& notification) { handle_status_update(notification); });
-
-        if (id == INVALID_SUBSCRIPTION_ID) {
-            spdlog::error("[AMS ToolChanger] Failed to register for status updates");
-            return AmsErrorHelper::not_connected("Failed to subscribe to Moonraker updates");
-        }
-
-        // RAII guard - automatically unsubscribes when backend is destroyed or stop() called
-        subscription_ = SubscriptionGuard(client_, id);
-
-        running_ = true;
-        spdlog::info("[AMS ToolChanger] Backend started, subscription ID: {}", id);
-
-        should_emit = true;
-    } // Release lock before emitting
-
-    // Emit initial state event OUTSIDE the lock to avoid deadlock
-    if (should_emit) {
-        emit_event(EVENT_STATE_CHANGED);
+AmsError AmsBackendToolChanger::additional_start_checks() {
+    if (tool_names_.empty()) {
+        spdlog::error("[AMS ToolChanger] Cannot start: No tools discovered. "
+                      "Call set_discovered_tools() before start()");
+        return AmsErrorHelper::not_connected("No tools discovered");
     }
-
     return AmsErrorHelper::success();
 }
 
-void AmsBackendToolChanger::stop() {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    if (!running_) {
-        return;
-    }
-
-    // RAII guard handles unsubscription automatically
-    subscription_.reset();
-
-    running_ = false;
-    spdlog::info("[AMS ToolChanger] Backend stopped");
-}
-
-void AmsBackendToolChanger::release_subscriptions() {
-    subscription_.release();
-}
-
-bool AmsBackendToolChanger::is_running() const {
-    return running_;
-}
+// stop(), release_subscriptions(), is_running() provided by AmsSubscriptionBackend
 
 // ============================================================================
 // Event System
 // ============================================================================
 
-void AmsBackendToolChanger::set_event_callback(EventCallback callback) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    event_callback_ = std::move(callback);
-}
-
-void AmsBackendToolChanger::emit_event(const std::string& event, const std::string& data) {
-    EventCallback cb;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        cb = event_callback_;
-    }
-
-    if (cb) {
-        cb(event, data);
-    }
-}
+// set_event_callback() and emit_event() provided by AmsSubscriptionBackend
 
 // ============================================================================
 // State Queries
@@ -184,27 +95,8 @@ SlotInfo AmsBackendToolChanger::get_slot_info(int slot_index) const {
     return empty;
 }
 
-AmsAction AmsBackendToolChanger::get_current_action() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return system_info_.action;
-}
-
-int AmsBackendToolChanger::get_current_tool() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return system_info_.current_tool;
-}
-
-int AmsBackendToolChanger::get_current_slot() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    // For tool changers, slot == tool
-    return system_info_.current_slot;
-}
-
-bool AmsBackendToolChanger::is_filament_loaded() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    // For tool changers, "loaded" means a tool is mounted
-    return system_info_.filament_loaded;
-}
+// get_current_action(), get_current_tool(), get_current_slot(), is_filament_loaded()
+// provided by AmsSubscriptionBackend
 
 // ============================================================================
 // Path Visualization
@@ -437,17 +329,7 @@ int AmsBackendToolChanger::find_slot_for_tool(const std::string& tool_name) cons
 // ============================================================================
 
 // NOTE: Must be called while holding mutex_ (accesses system_info_ without lock)
-AmsError AmsBackendToolChanger::check_preconditions() const {
-    if (!running_) {
-        return AmsErrorHelper::not_connected("Tool changer backend not started");
-    }
-
-    if (system_info_.is_busy()) {
-        return AmsErrorHelper::busy(ams_action_to_string(system_info_.action));
-    }
-
-    return AmsErrorHelper::success();
-}
+// check_preconditions() provided by AmsSubscriptionBackend
 
 // NOTE: Must be called while holding mutex_ (accesses system_info_ without lock)
 AmsError AmsBackendToolChanger::validate_slot_index(int slot_index) const {
@@ -461,29 +343,7 @@ AmsError AmsBackendToolChanger::validate_slot_index(int slot_index) const {
     return AmsErrorHelper::success();
 }
 
-AmsError AmsBackendToolChanger::execute_gcode(const std::string& gcode) {
-    if (!api_) {
-        return AmsErrorHelper::not_connected("MoonrakerAPI not available");
-    }
-
-    spdlog::info("[AMS ToolChanger] Executing G-code: {}", gcode);
-
-    // Execute G-code asynchronously via MoonrakerAPI
-    api_->execute_gcode(
-        gcode, []() { spdlog::debug("[AMS ToolChanger] G-code executed successfully"); },
-        [gcode](const MoonrakerError& err) {
-            if (err.type == MoonrakerErrorType::TIMEOUT) {
-                spdlog::warn(
-                    "[AMS ToolChanger] G-code response timed out (may still be running): {}",
-                    gcode);
-            } else {
-                spdlog::error("[AMS ToolChanger] G-code failed: {} - {}", gcode, err.message);
-            }
-        },
-        MoonrakerAPI::AMS_OPERATION_TIMEOUT_MS);
-
-    return AmsErrorHelper::success();
-}
+// execute_gcode() provided by AmsSubscriptionBackend
 
 AmsError AmsBackendToolChanger::load_filament(int slot_index) {
     // For tool changers, "load filament" means "mount tool"

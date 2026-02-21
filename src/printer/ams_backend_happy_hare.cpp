@@ -18,16 +18,10 @@ using namespace helix;
 // ============================================================================
 
 AmsBackendHappyHare::AmsBackendHappyHare(MoonrakerAPI* api, MoonrakerClient* client)
-    : api_(api), client_(client) {
+    : AmsSubscriptionBackend(api, client) {
     // Initialize system info with Happy Hare defaults
     system_info_.type = AmsType::HAPPY_HARE;
     system_info_.type_name = "Happy Hare";
-    system_info_.version = "unknown";
-    system_info_.current_tool = -1;
-    system_info_.current_slot = -1;
-    system_info_.filament_loaded = false;
-    system_info_.action = AmsAction::IDLE;
-    system_info_.total_slots = 0;
     system_info_.supports_endless_spool = true;
     system_info_.supports_tool_mapping = true;
     // Bypass support is determined at runtime from mmu.has_bypass status field.
@@ -35,118 +29,33 @@ AmsBackendHappyHare::AmsBackendHappyHare(MoonrakerAPI* api, MoonrakerClient* cli
     system_info_.supports_bypass = true;
     // Happy Hare bypass is always positional (selector moves to bypass position), never a sensor
     system_info_.has_hardware_bypass_sensor = false;
-    // Default to TIP_FORM — Happy Hare's default macro is _MMU_FORM_TIP.
+    // Default to TIP_FORM -- Happy Hare's default macro is _MMU_FORM_TIP.
     // Overridden by query_tip_method_from_config() once configfile response arrives.
     system_info_.tip_method = TipMethod::TIP_FORM;
 
     spdlog::debug("[AMS HappyHare] Backend created");
 }
 
-AmsBackendHappyHare::~AmsBackendHappyHare() {
-    // During static destruction (e.g., program exit), the mutex and client may be
-    // in an invalid state. Release the subscription guard WITHOUT trying to
-    // unsubscribe - the MoonrakerClient may already be destroyed.
-    subscription_.release();
-}
+// Destructor not needed -- base class handles subscription cleanup
 
 // ============================================================================
 // Lifecycle Management
 // ============================================================================
 
-AmsError AmsBackendHappyHare::start() {
-    bool should_emit = false;
-
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        if (running_) {
-            return AmsErrorHelper::success();
-        }
-
-        if (!client_) {
-            spdlog::error("[AMS HappyHare] Cannot start: MoonrakerClient is null");
-            return AmsErrorHelper::not_connected("MoonrakerClient not provided");
-        }
-
-        if (!api_) {
-            spdlog::error("[AMS HappyHare] Cannot start: MoonrakerAPI is null");
-            return AmsErrorHelper::not_connected("MoonrakerAPI not provided");
-        }
-
-        // Register for status update notifications from Moonraker
-        // The MMU state comes via notify_status_update when printer.mmu.* changes
-        SubscriptionId id = client_->register_notify_update(
-            [this](const nlohmann::json& notification) { handle_status_update(notification); });
-
-        if (id == INVALID_SUBSCRIPTION_ID) {
-            spdlog::error("[AMS HappyHare] Failed to register for status updates");
-            return AmsErrorHelper::not_connected("Failed to subscribe to Moonraker updates");
-        }
-
-        // RAII guard - automatically unsubscribes when backend is destroyed or stop() called
-        subscription_ = SubscriptionGuard(client_, id);
-
-        running_ = true;
-        spdlog::info("[AMS HappyHare] Backend started, subscription ID: {}", id);
-
-        should_emit = true;
-    } // Release lock before emitting
-
-    // Emit initial state event OUTSIDE the lock to avoid deadlock
-    if (should_emit) {
-        emit_event(EVENT_STATE_CHANGED);
-    }
-
+void AmsBackendHappyHare::on_started() {
     // Query configfile to determine tip method (cutter vs tip-forming).
     // Happy Hare determines this from form_tip_macro: if it contains "cut",
     // it's a cutter system; otherwise it's tip-forming or none.
     query_tip_method_from_config();
-
-    return AmsErrorHelper::success();
 }
 
-void AmsBackendHappyHare::stop() {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    if (!running_) {
-        return;
-    }
-
-    // RAII guard handles unsubscription automatically
-    subscription_.reset();
-
-    running_ = false;
-    spdlog::info("[AMS HappyHare] Backend stopped");
-}
-
-void AmsBackendHappyHare::release_subscriptions() {
-    subscription_.release();
-}
-
-bool AmsBackendHappyHare::is_running() const {
-    return running_;
-}
+// stop(), release_subscriptions(), is_running() provided by AmsSubscriptionBackend
 
 // ============================================================================
 // Event System
 // ============================================================================
 
-void AmsBackendHappyHare::set_event_callback(EventCallback callback) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    event_callback_ = std::move(callback);
-}
-
-void AmsBackendHappyHare::emit_event(const std::string& event, const std::string& data) {
-    EventCallback cb;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        cb = event_callback_;
-    }
-
-    if (cb) {
-        cb(event, data);
-    }
-}
+// set_event_callback() and emit_event() provided by AmsSubscriptionBackend
 
 // ============================================================================
 // State Queries
@@ -212,25 +121,8 @@ SlotInfo AmsBackendHappyHare::get_slot_info(int slot_index) const {
     return empty;
 }
 
-AmsAction AmsBackendHappyHare::get_current_action() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return system_info_.action;
-}
-
-int AmsBackendHappyHare::get_current_tool() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return system_info_.current_tool;
-}
-
-int AmsBackendHappyHare::get_current_slot() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return system_info_.current_slot;
-}
-
-bool AmsBackendHappyHare::is_filament_loaded() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return system_info_.filament_loaded;
-}
+// get_current_action(), get_current_tool(), get_current_slot(), is_filament_loaded()
+// provided by AmsSubscriptionBackend
 
 PathTopology AmsBackendHappyHare::get_topology() const {
     // Happy Hare uses a linear selector topology (ERCF-style)
@@ -717,17 +609,7 @@ void AmsBackendHappyHare::query_tip_method_from_config() {
 // Filament Operations
 // ============================================================================
 
-AmsError AmsBackendHappyHare::check_preconditions() const {
-    if (!running_) {
-        return AmsErrorHelper::not_connected("Happy Hare backend not started");
-    }
-
-    if (system_info_.is_busy()) {
-        return AmsErrorHelper::busy(ams_action_to_string(system_info_.action));
-    }
-
-    return AmsErrorHelper::success();
-}
+// check_preconditions() provided by AmsSubscriptionBackend
 
 AmsError AmsBackendHappyHare::validate_slot_index(int gate_index) const {
     if (!slots_.is_valid_index(gate_index)) {
@@ -737,29 +619,7 @@ AmsError AmsBackendHappyHare::validate_slot_index(int gate_index) const {
     return AmsErrorHelper::success();
 }
 
-AmsError AmsBackendHappyHare::execute_gcode(const std::string& gcode) {
-    if (!api_) {
-        return AmsErrorHelper::not_connected("MoonrakerAPI not available");
-    }
-
-    spdlog::info("[AMS HappyHare] Executing G-code: {}", gcode);
-
-    // Execute G-code asynchronously via MoonrakerAPI
-    // Errors will be reported via Moonraker's notify_gcode_response
-    api_->execute_gcode(
-        gcode, []() { spdlog::debug("[AMS HappyHare] G-code executed successfully"); },
-        [gcode](const MoonrakerError& err) {
-            if (err.type == MoonrakerErrorType::TIMEOUT) {
-                spdlog::warn("[AMS HappyHare] G-code response timed out (may still be running): {}",
-                             gcode);
-            } else {
-                spdlog::error("[AMS HappyHare] G-code failed: {} - {}", gcode, err.message);
-            }
-        },
-        MoonrakerAPI::AMS_OPERATION_TIMEOUT_MS);
-
-    return AmsErrorHelper::success();
-}
+// execute_gcode() provided by AmsSubscriptionBackend
 
 AmsError AmsBackendHappyHare::load_filament(int slot_index) {
     {
