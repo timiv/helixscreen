@@ -232,10 +232,11 @@ deploy_platform_hooks() {
 
     # Try without sudo first: during self-update INSTALL_DIR is pi-owned so no root
     # is needed.  Fall back to sudo for fresh installs where the directory may be
-    # root-owned or not yet created.
-    mkdir -p "${install_dir}/platform" 2>/dev/null || $SUDO mkdir -p "${install_dir}/platform"
-    cp "$hooks_src" "${install_dir}/platform/hooks.sh" 2>/dev/null || $SUDO cp "$hooks_src" "${install_dir}/platform/hooks.sh"
-    chmod +x "${install_dir}/platform/hooks.sh" 2>/dev/null || $SUDO chmod +x "${install_dir}/platform/hooks.sh"
+    # root-owned or not yet created.  Under NoNewPrivileges sudo is blocked, so
+    # the sudo fallbacks must be silent and non-fatal.
+    mkdir -p "${install_dir}/platform" 2>/dev/null || $SUDO mkdir -p "${install_dir}/platform" 2>/dev/null || true
+    cp "$hooks_src" "${install_dir}/platform/hooks.sh" 2>/dev/null || $SUDO cp "$hooks_src" "${install_dir}/platform/hooks.sh" 2>/dev/null || true
+    chmod +x "${install_dir}/platform/hooks.sh" 2>/dev/null || $SUDO chmod +x "${install_dir}/platform/hooks.sh" 2>/dev/null || true
     log_info "Deployed platform hooks: $platform"
 }
 
@@ -259,7 +260,11 @@ fix_install_ownership() {
 # Stop service for update
 stop_service() {
     if [ "$INIT_SYSTEM" = "systemd" ]; then
-        if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+        # Under NoNewPrivileges (self-update), sudo is blocked.  The service will be
+        # restarted by the watchdog after exit(0) — stopping it here isn't needed.
+        if _has_no_new_privs; then
+            log_info "Skipping service stop (NoNewPrivileges; restart via watchdog)"
+        elif systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
             log_info "Stopping existing HelixScreen service (systemd)..."
             $SUDO systemctl stop "$SERVICE_NAME" || true
         fi
