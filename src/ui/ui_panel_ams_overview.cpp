@@ -22,10 +22,10 @@
 #include "ams_state.h"
 #include "ams_types.h"
 #include "app_globals.h"
+#include "display_settings_manager.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "observer_factory.h"
 #include "printer_detector.h"
-#include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
 #include "ui/ams_drawing_utils.h"
@@ -303,7 +303,7 @@ void AmsOverviewPanel::create_unit_cards(const AmsSystemInfo& info) {
         lv_obj_set_style_translate_y(uc.error_badge, 4, LV_PART_MAIN);
 
         {
-            bool animate = SettingsManager::instance().get_animations_enabled();
+            bool animate = DisplaySettingsManager::instance().get_animations_enabled();
             auto worst = ams_draw::worst_unit_severity(unit);
             ams_draw::update_error_badge(uc.error_badge, unit.has_any_error(), worst, animate);
         }
@@ -337,7 +337,7 @@ void AmsOverviewPanel::update_unit_card(UnitCard& card, const AmsUnit& unit, int
 
     // Update error badge visibility and color
     if (card.error_badge) {
-        bool animate = SettingsManager::instance().get_animations_enabled();
+        bool animate = DisplaySettingsManager::instance().get_animations_enabled();
         auto worst = ams_draw::worst_unit_severity(unit);
         ams_draw::update_error_badge(card.error_badge, unit.has_any_error(), worst, animate);
     }
@@ -639,7 +639,7 @@ void AmsOverviewPanel::show_unit_detail(int unit_index) {
     lv_obj_remove_flag(detail_container_, LV_OBJ_FLAG_HIDDEN);
 
     // Zoom-in animation (scale + fade) — gated on animations setting
-    if (SettingsManager::instance().get_animations_enabled()) {
+    if (DisplaySettingsManager::instance().get_animations_enabled()) {
         // Set transform pivot to the clicked card's center relative to detail container
         lv_obj_update_layout(detail_container_);
         lv_area_t detail_coords;
@@ -699,7 +699,7 @@ void AmsOverviewPanel::show_overview() {
 
     detail_unit_index_ = -1;
 
-    if (SettingsManager::instance().get_animations_enabled()) {
+    if (DisplaySettingsManager::instance().get_animations_enabled()) {
         // Zoom-out animation: scale down + fade out, then swap visibility
         // Transform pivot is still set from the zoom-in (card center position)
         lv_anim_t scale_anim;

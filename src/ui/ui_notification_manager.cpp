@@ -6,7 +6,7 @@
 #include "ui_panel_notification_history.h"
 #include "ui_utils.h"
 
-#include "settings_manager.h"
+#include "display_settings_manager.h"
 #include "static_panel_registry.h"
 
 #include <spdlog/spdlog.h>
@@ -190,7 +190,7 @@ void NotificationManager::update_notification_count(size_t count) {
 
 void NotificationManager::animate_notification_badge() {
     // Skip animation if disabled
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         spdlog::debug("[NotificationManager] Animations disabled - skipping badge pulse");
         return;
     }

@@ -24,6 +24,7 @@
 #include "app_globals.h"
 #include "config.h"
 #include "display_manager.h"
+#include "display_settings_manager.h"
 #include "filament_sensor_manager.h"
 #include "format_utils.h"
 #include "injection_point_manager.h"
@@ -34,7 +35,6 @@
 #include "preprint_predictor.h"
 #include "printer_state.h"
 #include "runtime_config.h"
-#include "settings_manager.h"
 #include "standard_macros.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
@@ -417,7 +417,7 @@ lv_obj_t* PrintStatusPanel::create(lv_obj_t* parent) {
                           ui_gcode_viewer_is_using_2d_mode(gcode_viewer_) ? "2D" : "3D");
         } else {
             // No cmdline or env var - apply saved settings
-            int render_mode_val = SettingsManager::instance().get_gcode_render_mode();
+            int render_mode_val = DisplaySettingsManager::instance().get_gcode_render_mode();
             auto render_mode = static_cast<GcodeViewerRenderMode>(render_mode_val);
             ui_gcode_viewer_set_render_mode(gcode_viewer_, render_mode);
             spdlog::debug("[{}]   ✓ Set G-code render mode: {} (settings)", get_name(),
@@ -1207,7 +1207,7 @@ void PrintStatusPanel::on_print_progress_changed(int progress) {
     // This complements the subject binding with animated transitions
     if (progress_bar_) {
         lv_anim_enable_t anim_enable =
-            SettingsManager::instance().get_animations_enabled() ? LV_ANIM_ON : LV_ANIM_OFF;
+            DisplaySettingsManager::instance().get_animations_enabled() ? LV_ANIM_ON : LV_ANIM_OFF;
         lv_bar_set_value(progress_bar_, current_progress_, anim_enable);
     }
 
@@ -1653,7 +1653,7 @@ void PrintStatusPanel::on_print_start_progress_changed(int progress) {
     // Animate bar for smooth visual feedback
     if (preparing_progress_bar_) {
         lv_anim_enable_t anim_enable =
-            SettingsManager::instance().get_animations_enabled() ? LV_ANIM_ON : LV_ANIM_OFF;
+            DisplaySettingsManager::instance().get_animations_enabled() ? LV_ANIM_ON : LV_ANIM_OFF;
         lv_bar_set_value(preparing_progress_bar_, progress, anim_enable);
     }
     spdlog::trace("[{}] Print start progress: {}%", get_name(), progress);
@@ -1792,7 +1792,7 @@ void PrintStatusPanel::animate_badge_pop_in(lv_obj_t* badge, const char* label) 
     constexpr int32_t SCALE_FINAL = 256; // 100% scale
 
     // Skip animation if disabled - show badge in final state
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_set_style_transform_scale(badge, SCALE_FINAL, LV_PART_MAIN);
         lv_obj_set_style_opa(badge, LV_OPA_COVER, LV_PART_MAIN);
         spdlog::debug("[{}] Animations disabled - showing {} badge instantly", get_name(), label);

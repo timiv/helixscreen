@@ -9,6 +9,7 @@
 #include "ui_widget_memory.h"
 
 #include "ams_types.h"
+#include "display_settings_manager.h"
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "lvgl/src/xml/lv_xml_parser.h"
@@ -16,7 +17,6 @@
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
 #include "nozzle_renderer_bambu.h"
 #include "nozzle_renderer_faceted.h"
-#include "settings_manager.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -283,7 +283,7 @@ static void start_segment_animation(lv_obj_t* obj, FilamentPathData* data, int f
     data->anim_progress = 0;
 
     // Skip animation if disabled - jump to final state
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         data->anim_progress = 100;
         data->segment_anim_active = false;
         data->anim_direction = AnimDirection::NONE;
@@ -359,7 +359,7 @@ static void start_error_pulse(lv_obj_t* obj, FilamentPathData* data) {
     data->error_pulse_opa = ERROR_PULSE_OPA_MAX;
 
     // Skip animation if disabled - just show static error state
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_invalidate(obj);
         spdlog::trace("[FilamentPath] Animations disabled - showing static error state");
         return;
@@ -416,7 +416,7 @@ static void start_heat_pulse(lv_obj_t* obj, FilamentPathData* data) {
     data->heat_pulse_opa = HEAT_PULSE_OPA_MAX;
 
     // Skip animation if disabled - just show static heat state
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_invalidate(obj);
         spdlog::trace("[FilamentPath] Animations disabled - showing static heat state");
         return;
@@ -463,7 +463,7 @@ static void heat_pulse_anim_cb(void* var, int32_t value) {
 static void start_flow_animation(lv_obj_t* obj, FilamentPathData* data) {
     if (!obj || !data || data->flow_anim_active)
         return;
-    if (!SettingsManager::instance().get_animations_enabled())
+    if (!DisplaySettingsManager::instance().get_animations_enabled())
         return;
 
     data->flow_anim_active = true;

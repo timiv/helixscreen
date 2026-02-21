@@ -11,9 +11,9 @@
 #include "ui_nav_manager.h"
 #include "ui_toast_manager.h"
 
+#include "display_settings_manager.h"
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "lvgl/src/xml/lv_xml.h"
-#include "settings_manager.h"
 #include "theme_loader.h"
 #include "theme_manager.h"
 
@@ -160,7 +160,7 @@ void ThemeEditorOverlay::on_activate() {
 
     // Load the current theme for editing
     // (Theme selection happens in the preview overlay's dropdown, not here)
-    std::string theme_name = SettingsManager::instance().get_theme_name();
+    std::string theme_name = DisplaySettingsManager::instance().get_theme_name();
     load_theme(theme_name);
 
     spdlog::debug("[{}] Activated", get_name());
@@ -558,7 +558,7 @@ void ThemeEditorOverlay::handle_save_clicked() {
         original_theme_ = editing_theme_;
 
         // Persist as active theme and apply live (no restart needed)
-        SettingsManager::instance().set_theme_name(editing_theme_.filename);
+        DisplaySettingsManager::instance().set_theme_name(editing_theme_.filename);
         theme_manager_apply_theme(editing_theme_, theme_manager_is_dark_mode());
 
         spdlog::info("[{}] Theme '{}' saved and applied live", get_name(), editing_theme_.name);
@@ -844,7 +844,7 @@ void ThemeEditorOverlay::handle_save_as_confirm() {
     }
 
     // Update config to use new theme
-    SettingsManager::instance().set_theme_name(unique_filename);
+    DisplaySettingsManager::instance().set_theme_name(unique_filename);
 
     // Clear dirty state
     clear_dirty();
@@ -889,15 +889,15 @@ void ThemeEditorOverlay::init_theme_preset_dropdown() {
 
     if (theme_preset_dropdown) {
         // Set dropdown options from discovered theme files
-        std::string options = SettingsManager::instance().get_theme_options();
+        std::string options = DisplaySettingsManager::instance().get_theme_options();
         lv_dropdown_set_options(theme_preset_dropdown, options.c_str());
 
         // Set initial selection based on current theme
-        int current_index = SettingsManager::instance().get_theme_index();
+        int current_index = DisplaySettingsManager::instance().get_theme_index();
         lv_dropdown_set_selected(theme_preset_dropdown, static_cast<uint32_t>(current_index));
 
         spdlog::debug("[{}] Theme dropdown initialized to index {} ({})", get_name(), current_index,
-                      SettingsManager::instance().get_theme_name());
+                      DisplaySettingsManager::instance().get_theme_name());
     } else {
         spdlog::warn("[{}] Could not find theme preset dropdown", get_name());
     }
@@ -905,8 +905,8 @@ void ThemeEditorOverlay::init_theme_preset_dropdown() {
 
 void ThemeEditorOverlay::handle_theme_preset_changed(int index) {
     // Get theme filename from index
-    SettingsManager::instance().set_theme_by_index(index);
-    std::string theme_name = SettingsManager::instance().get_theme_name();
+    DisplaySettingsManager::instance().set_theme_by_index(index);
+    std::string theme_name = DisplaySettingsManager::instance().get_theme_name();
 
     // Load the selected theme into the editor
     load_theme(theme_name);

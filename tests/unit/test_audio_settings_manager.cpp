@@ -4,7 +4,6 @@
 #include "../lvgl_test_fixture.h"
 #include "audio_settings_manager.h"
 #include "config.h"
-#include "settings_manager.h"
 
 #include "../catch_amalgamated.hpp"
 
@@ -136,23 +135,5 @@ TEST_CASE_METHOD(LVGLTestFixture, "AudioSettingsManager completion alert options
     REQUIRE(std::string(options) == "Off\nNotification\nAlert");
 }
 
-TEST_CASE_METHOD(LVGLTestFixture, "AudioSettingsManager backward compat via SettingsManager",
-                 "[audio_settings]") {
-    Config::get_instance();
-    SettingsManager::instance().init_subjects();
-
-    SECTION("SettingsManager delegates sounds_enabled to AudioSettingsManager") {
-        SettingsManager::instance().set_sounds_enabled(true);
-        REQUIRE(AudioSettingsManager::instance().get_sounds_enabled() == true);
-
-        AudioSettingsManager::instance().set_sounds_enabled(false);
-        REQUIRE(SettingsManager::instance().get_sounds_enabled() == false);
-    }
-
-    SECTION("SettingsManager delegates volume to AudioSettingsManager") {
-        SettingsManager::instance().set_volume(77);
-        REQUIRE(AudioSettingsManager::instance().get_volume() == 77);
-    }
-
-    AudioSettingsManager::instance().deinit_subjects();
-}
+// Backward compat test removed: forwarding wrappers in SettingsManager have been eliminated.
+// All consumers now use AudioSettingsManager directly.

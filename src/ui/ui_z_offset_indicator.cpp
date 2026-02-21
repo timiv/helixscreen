@@ -5,13 +5,13 @@
 
 #include "ui_update_queue.h"
 
+#include "display_settings_manager.h"
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml_parser.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
 #include "nozzle_renderer_bambu.h"
 #include "nozzle_renderer_faceted.h"
-#include "settings_manager.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -385,7 +385,7 @@ void ui_z_offset_indicator_set_value(lv_obj_t* obj, int microns) {
     // Stop any existing position animation
     lv_anim_delete(obj, position_anim_cb);
 
-    if (SettingsManager::instance().get_animations_enabled()) {
+    if (DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_anim_t anim;
         lv_anim_init(&anim);
         lv_anim_set_var(&anim, obj);
@@ -416,7 +416,7 @@ void ui_z_offset_indicator_flash_direction(lv_obj_t* obj, int direction) {
     lv_anim_delete(obj, arrow_progress_anim_cb);
     lv_anim_delete(obj, arrow_opacity_anim_cb);
 
-    if (SettingsManager::instance().get_animations_enabled()) {
+    if (DisplaySettingsManager::instance().get_animations_enabled()) {
         // Phase 1: draw-in (base to tip)
         data->arrow_opacity = 255;
         data->arrow_progress = 0;

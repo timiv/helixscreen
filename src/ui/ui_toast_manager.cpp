@@ -8,7 +8,7 @@
 #include "ui_update_queue.h"
 #include "ui_utils.h"
 
-#include "settings_manager.h"
+#include "display_settings_manager.h"
 #include "sound_manager.h"
 #include "static_subject_registry.h"
 
@@ -103,7 +103,7 @@ static NotificationStatus severity_to_notification_status(ToastSeverity severity
 
 void ToastManager::animate_entrance(lv_obj_t* toast) {
     // Skip animation if disabled - just show toast in final state
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_set_style_translate_y(toast, 0, LV_PART_MAIN);
         lv_obj_set_style_opa(toast, LV_OPA_COVER, LV_PART_MAIN);
         spdlog::debug("[ToastManager] Animations disabled - showing toast instantly");
@@ -144,7 +144,7 @@ void ToastManager::animate_entrance(lv_obj_t* toast) {
 
 void ToastManager::animate_exit(lv_obj_t* toast) {
     // Skip animation if disabled - directly clean up
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         // Directly delete the toast - no animation
         if (toast && active_toast_ == toast) {
             helix::ui::safe_delete(active_toast_);

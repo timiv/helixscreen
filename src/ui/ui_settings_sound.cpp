@@ -11,8 +11,8 @@
 #include "ui_event_safety.h"
 #include "ui_nav_manager.h"
 
+#include "audio_settings_manager.h"
 #include "format_utils.h"
-#include "settings_manager.h"
 #include "sound_manager.h"
 #include "static_panel_registry.h"
 
@@ -163,7 +163,7 @@ void SoundSettingsOverlay::init_sounds_toggle() {
     if (sounds_row) {
         lv_obj_t* toggle = lv_obj_find_by_name(sounds_row, "toggle");
         if (toggle) {
-            if (SettingsManager::instance().get_sounds_enabled()) {
+            if (AudioSettingsManager::instance().get_sounds_enabled()) {
                 lv_obj_add_state(toggle, LV_STATE_CHECKED);
             } else {
                 lv_obj_remove_state(toggle, LV_STATE_CHECKED);
@@ -183,7 +183,7 @@ void SoundSettingsOverlay::init_volume_slider() {
 
     lv_obj_t* slider = lv_obj_find_by_name(volume_row, "slider");
     if (slider) {
-        int volume = SettingsManager::instance().get_volume();
+        int volume = AudioSettingsManager::instance().get_volume();
         lv_slider_set_value(slider, volume, LV_ANIM_OFF);
 
         // Update volume value label
@@ -214,7 +214,7 @@ void SoundSettingsOverlay::init_sound_theme_dropdown() {
 
     lv_obj_t* dropdown = lv_obj_find_by_name(theme_row, "dropdown");
     if (dropdown) {
-        auto& settings = SettingsManager::instance();
+        auto& settings = AudioSettingsManager::instance();
         auto themes = SoundManager::instance().get_available_themes();
         std::string current_theme = settings.get_sound_theme();
 
@@ -245,7 +245,7 @@ void SoundSettingsOverlay::init_sound_theme_dropdown() {
 
 void SoundSettingsOverlay::handle_sounds_changed(bool enabled) {
     spdlog::info("[{}] Sounds toggled: {}", get_name(), enabled ? "ON" : "OFF");
-    SettingsManager::instance().set_sounds_enabled(enabled);
+    AudioSettingsManager::instance().set_sounds_enabled(enabled);
 
     // Play test beep when enabling sounds
     if (enabled) {
@@ -255,11 +255,11 @@ void SoundSettingsOverlay::handle_sounds_changed(bool enabled) {
 
 void SoundSettingsOverlay::handle_ui_sounds_changed(bool enabled) {
     spdlog::info("[{}] UI Sounds toggled: {}", get_name(), enabled ? "ON" : "OFF");
-    SettingsManager::instance().set_ui_sounds_enabled(enabled);
+    AudioSettingsManager::instance().set_ui_sounds_enabled(enabled);
 }
 
 void SoundSettingsOverlay::handle_volume_changed(int value) {
-    SettingsManager::instance().set_volume(value);
+    AudioSettingsManager::instance().set_volume(value);
 
     // Update value label subject
     helix::format::format_percent(value, volume_value_buf_, sizeof(volume_value_buf_));
@@ -282,7 +282,7 @@ void SoundSettingsOverlay::handle_sound_theme_changed(int index) {
     if (index >= 0 && index < static_cast<int>(themes.size())) {
         const auto& theme_name = themes[index];
         spdlog::info("[{}] Sound theme changed: {} (index {})", get_name(), theme_name, index);
-        SettingsManager::instance().set_sound_theme(theme_name);
+        AudioSettingsManager::instance().set_sound_theme(theme_name);
         SoundManager::instance().set_theme(theme_name);
         SoundManager::instance().play("test_beep");
     } else {

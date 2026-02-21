@@ -29,6 +29,7 @@
 #include "app_globals.h"
 #include "config.h"
 #include "display_manager.h"
+#include "display_settings_manager.h"
 #include "format_utils.h"
 #include "gcode_parser.h" // For extract_thumbnails_from_content (USB thumbnail fallback)
 #include "lvgl/src/xml/lv_xml.h"
@@ -39,7 +40,6 @@
 #include "print_start_analyzer.h"
 #include "printer_state.h"
 #include "runtime_config.h"
-#include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
 #include "thumbnail_cache.h"
@@ -1702,7 +1702,7 @@ void PrintSelectPanel::animate_view_entrance(lv_obj_t* container) {
         return;
 
     // Skip animation if disabled - show container in final state
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_set_style_opa(container, LV_OPA_COVER, LV_PART_MAIN);
         spdlog::debug("[{}] Animations disabled - showing view instantly", get_name());
         return;
@@ -1866,7 +1866,7 @@ void PrintSelectPanel::update_sort_indicators() {
     constexpr int32_t FADE_DURATION_MS = 200;
 
     // Check if animations are enabled
-    bool animations_enabled = SettingsManager::instance().get_animations_enabled();
+    bool animations_enabled = DisplaySettingsManager::instance().get_animations_enabled();
 
     // Helper lambda for animated show/hide with crossfade
     auto animate_icon_visibility = [animations_enabled](lv_obj_t* icon, bool show) {

@@ -10,15 +10,16 @@
 #include "config.h"
 #include "display_backend.h"
 #include "display_manager.h"
+#include "display_settings_manager.h"
 #include "hv/requests.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
 #include "moonraker_types.h"
 #include "platform_capabilities.h"
 #include "printer_state.h"
-#include "settings_manager.h"
 #include "system/crash_handler.h"
 #include "system/update_checker.h"
+#include "system_settings_manager.h"
 #include "version.h"
 
 #include <spdlog/spdlog.h>
@@ -802,8 +803,8 @@ nlohmann::json TelemetryManager::build_session_event() const {
     }
 
     // Theme and language (always available, don't depend on DisplayManager)
-    app["theme"] = SettingsManager::instance().get_dark_mode() ? "dark" : "light";
-    app["locale"] = SettingsManager::instance().get_language();
+    app["theme"] = DisplaySettingsManager::instance().get_dark_mode() ? "dark" : "light";
+    app["locale"] = SystemSettingsManager::instance().get_language();
 
     event["app"] = app;
 

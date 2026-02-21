@@ -11,13 +11,13 @@
 #include "ams_state.h"
 #include "ams_types.h"
 #include "config.h"
+#include "display_settings_manager.h"
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "lvgl/src/xml/lv_xml_parser.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
 #include "observer_factory.h"
-#include "settings_manager.h"
 #include "static_subject_registry.h"
 #include "theme_manager.h"
 #include "ui/ams_drawing_utils.h"
@@ -403,7 +403,7 @@ static void evaluate_pulse_state(AmsSlotData* data) {
     bool should_pulse = is_active_operation && (is_current || is_target);
 
     if (should_pulse && !data->is_pulsing) {
-        if (!SettingsManager::instance().get_animations_enabled()) {
+        if (!DisplaySettingsManager::instance().get_animations_enabled()) {
             return; // Static highlight will handle it
         }
         ui_ams_slot_set_pulsing(data->container, true);
@@ -469,7 +469,7 @@ static void apply_slot_error(AmsSlotData* data, const SlotInfo& slot) {
         lv_obj_remove_flag(data->error_indicator, LV_OBJ_FLAG_HIDDEN);
 
         // Start pulsating animation if animations are enabled
-        if (SettingsManager::instance().get_animations_enabled()) {
+        if (DisplaySettingsManager::instance().get_animations_enabled()) {
             ams_draw::start_pulse(data->error_indicator, badge_color);
         } else {
             ams_draw::stop_pulse(data->error_indicator);

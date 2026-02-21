@@ -25,12 +25,12 @@
 #include "ui_update_queue.h"
 
 #include "app_globals.h"
+#include "display_settings_manager.h"
 #include "format_utils.h"
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
 #include "observer_factory.h"
 #include "printer_detector.h"
-#include "settings_manager.h"
 #include "static_panel_registry.h"
 
 #include <spdlog/spdlog.h>
@@ -272,14 +272,14 @@ lv_obj_t* BedMeshPanel::create(lv_obj_t* parent) {
     }
 
     // Apply saved render mode preference from settings
-    int saved_mode = SettingsManager::instance().get_bed_mesh_render_mode();
+    int saved_mode = DisplaySettingsManager::instance().get_bed_mesh_render_mode();
     auto render_mode = static_cast<BedMeshRenderMode>(saved_mode);
     ui_bed_mesh_set_render_mode(canvas_, render_mode);
     spdlog::debug("[{}] Render mode set from settings: {} ({})", get_name(), saved_mode,
                   saved_mode == 0 ? "Auto" : (saved_mode == 1 ? "3D" : "2D"));
 
     // Apply zero plane visibility from settings
-    bool show_zero_plane = SettingsManager::instance().get_bed_mesh_show_zero_plane();
+    bool show_zero_plane = DisplaySettingsManager::instance().get_bed_mesh_show_zero_plane();
     ui_bed_mesh_set_zero_plane_visible(canvas_, show_zero_plane);
     spdlog::debug("[{}] Zero plane visibility set from settings: {}", get_name(), show_zero_plane);
 

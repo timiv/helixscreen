@@ -10,11 +10,11 @@
 #include "ui_update_queue.h"
 
 #include "app_globals.h"
+#include "display_settings_manager.h"
 #include "moonraker_client.h" // For ConnectionState enum
 #include "observer_factory.h"
 #include "overlay_base.h"
 #include "printer_state.h" // For KlippyState enum
-#include "settings_manager.h"
 #include "sound_manager.h"
 #include "static_subject_registry.h"
 #include "theme_manager.h"
@@ -176,7 +176,7 @@ void NavigationManager::overlay_animate_slide_in(lv_obj_t* panel) {
     }
 
     // Skip animation if disabled - show panel in final state
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_set_style_translate_x(panel, 0, LV_PART_MAIN);
         lv_obj_set_style_opa(panel, LV_OPA_COVER, LV_PART_MAIN);
         spdlog::trace("[NavigationManager] Animations disabled - showing overlay instantly");
@@ -221,7 +221,7 @@ void NavigationManager::overlay_animate_slide_out(lv_obj_t* panel) {
     lv_obj_add_flag(panel, LV_OBJ_FLAG_EVENT_BUBBLE);
 
     // Skip animation if disabled - hide panel immediately and invoke callback
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_add_flag(panel, LV_OBJ_FLAG_HIDDEN);
         // Reset all transform and opacity properties for potential reuse
         lv_obj_set_style_translate_x(panel, 0, LV_PART_MAIN);
@@ -296,7 +296,7 @@ void NavigationManager::overlay_animate_slide_out(lv_obj_t* panel) {
 
 void NavigationManager::overlay_animate_zoom_in(lv_obj_t* panel, lv_area_t source_rect) {
     // Skip animation if disabled
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_set_style_translate_x(panel, 0, LV_PART_MAIN);
         lv_obj_set_style_translate_y(panel, 0, LV_PART_MAIN);
         lv_obj_set_style_transform_scale(panel, 256, LV_PART_MAIN);
@@ -412,7 +412,7 @@ void NavigationManager::overlay_animate_zoom_out(lv_obj_t* panel, lv_area_t sour
     lv_obj_add_flag(panel, LV_OBJ_FLAG_EVENT_BUBBLE);
 
     // Skip animation if disabled
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_add_flag(panel, LV_OBJ_FLAG_HIDDEN);
         lv_obj_set_style_translate_x(panel, 0, LV_PART_MAIN);
         lv_obj_set_style_translate_y(panel, 0, LV_PART_MAIN);

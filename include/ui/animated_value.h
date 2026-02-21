@@ -10,7 +10,7 @@
  * Key features:
  * - Retarget pattern: mid-animation value changes chase the new target
  * - Threshold skipping: ignores tiny changes to prevent jitter
- * - Animation toggle: respects SettingsManager::get_animations_enabled()
+ * - Animation toggle: respects DisplaySettingsManager::get_animations_enabled()
  * - RAII cleanup: automatically stops animation on destruction
  *
  * @pattern Observer + Animation - Subjects update DATA, animations update DISPLAY
@@ -37,8 +37,8 @@
 
 #include "ui_observer_guard.h"
 
+#include "display_settings_manager.h"
 #include "lvgl/lvgl.h"
-#include "settings_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -225,7 +225,7 @@ template <typename T> class AnimatedValue {
         target_value_ = new_value;
 
         // Check if animations are enabled
-        if (!SettingsManager::instance().get_animations_enabled()) {
+        if (!DisplaySettingsManager::instance().get_animations_enabled()) {
             // Instant update
             spdlog::trace("[AnimatedValue] Animations disabled, instant update");
             stop_animation();

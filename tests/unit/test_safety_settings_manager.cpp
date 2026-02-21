@@ -4,7 +4,6 @@
 #include "../lvgl_test_fixture.h"
 #include "config.h"
 #include "safety_settings_manager.h"
-#include "settings_manager.h"
 
 #include "../catch_amalgamated.hpp"
 
@@ -122,28 +121,5 @@ TEST_CASE_METHOD(LVGLTestFixture, "SafetySettingsManager subject values match ge
     SafetySettingsManager::instance().deinit_subjects();
 }
 
-TEST_CASE_METHOD(LVGLTestFixture, "SafetySettingsManager backward compat via SettingsManager",
-                 "[safety_settings]") {
-    Config::get_instance();
-    SettingsManager::instance().init_subjects();
-
-    SECTION("SettingsManager delegates estop to SafetySettingsManager") {
-        SettingsManager::instance().set_estop_require_confirmation(true);
-        REQUIRE(SafetySettingsManager::instance().get_estop_require_confirmation() == true);
-
-        SafetySettingsManager::instance().set_estop_require_confirmation(false);
-        REQUIRE(SettingsManager::instance().get_estop_require_confirmation() == false);
-    }
-
-    SECTION("SettingsManager delegates cancel_escalation to SafetySettingsManager") {
-        SettingsManager::instance().set_cancel_escalation_enabled(true);
-        REQUIRE(SafetySettingsManager::instance().get_cancel_escalation_enabled() == true);
-    }
-
-    SECTION("SettingsManager delegates timeout to SafetySettingsManager") {
-        SettingsManager::instance().set_cancel_escalation_timeout_seconds(60);
-        REQUIRE(SafetySettingsManager::instance().get_cancel_escalation_timeout_seconds() == 60);
-    }
-
-    SafetySettingsManager::instance().deinit_subjects();
-}
+// Backward compat test removed: forwarding wrappers in SettingsManager have been eliminated.
+// All consumers now use SafetySettingsManager directly.

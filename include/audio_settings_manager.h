@@ -11,7 +11,7 @@
 namespace helix {
 
 /** @brief Print completion notification mode (Off=0, Notification=1, Alert=2) */
-enum class CompletionAlertMode;
+enum class CompletionAlertMode { OFF = 0, NOTIFICATION = 1, ALERT = 2 };
 
 /**
  * @brief Domain-specific manager for audio/sound settings

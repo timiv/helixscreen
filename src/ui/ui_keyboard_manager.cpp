@@ -9,8 +9,8 @@
 #include "ui_utils.h"
 
 #include "config.h"
+#include "display_settings_manager.h"
 #include "keyboard_layout_provider.h"
-#include "settings_manager.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -845,7 +845,7 @@ void KeyboardManager::show(lv_obj_t* textarea) {
     lv_obj_update_layout(screen);
 
     // Animate keyboard sliding up from bottom
-    if (SettingsManager::instance().get_animations_enabled()) {
+    if (DisplaySettingsManager::instance().get_animations_enabled()) {
         int32_t keyboard_height = lv_obj_get_height(keyboard_);
         lv_obj_set_style_translate_y(keyboard_, keyboard_height, LV_PART_MAIN);
 
@@ -883,7 +883,7 @@ void KeyboardManager::show(lv_obj_t* textarea) {
         spdlog::debug("[KeyboardManager] Shifting screen UP by {} px", shift_up);
 
         uint32_t child_count = lv_obj_get_child_count(screen);
-        bool animations_enabled = SettingsManager::instance().get_animations_enabled();
+        bool animations_enabled = DisplaySettingsManager::instance().get_animations_enabled();
 
         for (uint32_t i = 0; i < child_count; i++) {
             lv_obj_t* child = lv_obj_get_child(screen, static_cast<int32_t>(i));
@@ -938,7 +938,7 @@ void KeyboardManager::hide() {
     lv_keyboard_set_textarea(keyboard_, nullptr);
 
     // Animate keyboard sliding down (or hide instantly if animations disabled)
-    if (SettingsManager::instance().get_animations_enabled()) {
+    if (DisplaySettingsManager::instance().get_animations_enabled()) {
         int32_t keyboard_height = lv_obj_get_height(keyboard_);
 
         lv_anim_t slide_anim;
@@ -961,7 +961,7 @@ void KeyboardManager::hide() {
     }
 
     uint32_t child_count = lv_obj_get_child_count(screen);
-    bool animations_enabled = SettingsManager::instance().get_animations_enabled();
+    bool animations_enabled = DisplaySettingsManager::instance().get_animations_enabled();
 
     spdlog::debug("[KeyboardManager] Restoring screen children to y=0");
 

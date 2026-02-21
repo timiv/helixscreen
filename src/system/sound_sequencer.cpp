@@ -3,7 +3,7 @@
 
 #include "sound_sequencer.h"
 
-#include "settings_manager.h"
+#include "audio_settings_manager.h"
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
@@ -201,7 +201,7 @@ void SoundSequencer::tick(float dt_ms) {
     }
 
     // Apply master volume attenuation
-    float volume = SettingsManager::instance().get_volume() / 100.0f;
+    float volume = AudioSettingsManager::instance().get_volume() / 100.0f;
     amplitude *= volume;
 
     // Clamp outputs

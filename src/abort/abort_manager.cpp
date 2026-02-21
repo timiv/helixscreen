@@ -7,7 +7,7 @@
 
 #include "moonraker_api.h"
 #include "printer_state.h"
-#include "settings_manager.h"
+#include "safety_settings_manager.h"
 #include "static_panel_registry.h"
 
 #include <spdlog/spdlog.h>
@@ -297,11 +297,11 @@ void AbortManager::send_cancel_print() {
     commands_sent_++;
 
     // Start timeout timer — only if escalation is enabled
-    bool escalation_enabled = SettingsManager::instance().get_cancel_escalation_enabled();
+    bool escalation_enabled = SafetySettingsManager::instance().get_cancel_escalation_enabled();
     if (escalation_enabled) {
         uint32_t timeout_ms =
             static_cast<uint32_t>(
-                SettingsManager::instance().get_cancel_escalation_timeout_seconds()) *
+                SafetySettingsManager::instance().get_cancel_escalation_timeout_seconds()) *
             1000;
         spdlog::info("[AbortManager] Cancel escalation enabled, timeout: {}ms", timeout_ms);
         cancel_timer_ = lv_timer_create(cancel_timer_cb, timeout_ms, this);

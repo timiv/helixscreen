@@ -3,8 +3,8 @@
 
 #include "ui_utils.h"
 
+#include "display_settings_manager.h"
 #include "format_utils.h"
-#include "settings_manager.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -161,7 +161,7 @@ std::string format_file_size(size_t bytes) {
 }
 
 const char* get_time_format_string() {
-    TimeFormat format = SettingsManager::instance().get_time_format();
+    TimeFormat format = DisplaySettingsManager::instance().get_time_format();
     // %l = hour (1-12, space-padded), %I = hour (01-12, zero-padded)
     // Using %l for cleaner display without leading zero
     return (format == TimeFormat::HOUR_12) ? "%l:%M %p" : "%H:%M";
@@ -188,7 +188,7 @@ std::string format_modified_date(time_t timestamp) {
     struct tm* timeinfo = localtime(&timestamp);
     if (timeinfo) {
         // Format: "Jan 15 2:30 PM" (12H) or "Jan 15 14:30" (24H)
-        TimeFormat format = SettingsManager::instance().get_time_format();
+        TimeFormat format = DisplaySettingsManager::instance().get_time_format();
         if (format == TimeFormat::HOUR_12) {
             strftime(buf, sizeof(buf), "%b %d %l:%M %p", timeinfo);
             // Trim double spaces from %l (space-padded hour)
@@ -405,7 +405,7 @@ bool ui_image_scale_to_contain(lv_obj_t* image_widget, lv_coord_t target_width,
 void ui_create_ripple(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, int start_size, int end_size,
                       int32_t duration_ms) {
     // Skip animation if disabled
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         spdlog::trace("[UI Utils] Animations disabled - skipping ripple");
         return;
     }

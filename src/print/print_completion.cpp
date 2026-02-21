@@ -11,12 +11,13 @@
 #include "ui_utils.h"
 
 #include "app_globals.h"
+#include "audio_settings_manager.h"
 #include "display_manager.h"
+#include "display_settings_manager.h"
 #include "format_utils.h"
 #include "moonraker_api.h"
 #include "moonraker_manager.h"
 #include "printer_state.h"
-#include "settings_manager.h"
 #include "sound_manager.h"
 #include "theme_manager.h"
 
@@ -184,7 +185,8 @@ static void show_rich_completion_modal(PrintJobState state, const char* filename
 
     // Celebrate successful prints with confetti (respects animations setting)
     // Create on lv_layer_top() so it renders above everything including modals
-    if (state == PrintJobState::COMPLETE && SettingsManager::instance().get_animations_enabled()) {
+    if (state == PrintJobState::COMPLETE &&
+        DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_t* confetti = ui_confetti_create(lv_layer_top());
         if (confetti) {
             ui_confetti_burst(confetti, 100);
@@ -257,7 +259,7 @@ static void on_print_state_changed_for_notification(lv_observer_t* observer,
         lv_obj_t* print_status_panel = get_global_print_status_panel().get_panel();
         bool on_print_status = NavigationManager::instance().is_panel_in_stack(print_status_panel);
 
-        auto mode = SettingsManager::instance().get_completion_alert_mode();
+        auto mode = AudioSettingsManager::instance().get_completion_alert_mode();
 
         spdlog::debug("[PrintComplete] Print {} - on_print_status={}, mode={}",
                       (current == PrintJobState::COMPLETE)    ? "complete"

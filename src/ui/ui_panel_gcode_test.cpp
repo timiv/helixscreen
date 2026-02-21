@@ -7,9 +7,9 @@
 #include "ui_event_safety.h"
 #include "ui_gcode_viewer.h"
 
+#include "display_settings_manager.h"
 #include "printer_state.h"
 #include "runtime_config.h"
-#include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
 
@@ -126,7 +126,7 @@ void GcodeTestPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                      ui_gcode_viewer_is_using_2d_mode(gcode_viewer_) ? "2D" : "3D");
     } else {
         // No cmdline or env var - apply saved settings
-        int render_mode_val = SettingsManager::instance().get_gcode_render_mode();
+        int render_mode_val = DisplaySettingsManager::instance().get_gcode_render_mode();
         auto render_mode = static_cast<GcodeViewerRenderMode>(render_mode_val);
         ui_gcode_viewer_set_render_mode(gcode_viewer_, render_mode);
         spdlog::info("[{}] Render mode: {} ({}) [settings]", get_name(), render_mode_val,

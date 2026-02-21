@@ -12,12 +12,12 @@
 #include "ui_utils.h"
 
 #include "app_globals.h"
+#include "display_settings_manager.h"
 #include "format_utils.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
 #include "print_history_manager.h"
 #include "printer_state.h"
-#include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "thumbnail_cache.h"
 #include "ui/ui_cleanup_helpers.h"
@@ -1079,7 +1079,7 @@ void HistoryListPanel::update_detail_subjects(const PrintHistoryJob& job) {
         struct tm* tm_info = localtime(&end_ts);
         char buf[32];
         // Format based on user's time format preference
-        TimeFormat format = SettingsManager::instance().get_time_format();
+        TimeFormat format = DisplaySettingsManager::instance().get_time_format();
         if (format == TimeFormat::HOUR_12) {
             strftime(buf, sizeof(buf), "%b %d, %l:%M %p", tm_info);
             // Trim double spaces from %l (space-padded hour)

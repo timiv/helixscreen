@@ -15,9 +15,9 @@
 #include "ui_toast_manager.h"
 #include "ui_utils.h"
 
+#include "display_settings_manager.h"
 #include "format_utils.h"
 #include "lvgl/src/others/translation/lv_translation.h"
-#include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
 
@@ -166,7 +166,7 @@ void DisplaySettingsOverlay::show(lv_obj_t* parent_screen) {
 void DisplaySettingsOverlay::on_activate() {
     OverlayBase::on_activate();
 
-    // Initialize all widget values from SettingsManager
+    // Initialize all widget values from DisplaySettingsManager
     init_brightness_controls();
     init_dim_dropdown();
     init_sleep_dropdown();
@@ -191,7 +191,7 @@ void DisplaySettingsOverlay::init_brightness_controls() {
     lv_obj_t* brightness_slider = lv_obj_find_by_name(overlay_root_, "brightness_slider");
     if (brightness_slider) {
         // Set initial value from settings
-        int brightness = SettingsManager::instance().get_brightness();
+        int brightness = DisplaySettingsManager::instance().get_brightness();
         lv_slider_set_value(brightness_slider, brightness, LV_ANIM_OFF);
 
         // Update subject (label binding happens in XML)
@@ -211,8 +211,8 @@ void DisplaySettingsOverlay::init_dim_dropdown() {
     lv_obj_t* dim_dropdown = dim_row ? lv_obj_find_by_name(dim_row, "dropdown") : nullptr;
     if (dim_dropdown) {
         // Set initial selection based on current setting (options set in XML)
-        int current_sec = SettingsManager::instance().get_display_dim_sec();
-        int index = SettingsManager::dim_seconds_to_index(current_sec);
+        int current_sec = DisplaySettingsManager::instance().get_display_dim_sec();
+        int index = DisplaySettingsManager::dim_seconds_to_index(current_sec);
         lv_dropdown_set_selected(dim_dropdown, index);
 
         spdlog::debug("[{}] Dim dropdown initialized to index {} ({}s)", get_name(), index,
@@ -228,8 +228,8 @@ void DisplaySettingsOverlay::init_sleep_dropdown() {
     lv_obj_t* sleep_dropdown = sleep_row ? lv_obj_find_by_name(sleep_row, "dropdown") : nullptr;
     if (sleep_dropdown) {
         // Set initial selection based on current setting (options set in XML)
-        int current_sec = SettingsManager::instance().get_display_sleep_sec();
-        int index = SettingsManager::sleep_seconds_to_index(current_sec);
+        int current_sec = DisplaySettingsManager::instance().get_display_sleep_sec();
+        int index = DisplaySettingsManager::sleep_seconds_to_index(current_sec);
         lv_dropdown_set_selected(sleep_dropdown, index);
 
         spdlog::debug("[{}] Sleep dropdown initialized to index {} ({}s)", get_name(), index,
@@ -247,7 +247,7 @@ void DisplaySettingsOverlay::init_sleep_while_printing_toggle() {
 
     lv_obj_t* toggle = lv_obj_find_by_name(row, "toggle");
     if (toggle) {
-        if (SettingsManager::instance().get_sleep_while_printing()) {
+        if (DisplaySettingsManager::instance().get_sleep_while_printing()) {
             lv_obj_add_state(toggle, LV_STATE_CHECKED);
         } else {
             lv_obj_remove_state(toggle, LV_STATE_CHECKED);
@@ -265,7 +265,7 @@ void DisplaySettingsOverlay::init_bed_mesh_dropdown() {
         bed_mesh_row ? lv_obj_find_by_name(bed_mesh_row, "dropdown") : nullptr;
     if (bed_mesh_dropdown) {
         // Set initial selection based on current setting (options set in XML)
-        int current_mode = SettingsManager::instance().get_bed_mesh_render_mode();
+        int current_mode = DisplaySettingsManager::instance().get_bed_mesh_render_mode();
         lv_dropdown_set_selected(bed_mesh_dropdown, current_mode);
 
         spdlog::debug("[{}] Bed mesh mode dropdown initialized to {} ({})", get_name(),
@@ -282,7 +282,7 @@ void DisplaySettingsOverlay::init_gcode_dropdown() {
     lv_obj_t* gcode_dropdown = gcode_row ? lv_obj_find_by_name(gcode_row, "dropdown") : nullptr;
     if (gcode_dropdown) {
         // Set initial selection based on current setting (options set in XML)
-        int current_mode = SettingsManager::instance().get_gcode_render_mode();
+        int current_mode = DisplaySettingsManager::instance().get_gcode_render_mode();
         lv_dropdown_set_selected(gcode_dropdown, current_mode);
 
         spdlog::debug("[{}] G-code mode dropdown initialized to {} ({})", get_name(), current_mode,
@@ -297,15 +297,15 @@ void DisplaySettingsOverlay::init_theme_preset_dropdown(lv_obj_t* root) {
     lv_obj_t* theme_preset_dropdown = lv_obj_find_by_name(root, "theme_preset_dropdown");
     if (theme_preset_dropdown) {
         // Set dropdown options from discovered theme files
-        std::string options = SettingsManager::instance().get_theme_options();
+        std::string options = DisplaySettingsManager::instance().get_theme_options();
         lv_dropdown_set_options(theme_preset_dropdown, options.c_str());
 
         // Set initial selection based on current theme
-        int current_index = SettingsManager::instance().get_theme_index();
+        int current_index = DisplaySettingsManager::instance().get_theme_index();
         lv_dropdown_set_selected(theme_preset_dropdown, static_cast<uint32_t>(current_index));
 
         spdlog::debug("[{}] Theme dropdown initialized to index {} ({})", get_name(), current_index,
-                      SettingsManager::instance().get_theme_name());
+                      DisplaySettingsManager::instance().get_theme_name());
     }
 }
 
@@ -318,7 +318,7 @@ void DisplaySettingsOverlay::init_time_format_dropdown() {
         time_format_row ? lv_obj_find_by_name(time_format_row, "dropdown") : nullptr;
     if (time_format_dropdown) {
         // Set initial selection based on current setting (options set in XML)
-        auto current_format = SettingsManager::instance().get_time_format();
+        auto current_format = DisplaySettingsManager::instance().get_time_format();
         lv_dropdown_set_selected(time_format_dropdown, static_cast<uint32_t>(current_format));
 
         spdlog::debug("[{}] Time format dropdown initialized to {} ({})", get_name(),
@@ -333,11 +333,11 @@ void DisplaySettingsOverlay::init_time_format_dropdown() {
 
 void DisplaySettingsOverlay::handle_sleep_while_printing_changed(bool enabled) {
     spdlog::info("[{}] Sleep while printing toggled: {}", get_name(), enabled ? "ON" : "OFF");
-    SettingsManager::instance().set_sleep_while_printing(enabled);
+    DisplaySettingsManager::instance().set_sleep_while_printing(enabled);
 }
 
 void DisplaySettingsOverlay::handle_brightness_changed(int value) {
-    SettingsManager::instance().set_brightness(value);
+    DisplaySettingsManager::instance().set_brightness(value);
 
     // Update subject (label binding happens in XML)
     helix::format::format_percent(value, brightness_value_buf_, sizeof(brightness_value_buf_));
@@ -352,10 +352,10 @@ void DisplaySettingsOverlay::handle_theme_preset_changed(int index) {
     }
 
     // Otherwise fall back to global theme change (legacy behavior)
-    SettingsManager::instance().set_theme_by_index(index);
+    DisplaySettingsManager::instance().set_theme_by_index(index);
 
     spdlog::info("[{}] Theme changed to index {} ({})", get_name(), index,
-                 SettingsManager::instance().get_theme_name());
+                 DisplaySettingsManager::instance().get_theme_name());
 }
 
 void DisplaySettingsOverlay::handle_explorer_theme_changed(int index) {
@@ -470,8 +470,8 @@ void DisplaySettingsOverlay::handle_theme_settings_clicked() {
     cached_themes_ = helix::discover_themes(helix::get_themes_directory());
 
     // Remember original theme for Apply button state and revert on close
-    original_theme_index_ = SettingsManager::instance().get_theme_index();
-    preview_theme_name_ = SettingsManager::instance().get_theme_name();
+    original_theme_index_ = DisplaySettingsManager::instance().get_theme_index();
+    preview_theme_name_ = DisplaySettingsManager::instance().get_theme_name();
     original_theme_ = theme_manager_get_active_theme();
 
     // Initialize dark mode toggle to current global state
@@ -514,8 +514,8 @@ void DisplaySettingsOverlay::handle_apply_theme_clicked() {
     int selected_index = lv_dropdown_get_selected(dropdown);
 
     // Persist theme selection
-    SettingsManager::instance().set_theme_by_index(selected_index);
-    std::string theme_name = SettingsManager::instance().get_theme_name();
+    DisplaySettingsManager::instance().set_theme_by_index(selected_index);
+    std::string theme_name = DisplaySettingsManager::instance().get_theme_name();
 
     // Commit the previewed theme as the new active theme.
     // Preview already called theme_manager_preview(), so apply it permanently.
@@ -572,7 +572,7 @@ void DisplaySettingsOverlay::handle_edit_colors_clicked() {
         // Load currently previewed theme for editing (or fallback to saved theme)
         std::string theme_name = !preview_theme_name_.empty()
                                      ? preview_theme_name_
-                                     : SettingsManager::instance().get_theme_name();
+                                     : DisplaySettingsManager::instance().get_theme_name();
         // Pass the preview mode so editor shows correct palette (dark or light)
         get_theme_editor_overlay().set_editing_dark_mode(preview_is_dark_);
         get_theme_editor_overlay().load_theme(theme_name);

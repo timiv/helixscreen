@@ -16,8 +16,8 @@
 #include "config.h"
 #include "filament_sensor_manager.h"
 #include "lvgl/lvgl.h"
-#include "settings_manager.h"
 #include "static_panel_registry.h"
+#include "system_settings_manager.h"
 #include "wizard_config_paths.h"
 
 #include <spdlog/spdlog.h>
@@ -364,7 +364,7 @@ void WizardSummaryStep::on_wizard_telemetry_changed(lv_event_t* e) {
     auto* toggle = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
     bool enabled = lv_obj_has_state(toggle, LV_STATE_CHECKED);
     spdlog::info("[WizardSummary] Telemetry toggled: {}", enabled ? "ON" : "OFF");
-    SettingsManager::instance().set_telemetry_enabled(enabled);
+    SystemSettingsManager::instance().set_telemetry_enabled(enabled);
     if (enabled) {
         ToastManager::instance().show(
             ToastSeverity::SUCCESS,

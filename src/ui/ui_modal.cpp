@@ -8,9 +8,9 @@
 #include "ui_update_queue.h"
 #include "ui_utils.h"
 
+#include "display_settings_manager.h"
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "lvgl/src/xml/lv_xml.h"
-#include "settings_manager.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -154,7 +154,7 @@ void ModalStack::animate_entrance(lv_obj_t* dialog) {
     lv_obj_set_style_transform_pivot_y(dialog, LV_PCT(50), LV_PART_MAIN);
 
     // Skip animation if disabled - show in final state
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_set_style_opa(backdrop, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_transform_scale(dialog, MODAL_SCALE_END, LV_PART_MAIN);
         lv_obj_set_style_opa(dialog, LV_OPA_COVER, LV_PART_MAIN);
@@ -240,7 +240,7 @@ void ModalStack::animate_exit(lv_obj_t* backdrop, lv_obj_t* dialog) {
     }
 
     // Skip animation if disabled
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_set_style_transform_scale(dialog, MODAL_SCALE_END, LV_PART_MAIN);
         lv_obj_set_style_opa(dialog, LV_OPA_COVER, LV_PART_MAIN);
         spdlog::debug("[ModalStack] Animations disabled - deleting modal instantly");

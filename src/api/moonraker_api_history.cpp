@@ -5,11 +5,11 @@
 #include "ui_notification.h"
 #include "ui_utils.h"
 
+#include "display_settings_manager.h"
 #include "format_utils.h"
 #include "hv/requests.h"
 #include "moonraker_api.h"
 #include "moonraker_api_internal.h"
-#include "settings_manager.h"
 #include "spdlog/spdlog.h"
 
 #include <chrono>
@@ -42,7 +42,7 @@ std::string format_history_date(double timestamp) {
     struct tm* timeinfo = localtime(&t);
     if (timeinfo) {
         // Format date part, then time part based on user preference
-        TimeFormat format = SettingsManager::instance().get_time_format();
+        TimeFormat format = DisplaySettingsManager::instance().get_time_format();
         if (format == TimeFormat::HOUR_12) {
             strftime(buf, sizeof(buf), "%b %d, %l:%M %p", timeinfo);
             // Trim double spaces from %l (space-padded hour)

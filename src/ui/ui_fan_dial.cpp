@@ -6,9 +6,9 @@
 #include "ui_fan_arc_resize.h"
 #include "ui_utils.h"
 
+#include "display_settings_manager.h"
 #include "format_utils.h"
 #include "lvgl/src/xml/lv_xml.h"
-#include "settings_manager.h"
 #include "theme_manager.h"
 #include "ui/ui_event_trampoline.h"
 
@@ -310,7 +310,7 @@ void FanDial::anim_completed_cb(lv_anim_t* anim) {
 
 void FanDial::animate_speed_label(int from, int to) {
     // Skip animation when value unchanged or animations disabled
-    if (from == to || !SettingsManager::instance().get_animations_enabled()) {
+    if (from == to || !DisplaySettingsManager::instance().get_animations_enabled()) {
         update_speed_label(to);
         if (arc_) {
             lv_arc_set_value(arc_, to);

@@ -100,15 +100,17 @@
 
 #include "android_asset_extractor.h"
 #include "data_root_resolver.h"
+#include "display_settings_manager.h"
 #include "led/ui_led_control_overlay.h"
 #include "platform_info.h"
 #include "printer_detector.h"
 #include "printer_image_manager.h"
-#include "settings_manager.h"
+#include "safety_settings_manager.h"
 #include "system/crash_handler.h"
 #include "system/crash_reporter.h"
 #include "system/telemetry_manager.h"
 #include "system/update_checker.h"
+#include "system_settings_manager.h"
 #include "theme_manager.h"
 #include "wifi_manager.h"
 
@@ -136,7 +138,6 @@
 #include "plugin_manager.h"
 #include "printer_discovery.h"
 #include "printer_state.h"
-#include "settings_manager.h"
 #include "splash_screen.h"
 #include "standard_macros.h"
 #include "tips_manager.h"
@@ -344,18 +345,20 @@ int Application::run(int argc, char** argv) {
         return 1;
     }
 
-    // Sync telemetry enabled state from SettingsManager (now that its subjects are initialized)
-    // Note: record_session() is deferred to on_discovery_complete callback so hardware data is
-    // available
-    TelemetryManager::instance().set_enabled(SettingsManager::instance().get_telemetry_enabled());
+    // Sync telemetry enabled state from SystemSettingsManager (now that its subjects are
+    // initialized) Note: record_session() is deferred to on_discovery_complete callback so hardware
+    // data is available
+    TelemetryManager::instance().set_enabled(
+        SystemSettingsManager::instance().get_telemetry_enabled());
 
     // Initialize SoundManager (beta feature - audio feedback)
     if (Config::get_instance()->is_beta_features_enabled()) {
         SoundManager::instance().initialize();
     }
 
-    // Update SettingsManager with theme mode support (must be after both theme and settings init)
-    SettingsManager::instance().on_theme_changed();
+    // Update DisplaySettingsManager with theme mode support (must be after both theme and settings
+    // init)
+    DisplaySettingsManager::instance().on_theme_changed();
 
     // Phase 10: Create UI and wire panels
     if (!init_ui()) {
@@ -857,7 +860,7 @@ bool Application::init_panel_subjects() {
     EmergencyStopOverlay::instance().init(get_printer_state(), m_moonraker->api());
     EmergencyStopOverlay::instance().create();
     EmergencyStopOverlay::instance().set_require_confirmation(
-        SettingsManager::instance().get_estop_require_confirmation());
+        SafetySettingsManager::instance().get_estop_require_confirmation());
 
     // Initialize AbortManager for smart print cancellation
     // Must happen after both API and AbortManager::init_subjects()
@@ -1404,8 +1407,8 @@ void Application::create_overlays() {
         lv_obj_t* editor_panel = theme_editor.create(m_screen);
         if (editor_panel) {
             // Load current theme for editing
-            std::string current_theme = SettingsManager::instance().get_theme_name();
-            theme_editor.set_editing_dark_mode(SettingsManager::instance().get_dark_mode());
+            std::string current_theme = DisplaySettingsManager::instance().get_theme_name();
+            theme_editor.set_editing_dark_mode(DisplaySettingsManager::instance().get_dark_mode());
             theme_editor.load_theme(current_theme);
             NavigationManager::instance().push_overlay(editor_panel);
             spdlog::info("[Application] Opened theme editor overlay via CLI");
