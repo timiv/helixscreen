@@ -16,16 +16,16 @@
 - **Uses**: 7 | **Velocity**: 0 | **Learned**: 2025-12-14 | **Last**: 2026-01-30 | **Category**: pattern | **Type**: informational
 > No hardcoded colors or spacing. Prefer semantic widgets (ui_card, ui_button, text_*, divider_*) which apply tokens automatically. Don't redundantly specify their built-in defaults (e.g., style_radius on ui_card, button_height on ui_button). See docs/LVGL9_XML_GUIDE.md "Custom Semantic Widgets" for defaults.
 
-### [L009] [***--|***--] Icon font sync workflow
-- **Uses**: 12 | **Velocity**: 1 | **Learned**: 2025-12-14 | **Last**: 2026-02-17 | **Category**: gotcha | **Type**: constraint
+### [L009] [***--|****-] Icon font sync workflow
+- **Uses**: 13 | **Velocity**: 2 | **Learned**: 2025-12-14 | **Last**: 2026-02-21 | **Category**: gotcha | **Type**: constraint
 > After adding icon to codepoints.h: add to regen_mdi_fonts.sh, run make regen-fonts, then rebuild. Forgetting any step = missing icon
 
-### [L011] [***--|-----] No mutex in destructors
-- **Uses**: 11 | **Velocity**: 0 | **Learned**: 2025-12-14 | **Last**: 2026-01-08 | **Category**: gotcha | **Type**: constraint
+### [L011] [***--|***--] No mutex in destructors
+- **Uses**: 12 | **Velocity**: 1 | **Learned**: 2025-12-14 | **Last**: 2026-02-21 | **Category**: gotcha | **Type**: constraint
 > Avoid mutex locks in destructors during static destruction phase. Other objects may already be destroyed, causing deadlock or crash on exit
 
-### [L014] [***--|****-] Register all XML components
-- **Uses**: 28 | **Velocity**: 2 | **Learned**: 2025-12-14 | **Last**: 2026-02-21 | **Category**: gotcha | **Type**: constraint
+### [L014] [***--|*****] Register all XML components
+- **Uses**: 30 | **Velocity**: 4 | **Learned**: 2025-12-14 | **Last**: 2026-02-21 | **Category**: gotcha | **Type**: constraint
 > When adding new XML components, must add lv_xml_component_register_from_file() call in main.cpp. Forgetting causes silent failures
 
 ### [L020] [***--|-----] ObserverGuard for cleanup
@@ -44,8 +44,8 @@
 - **Uses**: 1 | **Velocity**: 0 | **Learned**: 2025-12-25 | **Last**: 2026-01-01 | **Category**: pattern | **Type**: constraint
 > LVGL observer callbacks use C-style function signatures (lv_observer_t*, lv_subject_t*) - NOT lambdas. Must pass user_data via lv_observer_get_user_data(observer). Also: lv_subject_set_*() from non-main threads must use ui_async_call() to avoid render-phase assertions.
 
-### [L031] [***--|****-] XML no recompile
-- **Uses**: 22 | **Velocity**: 2.0075 | **Learned**: 2025-12-27 | **Last**: 2026-02-08 | **Category**: gotcha | **Type**: constraint
+### [L031] [***--|*****] XML no recompile
+- **Uses**: 24 | **Velocity**: 4.0075 | **Learned**: 2025-12-27 | **Last**: 2026-02-21 | **Category**: gotcha | **Type**: constraint
 > XML files are loaded at RUNTIME - never rebuild after XML-only changes. Just relaunch the app. This includes layout changes, styling, bindings, event callbacks - anything in ui_xml/*.xml. Only rebuild when C++ code changes.
 
 ### [L036] [*----|-----] Header file documentation
@@ -141,8 +141,8 @@
 - **Uses**: 0 | **Velocity**: 0 | **Learned**: 2026-02-07 | **Last**: 2026-02-07 | **Category**: build
 > AD5M cross-compilation uses 'make ad5m-docker' (Docker-based ARM cross-compile), NOT 'make pi-test' (which targets Raspberry Pi). Deploy with 'AD5M_HOST=192.168.1.67 make ad5m-deploy'. The pi-test target is for a different device entirely.
 
-### [L063] [-----|-----] Check staging area before commit
-- **Uses**: 0 | **Velocity**: 0 | **Learned**: 2026-02-08 | **Last**: 2026-02-08 | **Category**: git
+### [L063] [*----|***--] Check staging area before commit
+- **Uses**: 1 | **Velocity**: 1 | **Learned**: 2026-02-08 | **Last**: 2026-02-21 | **Category**: git
 > Run 'git status' before committing to verify no unexpected files are already staged from prior work. 'git add file1 file2' ADDS to the index but doesn't REPLACE it - pre-staged files from previous sessions will silently be included in the commit.
 
 ### [L064] [-----|-----] Commit generated translation artifacts
@@ -168,6 +168,10 @@
 ### [L069] [-----|-----] Never assume lv_obj user_data ownership — it may already be set
 - **Uses**: 0 | **Velocity**: 0 | **Learned**: 2026-02-15 | **Last**: 2026-02-15 | **Category**: architecture
 > LVGL's lv_obj_set_user_data() is a single shared slot per object. Custom XML widgets, component handlers, and LVGL internals may set user_data during object creation (e.g., severity_card stores a severity string). NEVER call delete/free on lv_obj_get_user_data() unless you are 100% certain you set it yourself on that specific object. NEVER use user_data as general-purpose storage on objects you didn't fully create — XML components and custom widgets may have claimed it already. For per-item data, prefer: (1) event callback user_data (separate per-callback), (2) a C++ side container (map/vector indexed by object pointer), or (3) lv_obj_find_by_name to stash data in a hidden child label.
+
+### [L071] [*----|***--] XML child click passthrough
+- **Uses**: 2 | **Velocity**: 1 | **Learned**: 2026-02-21 | **Last**: 2026-02-21 | **Category**: ui | **Type**: constraint
+> When a parent view has an event_cb for "clicked", all child objects (lv_obj, icon, text_body, text_tiny, etc.) must have `clickable="false" event_bubble="true"` or they absorb the click before it reaches the parent's callback. LVGL objects are clickable by default.
 
 ### [L070] [-----|-----] Don't lv_tr() non-translatable strings
 - **Uses**: 0 | **Velocity**: 0 | **Learned**: 2026-02-17 | **Last**: 2026-02-17 | **Category**: i18n

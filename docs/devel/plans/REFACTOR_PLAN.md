@@ -3,7 +3,7 @@
 > **Document Purpose**: Reference guide for refactoring work and progress tracking
 > **Created**: 2026-01-08
 > **Last Updated**: 2026-02-21
-> **Version**: 1.7 (Observer factory fully adopted + settings migration + callback registration)
+> **Version**: 1.8 (ui_utils split with proper namespaces)
 
 ## Table of Contents
 
@@ -1195,6 +1195,13 @@ private:
 >
 > **Remaining `get_moonraker_client()` in UI:** ~17 calls, mostly in `ui_wizard_connection.cpp` (10 calls,
 > legitimate transport-level connection management), plus screws_tilt, input_shaper, settings, change_host.
+>
+> **2026-02-21 Spoolman Domain Extracted:** First domain sub-API extracted. Created
+> `MoonrakerSpoolmanAPI` (20+ methods) with own header/impl. Consumers migrated to
+> `api->spoolman().method()` pattern. Mock follows same pattern with `MoonrakerSpoolmanAPIMock`.
+> 8 consumer files + 4 test files updated. 24 spoolman tests (88 assertions) all pass.
+>
+> **Commit:** `303c4473`
 
 #### Problem Statement
 `MoonrakerAPI` is a 1190-line facade containing **70+ public methods** across 5+ unrelated domains. Finding the right method requires scrolling through a massive interface.
@@ -1698,20 +1705,41 @@ Code review found and fixed: 2 lambda callbacks in console panel not migrated, 1
 
 ### 2.10 ui_utils.cpp Split
 
-**Status**: [x] Not Started  [ ] In Progress  [ ] Complete
+**Status**: [ ] Not Started  [ ] In Progress  [x] Complete
+
+> **Completed 2026-02-21**: Split ui_utils monolith into 4 properly namespaced modules with full
+> consumer migration. No forwarding headers — every consumer includes exactly what it needs.
+>
+> **New files (4 header + 4 implementation):**
+> - `ui_filename_utils.{h,cpp}` — namespace `helix::gcode`: get_filename_basename, strip_gcode_extension, get_display_filename, resolve_gcode_filename
+> - `ui_format_utils.{h,cpp}` — namespace `helix::ui`: format_print_time, format_filament_weight, format_layer_count, format_print_height, format_file_size, format_modified_date, format_time, get_time_format_string
+> - `ui_effects.{h,cpp}` — namespace `helix::ui`: create_ripple, create_fullscreen_backdrop, defocus_tree (renamed from ui_* prefix)
+> - `ui_image_helpers.{h,cpp}` — namespace `helix::ui`: image_scale_to_cover, image_scale_to_contain (renamed from ui_image_* prefix)
+>
+> **Residual `ui_utils.{h,cpp}`**: responsive layout (ui_get_header_content_padding, ui_get_responsive_header_height), LED icon (ui_brightness_to_lightbulb_icon), color utils (ui_parse_hex_color, ui_color_distance), toggle_list_empty_state, safe_delete
+>
+> **Consumer migration**: 20 files updated with specific includes + `using` declarations. 27 files changed total, 764 ins / 700 del.
+>
+> **Commit:** completed on main
 
 #### Problem Statement
-`ui_utils.cpp` (520 lines) is a dumping ground mixing: string formatting (filenames, times, layer counts), image scaling, color operations, ripple effects, and responsive layout calculations.
+`ui_utils.cpp` (520 lines) was a dumping ground mixing: string formatting (filenames, times, layer counts), image scaling, color operations, ripple effects, and responsive layout calculations.
 
-#### Proposed Solution
-Split into focused files:
-1. `ui_string_formatters.cpp` — time, file, layer, filament formatting
-2. `ui_image_helpers.cpp` — image scaling, layout
-3. `ui_effects.cpp` — ripple, animations
-4. `ui_responsive_layout.cpp` — breakpoint calculations
+#### Solution
+Split into 4 focused, namespaced modules + slimmed residual:
+1. `ui_filename_utils.{h,cpp}` (namespace `helix::gcode`) — gcode filename parsing/display
+2. `ui_format_utils.{h,cpp}` (namespace `helix::ui`) — display formatting for time, file size, weight, dates
+3. `ui_effects.{h,cpp}` (namespace `helix::ui`) — ripple effects, backdrop, defocus
+4. `ui_image_helpers.{h,cpp}` (namespace `helix::ui`) — image scaling utilities
 
-#### Effort Estimate
-Low (1 day)
+#### Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| ui_utils.cpp lines | 520 | ~130 (residual) |
+| ui_utils.h lines | ~412 | ~130 (residual) |
+| Namespaced functions | 0 | 14 (across helix::gcode and helix::ui) |
+| Consumer files updated | - | 20 |
+| Net lines | - | +64 (more files but proper separation) |
 
 ---
 
@@ -1815,7 +1843,7 @@ Low (1 day)
 | Namespace organization | 5d | | [ ] |
 | Dependency injection | 5d | | [ ] |
 | MoonrakerClient decomposition | 3d | | [ ] |
-| ui_utils.cpp split | 1d | | [ ] |
+| ui_utils.cpp split (namespaced) | 1d | | [x] Complete (2026-02-21) |
 
 ---
 
@@ -1827,15 +1855,12 @@ Low (1 day)
 | Phase 1: Quick Wins | 5 | 5 | 100% |
 | Phase 2: Foundation | 4 | 4 | 100% |
 | Phase 3: Architecture | 5 | 4 | 80% |
-| Phase 4: Polish | 7 | 4 | 57% |
+| Phase 4: Polish | 7 | 5 | 71% |
 | Phase 5: New Findings | 5 | 4.5 | 90% |
-| **Total** | **26** | **21.5** | **83%** |
+| **Total** | **26** | **22.5** | **87%** |
 
-> **Note (2026-02-21)**: Completed SettingsManager domain split (2.8) — 5 domain managers
-> extracted, 40 tests, 252 assertions. Consumer migration done: 132 callsites, 40 files,
-> net -566 lines. Panel callback batch registration (2.9) fully complete — 42 files migrated,
-> ~446 individual registrations consolidated. AMS base class (2.6) and temperature
-> consolidation (2.7) also completed on 2026-02-20.
+> **Note (2026-02-21)**: Completed SettingsManager domain split (2.8), callback batch registration (2.9),
+> observer factory full adoption (1.2), and ui_utils.cpp namespaced split (2.10). Overall progress 87%.
 
 ### Metrics Dashboard
 | Metric | Current | Target | Progress |
@@ -1865,10 +1890,10 @@ Based on current codebase state and remaining work (updated 2026-02-21):
 
 ### High Value / Moderate Effort
 
-1. **MoonrakerAPI domain split** (Section 1.5)
+1. **MoonrakerAPI domain split** (Section 1.5) — IN PROGRESS
    - 70+ methods in single class, abstraction boundary already enforced
-   - Would improve API discoverability and testing
-   - Partially started: proxy methods added, full sub-API split remaining
+   - Spoolman domain extracted (20+ methods, `api->spoolman().method()` pattern)
+   - Remaining domains: files, job, motion, heating, macros, filament, history
 
 2. ~~**Observer factory broader adoption** (Section 1.2) — COMPLETE~~
 
@@ -1889,9 +1914,7 @@ Based on current codebase state and remaining work (updated 2026-02-21):
    - Three incompatible error patterns exist
    - Would standardize error handling across codebase
 
-7. **ui_utils.cpp split** (Section 2.10)
-   - 520-line dumping ground mixing unrelated concerns
-   - Low effort, low urgency
+7. ~~**ui_utils.cpp split** (Section 2.10) — COMPLETE~~
 
 8. **Namespace organization** (Section 2.2)
    - Inconsistent namespace usage currently
@@ -2057,4 +2080,6 @@ private:
 | 2026-02-10 | Claude | **MoonrakerAPI abstraction boundary enforced.** Deleted dead `IMoonrakerDomainService` interface. Added proxy methods to MoonrakerAPI (connection state, subscriptions, database, plugin RPCs, gcode store). Migrated all UI code from `get_client()`/`get_moonraker_client()` to API proxies. Moved `BedMeshProfile` and `GcodeStoreEntry` to `moonraker_types.h`. Removed `client_` members from PID panel, retraction settings, spoolman overlay, console panel. ~17 legitimate `get_moonraker_client()` calls remain (mostly connection wizard). Commits: a5650da0, ec140f65, 4cabd79a. |
 | 2026-01-17 | Claude | **Major status update**: PrinterState decomposition COMPLETE (11+ domain classes extracted, facade now 2,002 lines). Quick Wins 100% complete (PrintStatusPanel modals extracted to 4 dedicated files). PrintStatusPanel now IN PROGRESS. Updated all progress tracking tables. Added Recommended Next Priorities section. Overall progress: 61% (was 28%). |
 | 2026-02-20 | Claude | **AMS backend base class extraction** (Section 2.6): Created `AmsSubscriptionBackend` base class, migrated AFC/HappyHare/ToolChanger. Net -361 lines. AFC `recursive_mutex` → `std::mutex`. **Temperature formatting consolidation** (Section 2.7): Moved `HeaterDisplayResult`/`heater_display()` to `ui_temperature_utils`, added `color` field, removed duplicates from `format_utils`. Net -61 lines. **New sections added** (2.8-2.10): SettingsManager domain split, Panel/Overlay base class adoption, ui_utils.cpp split. Updated recommended priorities. |
+| 2026-02-21 | Claude | **ui_utils.cpp namespaced split** (Section 2.10): Split monolith into 4 properly namespaced modules — `ui_filename_utils` (helix::gcode), `ui_format_utils` (helix::ui), `ui_effects` (helix::ui), `ui_image_helpers` (helix::ui). No forwarding headers. 20 consumer files migrated with specific includes + using declarations. Functions renamed to drop `ui_` prefix where namespace provides context. 27 files changed, 764 ins / 700 del. Overall progress: 87%. |
 | 2026-02-21 | Claude | **SettingsManager domain split** (Section 2.8): 5 domain managers extracted (Display, Audio, Safety, System, Input), 40 tests, 252 assertions. Consumer migration: 132 callsites in 40 files migrated to domain managers, net -566 lines. Header 854→165, impl 1156→215. Stale includes cleaned. **Callback batch registration** (Section 2.9): Phase 2 complete — 38 additional panels/overlays migrated via parallel agents (15 high-callback + 22 medium-callback files). Total: 42 files, ~446 registrations consolidated. Code review caught 3 consistency gaps, all fixed. **Observer factory full adoption** (Section 1.2): All class-based legacy observers migrated — 24 observers across 20 files in two commits, net -199 lines. 6 remaining usages are non-class infrastructure (widget pointers, custom structs) not suitable for factory. Overall progress: 81% (was 71%). |
+| 2026-02-21 | Claude | **MoonrakerSpoolmanAPI extracted** (Section 1.5, first domain): 20+ Spoolman methods extracted to `MoonrakerSpoolmanAPI` class with own header/impl. Consumer pattern: `api->spoolman().method()`. Mock: `MoonrakerSpoolmanAPIMock`. 8 consumer files + 4 test files migrated. 24 spoolman tests (88 assertions) all pass. Commit: 303c4473. |
