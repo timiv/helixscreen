@@ -3,6 +3,7 @@
 
 #include "ui_theme_editor_overlay.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_color_picker.h"
 #include "ui_event_safety.h"
 #include "ui_global_panel_helper.h"
@@ -128,29 +129,25 @@ lv_obj_t* ThemeEditorOverlay::create(lv_obj_t* parent) {
 }
 
 void ThemeEditorOverlay::register_callbacks() {
-    // Swatch click callback for color editing
-    lv_xml_register_event_cb(nullptr, "on_theme_swatch_clicked", on_swatch_clicked);
-
-    // Unified slider callback for property adjustments (uses user_data to identify property)
-    lv_xml_register_event_cb(nullptr, "on_theme_property_changed", on_property_changed);
-
-    // Action button callbacks
-    lv_xml_register_event_cb(nullptr, "on_theme_save_clicked", on_theme_save_clicked);
-    lv_xml_register_event_cb(nullptr, "on_theme_save_as_clicked", on_theme_save_as_clicked);
-    lv_xml_register_event_cb(nullptr, "on_theme_reset_clicked", on_theme_reset_clicked);
-
-    // Custom back button callback to intercept close and check dirty state
-    lv_xml_register_event_cb(nullptr, "on_theme_editor_back_clicked", on_back_clicked);
-
-    // Save As dialog callbacks
-    lv_xml_register_event_cb(nullptr, "on_theme_save_as_confirm", on_save_as_confirm);
-    lv_xml_register_event_cb(nullptr, "on_theme_save_as_cancel", on_save_as_cancel);
-
-    // Theme preset dropdown callback
-    lv_xml_register_event_cb(nullptr, "on_theme_preset_changed", on_theme_preset_changed);
-
-    // Preview button callback (shows editing theme, not saved theme)
-    lv_xml_register_event_cb(nullptr, "on_theme_preview_clicked", on_theme_preview_clicked);
+    register_xml_callbacks({
+        // Swatch click callback for color editing
+        {"on_theme_swatch_clicked", on_swatch_clicked},
+        // Unified slider callback for property adjustments
+        {"on_theme_property_changed", on_property_changed},
+        // Action button callbacks
+        {"on_theme_save_clicked", on_theme_save_clicked},
+        {"on_theme_save_as_clicked", on_theme_save_as_clicked},
+        {"on_theme_reset_clicked", on_theme_reset_clicked},
+        // Custom back button callback to intercept close and check dirty state
+        {"on_theme_editor_back_clicked", on_back_clicked},
+        // Save As dialog callbacks
+        {"on_theme_save_as_confirm", on_save_as_confirm},
+        {"on_theme_save_as_cancel", on_save_as_cancel},
+        // Theme preset dropdown callback
+        {"on_theme_preset_changed", on_theme_preset_changed},
+        // Preview button callback
+        {"on_theme_preview_clicked", on_theme_preview_clicked},
+    });
 
     spdlog::debug("[{}] Callbacks registered", get_name());
 }

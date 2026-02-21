@@ -3,6 +3,7 @@
 
 #include "ui_settings_macro_buttons.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_event_safety.h"
 #include "ui_nav_manager.h"
 
@@ -62,21 +63,22 @@ void MacroButtonsOverlay::init_subjects() {
 }
 
 void MacroButtonsOverlay::register_callbacks() {
-    // Register quick button dropdown callbacks
-    lv_xml_register_event_cb(nullptr, "on_quick_button_1_changed", on_quick_button_1_changed);
-    lv_xml_register_event_cb(nullptr, "on_quick_button_2_changed", on_quick_button_2_changed);
-
-    // Register standard macro slot callbacks
-    lv_xml_register_event_cb(nullptr, "on_load_filament_changed", on_load_filament_changed);
-    lv_xml_register_event_cb(nullptr, "on_unload_filament_changed", on_unload_filament_changed);
-    lv_xml_register_event_cb(nullptr, "on_purge_changed", on_purge_changed);
-    lv_xml_register_event_cb(nullptr, "on_pause_changed", on_pause_changed);
-    lv_xml_register_event_cb(nullptr, "on_resume_changed", on_resume_changed);
-    lv_xml_register_event_cb(nullptr, "on_cancel_changed", on_cancel_changed);
-    lv_xml_register_event_cb(nullptr, "on_bed_mesh_changed", on_bed_mesh_changed);
-    lv_xml_register_event_cb(nullptr, "on_bed_level_changed", on_bed_level_changed);
-    lv_xml_register_event_cb(nullptr, "on_clean_nozzle_changed", on_clean_nozzle_changed);
-    lv_xml_register_event_cb(nullptr, "on_heat_soak_changed", on_heat_soak_changed);
+    register_xml_callbacks({
+        // Quick button dropdown callbacks
+        {"on_quick_button_1_changed", on_quick_button_1_changed},
+        {"on_quick_button_2_changed", on_quick_button_2_changed},
+        // Standard macro slot callbacks
+        {"on_load_filament_changed", on_load_filament_changed},
+        {"on_unload_filament_changed", on_unload_filament_changed},
+        {"on_purge_changed", on_purge_changed},
+        {"on_pause_changed", on_pause_changed},
+        {"on_resume_changed", on_resume_changed},
+        {"on_cancel_changed", on_cancel_changed},
+        {"on_bed_mesh_changed", on_bed_mesh_changed},
+        {"on_bed_level_changed", on_bed_level_changed},
+        {"on_clean_nozzle_changed", on_clean_nozzle_changed},
+        {"on_heat_soak_changed", on_heat_soak_changed},
+    });
 
     spdlog::debug("[{}] Callbacks registered", get_name());
 }

@@ -3,6 +3,7 @@
 
 #include "ui_modal.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_event_safety.h"
 #include "ui_keyboard_manager.h"
 #include "ui_update_queue.h"
@@ -501,23 +502,24 @@ bool Modal::show(lv_obj_t* parent, const char** attrs) {
     spdlog::info("[{}] Showing modal", get_name());
 
     // Register event callbacks for XML components
-    lv_xml_register_event_cb(nullptr, "on_modal_ok_clicked", ok_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_modal_cancel_clicked", cancel_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_modal_tertiary_clicked", tertiary_button_cb);
-
-    // Register unique callback aliases for specific modals (same handlers, unique names)
-    lv_xml_register_event_cb(nullptr, "on_print_cancel_confirm", ok_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_print_cancel_dismiss", cancel_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_z_offset_save", ok_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_z_offset_cancel", cancel_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_exclude_object_confirm", ok_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_exclude_object_cancel", cancel_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_runout_load_filament", ok_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_runout_resume", cancel_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_runout_cancel_print", tertiary_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_runout_unload_filament", quaternary_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_runout_purge", quinary_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_runout_ok", senary_button_cb);
+    register_xml_callbacks({
+        {"on_modal_ok_clicked", ok_button_cb},
+        {"on_modal_cancel_clicked", cancel_button_cb},
+        {"on_modal_tertiary_clicked", tertiary_button_cb},
+        // Register unique callback aliases for specific modals (same handlers, unique names)
+        {"on_print_cancel_confirm", ok_button_cb},
+        {"on_print_cancel_dismiss", cancel_button_cb},
+        {"on_z_offset_save", ok_button_cb},
+        {"on_z_offset_cancel", cancel_button_cb},
+        {"on_exclude_object_confirm", ok_button_cb},
+        {"on_exclude_object_cancel", cancel_button_cb},
+        {"on_runout_load_filament", ok_button_cb},
+        {"on_runout_resume", cancel_button_cb},
+        {"on_runout_cancel_print", tertiary_button_cb},
+        {"on_runout_unload_filament", quaternary_button_cb},
+        {"on_runout_purge", quinary_button_cb},
+        {"on_runout_ok", senary_button_cb},
+    });
 
     // Use internal create method
     if (!create_and_show(parent_, component_name(), attrs)) {
@@ -791,10 +793,12 @@ void helix::ui::modal_init_subjects() {
                                "dialog_cancel_text", g_subjects);
 
     // Register event callbacks for modals using static Modal::show() API
-    // Generic close callback - closes topmost modal (use for OK/Cancel that just dismiss)
-    lv_xml_register_event_cb(nullptr, "on_modal_close", static_modal_close_cb);
-    // Legacy alias for print complete dialog
-    lv_xml_register_event_cb(nullptr, "on_print_complete_ok", static_modal_close_cb);
+    register_xml_callbacks({
+        // Generic close callback - closes topmost modal (use for OK/Cancel that just dismiss)
+        {"on_modal_close", static_modal_close_cb},
+        // Legacy alias for print complete dialog
+        {"on_print_complete_ok", static_modal_close_cb},
+    });
 
     g_subjects_initialized = true;
     spdlog::trace("[Modal] Modal dialog subjects registered");

@@ -3,6 +3,7 @@
 
 #include "ui_panel_home.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_icon.h"
@@ -182,17 +183,19 @@ void HomePanel::init_subjects() {
 
     // Register event callbacks BEFORE loading XML
     // Note: These use static trampolines that will look up the global instance
-    lv_xml_register_event_cb(nullptr, "light_toggle_cb", light_toggle_cb);
-    lv_xml_register_event_cb(nullptr, "light_long_press_cb", light_long_press_cb);
-    lv_xml_register_event_cb(nullptr, "power_toggle_cb", power_toggle_cb);
-    lv_xml_register_event_cb(nullptr, "power_long_press_cb", power_long_press_cb);
-    lv_xml_register_event_cb(nullptr, "print_card_clicked_cb", print_card_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "tip_text_clicked_cb", tip_text_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "temp_clicked_cb", temp_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "printer_status_clicked_cb", printer_status_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "network_clicked_cb", network_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "printer_manager_clicked_cb", printer_manager_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "ams_clicked_cb", ams_clicked_cb);
+    register_xml_callbacks({
+        {"light_toggle_cb", light_toggle_cb},
+        {"light_long_press_cb", light_long_press_cb},
+        {"power_toggle_cb", power_toggle_cb},
+        {"power_long_press_cb", power_long_press_cb},
+        {"print_card_clicked_cb", print_card_clicked_cb},
+        {"tip_text_clicked_cb", tip_text_clicked_cb},
+        {"temp_clicked_cb", temp_clicked_cb},
+        {"printer_status_clicked_cb", printer_status_clicked_cb},
+        {"network_clicked_cb", network_clicked_cb},
+        {"printer_manager_clicked_cb", printer_manager_clicked_cb},
+        {"ams_clicked_cb", ams_clicked_cb},
+    });
 
     // Subscribe to AmsState slot_count to show/hide AMS indicator
     // AmsState::init_subjects() is called in main.cpp before us

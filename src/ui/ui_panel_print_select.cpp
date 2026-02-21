@@ -12,6 +12,7 @@
 
 #include "ui_panel_print_select.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_fonts.h"
@@ -299,27 +300,21 @@ void PrintSelectPanel::init_subjects() {
                            subjects_);
 
     // Register XML event callbacks (must be done BEFORE XML is created)
-    lv_xml_register_event_cb(nullptr, "on_print_select_view_toggle", on_print_select_view_toggle);
-    lv_xml_register_event_cb(nullptr, "on_print_select_source_printer",
-                             on_print_select_source_printer);
-    lv_xml_register_event_cb(nullptr, "on_print_select_source_usb", on_print_select_source_usb);
-
-    // Register list header sort callbacks
-    lv_xml_register_event_cb(nullptr, "on_print_select_header_filename",
-                             on_print_select_header_filename);
-    lv_xml_register_event_cb(nullptr, "on_print_select_header_size", on_print_select_header_size);
-    lv_xml_register_event_cb(nullptr, "on_print_select_header_modified",
-                             on_print_select_header_modified);
-    lv_xml_register_event_cb(nullptr, "on_print_select_header_print_time",
-                             on_print_select_header_print_time);
-
-    // Register detail view callbacks
-    lv_xml_register_event_cb(nullptr, "on_print_select_print_button", on_print_select_print_button);
-    lv_xml_register_event_cb(nullptr, "on_print_select_delete_button",
-                             on_print_select_delete_button);
-    lv_xml_register_event_cb(nullptr, "on_print_select_detail_backdrop",
-                             on_print_select_detail_backdrop);
-    lv_xml_register_event_cb(nullptr, "on_print_detail_back_clicked", on_print_detail_back_clicked);
+    register_xml_callbacks({
+        {"on_print_select_view_toggle", on_print_select_view_toggle},
+        {"on_print_select_source_printer", on_print_select_source_printer},
+        {"on_print_select_source_usb", on_print_select_source_usb},
+        // List header sort callbacks
+        {"on_print_select_header_filename", on_print_select_header_filename},
+        {"on_print_select_header_size", on_print_select_header_size},
+        {"on_print_select_header_modified", on_print_select_header_modified},
+        {"on_print_select_header_print_time", on_print_select_header_print_time},
+        // Detail view callbacks
+        {"on_print_select_print_button", on_print_select_print_button},
+        {"on_print_select_delete_button", on_print_select_delete_button},
+        {"on_print_select_detail_backdrop", on_print_select_detail_backdrop},
+        {"on_print_detail_back_clicked", on_print_detail_back_clicked},
+    });
 
     subjects_initialized_ = true;
     spdlog::debug("[{}] Subjects initialized", get_name());

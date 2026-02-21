@@ -3,6 +3,7 @@
 
 #include "ui_color_picker.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_hsv_picker.h"
 #include "ui_modal.h"
 
@@ -316,12 +317,14 @@ void ColorPicker::register_callbacks() {
         return;
     }
 
-    lv_xml_register_event_cb(nullptr, "color_picker_close_cb", on_close_cb);
-    lv_xml_register_event_cb(nullptr, "color_swatch_clicked_cb", on_swatch_cb);
-    lv_xml_register_event_cb(nullptr, "color_picker_cancel_cb", on_cancel_cb);
-    lv_xml_register_event_cb(nullptr, "color_picker_select_cb", on_select_cb);
-    lv_xml_register_event_cb(nullptr, "hex_input_changed_cb", on_hex_input_changed_cb);
-    lv_xml_register_event_cb(nullptr, "hex_input_defocused_cb", on_hex_input_defocused_cb);
+    register_xml_callbacks({
+        {"color_picker_close_cb", on_close_cb},
+        {"color_swatch_clicked_cb", on_swatch_cb},
+        {"color_picker_cancel_cb", on_cancel_cb},
+        {"color_picker_select_cb", on_select_cb},
+        {"hex_input_changed_cb", on_hex_input_changed_cb},
+        {"hex_input_defocused_cb", on_hex_input_defocused_cb},
+    });
 
     callbacks_registered_ = true;
     spdlog::debug("[ColorPicker] Callbacks registered");

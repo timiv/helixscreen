@@ -3,6 +3,8 @@
 
 #include "ui_spoolman_context_menu.h"
 
+#include "ui_callback_helpers.h"
+
 #include <spdlog/spdlog.h>
 
 namespace helix::ui {
@@ -189,11 +191,13 @@ void SpoolmanContextMenu::register_callbacks() {
         return;
     }
 
-    lv_xml_register_event_cb(nullptr, "spoolman_context_backdrop_cb", on_backdrop_cb);
-    lv_xml_register_event_cb(nullptr, "spoolman_context_set_active_cb", on_set_active_cb);
-    lv_xml_register_event_cb(nullptr, "spoolman_context_edit_cb", on_edit_cb);
-    lv_xml_register_event_cb(nullptr, "spoolman_context_print_label_cb", on_print_label_cb);
-    lv_xml_register_event_cb(nullptr, "spoolman_context_delete_cb", on_delete_cb);
+    register_xml_callbacks({
+        {"spoolman_context_backdrop_cb", on_backdrop_cb},
+        {"spoolman_context_set_active_cb", on_set_active_cb},
+        {"spoolman_context_edit_cb", on_edit_cb},
+        {"spoolman_context_print_label_cb", on_print_label_cb},
+        {"spoolman_context_delete_cb", on_delete_cb},
+    });
 
     callbacks_registered_ = true;
     spdlog::debug("[SpoolmanContextMenu] Callbacks registered");

@@ -8,6 +8,7 @@
 
 #include "ui_settings_display.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_event_safety.h"
 #include "ui_modal.h"
 #include "ui_nav_manager.h"
@@ -83,23 +84,20 @@ void DisplaySettingsOverlay::init_subjects() {
 }
 
 void DisplaySettingsOverlay::register_callbacks() {
-    // Brightness slider callback
-    lv_xml_register_event_cb(nullptr, "on_brightness_changed", on_brightness_changed);
-
-    // Sleep while printing toggle
-    lv_xml_register_event_cb(nullptr, "on_sleep_while_printing_changed",
-                             on_sleep_while_printing_changed);
-
-    // Theme explorer callbacks (primary panel)
-    lv_xml_register_event_cb(nullptr, "on_theme_preset_changed", on_theme_preset_changed);
-    lv_xml_register_event_cb(nullptr, "on_theme_settings_clicked", on_theme_settings_clicked);
-    lv_xml_register_event_cb(nullptr, "on_preview_dark_mode_toggled", on_preview_dark_mode_toggled);
-    lv_xml_register_event_cb(nullptr, "on_edit_colors_clicked", on_edit_colors_clicked);
-    lv_xml_register_event_cb(nullptr, "on_preview_open_modal", on_preview_open_modal);
-
-    // Apply button uses header_bar's action_button mechanism
-    // The overlay_panel passes action_button_callback through, so we need to register it
-    lv_xml_register_event_cb(nullptr, "on_apply_theme_clicked", on_apply_theme_clicked);
+    register_xml_callbacks({
+        // Brightness slider
+        {"on_brightness_changed", on_brightness_changed},
+        // Sleep while printing toggle
+        {"on_sleep_while_printing_changed", on_sleep_while_printing_changed},
+        // Theme explorer callbacks (primary panel)
+        {"on_theme_preset_changed", on_theme_preset_changed},
+        {"on_theme_settings_clicked", on_theme_settings_clicked},
+        {"on_preview_dark_mode_toggled", on_preview_dark_mode_toggled},
+        {"on_edit_colors_clicked", on_edit_colors_clicked},
+        {"on_preview_open_modal", on_preview_open_modal},
+        // Apply button (header_bar action_button mechanism)
+        {"on_apply_theme_clicked", on_apply_theme_clicked},
+    });
 
     spdlog::debug("[{}] Callbacks registered", get_name());
 }

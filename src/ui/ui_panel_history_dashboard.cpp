@@ -3,6 +3,7 @@
 
 #include "ui_panel_history_dashboard.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_nav_manager.h"
 #include "ui_panel_common.h"
 #include "ui_panel_history_list.h"
@@ -133,18 +134,14 @@ void HistoryDashboardPanel::register_callbacks() {
     spdlog::debug("[{}] Registering event callbacks", get_name());
 
     // Register XML event callbacks
-    lv_xml_register_event_cb(nullptr, "history_filter_day_clicked",
-                             HistoryDashboardPanel::on_filter_day_clicked);
-    lv_xml_register_event_cb(nullptr, "history_filter_week_clicked",
-                             HistoryDashboardPanel::on_filter_week_clicked);
-    lv_xml_register_event_cb(nullptr, "history_filter_month_clicked",
-                             HistoryDashboardPanel::on_filter_month_clicked);
-    lv_xml_register_event_cb(nullptr, "history_filter_year_clicked",
-                             HistoryDashboardPanel::on_filter_year_clicked);
-    lv_xml_register_event_cb(nullptr, "history_filter_all_clicked",
-                             HistoryDashboardPanel::on_filter_all_clicked);
-    lv_xml_register_event_cb(nullptr, "history_view_full_clicked",
-                             HistoryDashboardPanel::on_view_history_clicked);
+    register_xml_callbacks({
+        {"history_filter_day_clicked", HistoryDashboardPanel::on_filter_day_clicked},
+        {"history_filter_week_clicked", HistoryDashboardPanel::on_filter_week_clicked},
+        {"history_filter_month_clicked", HistoryDashboardPanel::on_filter_month_clicked},
+        {"history_filter_year_clicked", HistoryDashboardPanel::on_filter_year_clicked},
+        {"history_filter_all_clicked", HistoryDashboardPanel::on_filter_all_clicked},
+        {"history_view_full_clicked", HistoryDashboardPanel::on_view_history_clicked},
+    });
 
     // Register row click callback for opening from Advanced panel
     lv_xml_register_event_cb(nullptr, "on_history_row_clicked", [](lv_event_t* /*e*/) {

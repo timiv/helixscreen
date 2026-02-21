@@ -3,6 +3,7 @@
 
 #include "ui_probe_overlay.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_nav_manager.h"
 #include "ui_panel_bed_mesh.h"
 #include "ui_panel_calibration_zoffset.h"
@@ -101,35 +102,38 @@ static void send_probe_gcode(const char* gcode, const char* label) {
 }
 
 void ui_probe_overlay_register_callbacks() {
-    // Universal probe actions
-    lv_xml_register_event_cb(nullptr, "on_probe_accuracy", [](lv_event_t* /*e*/) {
-        get_global_probe_overlay().handle_probe_accuracy();
-    });
-    lv_xml_register_event_cb(nullptr, "on_zoffset_cal", [](lv_event_t* /*e*/) {
-        get_global_probe_overlay().handle_zoffset_cal();
-    });
-    lv_xml_register_event_cb(nullptr, "on_bed_mesh", [](lv_event_t* /*e*/) {
-        get_global_probe_overlay().handle_bed_mesh();
-    });
-
-    // BLTouch controls
-    lv_xml_register_event_cb(nullptr, "on_bltouch_deploy", [](lv_event_t* /*e*/) {
-        send_probe_gcode("BLTOUCH_DEBUG COMMAND=pin_down", "BLTouch Deploy");
-    });
-    lv_xml_register_event_cb(nullptr, "on_bltouch_stow", [](lv_event_t* /*e*/) {
-        send_probe_gcode("BLTOUCH_DEBUG COMMAND=pin_up", "BLTouch Stow");
-    });
-    lv_xml_register_event_cb(nullptr, "on_bltouch_reset", [](lv_event_t* /*e*/) {
-        send_probe_gcode("BLTOUCH_DEBUG COMMAND=reset", "BLTouch Reset");
-    });
-    lv_xml_register_event_cb(nullptr, "on_bltouch_selftest", [](lv_event_t* /*e*/) {
-        send_probe_gcode("BLTOUCH_DEBUG COMMAND=self_test", "BLTouch Self-Test");
-    });
-    lv_xml_register_event_cb(nullptr, "on_bltouch_output_5v", [](lv_event_t* /*e*/) {
-        send_probe_gcode("SET_BLTOUCH OUTPUT_MODE=5V", "BLTouch Output 5V");
-    });
-    lv_xml_register_event_cb(nullptr, "on_bltouch_output_od", [](lv_event_t* /*e*/) {
-        send_probe_gcode("SET_BLTOUCH OUTPUT_MODE=OD", "BLTouch Output OD");
+    register_xml_callbacks({
+        // Universal probe actions
+        {"on_probe_accuracy",
+         [](lv_event_t* /*e*/) { get_global_probe_overlay().handle_probe_accuracy(); }},
+        {"on_zoffset_cal",
+         [](lv_event_t* /*e*/) { get_global_probe_overlay().handle_zoffset_cal(); }},
+        {"on_bed_mesh", [](lv_event_t* /*e*/) { get_global_probe_overlay().handle_bed_mesh(); }},
+        // BLTouch controls
+        {"on_bltouch_deploy",
+         [](lv_event_t* /*e*/) {
+             send_probe_gcode("BLTOUCH_DEBUG COMMAND=pin_down", "BLTouch Deploy");
+         }},
+        {"on_bltouch_stow",
+         [](lv_event_t* /*e*/) {
+             send_probe_gcode("BLTOUCH_DEBUG COMMAND=pin_up", "BLTouch Stow");
+         }},
+        {"on_bltouch_reset",
+         [](lv_event_t* /*e*/) {
+             send_probe_gcode("BLTOUCH_DEBUG COMMAND=reset", "BLTouch Reset");
+         }},
+        {"on_bltouch_selftest",
+         [](lv_event_t* /*e*/) {
+             send_probe_gcode("BLTOUCH_DEBUG COMMAND=self_test", "BLTouch Self-Test");
+         }},
+        {"on_bltouch_output_5v",
+         [](lv_event_t* /*e*/) {
+             send_probe_gcode("SET_BLTOUCH OUTPUT_MODE=5V", "BLTouch Output 5V");
+         }},
+        {"on_bltouch_output_od",
+         [](lv_event_t* /*e*/) {
+             send_probe_gcode("SET_BLTOUCH OUTPUT_MODE=OD", "BLTouch Output OD");
+         }},
     });
 
     spdlog::trace("[Probe] Event callbacks registered");

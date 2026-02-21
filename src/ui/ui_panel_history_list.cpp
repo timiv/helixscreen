@@ -3,6 +3,7 @@
 
 #include "ui_panel_history_list.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_fonts.h"
 #include "ui_nav_manager.h"
 #include "ui_notification.h"
@@ -121,37 +122,34 @@ void HistoryListPanel::register_callbacks() {
 
     spdlog::debug("[{}] Registering event callbacks", get_name());
 
-    // Register XML event callbacks for search, filter, and sort
-    lv_xml_register_event_cb(nullptr, "history_search_changed", [](lv_event_t* /*e*/) {
-        get_global_history_list_panel().on_search_changed();
-    });
-    lv_xml_register_event_cb(nullptr, "history_search_clear", [](lv_event_t* /*e*/) {
-        get_global_history_list_panel().on_search_clear();
-    });
-    lv_xml_register_event_cb(nullptr, "history_filter_status_changed", [](lv_event_t* e) {
-        lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
-        if (dropdown) {
-            int index = lv_dropdown_get_selected(dropdown);
-            get_global_history_list_panel().on_status_filter_changed(index);
-        }
-    });
-    lv_xml_register_event_cb(nullptr, "history_sort_changed", [](lv_event_t* e) {
-        lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
-        if (dropdown) {
-            int index = lv_dropdown_get_selected(dropdown);
-            get_global_history_list_panel().on_sort_changed(index);
-        }
-    });
-
-    // Register detail overlay button callbacks
-    lv_xml_register_event_cb(nullptr, "history_detail_reprint", [](lv_event_t* /*e*/) {
-        get_global_history_list_panel().handle_reprint();
-    });
-    lv_xml_register_event_cb(nullptr, "history_detail_delete", [](lv_event_t* /*e*/) {
-        get_global_history_list_panel().handle_delete();
-    });
-    lv_xml_register_event_cb(nullptr, "history_detail_view_timelapse", [](lv_event_t* /*e*/) {
-        get_global_history_list_panel().handle_view_timelapse();
+    // Register XML event callbacks for search, filter, sort, and detail overlay
+    register_xml_callbacks({
+        {"history_search_changed",
+         [](lv_event_t* /*e*/) { get_global_history_list_panel().on_search_changed(); }},
+        {"history_search_clear",
+         [](lv_event_t* /*e*/) { get_global_history_list_panel().on_search_clear(); }},
+        {"history_filter_status_changed",
+         [](lv_event_t* e) {
+             lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
+             if (dropdown) {
+                 int index = lv_dropdown_get_selected(dropdown);
+                 get_global_history_list_panel().on_status_filter_changed(index);
+             }
+         }},
+        {"history_sort_changed",
+         [](lv_event_t* e) {
+             lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
+             if (dropdown) {
+                 int index = lv_dropdown_get_selected(dropdown);
+                 get_global_history_list_panel().on_sort_changed(index);
+             }
+         }},
+        {"history_detail_reprint",
+         [](lv_event_t* /*e*/) { get_global_history_list_panel().handle_reprint(); }},
+        {"history_detail_delete",
+         [](lv_event_t* /*e*/) { get_global_history_list_panel().handle_delete(); }},
+        {"history_detail_view_timelapse",
+         [](lv_event_t* /*e*/) { get_global_history_list_panel().handle_view_timelapse(); }},
     });
 
     callbacks_registered_ = true;

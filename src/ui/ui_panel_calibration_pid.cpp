@@ -3,6 +3,7 @@
 
 #include "ui_panel_calibration_pid.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_emergency_stop.h"
 #include "ui_event_safety.h"
 #include "ui_nav_manager.h"
@@ -115,23 +116,25 @@ void PIDCalibrationPanel::init_subjects() {
 
     // Register XML event callbacks (once globally)
     if (!s_callbacks_registered) {
-        lv_xml_register_event_cb(nullptr, "on_pid_heater_extruder", on_heater_extruder_clicked);
-        lv_xml_register_event_cb(nullptr, "on_pid_heater_bed", on_heater_bed_clicked);
-        lv_xml_register_event_cb(nullptr, "on_pid_temp_up", on_temp_up);
-        lv_xml_register_event_cb(nullptr, "on_pid_temp_down", on_temp_down);
-        lv_xml_register_event_cb(nullptr, "on_pid_start", on_start_clicked);
-        lv_xml_register_event_cb(nullptr, "on_pid_abort", on_abort_clicked);
-        lv_xml_register_event_cb(nullptr, "on_pid_done", on_done_clicked);
-        lv_xml_register_event_cb(nullptr, "on_pid_retry", on_retry_clicked);
-        // Material preset callbacks
-        lv_xml_register_event_cb(nullptr, "on_pid_preset_pla", on_pid_preset_pla);
-        lv_xml_register_event_cb(nullptr, "on_pid_preset_petg", on_pid_preset_petg);
-        lv_xml_register_event_cb(nullptr, "on_pid_preset_abs", on_pid_preset_abs);
-        lv_xml_register_event_cb(nullptr, "on_pid_preset_pa", on_pid_preset_pa);
-        lv_xml_register_event_cb(nullptr, "on_pid_preset_tpu", on_pid_preset_tpu);
-        lv_xml_register_event_cb(nullptr, "on_pid_preset_bed_pla", on_pid_preset_bed_pla);
-        lv_xml_register_event_cb(nullptr, "on_pid_preset_bed_petg", on_pid_preset_bed_petg);
-        lv_xml_register_event_cb(nullptr, "on_pid_preset_bed_abs", on_pid_preset_bed_abs);
+        register_xml_callbacks({
+            {"on_pid_heater_extruder", on_heater_extruder_clicked},
+            {"on_pid_heater_bed", on_heater_bed_clicked},
+            {"on_pid_temp_up", on_temp_up},
+            {"on_pid_temp_down", on_temp_down},
+            {"on_pid_start", on_start_clicked},
+            {"on_pid_abort", on_abort_clicked},
+            {"on_pid_done", on_done_clicked},
+            {"on_pid_retry", on_retry_clicked},
+            // Material preset callbacks
+            {"on_pid_preset_pla", on_pid_preset_pla},
+            {"on_pid_preset_petg", on_pid_preset_petg},
+            {"on_pid_preset_abs", on_pid_preset_abs},
+            {"on_pid_preset_pa", on_pid_preset_pa},
+            {"on_pid_preset_tpu", on_pid_preset_tpu},
+            {"on_pid_preset_bed_pla", on_pid_preset_bed_pla},
+            {"on_pid_preset_bed_petg", on_pid_preset_bed_petg},
+            {"on_pid_preset_bed_abs", on_pid_preset_bed_abs},
+        });
         s_callbacks_registered = true;
     }
 

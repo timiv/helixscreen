@@ -5,6 +5,7 @@
 
 #include "ui_ams_device_operations_overlay.h"
 #include "ui_ams_dryer_card.h"
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_step_progress.h"
@@ -42,10 +43,12 @@ AmsOperationSidebar::~AmsOperationSidebar() {
 // ============================================================================
 
 void AmsOperationSidebar::register_callbacks_static() {
-    lv_xml_register_event_cb(nullptr, "ams_sidebar_bypass_toggled", on_bypass_toggled_cb);
-    lv_xml_register_event_cb(nullptr, "ams_sidebar_unload_clicked", on_unload_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "ams_sidebar_reset_clicked", on_reset_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "ams_sidebar_settings_clicked", on_settings_clicked_cb);
+    register_xml_callbacks({
+        {"ams_sidebar_bypass_toggled", on_bypass_toggled_cb},
+        {"ams_sidebar_unload_clicked", on_unload_clicked_cb},
+        {"ams_sidebar_reset_clicked", on_reset_clicked_cb},
+        {"ams_sidebar_settings_clicked", on_settings_clicked_cb},
+    });
 }
 
 // ============================================================================

@@ -3,6 +3,7 @@
 
 #include "ui_panel_input_shaper.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_emergency_stop.h"
 #include "ui_frequency_response_chart.h"
 #include "ui_modal.h"
@@ -123,84 +124,54 @@ static void on_input_shaper_row_clicked(lv_event_t* e) {
 
 void ui_panel_input_shaper_register_callbacks() {
     // Register event callbacks for XML
-    lv_xml_register_event_cb(nullptr, "input_shaper_calibrate_all_cb", [](lv_event_t* /*e*/) {
-        get_global_input_shaper_panel().handle_calibrate_all_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "input_shaper_calibrate_x_cb", [](lv_event_t* /*e*/) {
-        get_global_input_shaper_panel().handle_calibrate_x_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "input_shaper_calibrate_y_cb", [](lv_event_t* /*e*/) {
-        get_global_input_shaper_panel().handle_calibrate_y_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "input_shaper_measure_noise_cb", [](lv_event_t* /*e*/) {
-        get_global_input_shaper_panel().handle_measure_noise_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "input_shaper_cancel_cb", [](lv_event_t* /*e*/) {
-        get_global_input_shaper_panel().handle_cancel_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "input_shaper_apply_cb", [](lv_event_t* /*e*/) {
-        get_global_input_shaper_panel().handle_apply_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "input_shaper_close_cb", [](lv_event_t* /*e*/) {
-        get_global_input_shaper_panel().handle_close_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "input_shaper_retry_cb", [](lv_event_t* /*e*/) {
-        get_global_input_shaper_panel().handle_retry_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "input_shaper_save_config_cb", [](lv_event_t* /*e*/) {
-        get_global_input_shaper_panel().handle_save_config_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "input_shaper_save_cb", [](lv_event_t* /*e*/) {
-        get_global_input_shaper_panel().handle_save_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "input_shaper_print_test_cb", [](lv_event_t* /*e*/) {
-        get_global_input_shaper_panel().handle_print_test_pattern_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "input_shaper_help_cb", [](lv_event_t* /*e*/) {
-        get_global_input_shaper_panel().handle_help_clicked();
-    });
-
-    // Chip toggle callbacks for frequency response chart overlays
-    lv_xml_register_event_cb(nullptr, "input_shaper_chip_x_0_cb", [](lv_event_t*) {
-        get_global_input_shaper_panel().handle_chip_x_clicked(0);
-    });
-    lv_xml_register_event_cb(nullptr, "input_shaper_chip_x_1_cb", [](lv_event_t*) {
-        get_global_input_shaper_panel().handle_chip_x_clicked(1);
-    });
-    lv_xml_register_event_cb(nullptr, "input_shaper_chip_x_2_cb", [](lv_event_t*) {
-        get_global_input_shaper_panel().handle_chip_x_clicked(2);
-    });
-    lv_xml_register_event_cb(nullptr, "input_shaper_chip_x_3_cb", [](lv_event_t*) {
-        get_global_input_shaper_panel().handle_chip_x_clicked(3);
-    });
-    lv_xml_register_event_cb(nullptr, "input_shaper_chip_x_4_cb", [](lv_event_t*) {
-        get_global_input_shaper_panel().handle_chip_x_clicked(4);
-    });
-    lv_xml_register_event_cb(nullptr, "input_shaper_chip_y_0_cb", [](lv_event_t*) {
-        get_global_input_shaper_panel().handle_chip_y_clicked(0);
-    });
-    lv_xml_register_event_cb(nullptr, "input_shaper_chip_y_1_cb", [](lv_event_t*) {
-        get_global_input_shaper_panel().handle_chip_y_clicked(1);
-    });
-    lv_xml_register_event_cb(nullptr, "input_shaper_chip_y_2_cb", [](lv_event_t*) {
-        get_global_input_shaper_panel().handle_chip_y_clicked(2);
-    });
-    lv_xml_register_event_cb(nullptr, "input_shaper_chip_y_3_cb", [](lv_event_t*) {
-        get_global_input_shaper_panel().handle_chip_y_clicked(3);
-    });
-    lv_xml_register_event_cb(nullptr, "input_shaper_chip_y_4_cb", [](lv_event_t*) {
-        get_global_input_shaper_panel().handle_chip_y_clicked(4);
+    register_xml_callbacks({
+        {"input_shaper_calibrate_all_cb",
+         [](lv_event_t* /*e*/) { get_global_input_shaper_panel().handle_calibrate_all_clicked(); }},
+        {"input_shaper_calibrate_x_cb",
+         [](lv_event_t* /*e*/) { get_global_input_shaper_panel().handle_calibrate_x_clicked(); }},
+        {"input_shaper_calibrate_y_cb",
+         [](lv_event_t* /*e*/) { get_global_input_shaper_panel().handle_calibrate_y_clicked(); }},
+        {"input_shaper_measure_noise_cb",
+         [](lv_event_t* /*e*/) { get_global_input_shaper_panel().handle_measure_noise_clicked(); }},
+        {"input_shaper_cancel_cb",
+         [](lv_event_t* /*e*/) { get_global_input_shaper_panel().handle_cancel_clicked(); }},
+        {"input_shaper_apply_cb",
+         [](lv_event_t* /*e*/) { get_global_input_shaper_panel().handle_apply_clicked(); }},
+        {"input_shaper_close_cb",
+         [](lv_event_t* /*e*/) { get_global_input_shaper_panel().handle_close_clicked(); }},
+        {"input_shaper_retry_cb",
+         [](lv_event_t* /*e*/) { get_global_input_shaper_panel().handle_retry_clicked(); }},
+        {"input_shaper_save_config_cb",
+         [](lv_event_t* /*e*/) { get_global_input_shaper_panel().handle_save_config_clicked(); }},
+        {"input_shaper_save_cb",
+         [](lv_event_t* /*e*/) { get_global_input_shaper_panel().handle_save_clicked(); }},
+        {"input_shaper_print_test_cb",
+         [](lv_event_t* /*e*/) {
+             get_global_input_shaper_panel().handle_print_test_pattern_clicked();
+         }},
+        {"input_shaper_help_cb",
+         [](lv_event_t* /*e*/) { get_global_input_shaper_panel().handle_help_clicked(); }},
+        // Chip toggle callbacks for frequency response chart overlays
+        {"input_shaper_chip_x_0_cb",
+         [](lv_event_t*) { get_global_input_shaper_panel().handle_chip_x_clicked(0); }},
+        {"input_shaper_chip_x_1_cb",
+         [](lv_event_t*) { get_global_input_shaper_panel().handle_chip_x_clicked(1); }},
+        {"input_shaper_chip_x_2_cb",
+         [](lv_event_t*) { get_global_input_shaper_panel().handle_chip_x_clicked(2); }},
+        {"input_shaper_chip_x_3_cb",
+         [](lv_event_t*) { get_global_input_shaper_panel().handle_chip_x_clicked(3); }},
+        {"input_shaper_chip_x_4_cb",
+         [](lv_event_t*) { get_global_input_shaper_panel().handle_chip_x_clicked(4); }},
+        {"input_shaper_chip_y_0_cb",
+         [](lv_event_t*) { get_global_input_shaper_panel().handle_chip_y_clicked(0); }},
+        {"input_shaper_chip_y_1_cb",
+         [](lv_event_t*) { get_global_input_shaper_panel().handle_chip_y_clicked(1); }},
+        {"input_shaper_chip_y_2_cb",
+         [](lv_event_t*) { get_global_input_shaper_panel().handle_chip_y_clicked(2); }},
+        {"input_shaper_chip_y_3_cb",
+         [](lv_event_t*) { get_global_input_shaper_panel().handle_chip_y_clicked(3); }},
+        {"input_shaper_chip_y_4_cb",
+         [](lv_event_t*) { get_global_input_shaper_panel().handle_chip_y_clicked(4); }},
     });
 
     // Initialize subjects BEFORE XML creation

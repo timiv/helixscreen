@@ -3,6 +3,7 @@
 
 #include "ui_wizard_connection.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_keyboard_manager.h"
@@ -847,13 +848,13 @@ void WizardConnectionStep::handle_port_input_changed() {
 void WizardConnectionStep::register_callbacks() {
     spdlog::debug("[{}] Registering event callbacks", get_name());
 
-    // NOTE: We use static trampolines registered via lv_xml_register_event_cb
-    // The actual event binding happens in create() where we have 'this' pointer
-    lv_xml_register_event_cb(nullptr, "on_test_connection_clicked",
-                             on_test_connection_clicked_static);
-    lv_xml_register_event_cb(nullptr, "on_ip_input_changed", on_ip_input_changed_static);
-    lv_xml_register_event_cb(nullptr, "on_port_input_changed", on_port_input_changed_static);
-    lv_xml_register_event_cb(nullptr, "on_printer_selected", on_printer_selected_cb);
+    // Static trampolines — actual event binding happens in create() where we have 'this' pointer
+    register_xml_callbacks({
+        {"on_test_connection_clicked", on_test_connection_clicked_static},
+        {"on_ip_input_changed", on_ip_input_changed_static},
+        {"on_port_input_changed", on_port_input_changed_static},
+        {"on_printer_selected", on_printer_selected_cb},
+    });
 
     spdlog::debug("[{}] Event callbacks registered", get_name());
 }

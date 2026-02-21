@@ -3,6 +3,7 @@
 
 #include "ui_overlay_timelapse_settings.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_fonts.h"
 #include "ui_icon_codepoints.h"
@@ -72,9 +73,7 @@ TimelapseSettingsOverlay::TimelapseSettingsOverlay(MoonrakerAPI* api) : api_(api
 }
 
 void TimelapseSettingsOverlay::init_subjects() {
-    // Register the row click callback for opening this overlay from advanced panel
-    lv_xml_register_event_cb(nullptr, "on_timelapse_row_clicked", on_timelapse_row_clicked);
-    spdlog::debug("[{}] init_subjects() - registered row click callback", get_name());
+    spdlog::debug("[{}] init_subjects()", get_name());
 }
 
 lv_obj_t* TimelapseSettingsOverlay::create(lv_obj_t* parent) {
@@ -130,11 +129,14 @@ lv_obj_t* TimelapseSettingsOverlay::create(lv_obj_t* parent) {
                   render_progress_container_ != nullptr, btn_render_now_ != nullptr);
 
     // Register event callbacks via XML system
-    lv_xml_register_event_cb(nullptr, "on_timelapse_enabled_changed", on_enabled_changed);
-    lv_xml_register_event_cb(nullptr, "on_timelapse_mode_changed", on_mode_changed);
-    lv_xml_register_event_cb(nullptr, "on_timelapse_framerate_changed", on_framerate_changed);
-    lv_xml_register_event_cb(nullptr, "on_timelapse_autorender_changed", on_autorender_changed);
-    lv_xml_register_event_cb(nullptr, "on_timelapse_render_now", on_render_now);
+    register_xml_callbacks({
+        {"on_timelapse_row_clicked", on_timelapse_row_clicked},
+        {"on_timelapse_enabled_changed", on_enabled_changed},
+        {"on_timelapse_mode_changed", on_mode_changed},
+        {"on_timelapse_framerate_changed", on_framerate_changed},
+        {"on_timelapse_autorender_changed", on_autorender_changed},
+        {"on_timelapse_render_now", on_render_now},
+    });
 
     return overlay_root_;
 }

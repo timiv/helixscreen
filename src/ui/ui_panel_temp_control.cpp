@@ -3,6 +3,7 @@
 
 #include "ui_panel_temp_control.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_component_keypad.h"
 #include "ui_error_reporting.h"
 #include "ui_nav_manager.h"
@@ -101,19 +102,20 @@ TempControlPanel::TempControlPanel(PrinterState& printer_state, MoonrakerAPI* ap
 
     // Register XML event callbacks in constructor (BEFORE any lv_xml_create calls)
     // These are global registrations that must exist when XML is parsed
-    lv_xml_register_event_cb(nullptr, "on_nozzle_confirm_clicked", on_nozzle_confirm_clicked);
-    lv_xml_register_event_cb(nullptr, "on_nozzle_preset_off_clicked", on_nozzle_preset_off_clicked);
-    lv_xml_register_event_cb(nullptr, "on_nozzle_preset_pla_clicked", on_nozzle_preset_pla_clicked);
-    lv_xml_register_event_cb(nullptr, "on_nozzle_preset_petg_clicked",
-                             on_nozzle_preset_petg_clicked);
-    lv_xml_register_event_cb(nullptr, "on_nozzle_preset_abs_clicked", on_nozzle_preset_abs_clicked);
-    lv_xml_register_event_cb(nullptr, "on_nozzle_custom_clicked", on_nozzle_custom_clicked);
-    lv_xml_register_event_cb(nullptr, "on_bed_confirm_clicked", on_bed_confirm_clicked);
-    lv_xml_register_event_cb(nullptr, "on_bed_preset_off_clicked", on_bed_preset_off_clicked);
-    lv_xml_register_event_cb(nullptr, "on_bed_preset_pla_clicked", on_bed_preset_pla_clicked);
-    lv_xml_register_event_cb(nullptr, "on_bed_preset_petg_clicked", on_bed_preset_petg_clicked);
-    lv_xml_register_event_cb(nullptr, "on_bed_preset_abs_clicked", on_bed_preset_abs_clicked);
-    lv_xml_register_event_cb(nullptr, "on_bed_custom_clicked", on_bed_custom_clicked);
+    register_xml_callbacks({
+        {"on_nozzle_confirm_clicked", on_nozzle_confirm_clicked},
+        {"on_nozzle_preset_off_clicked", on_nozzle_preset_off_clicked},
+        {"on_nozzle_preset_pla_clicked", on_nozzle_preset_pla_clicked},
+        {"on_nozzle_preset_petg_clicked", on_nozzle_preset_petg_clicked},
+        {"on_nozzle_preset_abs_clicked", on_nozzle_preset_abs_clicked},
+        {"on_nozzle_custom_clicked", on_nozzle_custom_clicked},
+        {"on_bed_confirm_clicked", on_bed_confirm_clicked},
+        {"on_bed_preset_off_clicked", on_bed_preset_off_clicked},
+        {"on_bed_preset_pla_clicked", on_bed_preset_pla_clicked},
+        {"on_bed_preset_petg_clicked", on_bed_preset_petg_clicked},
+        {"on_bed_preset_abs_clicked", on_bed_preset_abs_clicked},
+        {"on_bed_custom_clicked", on_bed_custom_clicked},
+    });
 
     spdlog::debug("[TempPanel] Constructed - subscribed to PrinterState temperature subjects");
 }

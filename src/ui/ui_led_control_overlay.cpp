@@ -3,6 +3,7 @@
 
 #include "led/ui_led_control_overlay.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_color_picker.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
@@ -105,11 +106,13 @@ lv_obj_t* LedControlOverlay::create(lv_obj_t* parent) {
 }
 
 void LedControlOverlay::register_callbacks() {
-    lv_xml_register_event_cb(nullptr, "led_custom_color_cb", on_custom_color_cb);
-    lv_xml_register_event_cb(nullptr, "led_brightness_changed_cb", on_brightness_changed_cb);
-    lv_xml_register_event_cb(nullptr, "led_native_turn_off_cb", on_native_turn_off_cb);
-    lv_xml_register_event_cb(nullptr, "led_wled_toggle_cb", on_wled_toggle_cb);
-    lv_xml_register_event_cb(nullptr, "led_color_preset_cb", on_color_preset_cb);
+    register_xml_callbacks({
+        {"led_custom_color_cb", on_custom_color_cb},
+        {"led_brightness_changed_cb", on_brightness_changed_cb},
+        {"led_native_turn_off_cb", on_native_turn_off_cb},
+        {"led_wled_toggle_cb", on_wled_toggle_cb},
+        {"led_color_preset_cb", on_color_preset_cb},
+    });
     spdlog::trace("[{}] Callbacks registered", get_name());
 }
 

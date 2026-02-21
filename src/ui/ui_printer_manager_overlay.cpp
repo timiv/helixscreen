@@ -2,6 +2,7 @@
 
 #include "ui_printer_manager_overlay.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_event_safety.h"
 #include "ui_fan_control_overlay.h"
 #include "ui_keyboard_manager.h"
@@ -116,24 +117,23 @@ lv_obj_t* PrinterManagerOverlay::create(lv_obj_t* parent) {
 // =============================================================================
 
 void PrinterManagerOverlay::register_callbacks() {
-    // Chip navigation callbacks
-    lv_xml_register_event_cb(nullptr, "pm_chip_bed_mesh_clicked", on_chip_bed_mesh_clicked);
-    lv_xml_register_event_cb(nullptr, "pm_chip_leds_clicked", on_chip_leds_clicked);
-    lv_xml_register_event_cb(nullptr, "pm_chip_adxl_clicked", on_chip_adxl_clicked);
-    lv_xml_register_event_cb(nullptr, "pm_chip_retraction_clicked", on_chip_retraction_clicked);
-    lv_xml_register_event_cb(nullptr, "pm_chip_spoolman_clicked", on_chip_spoolman_clicked);
-    lv_xml_register_event_cb(nullptr, "pm_chip_timelapse_clicked", on_chip_timelapse_clicked);
-    lv_xml_register_event_cb(nullptr, "pm_chip_screws_tilt_clicked", on_chip_screws_tilt_clicked);
-    lv_xml_register_event_cb(nullptr, "pm_chip_ams_clicked", on_chip_ams_clicked);
-    lv_xml_register_event_cb(nullptr, "pm_chip_fans_clicked", on_chip_fans_clicked);
-    lv_xml_register_event_cb(nullptr, "pm_chip_speaker_clicked", on_chip_speaker_clicked);
-
-    // Printer name click callback (inline rename)
-    lv_xml_register_event_cb(nullptr, "pm_printer_name_clicked", pm_printer_name_clicked_cb);
-
-    // Image click callback (opens printer image picker)
-    lv_xml_register_event_cb(nullptr, "on_change_printer_image_clicked",
-                             change_printer_image_clicked_cb);
+    register_xml_callbacks({
+        // Chip navigation callbacks
+        {"pm_chip_bed_mesh_clicked", on_chip_bed_mesh_clicked},
+        {"pm_chip_leds_clicked", on_chip_leds_clicked},
+        {"pm_chip_adxl_clicked", on_chip_adxl_clicked},
+        {"pm_chip_retraction_clicked", on_chip_retraction_clicked},
+        {"pm_chip_spoolman_clicked", on_chip_spoolman_clicked},
+        {"pm_chip_timelapse_clicked", on_chip_timelapse_clicked},
+        {"pm_chip_screws_tilt_clicked", on_chip_screws_tilt_clicked},
+        {"pm_chip_ams_clicked", on_chip_ams_clicked},
+        {"pm_chip_fans_clicked", on_chip_fans_clicked},
+        {"pm_chip_speaker_clicked", on_chip_speaker_clicked},
+        // Printer name click callback (inline rename)
+        {"pm_printer_name_clicked", pm_printer_name_clicked_cb},
+        // Image click callback (opens printer image picker)
+        {"on_change_printer_image_clicked", change_printer_image_clicked_cb},
+    });
 }
 
 // =============================================================================
