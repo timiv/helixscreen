@@ -128,6 +128,27 @@ void HomeWidgetsOverlay::on_activate() {
     widget_config_ = std::make_unique<helix::HomeWidgetConfig>(*Config::get_instance());
     widget_config_->load();
 
+    // Auto-disable hardware-gated widgets whose hardware isn't detected.
+    // Prevents stale enabled=true entries from counting toward the max widget limit.
+    {
+        const auto& entries = widget_config_->entries();
+        for (size_t i = 0; i < entries.size(); ++i) {
+            if (!entries[i].enabled) {
+                continue;
+            }
+            const auto* def = helix::find_widget_def(entries[i].id);
+            if (def && def->hardware_gate_subject) {
+                lv_subject_t* gate = lv_xml_get_subject(nullptr, def->hardware_gate_subject);
+                if (!gate || lv_subject_get_int(gate) <= 0) {
+                    widget_config_->set_enabled(i, false);
+                    changes_made_ = true;
+                    spdlog::debug("[{}] Auto-disabled '{}' (hardware not detected)", get_name(),
+                                  entries[i].id);
+                }
+            }
+        }
+    }
+
     populate_widget_list();
 }
 
@@ -182,13 +203,22 @@ bool HomeWidgetsOverlay::handle_widget_toggled(size_t index, bool enabled) {
         return false;
     }
 
-    // Enforce max enabled widget limit
+    // Enforce max enabled widget limit (only count widgets whose hardware is available,
+    // since hardware-gated widgets with no detected hardware can't be toggled off)
     if (enabled) {
         size_t enabled_count = 0;
         for (const auto& entry : widget_config_->entries()) {
-            if (entry.enabled) {
-                ++enabled_count;
+            if (!entry.enabled) {
+                continue;
             }
+            const auto* def = helix::find_widget_def(entry.id);
+            if (def && def->hardware_gate_subject) {
+                lv_subject_t* gate = lv_xml_get_subject(nullptr, def->hardware_gate_subject);
+                if (!gate || lv_subject_get_int(gate) <= 0) {
+                    continue; // Hardware not detected — don't count
+                }
+            }
+            ++enabled_count;
         }
         if (enabled_count >= MAX_ENABLED_WIDGETS) {
             spdlog::warn("[{}] Cannot enable more than {} widgets", get_name(),

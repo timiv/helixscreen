@@ -22,6 +22,7 @@
 #include <unordered_map>
 
 using helix::ui::temperature::centi_to_degrees;
+using helix::ui::temperature::centi_to_degrees_f;
 using helix::ui::temperature::get_heating_state_color;
 
 // ============================================================================
@@ -40,7 +41,8 @@ static constexpr uint32_t TEMP_DISPLAY_MAGIC = 0x544D5031;
  */
 struct TempDisplayData {
     uint32_t magic = TEMP_DISPLAY_MAGIC;
-    int current_temp = 0;
+    int current_centi = 0; // Centidegrees for precision formatting
+    int current_temp = 0;  // Whole degrees (for heating color logic)
     int target_temp = 0;
     bool show_target = false;        // Default: hide target (opt-in via prop)
     bool has_target_binding = false; // True if bind_target was set (heater mode)
@@ -134,13 +136,19 @@ static void format_target_text(TempDisplayData* data) {
     lv_subject_copy_string(&data->target_text_subject, data->target_text_buf);
 }
 
+/** Format centidegrees as "XX.X" with one decimal place */
+static void format_centi_temp(char* buf, size_t buf_size, int centi) {
+    float deg = centi_to_degrees_f(centi);
+    snprintf(buf, buf_size, "%.1f", deg);
+}
+
 /** Update the display text based on current values */
 static void update_display(TempDisplayData* data) {
     if (!data)
         return;
 
     // Update current temp via subject
-    snprintf(data->current_text_buf, sizeof(data->current_text_buf), "%d", data->current_temp);
+    format_centi_temp(data->current_text_buf, sizeof(data->current_text_buf), data->current_centi);
     lv_subject_copy_string(&data->current_text_subject, data->current_text_buf);
 
     // Update target temp via subject (shows "--" when heater off)
@@ -202,16 +210,15 @@ static void current_temp_observer_cb(lv_observer_t* observer, lv_subject_t* subj
     if (!data)
         return;
 
-    int temp_deg = centi_to_degrees(lv_subject_get_int(subject));
+    int centi = lv_subject_get_int(subject);
+    data->current_centi = centi;
+    data->current_temp = centi_to_degrees(centi);
 
-    if (data) {
-        data->current_temp = temp_deg;
-        // Update color since it depends on current vs target comparison
-        update_heating_color(data);
-    }
+    // Update color since it depends on current vs target comparison
+    update_heating_color(data);
 
     // Update the text subject (which automatically updates the label via binding)
-    snprintf(data->current_text_buf, sizeof(data->current_text_buf), "%d", temp_deg);
+    format_centi_temp(data->current_text_buf, sizeof(data->current_text_buf), centi);
     lv_subject_copy_string(&data->current_text_subject, data->current_text_buf);
 }
 
@@ -352,9 +359,10 @@ static void ui_temp_display_apply_cb(lv_xml_parser_state_t* state, const char** 
                 lv_subject_add_observer_obj(subject, current_temp_observer_cb, data->current_label,
                                             nullptr);
                 // Set initial value
-                data->current_temp = centi_to_degrees(lv_subject_get_int(subject));
-                snprintf(data->current_text_buf, sizeof(data->current_text_buf), "%d",
-                         data->current_temp);
+                int centi = lv_subject_get_int(subject);
+                data->current_centi = centi;
+                data->current_temp = centi_to_degrees(centi);
+                format_centi_temp(data->current_text_buf, sizeof(data->current_text_buf), centi);
                 lv_subject_copy_string(&data->current_text_subject, data->current_text_buf);
                 spdlog::trace("[temp_display] Bound current to subject '{}' ({}°C)", value,
                               data->current_temp);
@@ -411,6 +419,7 @@ void ui_temp_display_set(lv_obj_t* obj, int current, int target) {
         return;
     }
 
+    data->current_centi = current * 10; // Approximate from whole degrees
     data->current_temp = current;
     data->target_temp = target;
     update_display(data);
@@ -425,7 +434,9 @@ void ui_temp_display_set_current(lv_obj_t* obj, int current) {
     data->current_temp = current;
 
     // Update current temp via subject for efficiency
-    snprintf(data->current_text_buf, sizeof(data->current_text_buf), "%d", current);
+    // Note: this API takes whole degrees, so format as "XX.0"
+    snprintf(data->current_text_buf, sizeof(data->current_text_buf), "%.1f",
+             static_cast<float>(current));
     lv_subject_copy_string(&data->current_text_subject, data->current_text_buf);
 }
 
