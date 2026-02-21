@@ -290,8 +290,9 @@ class AmsBackendAfc : public AmsSubscriptionBackend {
      * Extracts afc object from notification and updates system_info_.
      *
      * @param afc_data JSON object containing printer.afc data
+     * @param deferred_error_event Output: error message to emit after releasing mutex
      */
-    void parse_afc_state(const nlohmann::json& afc_data);
+    void parse_afc_state(const nlohmann::json& afc_data, std::string& deferred_error_event);
 
     /**
      * @brief Query current AFC state from Moonraker
