@@ -33,6 +33,21 @@ const std::vector<std::string> MoonrakerAPIMock::PATH_PREFIXES = {
 MoonrakerAPIMock::MoonrakerAPIMock(MoonrakerClient& client, PrinterState& state)
     : MoonrakerAPI(client, state) {
     spdlog::debug("[MoonrakerAPIMock] Created - HTTP methods will use local test files");
+
+    // Replace base MoonrakerSpoolmanAPI with mock version
+    spoolman_api_ = std::make_unique<MoonrakerSpoolmanAPIMock>(client);
+}
+
+MoonrakerSpoolmanAPIMock& MoonrakerAPIMock::spoolman_mock() {
+    return static_cast<MoonrakerSpoolmanAPIMock&>(*spoolman_api_);
+}
+
+// ============================================================================
+// MoonrakerSpoolmanAPIMock Implementation
+// ============================================================================
+
+MoonrakerSpoolmanAPIMock::MoonrakerSpoolmanAPIMock(MoonrakerClient& client)
+    : MoonrakerSpoolmanAPI(client) {
     init_mock_spools();
 }
 
@@ -905,10 +920,10 @@ void MoonrakerAPIMock::start_bed_mesh_calibrate(BedMeshProgressCallback on_progr
 }
 
 // ============================================================================
-// MoonrakerAPIMock - Spoolman Override
+// MoonrakerSpoolmanAPIMock - Spoolman Override
 // ============================================================================
 
-void MoonrakerAPIMock::init_mock_spools() {
+void MoonrakerSpoolmanAPIMock::init_mock_spools() {
     // Create a realistic mock spool inventory
     mock_spools_.clear();
 
@@ -1223,8 +1238,8 @@ void MoonrakerAPIMock::init_mock_spools() {
     spdlog::debug("[MoonrakerAPIMock] Initialized {} mock spools", mock_spools_.size());
 }
 
-void MoonrakerAPIMock::get_spoolman_status(std::function<void(bool, int)> on_success,
-                                           ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::get_spoolman_status(std::function<void(bool, int)> on_success,
+                                                   ErrorCallback /*on_error*/) {
     spdlog::debug("[MoonrakerAPIMock] get_spoolman_status() -> connected={}, active={}",
                   mock_spoolman_enabled_, mock_active_spool_id_);
 
@@ -1233,8 +1248,8 @@ void MoonrakerAPIMock::get_spoolman_status(std::function<void(bool, int)> on_suc
     }
 }
 
-void MoonrakerAPIMock::get_spoolman_spools(SpoolListCallback on_success,
-                                           ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::get_spoolman_spools(SpoolListCallback on_success,
+                                                   ErrorCallback /*on_error*/) {
     spdlog::debug("[MoonrakerAPIMock] get_spoolman_spools() -> {} spools", mock_spools_.size());
 
     if (on_success) {
@@ -1242,8 +1257,8 @@ void MoonrakerAPIMock::get_spoolman_spools(SpoolListCallback on_success,
     }
 }
 
-void MoonrakerAPIMock::get_spoolman_spool(int spool_id, SpoolCallback on_success,
-                                          ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::get_spoolman_spool(int spool_id, SpoolCallback on_success,
+                                                  ErrorCallback /*on_error*/) {
     // Search mock spools for the requested ID
     for (const auto& spool : mock_spools_) {
         if (spool.id == spool_id) {
@@ -1263,8 +1278,8 @@ void MoonrakerAPIMock::get_spoolman_spool(int spool_id, SpoolCallback on_success
     }
 }
 
-void MoonrakerAPIMock::set_active_spool(int spool_id, SuccessCallback on_success,
-                                        ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::set_active_spool(int spool_id, SuccessCallback on_success,
+                                                ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] set_active_spool({}) - was {}", spool_id,
                  mock_active_spool_id_);
 
@@ -1281,9 +1296,9 @@ void MoonrakerAPIMock::set_active_spool(int spool_id, SuccessCallback on_success
     }
 }
 
-void MoonrakerAPIMock::update_spoolman_spool_weight(int spool_id, double remaining_weight_g,
-                                                    SuccessCallback on_success,
-                                                    ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::update_spoolman_spool_weight(int spool_id, double remaining_weight_g,
+                                                            SuccessCallback on_success,
+                                                            ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] update_spoolman_spool_weight({}, {:.1f}g)", spool_id,
                  remaining_weight_g);
 
@@ -1302,9 +1317,9 @@ void MoonrakerAPIMock::update_spoolman_spool_weight(int spool_id, double remaini
     }
 }
 
-void MoonrakerAPIMock::update_spoolman_spool(int spool_id, const nlohmann::json& spool_data,
-                                             SuccessCallback on_success,
-                                             ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::update_spoolman_spool(int spool_id, const nlohmann::json& spool_data,
+                                                     SuccessCallback on_success,
+                                                     ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] update_spoolman_spool({}, {} fields)", spool_id,
                  spool_data.size());
 
@@ -1339,10 +1354,10 @@ void MoonrakerAPIMock::update_spoolman_spool(int spool_id, const nlohmann::json&
     }
 }
 
-void MoonrakerAPIMock::update_spoolman_filament(int filament_id,
-                                                const nlohmann::json& filament_data,
-                                                SuccessCallback on_success,
-                                                ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::update_spoolman_filament(int filament_id,
+                                                        const nlohmann::json& filament_data,
+                                                        SuccessCallback on_success,
+                                                        ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] update_spoolman_filament({}, {} fields)", filament_id,
                  filament_data.size());
 
@@ -1351,9 +1366,10 @@ void MoonrakerAPIMock::update_spoolman_filament(int filament_id,
     }
 }
 
-void MoonrakerAPIMock::update_spoolman_filament_color(int filament_id, const std::string& color_hex,
-                                                      SuccessCallback on_success,
-                                                      ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::update_spoolman_filament_color(int filament_id,
+                                                              const std::string& color_hex,
+                                                              SuccessCallback on_success,
+                                                              ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] update_spoolman_filament_color({}, {})", filament_id,
                  color_hex);
 
@@ -1369,11 +1385,11 @@ void MoonrakerAPIMock::update_spoolman_filament_color(int filament_id, const std
 }
 
 // ============================================================================
-// MoonrakerAPIMock - Spoolman CRUD Methods
+// MoonrakerSpoolmanAPIMock - Spoolman CRUD Methods
 // ============================================================================
 
-void MoonrakerAPIMock::get_spoolman_vendors(VendorListCallback on_success,
-                                            ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::get_spoolman_vendors(VendorListCallback on_success,
+                                                    ErrorCallback /*on_error*/) {
     spdlog::debug("[MoonrakerAPIMock] get_spoolman_vendors()");
 
     // Build vendor list from existing mock spools (deduplicate by vendor name)
@@ -1397,8 +1413,8 @@ void MoonrakerAPIMock::get_spoolman_vendors(VendorListCallback on_success,
     }
 }
 
-void MoonrakerAPIMock::get_spoolman_filaments(FilamentListCallback on_success,
-                                              ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::get_spoolman_filaments(FilamentListCallback on_success,
+                                                      ErrorCallback /*on_error*/) {
     spdlog::debug("[MoonrakerAPIMock] get_spoolman_filaments()");
 
     // Build filament list from existing mock spools (deduplicate by vendor+material+color)
@@ -1448,9 +1464,9 @@ void MoonrakerAPIMock::get_spoolman_filaments(FilamentListCallback on_success,
     }
 }
 
-void MoonrakerAPIMock::create_spoolman_vendor(const nlohmann::json& vendor_data,
-                                              VendorCreateCallback on_success,
-                                              ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::create_spoolman_vendor(const nlohmann::json& vendor_data,
+                                                      VendorCreateCallback on_success,
+                                                      ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] create_spoolman_vendor({})",
                  vendor_data.value("name", "unknown"));
 
@@ -1464,9 +1480,9 @@ void MoonrakerAPIMock::create_spoolman_vendor(const nlohmann::json& vendor_data,
     }
 }
 
-void MoonrakerAPIMock::create_spoolman_filament(const nlohmann::json& filament_data,
-                                                FilamentCreateCallback on_success,
-                                                ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::create_spoolman_filament(const nlohmann::json& filament_data,
+                                                        FilamentCreateCallback on_success,
+                                                        ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] create_spoolman_filament({} {})",
                  filament_data.value("material", "?"), filament_data.value("name", "?"));
 
@@ -1491,9 +1507,9 @@ void MoonrakerAPIMock::create_spoolman_filament(const nlohmann::json& filament_d
     }
 }
 
-void MoonrakerAPIMock::create_spoolman_spool(const nlohmann::json& spool_data,
-                                             SpoolCreateCallback on_success,
-                                             ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::create_spoolman_spool(const nlohmann::json& spool_data,
+                                                     SpoolCreateCallback on_success,
+                                                     ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] create_spoolman_spool()");
 
     // Create a new spool and add to the mock list
@@ -1517,8 +1533,8 @@ void MoonrakerAPIMock::create_spoolman_spool(const nlohmann::json& spool_data,
     }
 }
 
-void MoonrakerAPIMock::delete_spoolman_spool(int spool_id, SuccessCallback on_success,
-                                             ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::delete_spoolman_spool(int spool_id, SuccessCallback on_success,
+                                                     ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] delete_spoolman_spool({})", spool_id);
 
     // Remove from mock list
@@ -1534,8 +1550,8 @@ void MoonrakerAPIMock::delete_spoolman_spool(int spool_id, SuccessCallback on_su
     }
 }
 
-void MoonrakerAPIMock::get_spoolman_external_vendors(VendorListCallback on_success,
-                                                     ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::get_spoolman_external_vendors(VendorListCallback on_success,
+                                                             ErrorCallback /*on_error*/) {
     spdlog::debug("[MoonrakerAPIMock] get_spoolman_external_vendors()");
 
     std::vector<VendorInfo> vendors;
@@ -1570,9 +1586,9 @@ void MoonrakerAPIMock::get_spoolman_external_vendors(VendorListCallback on_succe
     }
 }
 
-void MoonrakerAPIMock::get_spoolman_external_filaments(const std::string& vendor_name,
-                                                       FilamentListCallback on_success,
-                                                       ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::get_spoolman_external_filaments(const std::string& vendor_name,
+                                                               FilamentListCallback on_success,
+                                                               ErrorCallback /*on_error*/) {
     spdlog::debug("[MoonrakerAPIMock] get_spoolman_external_filaments(vendor={})", vendor_name);
 
     std::vector<FilamentInfo> filaments;
@@ -1626,8 +1642,9 @@ void MoonrakerAPIMock::get_spoolman_external_filaments(const std::string& vendor
     }
 }
 
-void MoonrakerAPIMock::get_spoolman_filaments(int vendor_id, FilamentListCallback on_success,
-                                              ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::get_spoolman_filaments(int vendor_id,
+                                                      FilamentListCallback on_success,
+                                                      ErrorCallback /*on_error*/) {
     spdlog::debug("[MoonrakerAPIMock] get_spoolman_filaments(vendor_id={})", vendor_id);
 
     // Return mock filaments — SpoolInfo doesn't have vendor_id so we can't
@@ -1658,8 +1675,8 @@ void MoonrakerAPIMock::get_spoolman_filaments(int vendor_id, FilamentListCallbac
     }
 }
 
-void MoonrakerAPIMock::delete_spoolman_vendor(int vendor_id, SuccessCallback on_success,
-                                              ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::delete_spoolman_vendor(int vendor_id, SuccessCallback on_success,
+                                                      ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] delete_spoolman_vendor({})", vendor_id);
 
     if (on_success) {
@@ -1667,8 +1684,8 @@ void MoonrakerAPIMock::delete_spoolman_vendor(int vendor_id, SuccessCallback on_
     }
 }
 
-void MoonrakerAPIMock::delete_spoolman_filament(int filament_id, SuccessCallback on_success,
-                                                ErrorCallback /*on_error*/) {
+void MoonrakerSpoolmanAPIMock::delete_spoolman_filament(int filament_id, SuccessCallback on_success,
+                                                        ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] delete_spoolman_filament({})", filament_id);
 
     if (on_success) {
@@ -1750,10 +1767,10 @@ void MoonrakerAPIMock::call_rest_post(const std::string& endpoint, const nlohman
 }
 
 // ============================================================================
-// MoonrakerAPIMock - Slot-Spool Mapping
+// MoonrakerSpoolmanAPIMock - Slot-Spool Mapping
 // ============================================================================
 
-void MoonrakerAPIMock::assign_spool_to_slot(int slot_index, int spool_id) {
+void MoonrakerSpoolmanAPIMock::assign_spool_to_slot(int slot_index, int spool_id) {
     if (spool_id <= 0) {
         unassign_spool_from_slot(slot_index);
         return;
@@ -1778,7 +1795,7 @@ void MoonrakerAPIMock::assign_spool_to_slot(int slot_index, int spool_id) {
                  spool->color_name, slot_index);
 }
 
-void MoonrakerAPIMock::unassign_spool_from_slot(int slot_index) {
+void MoonrakerSpoolmanAPIMock::unassign_spool_from_slot(int slot_index) {
     auto it = slot_spool_map_.find(slot_index);
     if (it != slot_spool_map_.end()) {
         spdlog::info("[MoonrakerAPIMock] Unassigned spool {} from slot {}", it->second, slot_index);
@@ -1786,12 +1803,12 @@ void MoonrakerAPIMock::unassign_spool_from_slot(int slot_index) {
     }
 }
 
-int MoonrakerAPIMock::get_spool_for_slot(int slot_index) const {
+int MoonrakerSpoolmanAPIMock::get_spool_for_slot(int slot_index) const {
     auto it = slot_spool_map_.find(slot_index);
     return (it != slot_spool_map_.end()) ? it->second : 0;
 }
 
-std::optional<SpoolInfo> MoonrakerAPIMock::get_spool_info_for_slot(int slot_index) const {
+std::optional<SpoolInfo> MoonrakerSpoolmanAPIMock::get_spool_info_for_slot(int slot_index) const {
     int spool_id = get_spool_for_slot(slot_index);
     if (spool_id <= 0) {
         return std::nullopt;
@@ -1805,7 +1822,7 @@ std::optional<SpoolInfo> MoonrakerAPIMock::get_spool_info_for_slot(int slot_inde
     return std::nullopt;
 }
 
-void MoonrakerAPIMock::consume_filament(float grams, int slot_index) {
+void MoonrakerSpoolmanAPIMock::consume_filament(float grams, int slot_index) {
     // Determine which spool to update
     int spool_id = mock_active_spool_id_;
     if (slot_index >= 0) {

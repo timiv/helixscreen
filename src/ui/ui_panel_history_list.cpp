@@ -3,6 +3,7 @@
 
 #include "ui_panel_history_list.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_fonts.h"
 #include "ui_nav_manager.h"
 #include "ui_notification.h"
@@ -12,12 +13,13 @@
 #include "ui_utils.h"
 
 #include "app_globals.h"
+#include "display_settings_manager.h"
 #include "format_utils.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
+#include "observer_factory.h"
 #include "print_history_manager.h"
 #include "printer_state.h"
-#include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "thumbnail_cache.h"
 #include "ui/ui_cleanup_helpers.h"
@@ -121,37 +123,34 @@ void HistoryListPanel::register_callbacks() {
 
     spdlog::debug("[{}] Registering event callbacks", get_name());
 
-    // Register XML event callbacks for search, filter, and sort
-    lv_xml_register_event_cb(nullptr, "history_search_changed", [](lv_event_t* /*e*/) {
-        get_global_history_list_panel().on_search_changed();
-    });
-    lv_xml_register_event_cb(nullptr, "history_search_clear", [](lv_event_t* /*e*/) {
-        get_global_history_list_panel().on_search_clear();
-    });
-    lv_xml_register_event_cb(nullptr, "history_filter_status_changed", [](lv_event_t* e) {
-        lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
-        if (dropdown) {
-            int index = lv_dropdown_get_selected(dropdown);
-            get_global_history_list_panel().on_status_filter_changed(index);
-        }
-    });
-    lv_xml_register_event_cb(nullptr, "history_sort_changed", [](lv_event_t* e) {
-        lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
-        if (dropdown) {
-            int index = lv_dropdown_get_selected(dropdown);
-            get_global_history_list_panel().on_sort_changed(index);
-        }
-    });
-
-    // Register detail overlay button callbacks
-    lv_xml_register_event_cb(nullptr, "history_detail_reprint", [](lv_event_t* /*e*/) {
-        get_global_history_list_panel().handle_reprint();
-    });
-    lv_xml_register_event_cb(nullptr, "history_detail_delete", [](lv_event_t* /*e*/) {
-        get_global_history_list_panel().handle_delete();
-    });
-    lv_xml_register_event_cb(nullptr, "history_detail_view_timelapse", [](lv_event_t* /*e*/) {
-        get_global_history_list_panel().handle_view_timelapse();
+    // Register XML event callbacks for search, filter, sort, and detail overlay
+    register_xml_callbacks({
+        {"history_search_changed",
+         [](lv_event_t* /*e*/) { get_global_history_list_panel().on_search_changed(); }},
+        {"history_search_clear",
+         [](lv_event_t* /*e*/) { get_global_history_list_panel().on_search_clear(); }},
+        {"history_filter_status_changed",
+         [](lv_event_t* e) {
+             lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
+             if (dropdown) {
+                 int index = lv_dropdown_get_selected(dropdown);
+                 get_global_history_list_panel().on_status_filter_changed(index);
+             }
+         }},
+        {"history_sort_changed",
+         [](lv_event_t* e) {
+             lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
+             if (dropdown) {
+                 int index = lv_dropdown_get_selected(dropdown);
+                 get_global_history_list_panel().on_sort_changed(index);
+             }
+         }},
+        {"history_detail_reprint",
+         [](lv_event_t* /*e*/) { get_global_history_list_panel().handle_reprint(); }},
+        {"history_detail_delete",
+         [](lv_event_t* /*e*/) { get_global_history_list_panel().handle_delete(); }},
+        {"history_detail_view_timelapse",
+         [](lv_event_t* /*e*/) { get_global_history_list_panel().handle_view_timelapse(); }},
     });
 
     callbacks_registered_ = true;
@@ -220,21 +219,15 @@ lv_obj_t* HistoryListPanel::create(lv_obj_t* parent) {
 
     // Register connection state observer to auto-refresh when connected
     // This handles the case where the panel is opened before connection is established
-    // ObserverGuard handles cleanup automatically in destructor
     lv_subject_t* conn_subject = get_printer_state().get_printer_connection_state_subject();
-    connection_observer_ = ObserverGuard(
-        conn_subject,
-        [](lv_observer_t* observer, lv_subject_t* subject) {
-            auto* self = static_cast<HistoryListPanel*>(lv_observer_get_user_data(observer));
-            int32_t state = lv_subject_get_int(subject);
-
+    connection_observer_ = helix::ui::observe_int_sync<HistoryListPanel>(
+        conn_subject, this, [](HistoryListPanel* self, int state) {
             if (state == static_cast<int>(ConnectionState::CONNECTED) && self->is_active_ &&
                 !self->jobs_received_) {
                 spdlog::debug("[{}] Connection established - refreshing data", self->get_name());
                 self->refresh_from_api();
             }
-        },
-        this);
+        });
 
     // Initially hidden
     lv_obj_add_flag(overlay_root_, LV_OBJ_FLAG_HIDDEN);
@@ -398,7 +391,7 @@ void HistoryListPanel::refresh_from_api() {
 
     spdlog::debug("[{}] Fetching first page of history (limit={})", get_name(), PAGE_SIZE);
 
-    api->get_history_list(
+    api->history().get_history_list(
         PAGE_SIZE, // limit - use page size
         0,         // start - first page
         0.0,       // since (no filter)
@@ -440,7 +433,7 @@ void HistoryListPanel::load_more() {
     spdlog::debug("[{}] Loading more jobs (start={}, limit={})", get_name(), start_offset,
                   PAGE_SIZE);
 
-    api->get_history_list(
+    api->history().get_history_list(
         PAGE_SIZE,    // limit
         start_offset, // start - continue from where we left off
         0.0,          // since (no filter)
@@ -1079,7 +1072,7 @@ void HistoryListPanel::update_detail_subjects(const PrintHistoryJob& job) {
         struct tm* tm_info = localtime(&end_ts);
         char buf[32];
         // Format based on user's time format preference
-        TimeFormat format = SettingsManager::instance().get_time_format();
+        TimeFormat format = DisplaySettingsManager::instance().get_time_format();
         if (format == TimeFormat::HOUR_12) {
             strftime(buf, sizeof(buf), "%b %d, %l:%M %p", tm_info);
             // Trim double spaces from %l (space-padded hour)
@@ -1240,7 +1233,7 @@ void HistoryListPanel::confirm_delete() {
 
     MoonrakerAPI* api = get_moonraker_api();
     if (api) {
-        api->delete_history_job(
+        api->history().delete_history_job(
             job_id,
             [this, job_id, filename]() {
                 spdlog::info("[{}] Job deleted: {} ({})", get_name(), filename, job_id);

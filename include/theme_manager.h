@@ -208,6 +208,15 @@ class ThemeManager {
 // 5-tier system: TINY (≤390) → SMALL (391-460) → MEDIUM (461-550) → LARGE (551-700) → XLARGE (>700)
 // _tiny is optional with fallback to _small — only define _tiny where values differ
 // _xlarge is optional with fallback to _large — only define _xlarge where values differ
+// Breakpoint index values (used in C++ and XML bind_flag_if_eq ref_value)
+enum UiBreakpointIndex : int32_t {
+    UI_BP_TINY = 0,
+    UI_BP_SMALL = 1,
+    UI_BP_MEDIUM = 2,
+    UI_BP_LARGE = 3,
+    UI_BP_XLARGE = 4,
+};
+
 #define UI_BREAKPOINT_TINY_MAX 390   // height ≤390 → TINY (480x320)
 #define UI_BREAKPOINT_SMALL_MAX 460  // height 391-460 → SMALL (480x400, 1920x440)
 #define UI_BREAKPOINT_MEDIUM_MAX 550 // height 461-550 → MEDIUM (800x480)
@@ -384,6 +393,19 @@ void theme_manager_apply_theme(const helix::ThemeData& theme, bool dark_mode);
  * @return Pointer to the theme change subject (valid after theme_manager_init)
  */
 lv_subject_t* theme_manager_get_changed_subject();
+
+/**
+ * @brief Get the breakpoint index subject for reactive responsive visibility
+ *
+ * Returns an LVGL int subject holding the current breakpoint index:
+ *   0=TINY, 1=SMALL, 2=MEDIUM, 3=LARGE, 4=XLARGE
+ *
+ * Use with bind_flag_if_eq in XML to reactively show/hide elements based on
+ * screen size. Example: <bind_flag_if_eq subject="ui_breakpoint" flag="hidden" ref_value="0"/>
+ *
+ * @return Pointer to the breakpoint subject (valid after theme_manager_init)
+ */
+lv_subject_t* theme_manager_get_breakpoint_subject();
 
 /**
  * @brief Notify observers that theme has changed

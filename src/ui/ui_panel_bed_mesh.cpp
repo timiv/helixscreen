@@ -14,6 +14,7 @@
 #include "ui_panel_bed_mesh.h"
 
 #include "ui_bed_mesh.h"
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_global_panel_helper.h"
 #include "ui_modal.h"
@@ -24,12 +25,12 @@
 #include "ui_update_queue.h"
 
 #include "app_globals.h"
+#include "display_settings_manager.h"
 #include "format_utils.h"
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
 #include "observer_factory.h"
 #include "printer_detector.h"
-#include "settings_manager.h"
 #include "static_panel_registry.h"
 
 #include <spdlog/spdlog.h>
@@ -271,14 +272,14 @@ lv_obj_t* BedMeshPanel::create(lv_obj_t* parent) {
     }
 
     // Apply saved render mode preference from settings
-    int saved_mode = SettingsManager::instance().get_bed_mesh_render_mode();
+    int saved_mode = DisplaySettingsManager::instance().get_bed_mesh_render_mode();
     auto render_mode = static_cast<BedMeshRenderMode>(saved_mode);
     ui_bed_mesh_set_render_mode(canvas_, render_mode);
     spdlog::debug("[{}] Render mode set from settings: {} ({})", get_name(), saved_mode,
                   saved_mode == 0 ? "Auto" : (saved_mode == 1 ? "3D" : "2D"));
 
     // Apply zero plane visibility from settings
-    bool show_zero_plane = SettingsManager::instance().get_bed_mesh_show_zero_plane();
+    bool show_zero_plane = DisplaySettingsManager::instance().get_bed_mesh_show_zero_plane();
     ui_bed_mesh_set_zero_plane_visible(canvas_, show_zero_plane);
     spdlog::debug("[{}] Zero plane visibility set from settings: {}", get_name(), show_zero_plane);
 
@@ -305,48 +306,49 @@ void BedMeshPanel::register_callbacks() {
 
     spdlog::debug("[{}] Registering event callbacks", get_name());
 
-    // Header calibrate button
-    lv_xml_register_event_cb(nullptr, "on_bed_mesh_calibrate_clicked",
-                             on_calibrate_header_clicked_cb);
+    register_xml_callbacks({
+        // Header calibrate button
+        {"on_bed_mesh_calibrate_clicked", on_calibrate_header_clicked_cb},
 
-    // Profile row callbacks (5 profiles)
-    lv_xml_register_event_cb(nullptr, "on_profile_0_clicked", on_profile_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "on_profile_1_clicked", on_profile_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "on_profile_2_clicked", on_profile_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "on_profile_3_clicked", on_profile_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "on_profile_4_clicked", on_profile_clicked_cb);
+        // Profile row callbacks (5 profiles)
+        {"on_profile_0_clicked", on_profile_clicked_cb},
+        {"on_profile_1_clicked", on_profile_clicked_cb},
+        {"on_profile_2_clicked", on_profile_clicked_cb},
+        {"on_profile_3_clicked", on_profile_clicked_cb},
+        {"on_profile_4_clicked", on_profile_clicked_cb},
 
-    lv_xml_register_event_cb(nullptr, "on_profile_0_rename", on_profile_rename_cb);
-    lv_xml_register_event_cb(nullptr, "on_profile_1_rename", on_profile_rename_cb);
-    lv_xml_register_event_cb(nullptr, "on_profile_2_rename", on_profile_rename_cb);
-    lv_xml_register_event_cb(nullptr, "on_profile_3_rename", on_profile_rename_cb);
-    lv_xml_register_event_cb(nullptr, "on_profile_4_rename", on_profile_rename_cb);
+        {"on_profile_0_rename", on_profile_rename_cb},
+        {"on_profile_1_rename", on_profile_rename_cb},
+        {"on_profile_2_rename", on_profile_rename_cb},
+        {"on_profile_3_rename", on_profile_rename_cb},
+        {"on_profile_4_rename", on_profile_rename_cb},
 
-    lv_xml_register_event_cb(nullptr, "on_profile_0_delete", on_profile_delete_cb);
-    lv_xml_register_event_cb(nullptr, "on_profile_1_delete", on_profile_delete_cb);
-    lv_xml_register_event_cb(nullptr, "on_profile_2_delete", on_profile_delete_cb);
-    lv_xml_register_event_cb(nullptr, "on_profile_3_delete", on_profile_delete_cb);
-    lv_xml_register_event_cb(nullptr, "on_profile_4_delete", on_profile_delete_cb);
+        {"on_profile_0_delete", on_profile_delete_cb},
+        {"on_profile_1_delete", on_profile_delete_cb},
+        {"on_profile_2_delete", on_profile_delete_cb},
+        {"on_profile_3_delete", on_profile_delete_cb},
+        {"on_profile_4_delete", on_profile_delete_cb},
 
-    // Calibrate modal
-    lv_xml_register_event_cb(nullptr, "on_bed_mesh_calibrate_cancel", on_calibrate_cancel_cb);
-    lv_xml_register_event_cb(nullptr, "on_bed_mesh_calibrate_start", on_calibrate_start_cb);
+        // Calibrate modal
+        {"on_bed_mesh_calibrate_cancel", on_calibrate_cancel_cb},
+        {"on_bed_mesh_calibrate_start", on_calibrate_start_cb},
 
-    // Rename modal
-    lv_xml_register_event_cb(nullptr, "on_bed_mesh_rename_cancel", on_rename_cancel_cb);
-    lv_xml_register_event_cb(nullptr, "on_bed_mesh_rename_confirm", on_rename_confirm_cb);
+        // Rename modal
+        {"on_bed_mesh_rename_cancel", on_rename_cancel_cb},
+        {"on_bed_mesh_rename_confirm", on_rename_confirm_cb},
 
-    // Delete modal
-    lv_xml_register_event_cb(nullptr, "on_bed_mesh_delete_cancel", on_delete_cancel_cb);
-    lv_xml_register_event_cb(nullptr, "on_bed_mesh_delete_confirm", on_delete_confirm_cb);
+        // Delete modal
+        {"on_bed_mesh_delete_cancel", on_delete_cancel_cb},
+        {"on_bed_mesh_delete_confirm", on_delete_confirm_cb},
 
-    // Save config modal
-    lv_xml_register_event_cb(nullptr, "on_bed_mesh_save_config_no", on_save_config_no_cb);
-    lv_xml_register_event_cb(nullptr, "on_bed_mesh_save_config_yes", on_save_config_yes_cb);
+        // Save config modal
+        {"on_bed_mesh_save_config_no", on_save_config_no_cb},
+        {"on_bed_mesh_save_config_yes", on_save_config_yes_cb},
 
-    // Calibration modal - emergency stop and save profile
-    lv_xml_register_event_cb(nullptr, "on_bed_mesh_emergency_stop", on_emergency_stop_cb);
-    lv_xml_register_event_cb(nullptr, "on_bed_mesh_save_profile", on_save_profile_cb);
+        // Calibration modal - emergency stop and save profile
+        {"on_bed_mesh_emergency_stop", on_emergency_stop_cb},
+        {"on_bed_mesh_save_profile", on_save_profile_cb},
+    });
 
     callbacks_registered_ = true;
     spdlog::debug("[{}] Event callbacks registered", get_name());

@@ -52,7 +52,7 @@ void PrintHistoryManager::fetch(int limit) {
     // Capture weak_ptr for async callback safety [L012]
     std::weak_ptr<bool> weak_guard = callback_guard_;
 
-    api_->get_history_list(
+    api_->history().get_history_list(
         limit, 0, 0.0, 0.0, // limit, start, since, before
         [this, weak_guard](const std::vector<PrintHistoryJob>& jobs, uint64_t /*total*/) {
             // Copy jobs since callback param is const ref

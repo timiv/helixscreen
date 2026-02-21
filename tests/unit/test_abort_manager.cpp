@@ -22,6 +22,7 @@
 #include "../ui_test_utils.h"
 #include "abort_manager.h"
 #include "app_globals.h"
+#include "safety_settings_manager.h"
 #include "settings_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -1227,7 +1228,7 @@ TEST_CASE_METHOD(AbortManagerTestFixture,
                  "AbortManager: Escalation disabled - cancel timeout never fires",
                  "[abort][cancel][escalation][settings]") {
     // Disable escalation (this is the new default)
-    SettingsManager::instance().set_cancel_escalation_enabled(false);
+    SafetySettingsManager::instance().set_cancel_escalation_enabled(false);
 
     AbortManager::instance().start_abort();
     simulate_kalico_not_present();
@@ -1246,8 +1247,8 @@ TEST_CASE_METHOD(AbortManagerTestFixture,
                  "AbortManager: Escalation enabled - cancel timeout fires with configured value",
                  "[abort][cancel][escalation][settings]") {
     // Enable escalation with 60s timeout
-    SettingsManager::instance().set_cancel_escalation_enabled(true);
-    SettingsManager::instance().set_cancel_escalation_timeout_seconds(60);
+    SafetySettingsManager::instance().set_cancel_escalation_enabled(true);
+    SafetySettingsManager::instance().set_cancel_escalation_timeout_seconds(60);
 
     AbortManager::instance().start_abort();
     simulate_kalico_not_present();

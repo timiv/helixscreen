@@ -377,3 +377,51 @@ ALTEOF
     run fix_install_ownership
     [ "$status" -eq 0 ]
 }
+
+@test "fix_install_ownership: succeeds without sudo when files are user-owned" {
+    # Self-update scenario: config is already owned by the user, so bare chown
+    # succeeds and sudo is never invoked.
+    KLIPPER_USER="biqu"
+    SUDO="sudo_should_not_be_called"
+    mkdir -p "$INSTALL_DIR/config"
+
+    local chown_log="$BATS_TEST_TMPDIR/chown_log"
+    mock_command_script "chown" 'echo "$@" >> "'"$chown_log"'"; exit 0'
+
+    run fix_install_ownership
+    [ "$status" -eq 0 ]
+    [ -f "$chown_log" ]
+    grep -q "biqu:biqu" "$chown_log"
+}
+
+@test "fix_install_ownership: falls back to sudo when bare chown fails" {
+    # Fresh install scenario: config is root-owned, bare chown fails,
+    # $SUDO chown succeeds.
+    KLIPPER_USER="biqu"
+    mkdir -p "$INSTALL_DIR/config"
+
+    local sudo_log="$BATS_TEST_TMPDIR/sudo_log"
+    # chown without sudo fails; sudo wrapper records the call
+    mock_command_script "chown" 'exit 1'
+    mock_command_script "sudo" 'echo "$@" >> "'"$sudo_log"'"; exit 0'
+    SUDO="$BATS_TEST_TMPDIR/bin/sudo"
+
+    run fix_install_ownership
+    [ "$status" -eq 0 ]
+    [ -f "$sudo_log" ]
+    grep -q "chown" "$sudo_log"
+}
+
+@test "fix_install_ownership: survives when both chown and sudo fail (NoNewPrivileges)" {
+    # NoNewPrivileges scenario: bare chown fails AND sudo is blocked.
+    # The || true must prevent set -eu from killing the script.
+    KLIPPER_USER="biqu"
+    mkdir -p "$INSTALL_DIR/config"
+
+    mock_command_fail "chown"
+    mock_command_fail "sudo"
+    SUDO="$BATS_TEST_TMPDIR/bin/sudo"
+
+    run fix_install_ownership
+    [ "$status" -eq 0 ]
+}

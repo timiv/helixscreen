@@ -3269,10 +3269,10 @@ void MoonrakerClientMock::temperature_simulation_loop() {
         speed_factor_.store(speed);
         flow_factor_.store(flow);
 
-        // Simulate fan ramping up during print (0-255 over 30 simulated seconds)
+        // Part fan at ~30% during printing (typical for PLA)
         int fan = 0;
-        if (phase == MockPrintPhase::PRINTING || phase == MockPrintPhase::PREHEAT) {
-            fan = std::min(255, static_cast<int>(print_progress_.load() * 255.0));
+        if (phase == MockPrintPhase::PRINTING) {
+            fan = 77; // ~30% of 255
         }
         fan_speed_.store(fan);
 

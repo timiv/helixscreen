@@ -4,6 +4,7 @@
 #include "ui_ams_context_menu.h"
 
 #include "ui_button.h"
+#include "ui_callback_helpers.h"
 #include "ui_toast_manager.h"
 
 #include "ams_backend.h"
@@ -394,14 +395,16 @@ void AmsContextMenu::register_callbacks() {
         return;
     }
 
-    lv_xml_register_event_cb(nullptr, "ams_context_backdrop_cb", on_backdrop_cb);
-    lv_xml_register_event_cb(nullptr, "ams_context_load_cb", on_load_cb);
-    lv_xml_register_event_cb(nullptr, "ams_context_unload_cb", on_unload_cb);
-    lv_xml_register_event_cb(nullptr, "ams_context_reset_lane_cb", on_reset_lane_cb);
-    lv_xml_register_event_cb(nullptr, "ams_context_edit_cb", on_edit_cb);
-    lv_xml_register_event_cb(nullptr, "ams_context_spoolman_cb", on_spoolman_cb);
-    lv_xml_register_event_cb(nullptr, "ams_context_tool_changed_cb", on_tool_changed_cb);
-    lv_xml_register_event_cb(nullptr, "ams_context_backup_changed_cb", on_backup_changed_cb);
+    register_xml_callbacks({
+        {"ams_context_backdrop_cb", on_backdrop_cb},
+        {"ams_context_load_cb", on_load_cb},
+        {"ams_context_unload_cb", on_unload_cb},
+        {"ams_context_reset_lane_cb", on_reset_lane_cb},
+        {"ams_context_edit_cb", on_edit_cb},
+        {"ams_context_spoolman_cb", on_spoolman_cb},
+        {"ams_context_tool_changed_cb", on_tool_changed_cb},
+        {"ams_context_backup_changed_cb", on_backup_changed_cb},
+    });
 
     callbacks_registered_ = true;
     spdlog::debug("[AmsContextMenu] Callbacks registered");

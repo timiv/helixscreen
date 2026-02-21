@@ -12,9 +12,12 @@
 
 #include "ui_panel_print_select.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
+#include "ui_filename_utils.h"
 #include "ui_fonts.h"
+#include "ui_format_utils.h"
 #include "ui_icon.h"
 #include "ui_modal.h"
 #include "ui_nav_manager.h"
@@ -24,22 +27,22 @@
 #include "ui_print_select_path_navigator.h"
 #include "ui_subject_registry.h"
 #include "ui_update_queue.h"
-#include "ui_utils.h"
 
 #include "app_globals.h"
 #include "config.h"
 #include "display_manager.h"
+#include "display_settings_manager.h"
 #include "format_utils.h"
 #include "gcode_parser.h" // For extract_thumbnails_from_content (USB thumbnail fallback)
 #include "helix-xml/src/xml/lv_xml.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h" // For ConnectionState enum
+#include "observer_factory.h"
 #include "preprint_predictor.h"
 #include "print_history_manager.h"
 #include "print_start_analyzer.h"
 #include "printer_state.h"
 #include "runtime_config.h"
-#include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
 #include "thumbnail_cache.h"
@@ -58,11 +61,14 @@
 #include <vector>
 
 using namespace helix;
+using helix::gcode::strip_gcode_extension;
+using helix::ui::format_filament_weight;
+using helix::ui::format_layer_count;
+using helix::ui::format_print_height;
+using helix::ui::format_print_time;
 
 // Forward declaration for class-based API
 PrintStatusPanel& get_global_print_status_panel();
-
-// Note: strip_gcode_extension() moved to ui_utils.h for DRY reuse across panels
 
 // ============================================================================
 // Global Instance
@@ -299,27 +305,21 @@ void PrintSelectPanel::init_subjects() {
                            subjects_);
 
     // Register XML event callbacks (must be done BEFORE XML is created)
-    lv_xml_register_event_cb(nullptr, "on_print_select_view_toggle", on_print_select_view_toggle);
-    lv_xml_register_event_cb(nullptr, "on_print_select_source_printer",
-                             on_print_select_source_printer);
-    lv_xml_register_event_cb(nullptr, "on_print_select_source_usb", on_print_select_source_usb);
-
-    // Register list header sort callbacks
-    lv_xml_register_event_cb(nullptr, "on_print_select_header_filename",
-                             on_print_select_header_filename);
-    lv_xml_register_event_cb(nullptr, "on_print_select_header_size", on_print_select_header_size);
-    lv_xml_register_event_cb(nullptr, "on_print_select_header_modified",
-                             on_print_select_header_modified);
-    lv_xml_register_event_cb(nullptr, "on_print_select_header_print_time",
-                             on_print_select_header_print_time);
-
-    // Register detail view callbacks
-    lv_xml_register_event_cb(nullptr, "on_print_select_print_button", on_print_select_print_button);
-    lv_xml_register_event_cb(nullptr, "on_print_select_delete_button",
-                             on_print_select_delete_button);
-    lv_xml_register_event_cb(nullptr, "on_print_select_detail_backdrop",
-                             on_print_select_detail_backdrop);
-    lv_xml_register_event_cb(nullptr, "on_print_detail_back_clicked", on_print_detail_back_clicked);
+    register_xml_callbacks({
+        {"on_print_select_view_toggle", on_print_select_view_toggle},
+        {"on_print_select_source_printer", on_print_select_source_printer},
+        {"on_print_select_source_usb", on_print_select_source_usb},
+        // List header sort callbacks
+        {"on_print_select_header_filename", on_print_select_header_filename},
+        {"on_print_select_header_size", on_print_select_header_size},
+        {"on_print_select_header_modified", on_print_select_header_modified},
+        {"on_print_select_header_print_time", on_print_select_header_print_time},
+        // Detail view callbacks
+        {"on_print_select_print_button", on_print_select_print_button},
+        {"on_print_select_delete_button", on_print_select_delete_button},
+        {"on_print_select_detail_backdrop", on_print_select_detail_backdrop},
+        {"on_print_detail_back_clicked", on_print_detail_back_clicked},
+    });
 
     subjects_initialized_ = true;
     spdlog::debug("[{}] Subjects initialized", get_name());
@@ -589,15 +589,12 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     // Register observer on connection state to refresh files when printer connects
     // This handles the race condition where panel activates before WebSocket connection
-    // ObserverGuard handles cleanup automatically in destructor
+    using helix::ui::observe_int_sync;
     lv_subject_t* connection_subject = printer_state_.get_printer_connection_state_subject();
     if (connection_subject) {
-        connection_observer_ = ObserverGuard(
-            connection_subject,
-            [](lv_observer_t* observer, lv_subject_t* subject) {
-                auto* self = static_cast<PrintSelectPanel*>(lv_observer_get_user_data(observer));
-                int32_t state = lv_subject_get_int(subject);
-                if (state == static_cast<int>(ConnectionState::CONNECTED) && self) {
+        connection_observer_ = observe_int_sync<PrintSelectPanel>(
+            connection_subject, this, [](PrintSelectPanel* self, int state) {
+                if (state == static_cast<int>(ConnectionState::CONNECTED)) {
                     // Refresh files if empty (and on Printer source, not USB)
                     bool is_printer_source =
                         !self->usb_source_ || !self->usb_source_->is_usb_active();
@@ -620,24 +617,18 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                     // Note: Plugin detection now happens automatically in discovery flow
                     // (application.cpp). Install prompt is triggered by helix_plugin_observer_.
                 }
-            },
-            this);
+            });
         spdlog::trace("[{}] Registered observer on connection state for auto-refresh", get_name());
     }
 
-    // Register observer on print job state to enable/disable print button
+    // Register observer on print job state enum to enable/disable print button
     // Prevents starting a new print while one is already in progress
-    lv_subject_t* print_state_subject = printer_state_.get_print_state_subject();
+    // NOTE: get_print_state_enum_subject() is INT, get_print_state_subject() is STRING
+    lv_subject_t* print_state_subject = printer_state_.get_print_state_enum_subject();
     if (print_state_subject) {
-        print_state_observer_ = ObserverGuard(
-            print_state_subject,
-            [](lv_observer_t* observer, lv_subject_t* /*subject*/) {
-                auto* self = static_cast<PrintSelectPanel*>(lv_observer_get_user_data(observer));
-                if (self) {
-                    self->update_print_button_state();
-                }
-            },
-            this);
+        print_state_observer_ = observe_int_sync<PrintSelectPanel>(
+            print_state_subject, this,
+            [](PrintSelectPanel* self, int) { self->update_print_button_state(); });
         spdlog::trace("[{}] Registered observer on print job state for print button", get_name());
     }
 
@@ -645,15 +636,9 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // (before Moonraker reports state change, which can take seconds)
     lv_subject_t* print_in_progress_subject = printer_state_.get_print_in_progress_subject();
     if (print_in_progress_subject) {
-        print_in_progress_observer_ = ObserverGuard(
-            print_in_progress_subject,
-            [](lv_observer_t* observer, lv_subject_t* /*subject*/) {
-                auto* self = static_cast<PrintSelectPanel*>(lv_observer_get_user_data(observer));
-                if (self) {
-                    self->update_print_button_state();
-                }
-            },
-            this);
+        print_in_progress_observer_ = observe_int_sync<PrintSelectPanel>(
+            print_in_progress_subject, this,
+            [](PrintSelectPanel* self, int) { self->update_print_button_state(); });
         spdlog::trace("[{}] Registered observer on print_in_progress for print button", get_name());
     }
 
@@ -662,14 +647,8 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Only show modal when explicitly 0 (after discovery confirms plugin is missing)
     lv_subject_t* plugin_subject = printer_state_.get_helix_plugin_installed_subject();
     if (plugin_subject) {
-        helix_plugin_observer_ = ObserverGuard(
-            plugin_subject,
-            [](lv_observer_t* observer, lv_subject_t* subject) {
-                auto* self = static_cast<PrintSelectPanel*>(lv_observer_get_user_data(observer));
-                if (!self)
-                    return;
-
-                int plugin_state = lv_subject_get_int(subject);
+        helix_plugin_observer_ = observe_int_sync<PrintSelectPanel>(
+            plugin_subject, this, [](PrintSelectPanel* self, int plugin_state) {
                 // Only show modal when state is explicitly 0 (checked and not installed)
                 // Skip if -1 (unknown/pre-discovery) or 1 (installed)
                 if (plugin_state == 0 && self->plugin_installer_.should_prompt_install()) {
@@ -678,8 +657,7 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                     self->plugin_install_modal_.set_installer(&self->plugin_installer_);
                     self->plugin_install_modal_.show(lv_screen_active());
                 }
-            },
-            this);
+            });
         spdlog::trace("[{}] Registered observer on helix_plugin_installed for install prompt",
                       get_name());
     }
@@ -1702,7 +1680,7 @@ void PrintSelectPanel::animate_view_entrance(lv_obj_t* container) {
         return;
 
     // Skip animation if disabled - show container in final state
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_set_style_opa(container, LV_OPA_COVER, LV_PART_MAIN);
         spdlog::debug("[{}] Animations disabled - showing view instantly", get_name());
         return;
@@ -1866,7 +1844,7 @@ void PrintSelectPanel::update_sort_indicators() {
     constexpr int32_t FADE_DURATION_MS = 200;
 
     // Check if animations are enabled
-    bool animations_enabled = SettingsManager::instance().get_animations_enabled();
+    bool animations_enabled = DisplaySettingsManager::instance().get_animations_enabled();
 
     // Helper lambda for animated show/hide with crossfade
     auto animate_icon_visibility = [animations_enabled](lv_obj_t* icon, bool show) {

@@ -297,7 +297,7 @@ TEST_CASE("MoonrakerAPIMock - get_spoolman_status", "[filament][mock]") {
 
     SECTION("Returns connected by default") {
         bool callback_called = false;
-        api.get_spoolman_status(
+        api.spoolman().get_spoolman_status(
             [&](bool connected, int active_spool_id) {
                 callback_called = true;
                 REQUIRE(connected == true);
@@ -309,10 +309,10 @@ TEST_CASE("MoonrakerAPIMock - get_spoolman_status", "[filament][mock]") {
     }
 
     SECTION("Can be disabled") {
-        api.set_mock_spoolman_enabled(false);
+        api.spoolman_mock().set_mock_spoolman_enabled(false);
 
         bool callback_called = false;
-        api.get_spoolman_status(
+        api.spoolman().get_spoolman_status(
             [&](bool connected, int /*active_spool_id*/) {
                 callback_called = true;
                 REQUIRE(connected == false);
@@ -331,7 +331,7 @@ TEST_CASE("MoonrakerAPIMock - get_spoolman_spools", "[filament][mock]") {
 
     SECTION("Returns non-empty spool list") {
         bool callback_called = false;
-        api.get_spoolman_spools(
+        api.spoolman().get_spoolman_spools(
             [&](const std::vector<SpoolInfo>& spools) {
                 callback_called = true;
                 REQUIRE(spools.size() == 19); // Mock has 19 spools
@@ -342,7 +342,7 @@ TEST_CASE("MoonrakerAPIMock - get_spoolman_spools", "[filament][mock]") {
     }
 
     SECTION("First spool is active by default") {
-        api.get_spoolman_spools(
+        api.spoolman().get_spoolman_spools(
             [&](const std::vector<SpoolInfo>& spools) {
                 REQUIRE(spools.size() > 0);
                 REQUIRE(spools[0].is_active == true);
@@ -356,7 +356,7 @@ TEST_CASE("MoonrakerAPIMock - get_spoolman_spools", "[filament][mock]") {
     }
 
     SECTION("Spools have valid data") {
-        api.get_spoolman_spools(
+        api.spoolman().get_spoolman_spools(
             [&](const std::vector<SpoolInfo>& spools) {
                 for (const auto& spool : spools) {
                     // Each spool should have basic info
@@ -373,7 +373,7 @@ TEST_CASE("MoonrakerAPIMock - get_spoolman_spools", "[filament][mock]") {
 
     SECTION("Has diverse materials") {
         std::set<std::string> materials;
-        api.get_spoolman_spools(
+        api.spoolman().get_spoolman_spools(
             [&](const std::vector<SpoolInfo>& spools) {
                 for (const auto& spool : spools) {
                     materials.insert(spool.material);
@@ -393,24 +393,24 @@ TEST_CASE("MoonrakerAPIMock - set_active_spool", "[filament][mock]") {
 
     SECTION("Changes active spool") {
         bool success_called = false;
-        api.set_active_spool(
+        api.spoolman().set_active_spool(
             5, [&]() { success_called = true; },
             [](const MoonrakerError&) { FAIL("Error should not be called"); });
 
         REQUIRE(success_called);
 
         // Verify the change via get_spoolman_status
-        api.get_spoolman_status(
+        api.spoolman().get_spoolman_status(
             [](bool /*connected*/, int active_spool_id) { REQUIRE(active_spool_id == 5); },
             [](const MoonrakerError&) {});
     }
 
     SECTION("Updates is_active flag on spools") {
         // Set spool 3 as active
-        api.set_active_spool(3, []() {}, [](const MoonrakerError&) {});
+        api.spoolman().set_active_spool(3, []() {}, [](const MoonrakerError&) {});
 
         // Verify spool 3 has is_active=true, others false
-        api.get_spoolman_spools(
+        api.spoolman().get_spoolman_spools(
             [](const std::vector<SpoolInfo>& spools) {
                 for (const auto& spool : spools) {
                     if (spool.id == 3) {
@@ -426,7 +426,8 @@ TEST_CASE("MoonrakerAPIMock - set_active_spool", "[filament][mock]") {
     SECTION("Setting non-existent spool ID still succeeds") {
         // Mock doesn't validate IDs - that's the server's job
         bool success_called = false;
-        api.set_active_spool(9999, [&]() { success_called = true; }, [](const MoonrakerError&) {});
+        api.spoolman().set_active_spool(
+            9999, [&]() { success_called = true; }, [](const MoonrakerError&) {});
 
         REQUIRE(success_called);
     }
@@ -443,7 +444,7 @@ TEST_CASE("MoonrakerAPIMock - get_spoolman_vendors", "[filament][mock]") {
 
     SECTION("Returns vendor list derived from spools") {
         bool callback_called = false;
-        api.get_spoolman_vendors(
+        api.spoolman().get_spoolman_vendors(
             [&](const std::vector<VendorInfo>& vendors) {
                 callback_called = true;
                 // Should have multiple unique vendors from mock spools
@@ -461,7 +462,7 @@ TEST_CASE("MoonrakerAPIMock - get_spoolman_vendors", "[filament][mock]") {
 
     SECTION("Vendors are deduplicated") {
         std::set<std::string> vendor_names;
-        api.get_spoolman_vendors(
+        api.spoolman().get_spoolman_vendors(
             [&](const std::vector<VendorInfo>& vendors) {
                 for (const auto& v : vendors) {
                     REQUIRE(vendor_names.find(v.name) == vendor_names.end());
@@ -479,7 +480,7 @@ TEST_CASE("MoonrakerAPIMock - get_spoolman_filaments", "[filament][mock]") {
 
     SECTION("Returns filament list") {
         bool callback_called = false;
-        api.get_spoolman_filaments(
+        api.spoolman().get_spoolman_filaments(
             [&](const std::vector<FilamentInfo>& filaments) {
                 callback_called = true;
                 REQUIRE(filaments.size() > 0);
@@ -505,7 +506,7 @@ TEST_CASE("MoonrakerAPIMock - create_spoolman_vendor", "[filament][mock]") {
         data["url"] = "https://example.com";
 
         bool callback_called = false;
-        api.create_spoolman_vendor(
+        api.spoolman().create_spoolman_vendor(
             data,
             [&](const VendorInfo& vendor) {
                 callback_called = true;
@@ -533,7 +534,7 @@ TEST_CASE("MoonrakerAPIMock - create_spoolman_filament", "[filament][mock]") {
         data["weight"] = 1000.0f;
 
         bool callback_called = false;
-        api.create_spoolman_filament(
+        api.spoolman().create_spoolman_filament(
             data,
             [&](const FilamentInfo& filament) {
                 callback_called = true;
@@ -555,7 +556,7 @@ TEST_CASE("MoonrakerAPIMock - create_spoolman_spool", "[filament][mock]") {
 
     SECTION("Creates spool and adds to list") {
         size_t initial_count = 0;
-        api.get_spoolman_spools(
+        api.spoolman().get_spoolman_spools(
             [&](const std::vector<SpoolInfo>& spools) { initial_count = spools.size(); },
             [](const MoonrakerError&) {});
 
@@ -565,7 +566,7 @@ TEST_CASE("MoonrakerAPIMock - create_spoolman_spool", "[filament][mock]") {
         data["spool_weight"] = 200.0;
 
         bool callback_called = false;
-        api.create_spoolman_spool(
+        api.spoolman().create_spoolman_spool(
             data,
             [&](const SpoolInfo& spool) {
                 callback_called = true;
@@ -578,7 +579,7 @@ TEST_CASE("MoonrakerAPIMock - create_spoolman_spool", "[filament][mock]") {
         REQUIRE(callback_called);
 
         // Verify spool count increased
-        api.get_spoolman_spools(
+        api.spoolman().get_spoolman_spools(
             [&](const std::vector<SpoolInfo>& spools) {
                 REQUIRE(spools.size() == initial_count + 1);
             },
@@ -593,7 +594,7 @@ TEST_CASE("MoonrakerAPIMock - delete_spoolman_spool", "[filament][mock]") {
 
     SECTION("Deletes spool from list") {
         size_t initial_count = 0;
-        api.get_spoolman_spools(
+        api.spoolman().get_spoolman_spools(
             [&](const std::vector<SpoolInfo>& spools) { initial_count = spools.size(); },
             [](const MoonrakerError&) {});
 
@@ -601,14 +602,14 @@ TEST_CASE("MoonrakerAPIMock - delete_spoolman_spool", "[filament][mock]") {
 
         // Delete spool with ID 1
         bool callback_called = false;
-        api.delete_spoolman_spool(
+        api.spoolman().delete_spoolman_spool(
             1, [&]() { callback_called = true; },
             [](const MoonrakerError&) { FAIL("Error callback should not be called"); });
 
         REQUIRE(callback_called);
 
         // Verify spool count decreased
-        api.get_spoolman_spools(
+        api.spoolman().get_spoolman_spools(
             [&](const std::vector<SpoolInfo>& spools) {
                 REQUIRE(spools.size() == initial_count - 1);
                 // Verify spool 1 is gone
@@ -621,7 +622,7 @@ TEST_CASE("MoonrakerAPIMock - delete_spoolman_spool", "[filament][mock]") {
 
     SECTION("Deleting non-existent spool still succeeds") {
         bool callback_called = false;
-        api.delete_spoolman_spool(
+        api.spoolman().delete_spoolman_spool(
             9999, [&]() { callback_called = true; }, [](const MoonrakerError&) {});
 
         REQUIRE(callback_called);
@@ -636,7 +637,7 @@ TEST_CASE("MoonrakerAPIMock - update_spoolman_spool", "[filament][mock]") {
     SECTION("Updates remaining_weight field") {
         // Get initial weight of first spool
         double initial_weight = 0;
-        api.get_spoolman_spools(
+        api.spoolman().get_spoolman_spools(
             [&initial_weight](const std::vector<SpoolInfo>& spools) {
                 REQUIRE(!spools.empty());
                 initial_weight = spools[0].remaining_weight_g;
@@ -649,14 +650,14 @@ TEST_CASE("MoonrakerAPIMock - update_spoolman_spool", "[filament][mock]") {
 
         bool callback_called = false;
         int spool_id = 1; // First mock spool
-        api.update_spoolman_spool(
+        api.spoolman().update_spoolman_spool(
             spool_id, patch, [&callback_called]() { callback_called = true; },
             [](const MoonrakerError&) { FAIL("Update should not fail"); });
 
         REQUIRE(callback_called);
 
         // Verify the weight was updated
-        api.get_spoolman_spools(
+        api.spoolman().get_spoolman_spools(
             [spool_id](const std::vector<SpoolInfo>& spools) {
                 for (const auto& s : spools) {
                     if (s.id == spool_id) {
@@ -869,14 +870,14 @@ TEST_CASE("Mock persists created filaments", "[spoolman][mock]") {
     filament_data["vendor_id"] = 1;
 
     FilamentInfo created;
-    api.create_spoolman_filament(
+    api.spoolman().create_spoolman_filament(
         filament_data, [&](const FilamentInfo& f) { created = f; }, nullptr);
     REQUIRE(created.id > 0);
 
     // Verify it appears in subsequent filament list
     std::vector<FilamentInfo> filaments;
-    api.get_spoolman_filaments([&](const std::vector<FilamentInfo>& list) { filaments = list; },
-                               nullptr);
+    api.spoolman().get_spoolman_filaments(
+        [&](const std::vector<FilamentInfo>& list) { filaments = list; }, nullptr);
 
     bool found = false;
     for (const auto& f : filaments) {
@@ -894,7 +895,7 @@ TEST_CASE("Mock update_spoolman_spool supports filament_id patch", "[spoolman][m
     MoonrakerClientMock client;
     MoonrakerAPIMock api(client, state);
 
-    auto& spools = api.get_mock_spools();
+    auto& spools = api.spoolman_mock().get_mock_spools();
     int spool_id = spools[0].id;
     int original_filament_id = spools[0].filament_id;
 
@@ -902,7 +903,7 @@ TEST_CASE("Mock update_spoolman_spool supports filament_id patch", "[spoolman][m
     patch["filament_id"] = 999;
 
     bool success = false;
-    api.update_spoolman_spool(spool_id, patch, [&]() { success = true; }, nullptr);
+    api.spoolman().update_spoolman_spool(spool_id, patch, [&]() { success = true; }, nullptr);
 
     REQUIRE(success);
     REQUIRE(spools[0].filament_id == 999);

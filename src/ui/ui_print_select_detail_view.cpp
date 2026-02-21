@@ -3,6 +3,7 @@
 
 #include "ui_print_select_detail_view.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_icon.h"
 #include "ui_modal.h"
@@ -99,16 +100,14 @@ void PrintSelectDetailView::init_subjects() {
     // Register XML event callbacks BEFORE subjects (per [L013])
     // Callbacks must be registered before XML is created
     if (!s_callbacks_registered) {
-        lv_xml_register_event_cb(nullptr, "on_preprint_bed_mesh_toggled",
-                                 on_preprint_bed_mesh_toggled);
-        lv_xml_register_event_cb(nullptr, "on_preprint_qgl_toggled", on_preprint_qgl_toggled);
-        lv_xml_register_event_cb(nullptr, "on_preprint_z_tilt_toggled", on_preprint_z_tilt_toggled);
-        lv_xml_register_event_cb(nullptr, "on_preprint_nozzle_clean_toggled",
-                                 on_preprint_nozzle_clean_toggled);
-        lv_xml_register_event_cb(nullptr, "on_preprint_purge_line_toggled",
-                                 on_preprint_purge_line_toggled);
-        lv_xml_register_event_cb(nullptr, "on_preprint_timelapse_toggled",
-                                 on_preprint_timelapse_toggled);
+        register_xml_callbacks({
+            {"on_preprint_bed_mesh_toggled", on_preprint_bed_mesh_toggled},
+            {"on_preprint_qgl_toggled", on_preprint_qgl_toggled},
+            {"on_preprint_z_tilt_toggled", on_preprint_z_tilt_toggled},
+            {"on_preprint_nozzle_clean_toggled", on_preprint_nozzle_clean_toggled},
+            {"on_preprint_purge_line_toggled", on_preprint_purge_line_toggled},
+            {"on_preprint_timelapse_toggled", on_preprint_timelapse_toggled},
+        });
         s_callbacks_registered = true;
         spdlog::debug("[DetailView] Registered pre-print toggle callbacks");
     }

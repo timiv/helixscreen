@@ -418,7 +418,7 @@ void WizardWifiStep::on_wifi_toggle_changed_static(lv_event_t* e) {
 void WizardWifiStep::on_network_item_clicked_static(lv_event_t* e) {
     // Network items use item user_data (WifiWizardNetworkItemData with parent pointer)
     // instead of event user_data, since XML event_cb can't pass instance context
-    lv_obj_t* item = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    lv_obj_t* item = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
     if (!item)
         return;
 
@@ -520,7 +520,7 @@ void WizardWifiStep::handle_wifi_toggle_changed(lv_event_t* e) {
 }
 
 void WizardWifiStep::handle_network_item_clicked(lv_event_t* e) {
-    lv_obj_t* item = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    lv_obj_t* item = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
     if (!item)
         return;
 

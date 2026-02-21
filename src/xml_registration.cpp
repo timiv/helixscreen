@@ -7,6 +7,7 @@
 #include "ui_ams_device_operations_overlay.h"
 #include "ui_ams_device_section_detail_overlay.h"
 #include "ui_button.h"
+#include "ui_carousel.h"
 #include "ui_confetti.h"
 #include "ui_fan_dial.h"
 #include "ui_fonts.h"
@@ -143,6 +144,8 @@ void register_xml_components() {
     ui_button_init();             // <ui_button> with variant styles and auto-contrast
     ui_markdown_init();           // <ui_markdown> with theme-aware markdown rendering
     ui_notification_badge_init(); // <notification_badge> with auto-contrast text
+    ui_carousel_init();           // <ui_carousel> horizontal scroll-snap carousel
+    register_xml("carousel.xml"); // <carousel> XML component wrapping ui_carousel
     ui_confetti_init();           // <ui_confetti> celebration animation canvas
 
     // Register no-op callback and subject for optional handlers in XML components
@@ -240,18 +243,22 @@ void register_xml_components() {
     register_xml("print_file_list_row.xml");
     register_xml("print_file_detail.xml");
 
-    // Home panel widget components (dynamic instantiation from HomeWidgetConfig)
-    register_xml("components/home_widget_power.xml");
-    register_xml("components/home_widget_network.xml");
-    register_xml("components/home_widget_notifications.xml");
-    register_xml("components/home_widget_firmware_restart.xml");
-    register_xml("components/home_widget_ams.xml");
-    register_xml("components/home_widget_temperature.xml");
-    register_xml("components/home_widget_led.xml");
-    register_xml("components/home_widget_humidity.xml");
-    register_xml("components/home_widget_width_sensor.xml");
-    register_xml("components/home_widget_probe.xml");
-    register_xml("components/home_widget_filament.xml");
+    // Panel widget components (dynamic instantiation from PanelWidgetConfig)
+    register_xml("components/panel_widget_power.xml");
+    register_xml("components/panel_widget_network.xml");
+    register_xml("components/panel_widget_notifications.xml");
+    register_xml("components/panel_widget_firmware_restart.xml");
+    register_xml("components/panel_widget_ams.xml");
+    register_xml("components/panel_widget_temperature.xml");
+    register_xml("components/panel_widget_temp_stack.xml");
+    register_xml("components/panel_widget_led.xml");
+    register_xml("components/panel_widget_humidity.xml");
+    register_xml("components/panel_widget_width_sensor.xml");
+    register_xml("components/panel_widget_probe.xml");
+    register_xml("components/panel_widget_filament.xml");
+    register_xml("components/panel_widget_thermistor.xml");
+    register_xml("components/panel_widget_fan_stack.xml");
+    register_xml("thermistor_sensor_picker.xml");
 
     // Main navigation and panels
     register_xml("navigation_bar.xml");
@@ -332,7 +339,8 @@ void register_xml_components() {
     // Settings overlay panels
     register_xml("about_overlay.xml");
     register_xml("display_settings_overlay.xml");
-    register_xml("home_widgets_overlay.xml");
+    register_xml("panel_widget_row.xml");
+    register_xml("panel_widgets_overlay.xml");
     register_xml("sound_settings_overlay.xml");
     register_xml("led_settings_overlay.xml");
     register_xml("theme_editor_overlay.xml");

@@ -3,21 +3,13 @@
 
 #pragma once
 
-#include "ui_subscription_guard.h"
-
 #include "afc_config_manager.h"
-#include "ams_backend.h"
-#include "moonraker_client.h"
+#include "ams_subscription_backend.h"
 #include "slot_registry.h"
 
-#include <atomic>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <unordered_map>
-
-// Forward declaration
-class MoonrakerAPI;
 
 /**
  * @file ams_backend_afc.h
@@ -84,7 +76,7 @@ struct AfcUnitInfo {
     PathTopology topology = PathTopology::HUB; ///< Derived topology for this unit
 };
 
-class AmsBackendAfc : public AmsBackend {
+class AmsBackendAfc : public AmsSubscriptionBackend {
   public:
     /**
      * @brief Construct AFC backend
@@ -96,25 +88,10 @@ class AmsBackendAfc : public AmsBackend {
      */
     AmsBackendAfc(MoonrakerAPI* api, helix::MoonrakerClient* client);
 
-    ~AmsBackendAfc() override;
-
-    // Lifecycle
-    AmsError start() override;
-    void stop() override;
-    void release_subscriptions() override;
-    [[nodiscard]] bool is_running() const override;
-
-    // Events
-    void set_event_callback(EventCallback callback) override;
-
     // State queries
     [[nodiscard]] AmsSystemInfo get_system_info() const override;
     [[nodiscard]] AmsType get_type() const override;
     [[nodiscard]] SlotInfo get_slot_info(int slot_index) const override;
-    [[nodiscard]] AmsAction get_current_action() const override;
-    [[nodiscard]] int get_current_tool() const override;
-    [[nodiscard]] int get_current_slot() const override;
-    [[nodiscard]] bool is_filament_loaded() const override;
 
     // Path visualization
     [[nodiscard]] PathTopology get_topology() const override;
@@ -297,18 +274,16 @@ class AmsBackendAfc : public AmsBackend {
     friend class AmsBackendAfcConfigHelper;
     friend class AfcErrorHandlingHelper;
     friend class AfcErrorStateHelper;
+    friend class AfcCharHelper;
+
+    // --- AmsSubscriptionBackend hooks ---
+    void on_started() override;
+    void handle_status_update(const nlohmann::json& notification) override;
+    const char* backend_log_tag() const override {
+        return "[AMS AFC]";
+    }
 
   private:
-    /**
-     * @brief Handle status update notifications from Moonraker
-     *
-     * Called when printer.afc.* values change via notify_status_update.
-     * Parses the JSON and updates internal state.
-     *
-     * @param notification JSON notification from Moonraker
-     */
-    void handle_status_update(const nlohmann::json& notification);
-
     /**
      * @brief Parse AFC state from Moonraker JSON
      *
@@ -451,21 +426,6 @@ class AmsBackendAfc : public AmsBackend {
     [[nodiscard]] PathSegment compute_filament_segment_unlocked() const;
 
     /**
-     * @brief Emit event to registered callback
-     * @param event Event name
-     * @param data Event data (JSON or empty)
-     */
-    void emit_event(const std::string& event, const std::string& data = "");
-
-    /**
-     * @brief Execute a G-code command via MoonrakerAPI
-     *
-     * @param gcode The G-code command to execute
-     * @return AmsError indicating success or failure to queue command
-     */
-    virtual AmsError execute_gcode(const std::string& gcode);
-
-    /**
      * @brief Execute a G-code command with user-facing toast notifications
      *
      * Like execute_gcode() but shows a success or error toast when the
@@ -480,17 +440,6 @@ class AmsBackendAfc : public AmsBackend {
                                           const std::string& error_prefix);
 
     /**
-     * @brief Check common preconditions before operations
-     *
-     * Validates:
-     * - Backend is running
-     * - System is not busy
-     *
-     * @return AmsError (SUCCESS if ok, appropriate error otherwise)
-     */
-    AmsError check_preconditions() const;
-
-    /**
      * @brief Validate slot index is within range
      *
      * @param slot_index Slot index to validate
@@ -498,20 +447,7 @@ class AmsBackendAfc : public AmsBackend {
      */
     AmsError validate_slot_index(int slot_index) const;
 
-    // Dependencies
-    MoonrakerAPI* api_;              ///< For sending G-code commands
-    helix::MoonrakerClient* client_; ///< For subscribing to updates
-
-    // State
-    mutable std::recursive_mutex mutex_; ///< Protects state access (recursive for callback safety)
-    std::atomic<bool> running_{false};   ///< Backend running state
-    EventCallback event_callback_;       ///< Registered event handler
-    SubscriptionGuard subscription_;     ///< RAII subscription (auto-unsubscribes)
-
-    // Cached AFC state
-    AmsSystemInfo system_info_; ///< Current system state
-
-    // Unified slot registry — single source of truth for all slot-indexed state
+    // Unified slot registry -- single source of truth for all slot-indexed state
     helix::printer::SlotRegistry slots_;
 
     // Pre-init storage for lane names from PrinterCapabilities discovery.

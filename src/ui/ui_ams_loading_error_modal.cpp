@@ -3,6 +3,8 @@
 
 #include "ui_ams_loading_error_modal.h"
 
+#include "ui_callback_helpers.h"
+
 #include <spdlog/spdlog.h>
 
 namespace helix::ui {
@@ -109,9 +111,11 @@ void AmsLoadingErrorModal::register_callbacks() {
         return;
     }
 
-    lv_xml_register_event_cb(nullptr, "ams_loading_error_close_cb", on_close_cb);
-    lv_xml_register_event_cb(nullptr, "ams_loading_error_cancel_cb", on_cancel_cb);
-    lv_xml_register_event_cb(nullptr, "ams_loading_error_retry_cb", on_retry_cb);
+    register_xml_callbacks({
+        {"ams_loading_error_close_cb", on_close_cb},
+        {"ams_loading_error_cancel_cb", on_cancel_cb},
+        {"ams_loading_error_retry_cb", on_retry_cb},
+    });
 
     callbacks_registered_ = true;
     spdlog::debug("[AmsLoadingErrorModal] Callbacks registered");

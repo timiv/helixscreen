@@ -3,6 +3,7 @@
 
 #include "ui_panel_home.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_icon.h"
@@ -22,23 +23,26 @@
 #include "ams_state.h"
 #include "app_globals.h"
 #include "config.h"
+#include "display_settings_manager.h"
 #include "ethernet_manager.h"
 #include "filament_sensor_manager.h"
 #include "format_utils.h"
-#include "home_widget_config.h"
-#include "home_widget_registry.h"
 #include "injection_point_manager.h"
 #include "led/led_controller.h"
 #include "led/ui_led_control_overlay.h"
 #include "moonraker_api.h"
 #include "observer_factory.h"
+#include "panel_widget_manager.h"
+#include "panel_widgets/network_widget.h"
+#include "panel_widgets/power_widget.h"
+#include "panel_widgets/temp_stack_widget.h"
+#include "panel_widgets/thermistor_widget.h"
 #include "prerendered_images.h"
 #include "printer_detector.h"
 #include "printer_image_manager.h"
 #include "printer_images.h"
 #include "printer_state.h"
 #include "runtime_config.h"
-#include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
 #include "tool_state.h"
@@ -65,8 +69,6 @@ HomePanel::HomePanel(PrinterState& printer_state, MoonrakerAPI* api)
     // Initialize buffer contents with default values
     std::strcpy(status_buffer_, "Welcome to HelixScreen");
     std::snprintf(temp_buffer_, sizeof(temp_buffer_), "%s°C", helix::format::UNAVAILABLE);
-    std::strcpy(network_label_buffer_, "WiFi");
-
     // Subscribe to PrinterState subjects (ObserverGuard handles cleanup)
     // Note: Connection state dimming is now handled by XML binding to printer_connection_state
     using helix::ui::observe_int_sync;
@@ -128,7 +130,13 @@ HomePanel::~HomePanel() {
     // Gate observers watch external subjects (capabilities, klippy_state) that may
     // already be freed. Clear unconditionally — deinit_subjects() may have been
     // skipped if subjects_initialized_ was already false from a prior call.
-    widget_gate_observers_.clear();
+    helix::PanelWidgetManager::instance().clear_gate_observers("home");
+
+    // Detach active PanelWidget instances
+    for (auto& w : active_widgets_) {
+        w->detach();
+    }
+    active_widgets_.clear();
 
     // Clean up timers and animations - must be deleted explicitly before LVGL shutdown
     // Check lv_is_initialized() to avoid crash during static destruction
@@ -165,13 +173,9 @@ void HomePanel::init_subjects() {
                               "status_text", subjects_);
     UI_MANAGED_SUBJECT_STRING(temp_subject_, temp_buffer_, "— °C", "temp_text", subjects_);
 
-    // Network icon state: integer 0-5 for conditional icon visibility
-    // 0=disconnected, 1-4=wifi strength, 5=ethernet
-    // Note: Uses unique name to avoid conflict with navigation_bar's network_icon_state
-    UI_MANAGED_SUBJECT_INT(network_icon_state_, 0, "home_network_icon_state", subjects_);
-
-    UI_MANAGED_SUBJECT_STRING(network_label_subject_, network_label_buffer_, "WiFi",
-                              "network_label", subjects_);
+    // Network subjects (home_network_icon_state, network_label) are owned by
+    // NetworkWidget and initialized via PanelWidgetManager::init_widget_subjects()
+    // before this function runs. HomePanel looks them up by name when needed.
 
     // Printer type and host - two subjects for flexible XML layout
     UI_MANAGED_SUBJECT_STRING(printer_type_subject_, printer_type_buffer_, "", "printer_type_text",
@@ -182,17 +186,23 @@ void HomePanel::init_subjects() {
 
     // Register event callbacks BEFORE loading XML
     // Note: These use static trampolines that will look up the global instance
-    lv_xml_register_event_cb(nullptr, "light_toggle_cb", light_toggle_cb);
-    lv_xml_register_event_cb(nullptr, "light_long_press_cb", light_long_press_cb);
-    lv_xml_register_event_cb(nullptr, "power_toggle_cb", power_toggle_cb);
-    lv_xml_register_event_cb(nullptr, "power_long_press_cb", power_long_press_cb);
-    lv_xml_register_event_cb(nullptr, "print_card_clicked_cb", print_card_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "tip_text_clicked_cb", tip_text_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "temp_clicked_cb", temp_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "printer_status_clicked_cb", printer_status_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "network_clicked_cb", network_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "printer_manager_clicked_cb", printer_manager_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "ams_clicked_cb", ams_clicked_cb);
+    register_xml_callbacks({
+        {"light_toggle_cb", light_toggle_cb},
+        {"light_long_press_cb", light_long_press_cb},
+        {"power_toggle_cb", power_toggle_cb},
+        {"power_long_press_cb", power_long_press_cb},
+        {"print_card_clicked_cb", print_card_clicked_cb},
+        {"tip_text_clicked_cb", tip_text_clicked_cb},
+        {"temp_clicked_cb", temp_clicked_cb},
+        {"printer_status_clicked_cb", printer_status_clicked_cb},
+        {"network_clicked_cb", network_clicked_cb},
+        {"printer_manager_clicked_cb", printer_manager_clicked_cb},
+        {"ams_clicked_cb", ams_clicked_cb},
+        {"temp_stack_nozzle_cb", helix::TempStackWidget::temp_stack_nozzle_cb},
+        {"temp_stack_bed_cb", helix::TempStackWidget::temp_stack_bed_cb},
+        {"thermistor_clicked_cb", helix::ThermistorWidget::thermistor_clicked_cb},
+        {"thermistor_picker_backdrop_cb", helix::ThermistorWidget::thermistor_picker_backdrop_cb},
+    });
 
     // Subscribe to AmsState slot_count to show/hide AMS indicator
     // AmsState::init_subjects() is called in main.cpp before us
@@ -218,7 +228,7 @@ void HomePanel::deinit_subjects() {
     }
     // Release gate observers BEFORE subjects are freed — they observe external
     // subjects (capabilities, klippy_state) that may be destroyed during shutdown.
-    widget_gate_observers_.clear();
+    helix::PanelWidgetManager::instance().clear_gate_observers("home");
 
     // SubjectManager handles all lv_subject_deinit() calls via RAII
     subjects_.deinit_all();
@@ -226,53 +236,9 @@ void HomePanel::deinit_subjects() {
     spdlog::debug("[{}] Subjects deinitialized", get_name());
 }
 
-static helix::HomeWidgetConfig& get_widget_config() {
-    static helix::HomeWidgetConfig config(*Config::get_instance());
-    // Always reload to pick up changes from settings overlay
-    config.load();
-    return config;
-}
-
 void HomePanel::setup_widget_gate_observers() {
-    using helix::ui::observe_int_sync;
-    widget_gate_observers_.clear();
-
-    // Collect unique gate subject names from the widget registry
-    std::vector<const char*> gate_names;
-    for (const auto& def : helix::get_all_widget_defs()) {
-        if (def.hardware_gate_subject) {
-            // Avoid duplicates
-            bool found = false;
-            for (const auto* existing : gate_names) {
-                if (std::strcmp(existing, def.hardware_gate_subject) == 0) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                gate_names.push_back(def.hardware_gate_subject);
-            }
-        }
-    }
-
-    // Also observe klippy_state for firmware_restart conditional injection
-    gate_names.push_back("klippy_state");
-
-    for (const auto* name : gate_names) {
-        lv_subject_t* subject = lv_xml_get_subject(nullptr, name);
-        if (!subject) {
-            spdlog::trace("[{}] Gate subject '{}' not registered yet", get_name(), name);
-            continue;
-        }
-
-        widget_gate_observers_.push_back(observe_int_sync<HomePanel>(
-            subject, this, [](HomePanel* self, int /*value*/) { self->populate_widgets(); }));
-
-        spdlog::trace("[{}] Observing gate subject '{}'", get_name(), name);
-    }
-
-    spdlog::debug("[{}] Set up {} widget gate observers", get_name(),
-                  widget_gate_observers_.size());
+    auto& mgr = helix::PanelWidgetManager::instance();
+    mgr.setup_gate_observers("home", [this]() { populate_widgets(); });
 }
 
 void HomePanel::populate_widgets() {
@@ -282,101 +248,16 @@ void HomePanel::populate_widgets() {
         return;
     }
 
-    // Clear existing children (for repopulation)
-    lv_obj_clean(container);
-
-    auto& widget_config = get_widget_config();
-
-    // Collect enabled + hardware-available widget component names
-    std::vector<std::string> enabled_widgets;
-    for (const auto& entry : widget_config.entries()) {
-        if (!entry.enabled) {
-            continue;
-        }
-
-        // Check hardware gate — skip widgets whose hardware isn't present.
-        // Gates are defined in HomeWidgetDef::hardware_gate_subject and checked
-        // here instead of XML bind_flag_if_eq to avoid orphaned dividers.
-        const auto* def = helix::find_widget_def(entry.id);
-        if (def && def->hardware_gate_subject) {
-            lv_subject_t* gate = lv_xml_get_subject(nullptr, def->hardware_gate_subject);
-            if (gate && lv_subject_get_int(gate) == 0) {
-                continue;
-            }
-        }
-
-        enabled_widgets.push_back("home_widget_" + entry.id);
+    // Detach active PanelWidget instances before clearing
+    for (auto& w : active_widgets_) {
+        w->detach();
     }
+    active_widgets_.clear();
 
-    // If firmware_restart is NOT already in the list (user disabled it),
-    // conditionally inject it as the LAST widget when Klipper is in SHUTDOWN.
-    // This ensures the restart button is always reachable during a shutdown.
-    bool has_firmware_restart = std::find(enabled_widgets.begin(), enabled_widgets.end(),
-                                          "home_widget_firmware_restart") != enabled_widgets.end();
-    if (!has_firmware_restart) {
-        lv_subject_t* klippy = lv_xml_get_subject(nullptr, "klippy_state");
-        if (klippy && lv_subject_get_int(klippy) == 2) {
-            enabled_widgets.push_back("home_widget_firmware_restart");
-            spdlog::debug("[{}] Injected firmware_restart (Klipper SHUTDOWN)", get_name());
-        }
-    }
+    // Delegate generic widget creation to the manager
+    active_widgets_ = helix::PanelWidgetManager::instance().populate_widgets("home", container);
 
-    if (enabled_widgets.empty()) {
-        cache_widget_references();
-        return;
-    }
-
-    // Smart row layout:
-    //   1-4 widgets  → 1 row
-    //   5-8 widgets  → 2 rows, first row has 4
-    //   9-10 widgets → 2 rows, first row has 5
-    size_t total = enabled_widgets.size();
-    size_t first_row_count;
-    if (total <= 4) {
-        first_row_count = total; // Single row
-    } else if (total <= 8) {
-        first_row_count = 4; // 2 rows: 4 + remainder
-    } else {
-        first_row_count = 5; // 2 rows: 5 + remainder
-    }
-
-    auto create_row = [&](size_t start, size_t count) {
-        lv_obj_t* row = lv_obj_create(container);
-        lv_obj_set_width(row, LV_PCT(100));
-        lv_obj_set_flex_grow(row, 1);
-        lv_obj_set_style_pad_all(row, 0, 0);
-        lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
-        lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
-
-        bool first = true;
-        for (size_t i = start; i < start + count && i < enabled_widgets.size(); ++i) {
-            // Add divider between widgets (not before first)
-            if (!first) {
-                const char* div_attrs[] = {"height", "80%", nullptr, nullptr};
-                lv_xml_create(row, "divider_vertical", div_attrs);
-            }
-
-            auto* widget =
-                static_cast<lv_obj_t*>(lv_xml_create(row, enabled_widgets[i].c_str(), nullptr));
-            if (widget) {
-                first = false;
-                spdlog::debug("[{}] Created widget: {}", get_name(), enabled_widgets[i]);
-            } else {
-                spdlog::warn("[{}] Failed to create widget: {}", get_name(), enabled_widgets[i]);
-            }
-        }
-    };
-
-    // Create first row
-    create_row(0, first_row_count);
-
-    // Create second row if needed
-    if (total > first_row_count) {
-        create_row(first_row_count, total - first_row_count);
-    }
-
-    // Re-cache widget references after dynamic creation
+    // HomePanel-specific: cache references for light_icon_, power_icon_, etc.
     cache_widget_references();
 }
 
@@ -426,7 +307,7 @@ void HomePanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     spdlog::debug("[{}] Setting up...", get_name());
 
-    // Dynamically populate status card widgets from HomeWidgetConfig
+    // Dynamically populate status card widgets from PanelWidgetConfig
     populate_widgets();
 
     // Observe hardware gate subjects so widgets appear/disappear when
@@ -486,11 +367,11 @@ void HomePanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     }
 
     // Register plugin injection point for home panel widgets
-    lv_obj_t* widget_area = lv_obj_find_by_name(panel_, "home_widget_area");
+    lv_obj_t* widget_area = lv_obj_find_by_name(panel_, "panel_widget_area");
     if (widget_area) {
-        helix::plugin::InjectionPointManager::instance().register_point("home_widget_area",
+        helix::plugin::InjectionPointManager::instance().register_point("panel_widget_area",
                                                                         widget_area);
-        spdlog::debug("[{}] Registered injection point: home_widget_area", get_name());
+        spdlog::debug("[{}] Registered injection point: panel_widget_area", get_name());
     }
 
     spdlog::debug("[{}] Setup complete!", get_name());
@@ -519,11 +400,27 @@ void HomePanel::on_activate() {
     // Refresh power button state from actual device status
     refresh_power_state();
 
+    // Activate behavioral widgets (network polling, power refresh, etc.)
+    for (auto& w : active_widgets_) {
+        if (auto* nw = dynamic_cast<helix::NetworkWidget*>(w.get())) {
+            nw->on_activate();
+        } else if (auto* pw = dynamic_cast<helix::PowerWidget*>(w.get())) {
+            pw->refresh_power_state();
+        }
+    }
+
     // Start Spoolman polling for AMS mini status updates
     AmsState::instance().start_spoolman_polling();
 }
 
 void HomePanel::on_deactivate() {
+    // Deactivate behavioral widgets
+    for (auto& w : active_widgets_) {
+        if (auto* nw = dynamic_cast<helix::NetworkWidget*>(w.get())) {
+            nw->on_deactivate();
+        }
+    }
+
     AmsState::instance().stop_spoolman_polling();
 
     // Cancel any in-flight tip fade animations (var=this, not an lv_obj_t*)
@@ -581,7 +478,7 @@ void HomePanel::start_tip_fade_transition(const PrintingTip& new_tip) {
     spdlog::debug("[{}] Starting tip fade transition to: {}", get_name(), new_tip.title);
 
     // Skip animation if disabled - apply text immediately
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         current_tip_ = pending_tip_;
         std::snprintf(status_buffer_, sizeof(status_buffer_), "%s", pending_tip_.title.c_str());
         lv_subject_copy_string(&status_subject_, status_buffer_);
@@ -625,7 +522,7 @@ void HomePanel::apply_pending_tip() {
     spdlog::debug("[{}] Applied pending tip: {}", get_name(), pending_tip_.title);
 
     // Skip animation if disabled - show at full opacity immediately
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         if (tip_label_) {
             lv_obj_set_style_opa(tip_label_, LV_OPA_COVER, LV_PART_MAIN);
         }
@@ -1067,7 +964,7 @@ void HomePanel::flash_light_icon() {
     // Flash gold briefly then fade back to muted
     ui_icon_set_color(light_icon_, theme_manager_get_color("light_icon_on"), LV_OPA_COVER);
 
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         // No animations -- the next status update will restore the icon naturally
         return;
     }
@@ -1097,7 +994,7 @@ void HomePanel::on_extruder_temp_changed(int temp_centi) {
 
     // Format temperature for display and update the string subject
     // Guard: Observer callback fires during constructor before init_subjects()
-    helix::format::format_temp(temp_deg, temp_buffer_, sizeof(temp_buffer_));
+    helix::ui::temperature::format_temperature(temp_deg, temp_buffer_, sizeof(temp_buffer_));
     if (subjects_initialized_) {
         lv_subject_copy_string(&temp_subject_, temp_buffer_);
     }
@@ -1311,7 +1208,7 @@ void HomePanel::update(const char* status_text, int temp) {
     }
 
     char buf[32];
-    helix::format::format_temp(temp, buf, sizeof(buf));
+    helix::ui::temperature::format_temperature(temp, buf, sizeof(buf));
     lv_subject_copy_string(&temp_subject_, buf);
     spdlog::debug("[{}] Updated temp_text subject to: {}", get_name(), buf);
 }
@@ -1319,17 +1216,20 @@ void HomePanel::update(const char* status_text, int temp) {
 void HomePanel::set_network(NetworkType type) {
     current_network_ = type;
 
-    // Update label text
-    switch (type) {
-    case NetworkType::Wifi:
-        lv_subject_copy_string(&network_label_subject_, "WiFi");
-        break;
-    case NetworkType::Ethernet:
-        lv_subject_copy_string(&network_label_subject_, "Ethernet");
-        break;
-    case NetworkType::Disconnected:
-        lv_subject_copy_string(&network_label_subject_, "Disconnected");
-        break;
+    // Look up network subjects owned by NetworkWidget
+    lv_subject_t* label_subject = lv_xml_get_subject(nullptr, "network_label");
+    if (label_subject) {
+        switch (type) {
+        case NetworkType::Wifi:
+            lv_subject_copy_string(label_subject, "WiFi");
+            break;
+        case NetworkType::Ethernet:
+            lv_subject_copy_string(label_subject, "Ethernet");
+            break;
+        case NetworkType::Disconnected:
+            lv_subject_copy_string(label_subject, "Disconnected");
+            break;
+        }
     }
 
     // Update the icon state (will query WiFi signal strength if connected)
@@ -1383,11 +1283,16 @@ int HomePanel::compute_network_icon_state() {
 }
 
 void HomePanel::update_network_icon_state() {
+    lv_subject_t* icon_state = lv_xml_get_subject(nullptr, "home_network_icon_state");
+    if (!icon_state) {
+        return;
+    }
+
     int new_state = compute_network_icon_state();
-    int old_state = lv_subject_get_int(&network_icon_state_);
+    int old_state = lv_subject_get_int(icon_state);
 
     if (new_state != old_state) {
-        lv_subject_set_int(&network_icon_state_, new_state);
+        lv_subject_set_int(icon_state, new_state);
         spdlog::debug("[{}] Network icon state: {} -> {}", get_name(), old_state, new_state);
     }
 }

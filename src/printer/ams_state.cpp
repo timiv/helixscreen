@@ -969,7 +969,8 @@ void AmsState::sync_current_loaded_from_backend() {
             last_synced_spoolman_id_ = slot_info.spoolman_id;
             spdlog::info("[AMS State] Setting active Spoolman spool to {} (slot {})",
                          slot_info.spoolman_id, slot_index);
-            api_->set_active_spool(slot_info.spoolman_id, []() {}, [](const MoonrakerError&) {});
+            api_->spoolman().set_active_spool(
+                slot_info.spoolman_id, []() {}, [](const MoonrakerError&) {});
         }
 
         // Set color
@@ -1147,7 +1148,7 @@ void AmsState::refresh_spoolman_weights() {
             int slot_index = i;
             int spoolman_id = slot.spoolman_id;
 
-            api_->get_spoolman_spool(
+            api_->spoolman().get_spoolman_spool(
                 spoolman_id,
                 [slot_index, spoolman_id](const std::optional<SpoolInfo>& spool_opt) {
                     if (!spool_opt.has_value()) {

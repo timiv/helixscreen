@@ -292,7 +292,13 @@ lv_display_t* DisplayBackendFbdev::create_display(int width, int height) {
         return nullptr;
     }
 
-    // Set the framebuffer device path
+    // Skip FBIOBLANK when splash process owns the framebuffer
+    if (splash_active_) {
+        lv_linux_fbdev_set_skip_unblank(display_, true);
+        spdlog::debug("[Fbdev Backend] Splash active — FBIOBLANK skip enabled");
+    }
+
+    // Set the framebuffer device path (opens /dev/fb0 and mmaps it)
     lv_linux_fbdev_set_file(display_, fb_device_.c_str());
 
     // AD5M's LCD controller interprets XRGB8888's X byte as alpha.
@@ -583,10 +589,13 @@ void DisplayBackendFbdev::suppress_console() {
     // LVGL uses partial render mode and only repaints dirty regions, so any kernel
     // text written to /dev/fb0 persists in areas that haven't been invalidated.
     // This is the standard approach used by X11, Weston, and other fbdev applications.
+    //
+    // Use O_WRONLY: under systemd with SupplementaryGroups=tty, the tty group
+    // only has write permission (crw--w----). O_RDWR fails with EACCES.
     static const char* tty_paths[] = {"/dev/tty0", "/dev/tty1", "/dev/tty", nullptr};
 
     for (int i = 0; tty_paths[i] != nullptr; ++i) {
-        tty_fd_ = open(tty_paths[i], O_RDWR | O_CLOEXEC);
+        tty_fd_ = open(tty_paths[i], O_WRONLY | O_CLOEXEC);
         if (tty_fd_ >= 0) {
             if (ioctl(tty_fd_, KDSETMODE, KD_GRAPHICS) == 0) {
                 spdlog::info("[Fbdev Backend] Console suppressed via KDSETMODE KD_GRAPHICS on {}",

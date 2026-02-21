@@ -23,6 +23,8 @@ extern int g_screen_height;
 // These are extern'd by application.cpp for use during logging initialization
 std::string g_log_dest_cli; // CLI override for log destination
 std::string g_log_file_cli; // CLI override for log file path
+std::string
+    g_log_level_cli; // CLI override for log level (trace/debug/info/warn/error/critical/off)
 
 namespace helix {
 
@@ -124,6 +126,7 @@ static void print_help(const char* program_name) {
     printf("  --skip-splash        Skip splash screen on startup\n");
     printf("  -v, --verbose        Increase verbosity (-v=info, -vv=debug, -vvv=trace)\n");
     printf("  --log-dest <dest>    Log destination: auto, journal, syslog, file, console\n");
+    printf("  --log-level <level>  Log level: trace, debug, info, warn, error, critical, off\n");
     printf("  --log-file <path>    Log file path (when --log-dest=file)\n");
     printf("  -M, --memory-report  Log memory usage every 30 seconds (development)\n");
     printf("  --show-memory        Show memory stats overlay (press M to toggle)\n");
@@ -700,6 +703,26 @@ bool parse_cli_args(int argc, char** argv, CliArgs& args, int& screen_width, int
                 g_log_file_cli = argv[++i];
             } else {
                 printf("Error: --log-file requires a path argument\n");
+                return false;
+            }
+        } else if (strcmp(argv[i], "--log-level") == 0 ||
+                   strncmp(argv[i], "--log-level=", 12) == 0) {
+            const char* value = nullptr;
+            if (strncmp(argv[i], "--log-level=", 12) == 0) {
+                value = argv[i] + 12;
+            } else if (i + 1 < argc) {
+                value = argv[++i];
+            } else {
+                printf("Error: --log-level requires an argument\n");
+                return false;
+            }
+            g_log_level_cli = value;
+            if (g_log_level_cli != "trace" && g_log_level_cli != "debug" &&
+                g_log_level_cli != "info" && g_log_level_cli != "warn" &&
+                g_log_level_cli != "error" && g_log_level_cli != "critical" &&
+                g_log_level_cli != "off") {
+                printf("Error: invalid --log-level value: %s\n", g_log_level_cli.c_str());
+                printf("Valid values: trace, debug, info, warn, error, critical, off\n");
                 return false;
             }
         }

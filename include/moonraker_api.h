@@ -48,6 +48,8 @@
 #include "calibration_types.h"
 #include "moonraker_client.h"
 #include "moonraker_error.h"
+#include "moonraker_history_api.h"
+#include "moonraker_spoolman_api.h"
 #include "moonraker_types.h"
 #include "print_history_data.h"
 #include "printer_discovery.h"
@@ -93,12 +95,7 @@ class MoonrakerAPI {
     using FileMetadataCallback = std::function<void(const FileMetadata&)>;
     using BoolCallback = std::function<void(bool)>;
     using StringCallback = std::function<void(const std::string&)>;
-    using HistoryListCallback =
-        std::function<void(const std::vector<PrintHistoryJob>&, uint64_t total_count)>;
-    using HistoryTotalsCallback = std::function<void(const PrintHistoryTotals&)>;
     using TimelapseSettingsCallback = std::function<void(const TimelapseSettings&)>;
-    using SpoolCallback = std::function<void(const std::optional<SpoolInfo>&)>;
-    using SpoolListCallback = std::function<void(const std::vector<SpoolInfo>&)>;
     using WebcamListCallback = std::function<void(const std::vector<WebcamInfo>&)>;
     using JsonCallback = std::function<void(const json&)>;
     using RestCallback = std::function<void(const RestResponse&)>;
@@ -852,47 +849,6 @@ class MoonrakerAPI {
     bool ensure_http_base_url();
 
     // ========================================================================
-    // Print History Operations
-    // ========================================================================
-
-    /**
-     * @brief Get paginated list of print history jobs
-     *
-     * Calls server.history.list Moonraker endpoint.
-     *
-     * @param limit Maximum number of jobs to return (default 50)
-     * @param start Offset for pagination (0-based)
-     * @param since Unix timestamp - only include jobs after this time (0 = no filter)
-     * @param before Unix timestamp - only include jobs before this time (0 = no filter)
-     * @param on_success Callback with parsed job list and total count
-     * @param on_error Error callback
-     */
-    void get_history_list(int limit, int start, double since, double before,
-                          HistoryListCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Get aggregated history totals/statistics
-     *
-     * Calls server.history.totals Moonraker endpoint.
-     *
-     * @param on_success Callback with totals struct
-     * @param on_error Error callback
-     */
-    void get_history_totals(HistoryTotalsCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Delete a job from history by its unique ID
-     *
-     * Calls server.history.delete_job Moonraker endpoint.
-     *
-     * @param job_id Unique job identifier from PrintHistoryJob::job_id
-     * @param on_success Success callback (job deleted)
-     * @param on_error Error callback
-     */
-    void delete_history_job(const std::string& job_id, SuccessCallback on_success,
-                            ErrorCallback on_error);
-
-    // ========================================================================
     // Timelapse Operations (Moonraker-Timelapse Plugin)
     // ========================================================================
 
@@ -1306,231 +1262,32 @@ class MoonrakerAPI {
                                          ErrorCallback on_error);
 
     // ========================================================================
-    // Advanced Panel Operations - Spoolman
+    // Spoolman API (Delegated)
     // ========================================================================
 
     /**
-     * @brief Get Spoolman connection status
+     * @brief Get History API for print history operations
      *
-     * @param on_success Called with (connected, active_spool_id)
-     * @param on_error Called on failure
+     * All history methods (get_history_list, get_history_totals, delete_history_job)
+     * are available through this accessor.
+     *
+     * @return Reference to MoonrakerHistoryAPI
      */
-    virtual void
-    get_spoolman_status(std::function<void(bool connected, int active_spool_id)> on_success,
-                        ErrorCallback on_error);
+    MoonrakerHistoryAPI& history() {
+        return *history_api_;
+    }
 
     /**
-     * @brief Get list of spools from Spoolman
+     * @brief Get Spoolman API for filament tracking operations
      *
-     * @param on_success Called with spool list
-     * @param on_error Called on failure
+     * All Spoolman methods (get_spoolman_spools, set_active_spool, etc.)
+     * are available through this accessor.
+     *
+     * @return Reference to MoonrakerSpoolmanAPI
      */
-    virtual void get_spoolman_spools(helix::SpoolListCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Get a single spool's details by ID
-     *
-     * Fetches full spool information from Spoolman for a specific spool ID.
-     * Used when assigning a Spoolman spool to an AMS slot - the backend
-     * fetches the spool details to enrich the slot display.
-     *
-     * @param spool_id Spoolman spool ID
-     * @param on_success Called with spool info (empty optional if not found)
-     * @param on_error Called on failure (network error, etc.)
-     */
-    virtual void get_spoolman_spool(int spool_id, helix::SpoolCallback on_success,
-                                    ErrorCallback on_error);
-
-    /**
-     * @brief Set the active spool for filament tracking
-     *
-     * @param spool_id Spoolman spool ID (0 to clear)
-     * @param on_success Called when spool is set
-     * @param on_error Called on failure
-     */
-    virtual void set_active_spool(int spool_id, SuccessCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Get usage history for a spool
-     *
-     * @param spool_id Spoolman spool ID
-     * @param on_success Called with usage records
-     * @param on_error Called on failure
-     */
-    virtual void
-    get_spool_usage_history(int spool_id,
-                            std::function<void(const std::vector<FilamentUsageRecord>&)> on_success,
-                            ErrorCallback on_error);
-
-    /**
-     * @brief Update a spool's remaining weight in Spoolman
-     *
-     * Uses Moonraker's Spoolman proxy to PATCH /v1/spool/{id}.
-     * This updates the spool's remaining_weight field.
-     *
-     * @param spool_id Spoolman spool ID
-     * @param remaining_weight_g New remaining weight in grams
-     * @param on_success Called when update succeeds
-     * @param on_error Called on failure
-     */
-    virtual void update_spoolman_spool_weight(int spool_id, double remaining_weight_g,
-                                              SuccessCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Update a spool's properties in Spoolman
-     *
-     * General-purpose PATCH for spool fields (remaining_weight, price, lot_nr, comment, etc.).
-     * Uses Moonraker's Spoolman proxy to PATCH /v1/spool/{id}.
-     *
-     * @param spool_id Spoolman spool ID
-     * @param spool_data JSON object with fields to update
-     * @param on_success Called when update succeeds
-     * @param on_error Called on failure
-     */
-    virtual void update_spoolman_spool(int spool_id, const nlohmann::json& spool_data,
-                                       SuccessCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Update a filament definition in Spoolman
-     *
-     * Uses Moonraker's Spoolman proxy to PATCH /v1/filament/{id}.
-     * WARNING: This affects ALL spools using this filament definition.
-     *
-     * @param filament_id Spoolman filament ID (not spool ID!)
-     * @param filament_data JSON object with fields to update
-     * @param on_success Called when update succeeds
-     * @param on_error Called on failure
-     */
-    virtual void update_spoolman_filament(int filament_id, const nlohmann::json& filament_data,
-                                          SuccessCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Update a filament's color in Spoolman
-     *
-     * Uses Moonraker's Spoolman proxy to PATCH /v1/filament/{id}.
-     * WARNING: This affects ALL spools using this filament definition.
-     *
-     * @param filament_id Spoolman filament ID (not spool ID!)
-     * @param color_hex New color as hex string (e.g., "#FF0000")
-     * @param on_success Called when update succeeds
-     * @param on_error Called on failure
-     */
-    virtual void update_spoolman_filament_color(int filament_id, const std::string& color_hex,
-                                                SuccessCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Get list of vendors from Spoolman
-     *
-     * @param on_success Called with vendor list
-     * @param on_error Called on failure
-     */
-    virtual void get_spoolman_vendors(helix::VendorListCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Get list of filaments from Spoolman
-     *
-     * @param on_success Called with filament list
-     * @param on_error Called on failure
-     */
-    virtual void get_spoolman_filaments(helix::FilamentListCallback on_success,
-                                        ErrorCallback on_error);
-
-    /**
-     * @brief Create a new vendor in Spoolman
-     *
-     * @param vendor_data JSON body with vendor fields (name, url)
-     * @param on_success Called with created vendor info
-     * @param on_error Called on failure
-     */
-    virtual void create_spoolman_vendor(const nlohmann::json& vendor_data,
-                                        helix::VendorCreateCallback on_success,
-                                        ErrorCallback on_error);
-
-    /**
-     * @brief Create a new filament in Spoolman
-     *
-     * @param filament_data JSON body with filament fields
-     * @param on_success Called with created filament info
-     * @param on_error Called on failure
-     */
-    virtual void create_spoolman_filament(const nlohmann::json& filament_data,
-                                          helix::FilamentCreateCallback on_success,
-                                          ErrorCallback on_error);
-
-    /**
-     * @brief Create a new spool in Spoolman
-     *
-     * @param spool_data JSON body with spool fields
-     * @param on_success Called with created spool info
-     * @param on_error Called on failure
-     */
-    virtual void create_spoolman_spool(const nlohmann::json& spool_data,
-                                       helix::SpoolCreateCallback on_success,
-                                       ErrorCallback on_error);
-
-    /**
-     * @brief Delete a spool from Spoolman
-     *
-     * @param spool_id Spoolman spool ID to delete
-     * @param on_success Called when deletion succeeds
-     * @param on_error Called on failure
-     */
-    virtual void delete_spoolman_spool(int spool_id, SuccessCallback on_success,
-                                       ErrorCallback on_error);
-
-    /**
-     * @brief Get list of vendors from SpoolmanDB (external database)
-     *
-     * Queries the Spoolman server's external vendor endpoint.
-     *
-     * @param on_success Called with vendor list from SpoolmanDB
-     * @param on_error Called on failure
-     */
-    virtual void get_spoolman_external_vendors(helix::VendorListCallback on_success,
-                                               ErrorCallback on_error);
-
-    /**
-     * @brief Get list of filaments from SpoolmanDB filtered by vendor name
-     *
-     * Queries the Spoolman server's external filament endpoint.
-     *
-     * @param vendor_name Vendor name to filter by
-     * @param on_success Called with filament list from SpoolmanDB
-     * @param on_error Called on failure
-     */
-    virtual void get_spoolman_external_filaments(const std::string& vendor_name,
-                                                 helix::FilamentListCallback on_success,
-                                                 ErrorCallback on_error);
-
-    /**
-     * @brief Get list of filaments from Spoolman filtered by vendor ID
-     *
-     * @param vendor_id Vendor ID to filter by
-     * @param on_success Called with filament list
-     * @param on_error Called on failure
-     */
-    virtual void get_spoolman_filaments(int vendor_id, helix::FilamentListCallback on_success,
-                                        ErrorCallback on_error);
-
-    /**
-     * @brief Delete a vendor from Spoolman
-     *
-     * @param vendor_id Spoolman vendor ID to delete
-     * @param on_success Called when deletion succeeds
-     * @param on_error Called on failure
-     */
-    virtual void delete_spoolman_vendor(int vendor_id, SuccessCallback on_success,
-                                        ErrorCallback on_error);
-
-    /**
-     * @brief Delete a filament from Spoolman
-     *
-     * @param filament_id Spoolman filament ID to delete
-     * @param on_success Called when deletion succeeds
-     * @param on_error Called on failure
-     */
-    virtual void delete_spoolman_filament(int filament_id, SuccessCallback on_success,
-                                          ErrorCallback on_error);
+    MoonrakerSpoolmanAPI& spoolman() {
+        return *spoolman_api_;
+    }
 
     // ========================================================================
     // Advanced Panel Operations - Machine Limits
@@ -1633,6 +1390,10 @@ class MoonrakerAPI {
      * @return Vector of macro information
      */
     std::vector<MacroInfo> get_user_macros(bool include_system = false) const;
+
+  protected:
+    std::unique_ptr<MoonrakerHistoryAPI> history_api_;   ///< Print history API
+    std::unique_ptr<MoonrakerSpoolmanAPI> spoolman_api_; ///< Spoolman filament tracking API
 
   private:
     std::string http_base_url_; ///< HTTP base URL for file transfers

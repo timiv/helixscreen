@@ -3,11 +3,11 @@
 
 #include "sound_manager.h"
 
+#include "audio_settings_manager.h"
 #include "m300_sound_backend.h"
 #include "moonraker_client.h"
 #include "pwm_sound_backend.h"
 #include "runtime_config.h"
-#include "settings_manager.h"
 #include "sound_backend.h"
 #include "sound_sequencer.h"
 #include "sound_theme.h"
@@ -52,7 +52,7 @@ void SoundManager::initialize() {
     }
 
     // Load the configured theme
-    theme_name_ = SettingsManager::instance().get_sound_theme();
+    theme_name_ = AudioSettingsManager::instance().get_sound_theme();
     load_theme(theme_name_);
 
     // Create and start the sequencer
@@ -84,13 +84,13 @@ void SoundManager::play(const std::string& sound_name) {
 
 void SoundManager::play(const std::string& sound_name, SoundPriority priority) {
     // Master switch
-    if (!SettingsManager::instance().get_sounds_enabled()) {
+    if (!AudioSettingsManager::instance().get_sounds_enabled()) {
         spdlog::trace("[SoundManager] play('{}') skipped - sounds disabled", sound_name);
         return;
     }
 
     // UI sounds have their own toggle
-    if (is_ui_sound(sound_name) && !SettingsManager::instance().get_ui_sounds_enabled()) {
+    if (is_ui_sound(sound_name) && !AudioSettingsManager::instance().get_ui_sounds_enabled()) {
         spdlog::trace("[SoundManager] play('{}') skipped - UI sounds disabled", sound_name);
         return;
     }
@@ -159,7 +159,8 @@ std::vector<std::string> SoundManager::get_available_themes() const {
 }
 
 bool SoundManager::is_available() const {
-    return initialized_ && backend_ != nullptr && SettingsManager::instance().get_sounds_enabled();
+    return initialized_ && backend_ != nullptr &&
+           AudioSettingsManager::instance().get_sounds_enabled();
 }
 
 std::shared_ptr<SoundBackend> SoundManager::create_backend() {

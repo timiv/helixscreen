@@ -3,6 +3,7 @@
 
 #include "ui_panel_controls.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_fan_control_overlay.h"
@@ -19,6 +20,7 @@
 #include "ui_position_utils.h"
 #include "ui_settings_sensors.h"
 #include "ui_subject_registry.h"
+#include "ui_temperature_utils.h"
 #include "ui_toast_manager.h"
 #include "ui_update_queue.h"
 
@@ -225,48 +227,49 @@ void ControlsPanel::init_subjects() {
             }
         });
 
-    // Register calibration button event callbacks (direct buttons in card, no modal)
-    lv_xml_register_event_cb(nullptr, "on_calibration_bed_mesh", on_calibration_bed_mesh);
-    lv_xml_register_event_cb(nullptr, "on_calibration_zoffset", on_calibration_zoffset);
-    lv_xml_register_event_cb(nullptr, "on_calibration_screws", on_calibration_screws);
-    lv_xml_register_event_cb(nullptr, "on_calibration_motors", on_calibration_motors);
+    register_xml_callbacks({
+        // Calibration button event callbacks (direct buttons in card, no modal)
+        {"on_calibration_bed_mesh", on_calibration_bed_mesh},
+        {"on_calibration_zoffset", on_calibration_zoffset},
+        {"on_calibration_screws", on_calibration_screws},
+        {"on_calibration_motors", on_calibration_motors},
 
-    // Register V2 controls panel event callbacks (XML event_cb references)
-    // Quick Actions: Home buttons
-    lv_xml_register_event_cb(nullptr, "on_controls_home_all", on_home_all);
-    lv_xml_register_event_cb(nullptr, "on_controls_home_x", on_home_x);
-    lv_xml_register_event_cb(nullptr, "on_controls_home_y", on_home_y);
-    lv_xml_register_event_cb(nullptr, "on_controls_home_xy", on_home_xy);
-    lv_xml_register_event_cb(nullptr, "on_controls_home_z", on_home_z);
+        // Quick Actions: Home buttons
+        {"on_controls_home_all", on_home_all},
+        {"on_controls_home_x", on_home_x},
+        {"on_controls_home_y", on_home_y},
+        {"on_controls_home_xy", on_home_xy},
+        {"on_controls_home_z", on_home_z},
 
-    // Quick Actions: Leveling buttons (QGL / Z-Tilt)
-    lv_xml_register_event_cb(nullptr, "on_controls_qgl", on_qgl);
-    lv_xml_register_event_cb(nullptr, "on_controls_z_tilt", on_z_tilt);
+        // Quick Actions: Leveling buttons (QGL / Z-Tilt)
+        {"on_controls_qgl", on_qgl},
+        {"on_controls_z_tilt", on_z_tilt},
 
-    // Quick Actions: Macro buttons (unified callback with user_data index)
-    lv_xml_register_event_cb(nullptr, "on_controls_macro", on_macro);
+        // Quick Actions: Macro buttons (unified callback with user_data index)
+        {"on_controls_macro", on_macro},
 
-    // Speed/Flow override buttons
-    lv_xml_register_event_cb(nullptr, "on_controls_speed_up", on_speed_up);
-    lv_xml_register_event_cb(nullptr, "on_controls_speed_down", on_speed_down);
-    lv_xml_register_event_cb(nullptr, "on_controls_flow_up", on_flow_up);
-    lv_xml_register_event_cb(nullptr, "on_controls_flow_down", on_flow_down);
+        // Speed/Flow override buttons
+        {"on_controls_speed_up", on_speed_up},
+        {"on_controls_speed_down", on_speed_down},
+        {"on_controls_flow_up", on_flow_up},
+        {"on_controls_flow_down", on_flow_down},
 
-    // Cooling: Fan slider
-    lv_xml_register_event_cb(nullptr, "on_controls_fan_slider", on_fan_slider_changed);
+        // Cooling: Fan slider
+        {"on_controls_fan_slider", on_fan_slider_changed},
 
-    // Z-Offset banner: Save button
-    lv_xml_register_event_cb(nullptr, "on_controls_save_z_offset", on_save_z_offset);
+        // Z-Offset banner: Save button
+        {"on_controls_save_z_offset", on_save_z_offset},
 
-    // Z-Offset clickable row: Opens Print Tune overlay
-    lv_xml_register_event_cb(nullptr, "on_zoffset_tune", on_zoffset_tune);
+        // Z-Offset clickable row: Opens Print Tune overlay
+        {"on_zoffset_tune", on_zoffset_tune},
 
-    // Card click handlers (navigation to full overlay panels)
-    lv_xml_register_event_cb(nullptr, "on_controls_quick_actions", on_quick_actions_clicked);
-    lv_xml_register_event_cb(nullptr, "on_controls_temperatures", on_temperatures_clicked);
-    lv_xml_register_event_cb(nullptr, "on_nozzle_temp_clicked", on_nozzle_temp_clicked);
-    lv_xml_register_event_cb(nullptr, "on_bed_temp_clicked", on_bed_temp_clicked);
-    lv_xml_register_event_cb(nullptr, "on_controls_cooling", on_cooling_clicked);
+        // Card click handlers (navigation to full overlay panels)
+        {"on_controls_quick_actions", on_quick_actions_clicked},
+        {"on_controls_temperatures", on_temperatures_clicked},
+        {"on_nozzle_temp_clicked", on_nozzle_temp_clicked},
+        {"on_bed_temp_clicked", on_bed_temp_clicked},
+        {"on_controls_cooling", on_cooling_clicked},
+    });
 
     subjects_initialized_ = true;
     spdlog::trace("[{}] Dashboard subjects initialized", get_name());
@@ -501,7 +504,8 @@ void ControlsPanel::update_nozzle_label() {
 }
 
 void ControlsPanel::update_nozzle_temp_display() {
-    auto result = helix::format::heater_display(cached_extruder_temp_, cached_extruder_target_);
+    auto result =
+        helix::ui::temperature::heater_display(cached_extruder_temp_, cached_extruder_target_);
 
     std::snprintf(nozzle_temp_buf_, sizeof(nozzle_temp_buf_), "%s", result.temp.c_str());
     lv_subject_copy_string(&nozzle_temp_subject_, nozzle_temp_buf_);
@@ -515,7 +519,7 @@ void ControlsPanel::update_nozzle_temp_display() {
 }
 
 void ControlsPanel::update_bed_temp_display() {
-    auto result = helix::format::heater_display(cached_bed_temp_, cached_bed_target_);
+    auto result = helix::ui::temperature::heater_display(cached_bed_temp_, cached_bed_target_);
 
     std::snprintf(bed_temp_buf_, sizeof(bed_temp_buf_), "%s", result.temp.c_str());
     lv_subject_copy_string(&bed_temp_subject_, bed_temp_buf_);
@@ -1575,31 +1579,16 @@ void ControlsPanel::on_fan_slider_changed(lv_event_t* e) {
 
 PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, save_z_offset)
 
-// ============================================================================
-// OBSERVER CALLBACKS (Static - only for complex cases not using factory)
-// ============================================================================
-
-void ControlsPanel::on_secondary_fan_speed_changed(lv_observer_t* obs, lv_subject_t* subject) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (self) {
-        int speed_pct = lv_subject_get_int(subject);
-        // Find which fan this subject belongs to and update its label
-        for (const auto& row : self->secondary_fan_rows_) {
-            auto* fan_subject = self->printer_state_.get_fan_speed_subject(row.object_name);
-            if (fan_subject == subject) {
-                self->update_secondary_fan_speed(row.object_name, speed_pct);
-                break;
-            }
-        }
-    }
-}
-
 void ControlsPanel::subscribe_to_secondary_fan_speeds() {
+    using helix::ui::observe_int_sync;
     secondary_fan_observers_.reserve(secondary_fan_rows_.size());
 
     for (const auto& row : secondary_fan_rows_) {
         if (auto* subject = printer_state_.get_fan_speed_subject(row.object_name)) {
-            secondary_fan_observers_.emplace_back(subject, on_secondary_fan_speed_changed, this);
+            secondary_fan_observers_.push_back(observe_int_sync<ControlsPanel>(
+                subject, this, [name = row.object_name](ControlsPanel* self, int speed_pct) {
+                    self->update_secondary_fan_speed(name, speed_pct);
+                }));
             spdlog::trace("[{}] Subscribed to speed subject for secondary fan '{}'", get_name(),
                           row.object_name);
         }
@@ -1758,28 +1747,17 @@ void ControlsPanel::handle_secondary_temps_clicked() {
     overlay.show(parent_screen_);
 }
 
-void ControlsPanel::on_secondary_temp_changed(lv_observer_t* obs, lv_subject_t* subject) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (self) {
-        int centidegrees = lv_subject_get_int(subject);
-        auto& tsm = helix::sensors::TemperatureSensorManager::instance();
-        for (const auto& row : self->secondary_temp_rows_) {
-            auto* temp_subject = tsm.get_temp_subject(row.klipper_name);
-            if (temp_subject == subject) {
-                self->update_secondary_temp(row.klipper_name, centidegrees);
-                break;
-            }
-        }
-    }
-}
-
 void ControlsPanel::subscribe_to_secondary_temp_subjects() {
+    using helix::ui::observe_int_sync;
     secondary_temp_observers_.reserve(secondary_temp_rows_.size());
 
     auto& tsm = helix::sensors::TemperatureSensorManager::instance();
     for (const auto& row : secondary_temp_rows_) {
         if (auto* subject = tsm.get_temp_subject(row.klipper_name)) {
-            secondary_temp_observers_.emplace_back(subject, on_secondary_temp_changed, this);
+            secondary_temp_observers_.push_back(observe_int_sync<ControlsPanel>(
+                subject, this, [name = row.klipper_name](ControlsPanel* self, int centidegrees) {
+                    self->update_secondary_temp(name, centidegrees);
+                }));
             spdlog::trace("[{}] Subscribed to temp subject for sensor '{}'", get_name(),
                           row.klipper_name);
         }

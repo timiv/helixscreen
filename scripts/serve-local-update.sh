@@ -59,7 +59,7 @@
 #   --platform PLATFORM   Target platform to build and serve (default: pi).
 #                         See platform list above.
 #   --configure-remote    SSH into the device, write dev channel + dev_url into
-#                         helixconfig.json, enable HELIX_DEBUG=1 in
+#                         helixconfig.json, enable HELIX_LOG_LEVEL=debug in
 #                         helixscreen.env for debug logging, copy install.sh to
 #                         /tmp/ for local install testing, and restart the
 #                         helixscreen service. Run once per device (or after a
@@ -291,7 +291,7 @@ with open(path, 'w') as f:
 print('  update/channel =', data['update']['channel'], '(dev)')
 print('  update/dev_url =', data['update']['dev_url'])
 
-# Enable HELIX_DEBUG=1 in helixscreen.env (enables -vv debug logging via launcher).
+# Enable HELIX_LOG_LEVEL=debug in helixscreen.env (enables debug logging via launcher).
 # Launcher checks INSTALL_DIR/config/ first, then /etc/helixscreen/.
 DEFAULTS = '''# HelixScreen environment configuration
 # See config/helixscreen.env in the repo for full documentation.
@@ -312,15 +312,16 @@ if env_path is None:
 else:
     content = open(env_path).read()
     # If the file is missing essential defaults (was corrupted by a previous run),
-    # restore them before appending HELIX_DEBUG.
+    # restore them before setting HELIX_LOG_LEVEL.
     if 'MOONRAKER_HOST' not in content:
         content = DEFAULTS + content
         print('  Restored missing defaults in', env_path)
-# Remove any existing HELIX_DEBUG line then append it enabled
+# Set HELIX_LOG_LEVEL=debug (remove any existing line first, then append)
+content = re.sub(r'^#?\s*HELIX_LOG_LEVEL=.*\n?', '', content, flags=re.MULTILINE)
 content = re.sub(r'^#?\s*HELIX_DEBUG=.*\n?', '', content, flags=re.MULTILINE)
-content = content.rstrip('\n') + '\nHELIX_DEBUG=1\n'
+content = content.rstrip('\n') + '\nHELIX_LOG_LEVEL=debug\n'
 open(env_path, 'w').write(content)
-print('  HELIX_DEBUG=1  (debug logging enabled in', env_path + ')')
+print('  HELIX_LOG_LEVEL=debug  (debug logging enabled in', env_path + ')')
 \""
     echo ""
     echo "[serve-local-update] Copying install.sh to /tmp/ on ${USERNAME}@${PRINTER} ..."

@@ -459,20 +459,20 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock slot-spool mapping is empty initially", "[mock][filament]") {
     // No spools should be assigned to slots initially
-    REQUIRE(api_->get_spool_for_slot(0) == 0);
-    REQUIRE(api_->get_spool_for_slot(1) == 0);
-    REQUIRE(api_->get_spool_for_slot(7) == 0);
-    REQUIRE_FALSE(api_->get_spool_info_for_slot(0).has_value());
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(0) == 0);
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(1) == 0);
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(7) == 0);
+    REQUIRE_FALSE(api_->spoolman_mock().get_spool_info_for_slot(0).has_value());
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock can assign spool to slot",
                  "[mock][filament]") {
     // Spool 1 exists in mock data (Polymaker Jet Black PLA)
-    api_->assign_spool_to_slot(0, 1);
+    api_->spoolman_mock().assign_spool_to_slot(0, 1);
 
-    REQUIRE(api_->get_spool_for_slot(0) == 1);
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(0) == 1);
 
-    auto spool_info = api_->get_spool_info_for_slot(0);
+    auto spool_info = api_->spoolman_mock().get_spool_info_for_slot(0);
     REQUIRE(spool_info.has_value());
     REQUIRE(spool_info->id == 1);
     REQUIRE(spool_info->vendor == "Polymaker");
@@ -482,18 +482,18 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock can assign spool
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock can assign multiple spools to different slots",
                  "[mock][filament]") {
-    api_->assign_spool_to_slot(0, 1); // Polymaker PLA
-    api_->assign_spool_to_slot(1, 3); // Elegoo ASA
-    api_->assign_spool_to_slot(2, 6); // Overture TPU
+    api_->spoolman_mock().assign_spool_to_slot(0, 1); // Polymaker PLA
+    api_->spoolman_mock().assign_spool_to_slot(1, 3); // Elegoo ASA
+    api_->spoolman_mock().assign_spool_to_slot(2, 6); // Overture TPU
 
-    REQUIRE(api_->get_spool_for_slot(0) == 1);
-    REQUIRE(api_->get_spool_for_slot(1) == 3);
-    REQUIRE(api_->get_spool_for_slot(2) == 6);
-    REQUIRE(api_->get_spool_for_slot(3) == 0); // Not assigned
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(0) == 1);
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(1) == 3);
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(2) == 6);
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(3) == 0); // Not assigned
 
-    auto slot0 = api_->get_spool_info_for_slot(0);
-    auto slot1 = api_->get_spool_info_for_slot(1);
-    auto slot2 = api_->get_spool_info_for_slot(2);
+    auto slot0 = api_->spoolman_mock().get_spool_info_for_slot(0);
+    auto slot1 = api_->spoolman_mock().get_spool_info_for_slot(1);
+    auto slot2 = api_->spoolman_mock().get_spool_info_for_slot(2);
 
     REQUIRE(slot0->material == "PLA");
     REQUIRE(slot1->material == "ASA");
@@ -502,40 +502,40 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock can unassign spool from slot",
                  "[mock][filament]") {
-    api_->assign_spool_to_slot(0, 1);
-    REQUIRE(api_->get_spool_for_slot(0) == 1);
+    api_->spoolman_mock().assign_spool_to_slot(0, 1);
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(0) == 1);
 
-    api_->unassign_spool_from_slot(0);
-    REQUIRE(api_->get_spool_for_slot(0) == 0);
-    REQUIRE_FALSE(api_->get_spool_info_for_slot(0).has_value());
+    api_->spoolman_mock().unassign_spool_from_slot(0);
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(0) == 0);
+    REQUIRE_FALSE(api_->spoolman_mock().get_spool_info_for_slot(0).has_value());
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock reassigning spool replaces previous", "[mock][filament]") {
-    api_->assign_spool_to_slot(0, 1);
-    REQUIRE(api_->get_spool_for_slot(0) == 1);
+    api_->spoolman_mock().assign_spool_to_slot(0, 1);
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(0) == 1);
 
-    api_->assign_spool_to_slot(0, 5); // Replace with different spool
-    REQUIRE(api_->get_spool_for_slot(0) == 5);
+    api_->spoolman_mock().assign_spool_to_slot(0, 5); // Replace with different spool
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(0) == 5);
 
-    auto spool_info = api_->get_spool_info_for_slot(0);
+    auto spool_info = api_->spoolman_mock().get_spool_info_for_slot(0);
     REQUIRE(spool_info->vendor == "Kingroon");
     REQUIRE(spool_info->material == "PETG");
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture, "MoonrakerAPIMock assigning spool_id 0 unassigns",
                  "[mock][filament]") {
-    api_->assign_spool_to_slot(0, 1);
-    REQUIRE(api_->get_spool_for_slot(0) == 1);
+    api_->spoolman_mock().assign_spool_to_slot(0, 1);
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(0) == 1);
 
-    api_->assign_spool_to_slot(0, 0); // Assign 0 = unassign
-    REQUIRE(api_->get_spool_for_slot(0) == 0);
+    api_->spoolman_mock().assign_spool_to_slot(0, 0); // Assign 0 = unassign
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(0) == 0);
 }
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock ignores assignment of nonexistent spool", "[mock][filament]") {
-    api_->assign_spool_to_slot(0, 9999); // Doesn't exist
-    REQUIRE(api_->get_spool_for_slot(0) == 0);
+    api_->spoolman_mock().assign_spool_to_slot(0, 9999); // Doesn't exist
+    REQUIRE(api_->spoolman_mock().get_spool_for_slot(0) == 0);
 }
 
 // ============================================================================
@@ -545,7 +545,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock consume_filament decrements active spool weight",
                  "[mock][filament]") {
-    auto& spools = api_->get_mock_spools();
+    auto& spools = api_->spoolman_mock().get_mock_spools();
 
     // Find the currently active spool (don't assume index 0 is active)
     SpoolInfo* active_spool = nullptr;
@@ -561,7 +561,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
     float initial_weight = active_spool->remaining_weight_g;
     REQUIRE(initial_weight > 50.0f); // Sanity check: enough to consume
 
-    api_->consume_filament(50.0f); // Consume 50 grams
+    api_->spoolman_mock().consume_filament(50.0f); // Consume 50 grams
 
     // Verify weight decreased by exactly 50 grams
     REQUIRE(active_spool->remaining_weight_g == Catch::Approx(initial_weight - 50.0f));
@@ -570,7 +570,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock consume_filament uses slot's assigned spool",
                  "[mock][filament]") {
-    auto& spools = api_->get_mock_spools();
+    auto& spools = api_->spoolman_mock().get_mock_spools();
 
     // Find spool 5 by ID (don't assume array index)
     SpoolInfo* spool5 = nullptr;
@@ -583,13 +583,13 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
     REQUIRE(spool5 != nullptr);
 
     // Assign spool 5 to slot 2
-    api_->assign_spool_to_slot(2, 5);
+    api_->spoolman_mock().assign_spool_to_slot(2, 5);
 
     // Record initial weight before consumption
     float initial_weight = spool5->remaining_weight_g;
     REQUIRE(initial_weight >= 75.0f); // Sanity check: enough to consume
 
-    api_->consume_filament(75.0f, 2); // Consume from slot 2
+    api_->spoolman_mock().consume_filament(75.0f, 2); // Consume from slot 2
 
     // Verify spool 5's weight decreased by exactly 75 grams
     REQUIRE(spool5->remaining_weight_g == Catch::Approx(initial_weight - 75.0f));
@@ -597,7 +597,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock consume_filament doesn't go negative", "[mock][filament]") {
-    auto& spools = api_->get_mock_spools();
+    auto& spools = api_->spoolman_mock().get_mock_spools();
 
     // Find a spool with limited remaining weight (find by ID, not index)
     SpoolInfo* test_spool = nullptr;
@@ -610,7 +610,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
     REQUIRE(test_spool != nullptr);
 
     // Set this spool as active
-    api_->set_active_spool(4, []() {}, nullptr);
+    api_->spoolman_mock().set_active_spool(4, []() {}, nullptr);
 
     // Verify it's now active
     REQUIRE(test_spool->is_active);
@@ -621,7 +621,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 
     // Try to consume more than available
     float excess_consumption = initial_weight + 100.0f;
-    api_->consume_filament(excess_consumption);
+    api_->spoolman_mock().consume_filament(excess_consumption);
 
     // Should clamp to 0, not go negative
     REQUIRE(test_spool->remaining_weight_g >= 0.0f);
@@ -630,7 +630,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock consume_filament updates remaining length", "[mock][filament]") {
-    auto& spools = api_->get_mock_spools();
+    auto& spools = api_->spoolman_mock().get_mock_spools();
 
     // Find the currently active spool
     SpoolInfo* active_spool = nullptr;
@@ -650,7 +650,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
     // Consume some filament
     float consumption_grams = 100.0f;
     REQUIRE(initial_weight >= consumption_grams); // Sanity check
-    api_->consume_filament(consumption_grams);
+    api_->spoolman_mock().consume_filament(consumption_grams);
 
     // Length should decrease
     REQUIRE(active_spool->remaining_length_m < initial_length);
@@ -688,7 +688,7 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock set_active_spool updates is_active flag", "[mock][filament]") {
-    auto& spools = api_->get_mock_spools();
+    auto& spools = api_->spoolman_mock().get_mock_spools();
     REQUIRE(spools.size() >= 2); // Need at least 2 spools for this test
 
     // Find spool with ID 1 and spool with ID 2 (don't assume array index)
@@ -704,12 +704,12 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
     REQUIRE(spool2 != nullptr);
 
     // First set spool 1 as active to establish known state
-    api_->set_active_spool(1, []() {}, nullptr);
+    api_->spoolman_mock().set_active_spool(1, []() {}, nullptr);
     REQUIRE(spool1->is_active == true);
     REQUIRE(spool2->is_active == false);
 
     // Now set spool 2 as active
-    api_->set_active_spool(2, []() {}, nullptr);
+    api_->spoolman_mock().set_active_spool(2, []() {}, nullptr);
 
     // Verify spool 2 is now active and spool 1 is not
     REQUIRE(spool1->is_active == false);

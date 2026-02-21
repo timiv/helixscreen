@@ -22,8 +22,8 @@
 
 #include "app_globals.h"
 #include "config.h"
+#include "display_settings_manager.h"
 #include "printer_state.h"
-#include "settings_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -132,6 +132,11 @@ bool DisplayManager::init(const Config& config) {
                       m_height);
     }
 
+    // Tell backend to skip FBIOBLANK when splash owns the framebuffer
+    if (config.splash_active) {
+        m_backend->set_splash_active(true);
+    }
+
     // Create LVGL display - this opens /dev/fb0 and keeps it open
     m_display = m_backend->create_display(m_width, m_height);
     if (!m_display) {
@@ -145,8 +150,16 @@ bool DisplayManager::init(const Config& config) {
     // On AD5M, the FBIOBLANK state may be tied to the fd - calling it after
     // LVGL opens /dev/fb0 ensures the unblank persists while the display runs.
     // Uses same approach as GuppyScreen: FBIOBLANK + FBIOPAN_DISPLAY.
-    if (m_backend->unblank_display()) {
-        spdlog::info("[DisplayManager] Display unblanked via framebuffer ioctl");
+    //
+    // Skip when splash is active: the splash process already unblanked the display
+    // and is actively rendering to fb0. Calling FBIOBLANK + FBIOPAN_DISPLAY disrupts
+    // the splash image and causes visible flicker.
+    if (!config.splash_active) {
+        if (m_backend->unblank_display()) {
+            spdlog::info("[DisplayManager] Display unblanked via framebuffer ioctl");
+        }
+    } else {
+        spdlog::debug("[DisplayManager] Skipping unblank — splash process owns framebuffer");
     }
 
     // Apply display rotation if configured.
@@ -293,7 +306,7 @@ bool DisplayManager::init(const Config& config) {
                 [](lv_timer_t* t) {
                     auto* dm = static_cast<DisplayManager*>(lv_timer_get_user_data(t));
                     if (dm && dm->m_backlight && dm->m_backlight->is_available()) {
-                        int brightness = SettingsManager::instance().get_brightness();
+                        int brightness = DisplaySettingsManager::instance().get_brightness();
                         brightness = std::clamp(brightness, 10, 100);
                         dm->m_backlight->set_brightness(brightness);
                         spdlog::info("[DisplayManager] Delayed brightness override: {}%",
@@ -476,7 +489,7 @@ void DisplayManager::destroy_sleep_overlay() {
 
 void DisplayManager::check_display_sleep() {
     // If sleep-while-printing is disabled, inhibit sleep/dim during active prints
-    if (!SettingsManager::instance().get_sleep_while_printing()) {
+    if (!DisplaySettingsManager::instance().get_sleep_while_printing()) {
         PrintJobState job_state = get_printer_state().get_print_job_state();
         if (job_state == PrintJobState::PRINTING || job_state == PrintJobState::PAUSED) {
             // Reset LVGL activity timer so we don't immediately sleep when print ends
@@ -486,7 +499,7 @@ void DisplayManager::check_display_sleep() {
     }
 
     // Get configured sleep timeout from settings (0 = disabled)
-    int sleep_timeout_sec = SettingsManager::instance().get_display_sleep_sec();
+    int sleep_timeout_sec = DisplaySettingsManager::instance().get_display_sleep_sec();
 
     // Get LVGL inactivity time (milliseconds since last touch/input)
     uint32_t inactive_ms = lv_display_get_inactive_time(nullptr);
@@ -580,7 +593,7 @@ void DisplayManager::wake_display() {
     }
 
     // Restore configured brightness from settings
-    int brightness = SettingsManager::instance().get_brightness();
+    int brightness = DisplaySettingsManager::instance().get_brightness();
     brightness = std::clamp(brightness, 10, 100);
 
     if (m_backlight) {
@@ -596,7 +609,7 @@ void DisplayManager::ensure_display_on() {
     m_display_dimmed = false;
 
     // Get configured brightness (or default to 50%)
-    int brightness = SettingsManager::instance().get_brightness();
+    int brightness = DisplaySettingsManager::instance().get_brightness();
     brightness = std::clamp(brightness, 10, 100);
 
     // Apply to hardware - this ensures display is visible
@@ -616,7 +629,7 @@ void DisplayManager::restore_display_on_shutdown() {
     destroy_sleep_overlay();
 
     // Ensure display is awake before exiting so next app doesn't start with black screen
-    int brightness = SettingsManager::instance().get_brightness();
+    int brightness = DisplaySettingsManager::instance().get_brightness();
     brightness = std::clamp(brightness, 10, 100);
 
     if (m_backlight) {

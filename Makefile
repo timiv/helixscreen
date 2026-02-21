@@ -262,7 +262,7 @@ APP_C_OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(APP_C_SRCS))
 
 # Application C++ sources (exclude test binaries, splash binary, and lvgl-demo)
 # Include all subdirectories: ui/, api/, rendering/, printer/, print/, system/, application/
-APP_SRCS := $(filter-out $(SRC_DIR)/test_dynamic_cards.cpp $(SRC_DIR)/test_responsive_theme.cpp $(SRC_DIR)/test_tinygl_triangle.cpp $(SRC_DIR)/test_gcode_geometry.cpp $(SRC_DIR)/test_gcode_analysis.cpp $(SRC_DIR)/test_sdf_reconstruction.cpp $(SRC_DIR)/test_sparse_grid.cpp $(SRC_DIR)/test_partial_extraction.cpp $(SRC_DIR)/test_render_comparison.cpp $(SRC_DIR)/test_network_tester.cpp $(SRC_DIR)/helix_splash.cpp $(SRC_DIR)/helix_watchdog.cpp $(SRC_DIR)/lvgl-demo/main.cpp,$(wildcard $(SRC_DIR)/*.cpp) $(wildcard $(SRC_DIR)/*/*.cpp))
+APP_SRCS := $(filter-out $(SRC_DIR)/test_dynamic_cards.cpp $(SRC_DIR)/test_responsive_theme.cpp $(SRC_DIR)/test_tinygl_triangle.cpp $(SRC_DIR)/test_gcode_geometry.cpp $(SRC_DIR)/test_gcode_analysis.cpp $(SRC_DIR)/test_sdf_reconstruction.cpp $(SRC_DIR)/test_sparse_grid.cpp $(SRC_DIR)/test_partial_extraction.cpp $(SRC_DIR)/test_render_comparison.cpp $(SRC_DIR)/test_network_tester.cpp $(SRC_DIR)/helix_splash.cpp $(SRC_DIR)/helix_watchdog.cpp $(SRC_DIR)/lvgl-demo/main.cpp,$(wildcard $(SRC_DIR)/*.cpp) $(wildcard $(SRC_DIR)/*/*.cpp) $(wildcard $(SRC_DIR)/*/*/*.cpp))
 APP_OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(APP_SRCS))
 
 # Objective-C++ sources (macOS only - .mm files)
@@ -662,11 +662,19 @@ screenshots: $(BIN)
 # Runs automatically for cross-compiled builds (STRIP_BINARY=yes).
 # Extracts symbol maps first, then strips — preserving debug info for
 # offline crash resolution while keeping the deployed binary small.
+#
+# Artifacts produced (uploaded to R2 by CI):
+#   .sym    — nm -nC output for fast function-name lookup
+#   .debug  — DWARF debug info for addr2line (file:line, inlined frames)
 # =============================================================================
+OBJCOPY_CMD := $(CROSS_COMPILE)objcopy
+
 symbols: $(TARGET)
 ifeq ($(STRIP_BINARY),yes)
 	$(NM_CMD) -nC $(TARGET) > $(TARGET).sym
 	@echo "Symbol map: $(TARGET).sym"
+	$(OBJCOPY_CMD) --only-keep-debug $(TARGET) $(TARGET).debug
+	@echo "Debug info: $(TARGET).debug ($(shell du -h $(TARGET).debug 2>/dev/null | cut -f1 || echo '?'))"
 else
 	@echo "STRIP_BINARY not set — skipping symbol extraction"
 endif

@@ -3,6 +3,7 @@
 
 #include "ui_emergency_stop.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_modal.h"
 #include "ui_notification.h"
 #include "ui_toast_manager.h"
@@ -76,24 +77,20 @@ void EmergencyStopOverlay::init_subjects() {
     UI_MANAGED_SUBJECT_INT(recovery_can_restart_, 1, "recovery_can_restart", subjects_);
 
     // Register click callbacks for XML event binding
-    lv_xml_register_event_cb(nullptr, "emergency_stop_clicked", emergency_stop_clicked);
-    lv_xml_register_event_cb(nullptr, "estop_dialog_cancel_clicked", estop_dialog_cancel_clicked);
-    lv_xml_register_event_cb(nullptr, "estop_dialog_confirm_clicked", estop_dialog_confirm_clicked);
-    lv_xml_register_event_cb(nullptr, "recovery_restart_klipper_clicked",
-                             recovery_restart_klipper_clicked);
-    lv_xml_register_event_cb(nullptr, "recovery_firmware_restart_clicked",
-                             recovery_firmware_restart_clicked);
-    lv_xml_register_event_cb(nullptr, "recovery_dismiss_clicked", recovery_dismiss_clicked);
-
-    // Advanced panel button callbacks (reuse same logic)
-    lv_xml_register_event_cb(nullptr, "advanced_estop_clicked", advanced_estop_clicked);
-    lv_xml_register_event_cb(nullptr, "advanced_restart_klipper_clicked",
-                             advanced_restart_klipper_clicked);
-    lv_xml_register_event_cb(nullptr, "advanced_firmware_restart_clicked",
-                             advanced_firmware_restart_clicked);
-
-    // Home panel firmware restart button (shown during klippy SHUTDOWN)
-    lv_xml_register_event_cb(nullptr, "firmware_restart_clicked", home_firmware_restart_clicked);
+    register_xml_callbacks({
+        {"emergency_stop_clicked", emergency_stop_clicked},
+        {"estop_dialog_cancel_clicked", estop_dialog_cancel_clicked},
+        {"estop_dialog_confirm_clicked", estop_dialog_confirm_clicked},
+        {"recovery_restart_klipper_clicked", recovery_restart_klipper_clicked},
+        {"recovery_firmware_restart_clicked", recovery_firmware_restart_clicked},
+        {"recovery_dismiss_clicked", recovery_dismiss_clicked},
+        // Advanced panel button callbacks (reuse same logic)
+        {"advanced_estop_clicked", advanced_estop_clicked},
+        {"advanced_restart_klipper_clicked", advanced_restart_klipper_clicked},
+        {"advanced_firmware_restart_clicked", advanced_firmware_restart_clicked},
+        // Home panel firmware restart button (shown during klippy SHUTDOWN)
+        {"firmware_restart_clicked", home_firmware_restart_clicked},
+    });
 
     subjects_initialized_ = true;
 

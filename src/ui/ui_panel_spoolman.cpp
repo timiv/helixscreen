@@ -3,6 +3,7 @@
 
 #include "ui_panel_spoolman.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_global_panel_helper.h"
 #include "ui_keyboard_manager.h"
 #include "ui_modal.h"
@@ -89,11 +90,13 @@ void SpoolmanPanel::register_callbacks() {
     spdlog::debug("[{}] Registering event callbacks", get_name());
 
     // Register XML event callbacks
-    lv_xml_register_event_cb(nullptr, "on_spoolman_spool_row_clicked", on_spool_row_clicked);
-    lv_xml_register_event_cb(nullptr, "on_spoolman_refresh_clicked", on_refresh_clicked);
-    lv_xml_register_event_cb(nullptr, "on_spoolman_add_spool_clicked", on_add_spool_clicked);
-    lv_xml_register_event_cb(nullptr, "on_spoolman_search_changed", on_search_changed);
-    lv_xml_register_event_cb(nullptr, "on_spoolman_search_clear", on_search_clear);
+    register_xml_callbacks({
+        {"on_spoolman_spool_row_clicked", on_spool_row_clicked},
+        {"on_spoolman_refresh_clicked", on_refresh_clicked},
+        {"on_spoolman_add_spool_clicked", on_add_spool_clicked},
+        {"on_spoolman_search_changed", on_search_changed},
+        {"on_spoolman_search_clear", on_search_clear},
+    });
 
     callbacks_registered_ = true;
     spdlog::debug("[{}] Event callbacks registered", get_name());
@@ -204,7 +207,7 @@ void SpoolmanPanel::refresh_spools() {
 
     show_loading_state();
 
-    api->get_spoolman_spools(
+    api->spoolman().get_spoolman_spools(
         [this](const std::vector<SpoolInfo>& spools) {
             spdlog::info("[{}] Received {} spools from Spoolman", get_name(), spools.size());
 
@@ -227,7 +230,7 @@ void SpoolmanPanel::refresh_spools() {
                 return;
             }
 
-            api_inner->get_spoolman_status(
+            api_inner->spoolman().get_spoolman_status(
                 [this, spools](bool /*connected*/, int active_id) {
                     spdlog::debug("[{}] Active spool ID: {}", get_name(), active_id);
                     // Schedule UI update on main thread
@@ -426,7 +429,7 @@ void SpoolmanPanel::set_active_spool(int spool_id) {
         return;
     }
 
-    api->set_active_spool(
+    api->spoolman().set_active_spool(
         spool_id,
         [this, spool_id]() {
             spdlog::info("[{}] Set active spool to {}", get_name(), spool_id);
@@ -525,7 +528,7 @@ void SpoolmanPanel::delete_spool(int spool_id) {
                 return;
             }
 
-            api->delete_spoolman_spool(
+            api->spoolman().delete_spoolman_spool(
                 id,
                 [id]() {
                     spdlog::info("[Spoolman] Spool {} deleted successfully", id);

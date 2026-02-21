@@ -206,7 +206,7 @@ test-shell:
 		START_TIME=$$(date +%s); \
 		if command -v parallel >/dev/null 2>&1; then \
 			NPROC=$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4); \
-			bats --jobs "$$NPROC" tests/shell/; \
+			bats --jobs "$$NPROC" --no-parallelize-within-files tests/shell/; \
 		else \
 			bats tests/shell/; \
 		fi; \

@@ -3,14 +3,16 @@
 
 #include "ui_print_select_list_view.h"
 
+#include "ui_filename_utils.h"
 #include "ui_panel_print_select.h" // For PrintFileData
-#include "ui_utils.h"              // For strip_gcode_extension
 
-#include "settings_manager.h"
+#include "display_settings_manager.h"
 
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
+
+using helix::gcode::strip_gcode_extension;
 
 namespace helix::ui {
 
@@ -458,7 +460,7 @@ void PrintSelectListView::animate_entrance() {
     }
 
     // Skip animation if disabled
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         for (lv_obj_t* row : list_pool_) {
             if (!lv_obj_has_flag(row, LV_OBJ_FLAG_HIDDEN)) {
                 lv_obj_set_style_translate_y(row, 0, LV_PART_MAIN);

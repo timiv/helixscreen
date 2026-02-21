@@ -3,6 +3,7 @@
 
 #include "ui_spool_wizard.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_color_picker.h"
 #include "ui_global_panel_helper.h"
 #include "ui_keyboard_manager.h"
@@ -148,53 +149,40 @@ void SpoolWizardOverlay::register_callbacks() {
 
     spdlog::debug("[{}] Registering event callbacks", get_name());
 
-    // Navigation
-    lv_xml_register_event_cb(nullptr, "on_wizard_back", on_wizard_back);
-    lv_xml_register_event_cb(nullptr, "on_wizard_next", on_wizard_next);
-    lv_xml_register_event_cb(nullptr, "on_wizard_create", on_wizard_create);
+    register_xml_callbacks({
+        // Navigation
+        {"on_wizard_back", on_wizard_back},
+        {"on_wizard_next", on_wizard_next},
+        {"on_wizard_create", on_wizard_create},
 
-    // Vendor step
-    lv_xml_register_event_cb(nullptr, "on_wizard_vendor_selected", on_wizard_vendor_selected);
-    lv_xml_register_event_cb(nullptr, "on_wizard_show_create_vendor_modal",
-                             on_wizard_show_create_vendor_modal);
-    lv_xml_register_event_cb(nullptr, "on_wizard_cancel_create_vendor",
-                             on_wizard_cancel_create_vendor);
-    lv_xml_register_event_cb(nullptr, "on_wizard_vendor_search_changed",
-                             on_wizard_vendor_search_changed);
-    lv_xml_register_event_cb(nullptr, "on_wizard_new_vendor_name_changed",
-                             on_wizard_new_vendor_name_changed);
-    lv_xml_register_event_cb(nullptr, "on_wizard_new_vendor_url_changed",
-                             on_wizard_new_vendor_url_changed);
-    lv_xml_register_event_cb(nullptr, "on_wizard_confirm_create_vendor",
-                             on_wizard_confirm_create_vendor);
+        // Vendor step
+        {"on_wizard_vendor_selected", on_wizard_vendor_selected},
+        {"on_wizard_show_create_vendor_modal", on_wizard_show_create_vendor_modal},
+        {"on_wizard_cancel_create_vendor", on_wizard_cancel_create_vendor},
+        {"on_wizard_vendor_search_changed", on_wizard_vendor_search_changed},
+        {"on_wizard_new_vendor_name_changed", on_wizard_new_vendor_name_changed},
+        {"on_wizard_new_vendor_url_changed", on_wizard_new_vendor_url_changed},
+        {"on_wizard_confirm_create_vendor", on_wizard_confirm_create_vendor},
 
-    // Filament step
-    lv_xml_register_event_cb(nullptr, "on_wizard_filament_selected", on_wizard_filament_selected);
-    lv_xml_register_event_cb(nullptr, "on_wizard_show_create_filament_modal",
-                             on_wizard_show_create_filament_modal);
-    lv_xml_register_event_cb(nullptr, "on_wizard_cancel_create_filament",
-                             on_wizard_cancel_create_filament);
-    lv_xml_register_event_cb(nullptr, "on_wizard_material_changed", on_wizard_material_changed);
-    lv_xml_register_event_cb(nullptr, "on_wizard_new_filament_name_changed",
-                             on_wizard_new_filament_name_changed);
-    lv_xml_register_event_cb(nullptr, "on_wizard_pick_filament_color",
-                             on_wizard_pick_filament_color);
-    lv_xml_register_event_cb(nullptr, "on_wizard_nozzle_temp_changed",
-                             on_wizard_nozzle_temp_changed);
-    lv_xml_register_event_cb(nullptr, "on_wizard_bed_temp_changed", on_wizard_bed_temp_changed);
-    lv_xml_register_event_cb(nullptr, "on_wizard_filament_weight_changed",
-                             on_wizard_filament_weight_changed);
-    lv_xml_register_event_cb(nullptr, "on_wizard_spool_weight_changed",
-                             on_wizard_spool_weight_changed);
-    lv_xml_register_event_cb(nullptr, "on_wizard_confirm_create_filament",
-                             on_wizard_confirm_create_filament);
+        // Filament step
+        {"on_wizard_filament_selected", on_wizard_filament_selected},
+        {"on_wizard_show_create_filament_modal", on_wizard_show_create_filament_modal},
+        {"on_wizard_cancel_create_filament", on_wizard_cancel_create_filament},
+        {"on_wizard_material_changed", on_wizard_material_changed},
+        {"on_wizard_new_filament_name_changed", on_wizard_new_filament_name_changed},
+        {"on_wizard_pick_filament_color", on_wizard_pick_filament_color},
+        {"on_wizard_nozzle_temp_changed", on_wizard_nozzle_temp_changed},
+        {"on_wizard_bed_temp_changed", on_wizard_bed_temp_changed},
+        {"on_wizard_filament_weight_changed", on_wizard_filament_weight_changed},
+        {"on_wizard_spool_weight_changed", on_wizard_spool_weight_changed},
+        {"on_wizard_confirm_create_filament", on_wizard_confirm_create_filament},
 
-    // Spool details step
-    lv_xml_register_event_cb(nullptr, "on_wizard_remaining_weight_changed",
-                             on_wizard_remaining_weight_changed);
-    lv_xml_register_event_cb(nullptr, "on_wizard_price_changed", on_wizard_price_changed);
-    lv_xml_register_event_cb(nullptr, "on_wizard_lot_changed", on_wizard_lot_changed);
-    lv_xml_register_event_cb(nullptr, "on_wizard_notes_changed", on_wizard_notes_changed);
+        // Spool details step
+        {"on_wizard_remaining_weight_changed", on_wizard_remaining_weight_changed},
+        {"on_wizard_price_changed", on_wizard_price_changed},
+        {"on_wizard_lot_changed", on_wizard_lot_changed},
+        {"on_wizard_notes_changed", on_wizard_notes_changed},
+    });
 
     callbacks_registered_ = true;
     spdlog::debug("[{}] Event callbacks registered", get_name());
@@ -478,7 +466,7 @@ void SpoolWizardOverlay::create_vendor_then_filament_then_spool() {
         data["url"] = new_vendor_url_;
     }
 
-    api->create_spoolman_vendor(
+    api->spoolman().create_spoolman_vendor(
         data,
         [this](const VendorInfo& vendor) {
             helix::ui::queue_update([this, vendor]() {
@@ -535,7 +523,7 @@ void SpoolWizardOverlay::create_filament_then_spool(int vendor_id) {
     set_temp_range(data, "settings_bed_temp", selected_filament_.bed_temp_min,
                    selected_filament_.bed_temp_max);
 
-    api->create_spoolman_filament(
+    api->spoolman().create_spoolman_filament(
         data,
         [this](const FilamentInfo& filament) {
             helix::ui::queue_update([this, filament]() {
@@ -579,7 +567,7 @@ void SpoolWizardOverlay::create_spool(int filament_id) {
         data["comment"] = spool_notes_;
     }
 
-    api->create_spoolman_spool(
+    api->spoolman().create_spoolman_spool(
         data,
         [this](const SpoolInfo& spool) {
             helix::ui::queue_update([this, spool]() {
@@ -626,7 +614,7 @@ void SpoolWizardOverlay::on_creation_error(const std::string& message, int rollb
     if (api) {
         auto delete_vendor = [api, rollback_vendor_id]() {
             if (rollback_vendor_id >= 0) {
-                api->delete_spoolman_vendor(
+                api->spoolman().delete_spoolman_vendor(
                     rollback_vendor_id,
                     [rollback_vendor_id]() {
                         spdlog::info("Rollback: deleted vendor {}", rollback_vendor_id);
@@ -639,7 +627,7 @@ void SpoolWizardOverlay::on_creation_error(const std::string& message, int rollb
 
         if (rollback_filament_id >= 0) {
             // Delete filament first, then vendor (respects FK ordering)
-            api->delete_spoolman_filament(
+            api->spoolman().delete_spoolman_filament(
                 rollback_filament_id,
                 [rollback_filament_id, delete_vendor]() {
                     spdlog::info("Rollback: deleted filament {}", rollback_filament_id);
@@ -790,7 +778,7 @@ void SpoolWizardOverlay::load_vendors() {
 
     // Fetch server vendors
     // Fetch server vendors
-    api->get_spoolman_vendors(
+    api->spoolman().get_spoolman_vendors(
         [ctx, finish](const std::vector<VendorInfo>& server_list) {
             ctx->server_vendors.reserve(server_list.size());
             for (const auto& vi : server_list) {
@@ -814,7 +802,7 @@ void SpoolWizardOverlay::load_vendors() {
         });
 
     // Fetch external DB vendors
-    api->get_spoolman_external_vendors(
+    api->spoolman().get_spoolman_external_vendors(
         [ctx, finish](const std::vector<VendorInfo>& ext_list) {
             ctx->external_vendors.reserve(ext_list.size());
             for (const auto& vi : ext_list) {
@@ -1255,7 +1243,7 @@ void SpoolWizardOverlay::load_filaments() {
     // SpoolmanDB (~thousands of entries), which is too heavy for embedded.
     // Users can create filaments via "+ New" if the server list is empty.
     int vendor_id = selected_vendor_.server_id;
-    api->get_spoolman_filaments(
+    api->spoolman().get_spoolman_filaments(
         vendor_id,
         [this, vendor_id](const std::vector<FilamentInfo>& server_list) {
             helix::ui::queue_update([this, server_list, vendor_id]() {

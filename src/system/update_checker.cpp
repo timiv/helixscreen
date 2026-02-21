@@ -278,6 +278,31 @@ std::string resolve_tool(const std::string& name) {
 }
 
 /**
+ * @brief Resolve the install root directory from /proc/self/exe.
+ *
+ * Strips /bin/helix-screen from the exe path to get the install root
+ * (e.g., /home/pbrown/helixscreen).  Returns empty string on failure.
+ */
+std::string resolve_install_root() {
+    char exe_buf[PATH_MAX] = {};
+    ssize_t exe_len = readlink("/proc/self/exe", exe_buf, sizeof(exe_buf) - 1);
+    if (exe_len <= 0) {
+        return {};
+    }
+    exe_buf[exe_len] = '\0';
+    std::string exe_path(exe_buf);
+    auto slash = exe_path.rfind('/');
+    if (slash == std::string::npos) {
+        return {};
+    }
+    std::string bin_dir = exe_path.substr(0, slash);
+    if (bin_dir.size() >= 4 && bin_dir.substr(bin_dir.size() - 4) == "/bin") {
+        return bin_dir.substr(0, bin_dir.size() - 4);
+    }
+    return {};
+}
+
+/**
  * @brief Execute a command safely via fork/exec (no shell interpretation)
  *
  * Avoids command injection by bypassing the shell entirely.
@@ -374,6 +399,37 @@ int safe_exec(const std::vector<std::string>& args, bool capture_stderr = false)
     }
 
     return exit_code;
+}
+
+/**
+ * @brief Clean up stale .old backup directory left by a previous update.
+ *
+ * When the in-app updater runs install.sh under systemd's NoNewPrivileges
+ * constraint, the cleanup_old_install step can fail silently (sudo is blocked).
+ * This leaves a helixscreen.old directory that wastes disk space.  We clean it
+ * up at startup since we know the new version launched successfully.
+ */
+void cleanup_stale_old_install() {
+    std::string install_root = resolve_install_root();
+    if (install_root.empty()) {
+        return;
+    }
+
+    std::string old_dir = install_root + ".old";
+    struct stat st{};
+    if (stat(old_dir.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)) {
+        return; // no .old directory
+    }
+
+    spdlog::info("[UpdateChecker] Found stale backup from previous update: {}", old_dir);
+
+    const std::string rm_bin = resolve_tool("rm");
+    int ret = safe_exec({rm_bin, "-rf", old_dir});
+    if (ret == 0) {
+        spdlog::info("[UpdateChecker] Cleaned up stale backup: {}", old_dir);
+    } else {
+        spdlog::warn("[UpdateChecker] Could not remove stale backup {} (exit {})", old_dir, ret);
+    }
 }
 
 /**
@@ -483,6 +539,10 @@ void UpdateChecker::init() {
 
     init_subjects();
     register_notify_callbacks();
+
+    // Clean up stale .old backup from a previous in-app update that may have
+    // failed to remove it (e.g., NoNewPrivileges blocked sudo rm).
+    cleanup_stale_old_install();
 
     spdlog::debug("[UpdateChecker] Initialized");
     initialized_ = true;

@@ -23,6 +23,10 @@ MoonrakerAPI::MoonrakerAPI(MoonrakerClient& client, PrinterState& state) : clien
     // state parameter reserved for future use
     (void)state;
 
+    // Create sub-APIs
+    history_api_ = std::make_unique<MoonrakerHistoryAPI>(client);
+    spoolman_api_ = std::make_unique<MoonrakerSpoolmanAPI>(client);
+
     // Initialize build_volume_version subject for change notifications
     lv_subject_init_int(&build_volume_version_, 0);
 

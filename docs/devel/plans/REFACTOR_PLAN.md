@@ -2,8 +2,8 @@
 
 > **Document Purpose**: Reference guide for refactoring work and progress tracking
 > **Created**: 2026-01-08
-> **Last Updated**: 2026-01-17
-> **Version**: 1.4 (PrinterState decomposition complete, Quick Wins 100%)
+> **Last Updated**: 2026-02-21
+> **Version**: 1.8 (ui_utils split with proper namespaces)
 
 ## Table of Contents
 
@@ -804,10 +804,12 @@ tests/unit/test_printer_state.cpp
 
 > **Completed 2026-01-09**: All 5 phases complete. 9 files migrated to factory pattern. Standards documented in CLAUDE.md.
 >
-> **Adoption Status (2026-01-17)**: Factory implementation complete. Broader adoption is optional.
-> - Current usage: 9 files (7.2% of UI), 5/30 panels (16.7%)
-> - 10 panels still use legacy observer pattern but are functioning correctly
-> - Migration of remaining panels would reduce ~1,000 lines of boilerplate
+> **Full Adoption (2026-02-21)**: All class-based observer patterns migrated to factory.
+> - 24 legacy observers migrated across 20 files (17 UI panels/overlays + 3 non-UI)
+> - Net -199 lines across both commits
+> - 6 remaining `lv_observer_get_user_data` usages are non-class patterns (widget pointers,
+>   custom structs) in low-level infrastructure (notification_badge, ui_button, temp_graph,
+>   heating_animator, temperature_history_manager) — not candidates for factory migration
 
 #### Problem Statement
 The same 15-line observer pattern is repeated **129+ times** across 85+ UI files, totaling approximately **2000 lines** of nearly identical boilerplate.
@@ -1193,6 +1195,13 @@ private:
 >
 > **Remaining `get_moonraker_client()` in UI:** ~17 calls, mostly in `ui_wizard_connection.cpp` (10 calls,
 > legitimate transport-level connection management), plus screws_tilt, input_shaper, settings, change_host.
+>
+> **2026-02-21 Spoolman Domain Extracted:** First domain sub-API extracted. Created
+> `MoonrakerSpoolmanAPI` (20+ methods) with own header/impl. Consumers migrated to
+> `api->spoolman().method()` pattern. Mock follows same pattern with `MoonrakerSpoolmanAPIMock`.
+> 8 consumer files + 4 test files updated. 24 spoolman tests (88 assertions) all pass.
+>
+> **Commit:** `303c4473`
 
 #### Problem Statement
 `MoonrakerAPI` is a 1190-line facade containing **70+ public methods** across 5+ unrelated domains. Finding the right method requires scrolling through a massive interface.
@@ -1564,6 +1573,176 @@ MoonrakerClient (orchestrator, ~300 lines)
 
 ---
 
+### 2.6 AMS Backend Base Class Extraction
+
+**Status**: [ ] Not Started  [ ] In Progress  [x] Complete
+
+> **Completed 2026-02-20**: Extracted `AmsSubscriptionBackend` base class from AFC, HappyHare, and ToolChanger.
+> Net -361 lines. AFC migrated from `recursive_mutex` to `std::mutex` with structured lock scoping.
+> See `docs/devel/plans/2026-02-20-refactor-ams-formatting.md` for detailed plan.
+>
+> **Commits:** `daa07b57` (characterization tests), `3e01ea17` (base class + migrations)
+
+#### Problem Statement
+AFC, HappyHare, and ToolChanger shared 85-95% identical code for lifecycle management (`start`/`stop`), event handling (`emit_event`), state queries (`get_current_tool`, etc.), and utilities (`check_preconditions`, `execute_gcode`).
+
+AFC used `std::recursive_mutex` (tech debt from Dec 2025 quick fix `8f726504`) while the other backends used `std::mutex` with the proper pattern (release lock before `emit_event()`).
+
+#### Solution
+- Created `AmsSubscriptionBackend` base class (245 lines) with `final` lifecycle methods and virtual hooks (`on_started()`, `on_stopping()`, `additional_start_checks()`)
+- All three backends migrated to inherit from base class
+- AFC migrated from `recursive_mutex` to `std::mutex`
+- ValgACE (bit-rotten, polling-based) and Mock (different architecture) excluded by design
+
+#### Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| Duplicated lifecycle code | ~700 lines across 3 backends | 0 (in base class) |
+| AFC mutex type | `recursive_mutex` (tech debt) | `std::mutex` (consistent) |
+| Net lines | - | -361 |
+| Tests | 7 characterization cases, 42 assertions | All pass |
+
+---
+
+### 2.7 Temperature Formatting Consolidation
+
+**Status**: [ ] Not Started  [ ] In Progress  [x] Complete
+
+> **Completed 2026-02-20**: Consolidated duplicate temperature formatting from `format_utils` into
+> `ui_temperature_utils` as single source of truth. Net -61 lines. Added `color` field to `HeaterDisplayResult`.
+>
+> **Commit:** `4c17fd66`
+
+#### Problem Statement
+Two parallel systems for temperature formatting:
+- `format_utils.h` (`helix::format`): `format_temp()`, `format_temp_pair()`, `heater_display()`
+- `ui_temperature_utils.h` (`helix::ui::temperature`): `format_temperature()`, `format_temperature_pair()`, `get_heating_state_color()`
+
+Both hardcoded `tolerance = 2°C` for heating state logic. Both produced identical output formats.
+
+#### Solution
+- Moved `HeaterDisplayResult` and `heater_display()` to `ui_temperature_utils`
+- Added `lv_color_t color` field to `HeaterDisplayResult` (single call returns text + color)
+- Uses `DEFAULT_AT_TEMP_TOLERANCE` shared constant instead of duplicate hardcoded values
+- Removed duplicate `format_temp*()` functions from `format_utils`
+- Migrated callers in home, controls, and print-status panels
+- 17 new tests for consolidated API
+
+#### Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| Temperature format functions | 6 (3 duplicated across 2 files) | 6 (all in one file) |
+| Tolerance hardcoded locations | 2 | 1 (shared constant) |
+| Net lines | - | -61 |
+| Tests | 442 assertions in 99 cases | All pass |
+
+---
+
+### 2.8 SettingsManager Domain Split
+
+**Status**: [ ] Not Started  [ ] In Progress  [x] Complete
+
+#### Problem Statement
+`SettingsManager` (854-line header, 1,156-line implementation) manages 27 LVGL subjects across 6 unrelated domains: display, audio, safety, print behavior, hardware, and network/system. The settings panel has 7+ nearly identical dropdown callback handlers.
+
+#### Solution Implemented
+Split into 5 domain-specific managers + thin residual facade:
+
+| Manager | Subjects | Files |
+|---------|----------|-------|
+| `DisplaySettingsManager` | 13 (dark_mode, theme, brightness, dim, sleep, animations, render modes, time_format) | `display_settings_manager.{h,cpp}` |
+| `AudioSettingsManager` | 4 (sounds_enabled, ui_sounds, volume, completion_alert) | `audio_settings_manager.{h,cpp}` |
+| `SafetySettingsManager` | 3 (estop_confirm, cancel_escalation, timeout) | `safety_settings_manager.{h,cpp}` |
+| `SystemSettingsManager` | 3 (language, update_channel, telemetry) | `system_settings_manager.{h,cpp}` |
+| `InputSettingsManager` | 2 (scroll_throw, scroll_limit) + restart_pending | `input_settings_manager.{h,cpp}` |
+| **SettingsManager (residual)** | 2 (led_enabled, z_movement_style) + external_spool_info | Thin facade with forwarding wrappers |
+
+Also created `settings_callback_helpers.h` with dropdown/toggle callback factories.
+
+**Tests:** 40 test cases, 252 assertions across 5 domain test suites.
+**Consumer migration** (2026-02-21): All 132 consumer callsites migrated from deprecated `SettingsManager` forwarding wrappers to domain managers directly. 40 files changed, net -566 lines. SettingsManager header: 854→165 lines. Implementation: 1,156→215 lines. Stale includes cleaned up post-migration.
+
+#### Effort Actual
+~3 hours (2026-02-21)
+
+---
+
+### 2.9 Panel/Overlay Base Class Broader Adoption
+
+**Status**: [ ] Not Started  [ ] In Progress  [x] Complete
+
+#### Problem Statement
+60+ panels/overlays share identical structural patterns: `register_callbacks()` → list of `lv_xml_register_event_cb()` calls, `init_subjects()` → guarded macro calls, `create()` → XML load + widget lookup. Base class helpers like `create_overlay_from_xml()` exist but are used by only 1-2 overlays.
+
+#### Solution
+Created `ui_callback_helpers.h` with two helpers:
+- **`register_xml_callbacks()`** — batch registration via `std::initializer_list<XmlCallbackEntry>`, replaces repetitive one-per-line calls with compact table format
+- **`find_required_widget()`** — wraps `lv_obj_find_by_name()` + error logging into single call
+
+**Phase 1** (2026-02-21): Migrated 4 high-boilerplate files: bed mesh (26 callbacks), controls (24), spool wizard (25), settings (68 across two locations). Total: 143 individual registrations consolidated.
+
+**Phase 2** (2026-02-21): Migrated remaining 38 panels/overlays across two parallel agent batches:
+- High-callback files (15 files, ~177 registrations): input_shaper, filament, modal, pid_cal, ams_edit, macro_buttons, printer_manager, temp_control, print_select, advanced, home, network_settings, theme_editor, probe, emergency_stop
+- Medium-callback files (22 files, ~126 registrations): dryer_card, settings_display, print_tune, ams_context, zoffset_cal, print_status, history_list, history_dashboard, detail_view, screws_tilt, timelapse_settings, touch_cal, spoolman_context, settings_sound, panel_spoolman, led_control, ams_sidebar, wizard_connection, step_test, settings_led, ams_loading_error, color_picker, console
+
+Code review found and fixed: 2 lambda callbacks in console panel not migrated, 1 bare call in timelapse init_subjects() moved to batch.
+
+`create_overlay_from_xml()` migration deferred — existing non-users intentionally differ in behavior (skip `ui_overlay_panel_setup_standard()` or defer `parent_screen_` assignment).
+
+**Tests:** 6 test cases, 9 assertions.
+
+#### Remaining Work (optional)
+- Adopt `find_required_widget()` in panels with repetitive widget lookup + error checking
+- Investigate whether `create_overlay_from_xml()` can be made flexible enough for broader adoption
+
+#### Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| Individual `lv_xml_register_event_cb()` calls | ~446 across 42 files | 0 (all use batch `register_xml_callbacks()`) |
+| Net lines | - | -16 (38 files changed, 551 insertions, 535 deletions) |
+
+---
+
+### 2.10 ui_utils.cpp Split
+
+**Status**: [ ] Not Started  [ ] In Progress  [x] Complete
+
+> **Completed 2026-02-21**: Split ui_utils monolith into 4 properly namespaced modules with full
+> consumer migration. No forwarding headers — every consumer includes exactly what it needs.
+>
+> **New files (4 header + 4 implementation):**
+> - `ui_filename_utils.{h,cpp}` — namespace `helix::gcode`: get_filename_basename, strip_gcode_extension, get_display_filename, resolve_gcode_filename
+> - `ui_format_utils.{h,cpp}` — namespace `helix::ui`: format_print_time, format_filament_weight, format_layer_count, format_print_height, format_file_size, format_modified_date, format_time, get_time_format_string
+> - `ui_effects.{h,cpp}` — namespace `helix::ui`: create_ripple, create_fullscreen_backdrop, defocus_tree (renamed from ui_* prefix)
+> - `ui_image_helpers.{h,cpp}` — namespace `helix::ui`: image_scale_to_cover, image_scale_to_contain (renamed from ui_image_* prefix)
+>
+> **Residual `ui_utils.{h,cpp}`**: responsive layout (ui_get_header_content_padding, ui_get_responsive_header_height), LED icon (ui_brightness_to_lightbulb_icon), color utils (ui_parse_hex_color, ui_color_distance), toggle_list_empty_state, safe_delete
+>
+> **Consumer migration**: 20 files updated with specific includes + `using` declarations. 27 files changed total, 764 ins / 700 del.
+>
+> **Commit:** completed on main
+
+#### Problem Statement
+`ui_utils.cpp` (520 lines) was a dumping ground mixing: string formatting (filenames, times, layer counts), image scaling, color operations, ripple effects, and responsive layout calculations.
+
+#### Solution
+Split into 4 focused, namespaced modules + slimmed residual:
+1. `ui_filename_utils.{h,cpp}` (namespace `helix::gcode`) — gcode filename parsing/display
+2. `ui_format_utils.{h,cpp}` (namespace `helix::ui`) — display formatting for time, file size, weight, dates
+3. `ui_effects.{h,cpp}` (namespace `helix::ui`) — ripple effects, backdrop, defocus
+4. `ui_image_helpers.{h,cpp}` (namespace `helix::ui`) — image scaling utilities
+
+#### Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| ui_utils.cpp lines | 520 | ~130 (residual) |
+| ui_utils.h lines | ~412 | ~130 (residual) |
+| Namespaced functions | 0 | 14 (across helix::gcode and helix::ui) |
+| Consumer files updated | - | 20 |
+| Net lines | - | +64 (more files but proper separation) |
+
+---
+
 ## Quick Wins
 
 > **Assessment (2026-01-09)**: Original estimates were optimistic. Actual analysis revealed
@@ -1656,10 +1835,15 @@ MoonrakerClient (orchestrator, ~300 lines)
 ### Phase 4: Polish (ongoing)
 | Item | Effort | Owner | Status |
 |------|--------|-------|--------|
+| AMS backend base class extraction | 1d | | [x] Complete (2026-02-20) |
+| Temperature formatting consolidation | 0.5d | | [x] Complete (2026-02-20) |
+| SettingsManager domain split + consumer migration | 3-5d | | [x] Complete (2026-02-21) |
 | Unified error handling | 3d | | [ ] |
+| Panel/overlay base class adoption | 2-3d | | [x] Complete (2026-02-21) |
 | Namespace organization | 5d | | [ ] |
 | Dependency injection | 5d | | [ ] |
 | MoonrakerClient decomposition | 3d | | [ ] |
+| ui_utils.cpp split (namespaced) | 1d | | [x] Complete (2026-02-21) |
 
 ---
 
@@ -1671,22 +1855,27 @@ MoonrakerClient (orchestrator, ~300 lines)
 | Phase 1: Quick Wins | 5 | 5 | 100% |
 | Phase 2: Foundation | 4 | 4 | 100% |
 | Phase 3: Architecture | 5 | 4 | 80% |
-| Phase 4: Polish | 4 | 0 | 0% |
-| **Total** | **18** | **13** | **72%** |
+| Phase 4: Polish | 7 | 5 | 71% |
+| Phase 5: New Findings | 5 | 4.5 | 90% |
+| **Total** | **26** | **22.5** | **87%** |
 
-> **Note (2026-02-10)**: Phase 3 at 90% - PrinterState and PrintStatusPanel decomposition both COMPLETE.
-> MoonrakerAPI abstraction boundary enforced (UI no longer accesses Client directly). Full domain sub-API
-> split remains.
+> **Note (2026-02-21)**: Completed SettingsManager domain split (2.8), callback batch registration (2.9),
+> observer factory full adoption (1.2), and ui_utils.cpp namespaced split (2.10). Overall progress 87%.
 
 ### Metrics Dashboard
 | Metric | Current | Target | Progress |
 |--------|---------|--------|----------|
-| Lines of duplicated code | ~2000 | <1000 | 70% |
+| Lines of duplicated code | ~1500 | <1000 | 80% |
 | PrinterState lines | 2,032 (facade) | <500 | 70% |
 | PrintStatusPanel lines | 1,959 | <1000 | 50% (over target but acceptable) |
+| AMS backend duplication | 0 (base class) | 0 | 100% |
+| Temperature format duplication | 0 (consolidated) | 0 | 100% |
+| SettingsManager subjects | 2 residual (was 27) | <5 | 100% |
+| Settings domain managers | 5 extracted | - | 100% |
+| Callback registration boilerplate | ~446 consolidated (42 files) | 0 individual calls | 100% |
 | Panels using SubjectManagedPanel | 100% | 100% | 100% |
-| Observer boilerplate instances | ~90 | <20 | 30% |
-| Extracted components | 13 domain + 8 overlays | - | Done |
+| Observer boilerplate instances | 6 (non-class infra only) | 0 class-based | 100% |
+| Extracted components | 13 domain + 8 overlays + 1 AMS base | - | Done |
 | Quick Wins completion | 5/5 | 5/5 | 100% |
 
 > **Note (2026-01-25)**: PrinterState = 13 domain classes. PrintStatusPanel decomposed into 8 extracted
@@ -1697,43 +1886,41 @@ MoonrakerClient (orchestrator, ~300 lines)
 
 ## Recommended Next Priorities
 
-Based on current codebase state and remaining work, here are the recommended next steps:
+Based on current codebase state and remaining work (updated 2026-02-21):
 
 ### High Value / Moderate Effort
 
-1. **PrintStatusPanel overlay extraction** (Section 1.3)
-   - Implementation still 2,119 lines
-   - 4 overlays remain: TuneOverlay, ZOffsetOverlay, ExcludeObjectOverlay, FilamentRunoutOverlay
-   - Would bring file under 1,000 lines target
+1. **MoonrakerAPI domain split** (Section 1.5) — IN PROGRESS
+   - 70+ methods in single class, abstraction boundary already enforced
+   - Spoolman domain extracted (20+ methods, `api->spoolman().method()` pattern)
+   - Remaining domains: files, job, motion, heating, macros, filament, history
 
-2. **Observer factory broader adoption**
-   - 10 panels still use legacy observer pattern
-   - Migration would reduce ~1,000 lines of boilerplate
-   - Optional but improves consistency
+2. ~~**Observer factory broader adoption** (Section 1.2) — COMPLETE~~
+
+3. ~~**Panel/Overlay base class broader adoption** (Section 2.9) — COMPLETE~~
 
 ### Medium Value / Higher Effort
-
-3. **MoonrakerAPI domain split** (Section 1.5)
-   - 70+ methods in single class
-   - Not started
-   - Would improve API discoverability and testing
 
 4. **MoonrakerClient decomposition** (Section 2.4)
    - 808 line header, 1618 line implementation
    - Mixes connection, protocol, subscriptions, discovery caching
    - Moderate complexity but high maintainability impact
 
+5. ~~**SettingsManager consumer migration** (follow-up to 2.8) — COMPLETE~~
+
 ### Lower Priority (Nice to Have)
 
-5. **Unified error handling with Result<T>** (Section 2.1)
+6. **Unified error handling with Result<T>** (Section 2.1)
    - Three incompatible error patterns exist
    - Would standardize error handling across codebase
 
-6. **Namespace organization** (Section 2.2)
+7. ~~**ui_utils.cpp split** (Section 2.10) — COMPLETE~~
+
+8. **Namespace organization** (Section 2.2)
    - Inconsistent namespace usage currently
    - Large effort, low immediate impact
 
-7. **Dependency injection for panels** (Section 2.3)
+9. **Dependency injection for panels** (Section 2.3)
    - Would improve testability
    - Large scope, consider for major refactor phase
 
@@ -1892,3 +2079,7 @@ private:
 | 2026-01-11 | Claude | **Hardware Discovery Refactor complete** (separate effort from this plan). Created `PrinterDiscovery` as single source of truth. Deleted `PrinterCapabilities`. Moved bed mesh to MoonrakerAPI. Clean architecture: MoonrakerClient (transport) -> callbacks -> MoonrakerAPI (domain). See `docs/HARDWARE_DISCOVERY_REFACTOR.md`. |
 | 2026-02-10 | Claude | **MoonrakerAPI abstraction boundary enforced.** Deleted dead `IMoonrakerDomainService` interface. Added proxy methods to MoonrakerAPI (connection state, subscriptions, database, plugin RPCs, gcode store). Migrated all UI code from `get_client()`/`get_moonraker_client()` to API proxies. Moved `BedMeshProfile` and `GcodeStoreEntry` to `moonraker_types.h`. Removed `client_` members from PID panel, retraction settings, spoolman overlay, console panel. ~17 legitimate `get_moonraker_client()` calls remain (mostly connection wizard). Commits: a5650da0, ec140f65, 4cabd79a. |
 | 2026-01-17 | Claude | **Major status update**: PrinterState decomposition COMPLETE (11+ domain classes extracted, facade now 2,002 lines). Quick Wins 100% complete (PrintStatusPanel modals extracted to 4 dedicated files). PrintStatusPanel now IN PROGRESS. Updated all progress tracking tables. Added Recommended Next Priorities section. Overall progress: 61% (was 28%). |
+| 2026-02-20 | Claude | **AMS backend base class extraction** (Section 2.6): Created `AmsSubscriptionBackend` base class, migrated AFC/HappyHare/ToolChanger. Net -361 lines. AFC `recursive_mutex` → `std::mutex`. **Temperature formatting consolidation** (Section 2.7): Moved `HeaterDisplayResult`/`heater_display()` to `ui_temperature_utils`, added `color` field, removed duplicates from `format_utils`. Net -61 lines. **New sections added** (2.8-2.10): SettingsManager domain split, Panel/Overlay base class adoption, ui_utils.cpp split. Updated recommended priorities. |
+| 2026-02-21 | Claude | **ui_utils.cpp namespaced split** (Section 2.10): Split monolith into 4 properly namespaced modules — `ui_filename_utils` (helix::gcode), `ui_format_utils` (helix::ui), `ui_effects` (helix::ui), `ui_image_helpers` (helix::ui). No forwarding headers. 20 consumer files migrated with specific includes + using declarations. Functions renamed to drop `ui_` prefix where namespace provides context. 27 files changed, 764 ins / 700 del. Overall progress: 87%. |
+| 2026-02-21 | Claude | **SettingsManager domain split** (Section 2.8): 5 domain managers extracted (Display, Audio, Safety, System, Input), 40 tests, 252 assertions. Consumer migration: 132 callsites in 40 files migrated to domain managers, net -566 lines. Header 854→165, impl 1156→215. Stale includes cleaned. **Callback batch registration** (Section 2.9): Phase 2 complete — 38 additional panels/overlays migrated via parallel agents (15 high-callback + 22 medium-callback files). Total: 42 files, ~446 registrations consolidated. Code review caught 3 consistency gaps, all fixed. **Observer factory full adoption** (Section 1.2): All class-based legacy observers migrated — 24 observers across 20 files in two commits, net -199 lines. 6 remaining usages are non-class infrastructure (widget pointers, custom structs) not suitable for factory. Overall progress: 81% (was 71%). |
+| 2026-02-21 | Claude | **MoonrakerSpoolmanAPI extracted** (Section 1.5, first domain): 20+ Spoolman methods extracted to `MoonrakerSpoolmanAPI` class with own header/impl. Consumer pattern: `api->spoolman().method()`. Mock: `MoonrakerSpoolmanAPIMock`. 8 consumer files + 4 test files migrated. 24 spoolman tests (88 assertions) all pass. Commit: 303c4473. |

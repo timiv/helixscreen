@@ -131,6 +131,7 @@ class KeyboardManager {
 
     // Event callbacks (static to work with LVGL API)
     static void textarea_focus_event_cb(lv_event_t* e);
+    static void textarea_delete_event_cb(lv_event_t* e);
     static void longpress_event_handler(lv_event_t* e);
     static void keyboard_event_cb(lv_event_t* e);
     static void keyboard_draw_alternative_chars(lv_event_t* e);
@@ -161,6 +162,10 @@ class KeyboardManager {
     bool caps_lock_ = false;
 
     bool initialized_ = false;
+
+    // When true, long-press auto-inserts the alt character immediately.
+    // When false, user must slide finger over the overlay to select.
+    bool auto_insert_alt_ = true;
 
     // Static alternative character mapping table
     static const AltCharMapping alt_char_map_[];

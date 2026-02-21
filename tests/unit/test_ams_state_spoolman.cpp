@@ -35,7 +35,7 @@ TEST_CASE("AmsState - refresh_spoolman_weights updates slot weights from Spoolma
     MoonrakerAPIMock api(client, state);
 
     // Get mock spools and set known weights
-    auto& mock_spools = api.get_mock_spools();
+    auto& mock_spools = api.spoolman_mock().get_mock_spools();
     REQUIRE(mock_spools.size() > 0);
 
     // Configure a test spool with known values
@@ -60,8 +60,8 @@ TEST_CASE("AmsState - refresh_spoolman_weights updates slot weights from Spoolma
         REQUIRE_NOTHROW(ams.refresh_spoolman_weights());
 
         // Verify the mock spool data was not corrupted by the refresh
-        REQUIRE(api.get_mock_spools()[0].remaining_weight_g == 450.0);
-        REQUIRE(api.get_mock_spools()[0].initial_weight_g == 1000.0);
+        REQUIRE(api.spoolman_mock().get_mock_spools()[0].remaining_weight_g == 450.0);
+        REQUIRE(api.spoolman_mock().get_mock_spools()[0].initial_weight_g == 1000.0);
     }
 
     // Cleanup
@@ -84,14 +84,14 @@ TEST_CASE("AmsState - refresh_spoolman_weights skips slots without spoolman_id",
         // so this tests the general no-crash/no-corruption path.
 
         // Record original spool weights to verify no unintended modification
-        auto original_spools = api.get_mock_spools();
+        auto original_spools = api.spoolman_mock().get_mock_spools();
         size_t original_count = original_spools.size();
 
         // Act: Call refresh
         REQUIRE_NOTHROW(ams.refresh_spoolman_weights());
 
         // Assert: Mock spool inventory was not modified
-        REQUIRE(api.get_mock_spools().size() == original_count);
+        REQUIRE(api.spoolman_mock().get_mock_spools().size() == original_count);
     }
 
     // Cleanup
@@ -118,7 +118,7 @@ TEST_CASE("AmsState - refresh_spoolman_weights handles missing spools gracefully
 
         // Verify API is still usable after potential not-found responses
         bool api_called = false;
-        api.get_spoolman_spool(
+        api.spoolman().get_spoolman_spool(
             99999,
             [&](const std::optional<SpoolInfo>& spool) {
                 api_called = true;
@@ -256,7 +256,7 @@ TEST_CASE("AmsState - polling triggers periodic refresh", "[ams][spoolman][polli
 
     SECTION("polling with valid API performs refresh") {
         // Record original spool inventory to verify API state is consistent
-        const auto& spools_before = api.get_mock_spools();
+        const auto& spools_before = api.spoolman_mock().get_mock_spools();
         size_t count_before = spools_before.size();
         REQUIRE(count_before > 0);
 
@@ -264,7 +264,7 @@ TEST_CASE("AmsState - polling triggers periodic refresh", "[ams][spoolman][polli
         REQUIRE_NOTHROW(ams.start_spoolman_polling());
 
         // Verify mock spool inventory is unchanged after refresh
-        REQUIRE(api.get_mock_spools().size() == count_before);
+        REQUIRE(api.spoolman_mock().get_mock_spools().size() == count_before);
 
         // Cleanup
         REQUIRE_NOTHROW(ams.stop_spoolman_polling());

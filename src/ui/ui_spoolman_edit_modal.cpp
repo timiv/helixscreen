@@ -510,22 +510,23 @@ void SpoolEditModal::handle_save() {
 
     // Send spool PATCH first, then filament PATCH if needed
     if (!spool_patch.empty()) {
-        api_->update_spoolman_spool(
+        api_->spoolman().update_spoolman_spool(
             spool_id, spool_patch,
             [this, guard, filament_id, filament_patch, on_all_saved, on_error]() {
                 if (guard.expired()) {
                     return;
                 }
                 if (!filament_patch.empty() && filament_id > 0) {
-                    api_->update_spoolman_filament(filament_id, filament_patch, on_all_saved,
-                                                   on_error);
+                    api_->spoolman().update_spoolman_filament(filament_id, filament_patch,
+                                                              on_all_saved, on_error);
                 } else {
                     on_all_saved();
                 }
             },
             on_error);
     } else if (!filament_patch.empty() && filament_id > 0) {
-        api_->update_spoolman_filament(filament_id, filament_patch, on_all_saved, on_error);
+        api_->spoolman().update_spoolman_filament(filament_id, filament_patch, on_all_saved,
+                                                  on_error);
     } else {
         // Nothing to save (shouldn't happen since is_dirty() was true)
         handle_close();

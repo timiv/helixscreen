@@ -3,6 +3,7 @@
 
 #include "ui_panel_console.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_global_panel_helper.h"
@@ -198,13 +199,17 @@ void ConsolePanel::register_callbacks() {
     spdlog::debug("[{}] Registering event callbacks", get_name());
 
     // Register XML event callbacks for send and clear buttons
-    lv_xml_register_event_cb(nullptr, "on_console_send_clicked", [](lv_event_t* /*e*/) {
-        spdlog::debug("[Console] Send button clicked");
-        get_global_console_panel().send_gcode_command();
-    });
-    lv_xml_register_event_cb(nullptr, "on_console_clear_clicked", [](lv_event_t* /*e*/) {
-        spdlog::debug("[Console] Clear button clicked");
-        get_global_console_panel().clear_display();
+    register_xml_callbacks({
+        {"on_console_send_clicked",
+         [](lv_event_t* /*e*/) {
+             spdlog::debug("[Console] Send button clicked");
+             get_global_console_panel().send_gcode_command();
+         }},
+        {"on_console_clear_clicked",
+         [](lv_event_t* /*e*/) {
+             spdlog::debug("[Console] Clear button clicked");
+             get_global_console_panel().clear_display();
+         }},
     });
 
     callbacks_registered_ = true;

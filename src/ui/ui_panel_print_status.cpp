@@ -4,10 +4,12 @@
 #include "ui_panel_print_status.h"
 
 #include "ui_ams_current_tool.h"
+#include "ui_callback_helpers.h"
 #include "ui_component_header_bar.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_exclude_objects_list_overlay.h"
+#include "ui_filename_utils.h"
 #include "ui_gcode_viewer.h"
 #include "ui_modal.h"
 #include "ui_nav_manager.h"
@@ -17,13 +19,13 @@
 #include "ui_temperature_utils.h"
 #include "ui_toast_manager.h"
 #include "ui_update_queue.h"
-#include "ui_utils.h"
 
 #include "abort_manager.h"
 #include "ams_state.h"
 #include "app_globals.h"
 #include "config.h"
 #include "display_manager.h"
+#include "display_settings_manager.h"
 #include "filament_sensor_manager.h"
 #include "format_utils.h"
 #include "injection_point_manager.h"
@@ -34,7 +36,6 @@
 #include "preprint_predictor.h"
 #include "printer_state.h"
 #include "runtime_config.h"
-#include "settings_manager.h"
 #include "standard_macros.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
@@ -46,6 +47,7 @@
 #include <spdlog/spdlog.h>
 
 using namespace helix;
+using helix::gcode::resolve_gcode_filename;
 
 #include <cstdio>
 #include <cstdlib>
@@ -295,13 +297,15 @@ void PrintStatusPanel::init_subjects() {
     // Register XML event callbacks for print status panel buttons
     // (tune overlay subjects/callbacks registered by singleton on first show())
     // (light and timelapse callbacks are registered by light_timelapse_controls_.init_subjects())
-    lv_xml_register_event_cb(nullptr, "on_print_status_pause", on_pause_clicked);
-    lv_xml_register_event_cb(nullptr, "on_print_status_tune", on_tune_clicked);
-    lv_xml_register_event_cb(nullptr, "on_print_status_cancel", on_cancel_clicked);
-    lv_xml_register_event_cb(nullptr, "on_print_status_reprint", on_reprint_clicked);
-    lv_xml_register_event_cb(nullptr, "on_print_status_nozzle_clicked", on_nozzle_card_clicked);
-    lv_xml_register_event_cb(nullptr, "on_print_status_bed_clicked", on_bed_card_clicked);
-    lv_xml_register_event_cb(nullptr, "on_print_status_objects", on_objects_clicked);
+    register_xml_callbacks({
+        {"on_print_status_pause", on_pause_clicked},
+        {"on_print_status_tune", on_tune_clicked},
+        {"on_print_status_cancel", on_cancel_clicked},
+        {"on_print_status_reprint", on_reprint_clicked},
+        {"on_print_status_nozzle_clicked", on_nozzle_card_clicked},
+        {"on_print_status_bed_clicked", on_bed_card_clicked},
+        {"on_print_status_objects", on_objects_clicked},
+    });
 
     subjects_initialized_ = true;
 
@@ -417,7 +421,7 @@ lv_obj_t* PrintStatusPanel::create(lv_obj_t* parent) {
                           ui_gcode_viewer_is_using_2d_mode(gcode_viewer_) ? "2D" : "3D");
         } else {
             // No cmdline or env var - apply saved settings
-            int render_mode_val = SettingsManager::instance().get_gcode_render_mode();
+            int render_mode_val = DisplaySettingsManager::instance().get_gcode_render_mode();
             auto render_mode = static_cast<GcodeViewerRenderMode>(render_mode_val);
             ui_gcode_viewer_set_render_mode(gcode_viewer_, render_mode);
             spdlog::debug("[{}]   ✓ Set G-code render mode: {} (settings)", get_name(),
@@ -816,12 +820,12 @@ void PrintStatusPanel::update_all_displays() {
     lv_subject_copy_string(&bed_temp_subject_, bed_temp_buf_);
 
     // Heater status text (Off / Heating... / Ready)
-    auto nozzle_heater = helix::format::heater_display(nozzle_current_, nozzle_target_);
+    auto nozzle_heater = helix::ui::temperature::heater_display(nozzle_current_, nozzle_target_);
     std::snprintf(nozzle_status_buf_, sizeof(nozzle_status_buf_), "%s",
                   nozzle_heater.status.c_str());
     lv_subject_copy_string(&nozzle_status_subject_, nozzle_status_buf_);
 
-    auto bed_heater = helix::format::heater_display(bed_current_, bed_target_);
+    auto bed_heater = helix::ui::temperature::heater_display(bed_current_, bed_target_);
     std::snprintf(bed_status_buf_, sizeof(bed_status_buf_), "%s", bed_heater.status.c_str());
     lv_subject_copy_string(&bed_status_subject_, bed_status_buf_);
 
@@ -1164,12 +1168,12 @@ void PrintStatusPanel::on_temperature_changed() {
                             bed_temp_buf_, sizeof(bed_temp_buf_));
     lv_subject_copy_string(&bed_temp_subject_, bed_temp_buf_);
 
-    auto nozzle_heater = helix::format::heater_display(nozzle_current_, nozzle_target_);
+    auto nozzle_heater = helix::ui::temperature::heater_display(nozzle_current_, nozzle_target_);
     std::snprintf(nozzle_status_buf_, sizeof(nozzle_status_buf_), "%s",
                   nozzle_heater.status.c_str());
     lv_subject_copy_string(&nozzle_status_subject_, nozzle_status_buf_);
 
-    auto bed_heater = helix::format::heater_display(bed_current_, bed_target_);
+    auto bed_heater = helix::ui::temperature::heater_display(bed_current_, bed_target_);
     std::snprintf(bed_status_buf_, sizeof(bed_status_buf_), "%s", bed_heater.status.c_str());
     lv_subject_copy_string(&bed_status_subject_, bed_status_buf_);
 
@@ -1207,7 +1211,7 @@ void PrintStatusPanel::on_print_progress_changed(int progress) {
     // This complements the subject binding with animated transitions
     if (progress_bar_) {
         lv_anim_enable_t anim_enable =
-            SettingsManager::instance().get_animations_enabled() ? LV_ANIM_ON : LV_ANIM_OFF;
+            DisplaySettingsManager::instance().get_animations_enabled() ? LV_ANIM_ON : LV_ANIM_OFF;
         lv_bar_set_value(progress_bar_, current_progress_, anim_enable);
     }
 
@@ -1653,7 +1657,7 @@ void PrintStatusPanel::on_print_start_progress_changed(int progress) {
     // Animate bar for smooth visual feedback
     if (preparing_progress_bar_) {
         lv_anim_enable_t anim_enable =
-            SettingsManager::instance().get_animations_enabled() ? LV_ANIM_ON : LV_ANIM_OFF;
+            DisplaySettingsManager::instance().get_animations_enabled() ? LV_ANIM_ON : LV_ANIM_OFF;
         lv_bar_set_value(preparing_progress_bar_, progress, anim_enable);
     }
     spdlog::trace("[{}] Print start progress: {}%", get_name(), progress);
@@ -1792,7 +1796,7 @@ void PrintStatusPanel::animate_badge_pop_in(lv_obj_t* badge, const char* label) 
     constexpr int32_t SCALE_FINAL = 256; // 100% scale
 
     // Skip animation if disabled - show badge in final state
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_set_style_transform_scale(badge, SCALE_FINAL, LV_PART_MAIN);
         lv_obj_set_style_opa(badge, LV_OPA_COVER, LV_PART_MAIN);
         spdlog::debug("[{}] Animations disabled - showing {} badge instantly", get_name(), label);

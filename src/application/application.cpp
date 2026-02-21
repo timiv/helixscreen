@@ -13,10 +13,12 @@
 
 #include "application.h"
 
+// Private LVGL header needed to read display->flush_cb for splash no-op swap
 #include "ui_update_queue.h"
 
 #include "asset_manager.h"
 #include "config.h"
+#include "display/lv_display_private.h"
 #include "display_manager.h"
 #include "environment_config.h"
 #include "hardware_validator.h"
@@ -100,15 +102,17 @@
 
 #include "android_asset_extractor.h"
 #include "data_root_resolver.h"
+#include "display_settings_manager.h"
 #include "led/ui_led_control_overlay.h"
 #include "platform_info.h"
 #include "printer_detector.h"
 #include "printer_image_manager.h"
-#include "settings_manager.h"
+#include "safety_settings_manager.h"
 #include "system/crash_handler.h"
 #include "system/crash_reporter.h"
 #include "system/telemetry_manager.h"
 #include "system/update_checker.h"
+#include "system_settings_manager.h"
 #include "theme_manager.h"
 #include "wifi_manager.h"
 
@@ -136,7 +140,6 @@
 #include "plugin_manager.h"
 #include "printer_discovery.h"
 #include "printer_state.h"
-#include "settings_manager.h"
 #include "splash_screen.h"
 #include "standard_macros.h"
 #include "tips_manager.h"
@@ -165,6 +168,7 @@ using namespace helix;
 // External globals for logging (defined in cli_args.cpp, populated by parse_cli_args)
 extern std::string g_log_dest_cli;
 extern std::string g_log_file_cli;
+extern std::string g_log_level_cli;
 
 namespace {
 
@@ -343,18 +347,20 @@ int Application::run(int argc, char** argv) {
         return 1;
     }
 
-    // Sync telemetry enabled state from SettingsManager (now that its subjects are initialized)
-    // Note: record_session() is deferred to on_discovery_complete callback so hardware data is
-    // available
-    TelemetryManager::instance().set_enabled(SettingsManager::instance().get_telemetry_enabled());
+    // Sync telemetry enabled state from SystemSettingsManager (now that its subjects are
+    // initialized) Note: record_session() is deferred to on_discovery_complete callback so hardware
+    // data is available
+    TelemetryManager::instance().set_enabled(
+        SystemSettingsManager::instance().get_telemetry_enabled());
 
     // Initialize SoundManager (beta feature - audio feedback)
     if (Config::get_instance()->is_beta_features_enabled()) {
         SoundManager::instance().initialize();
     }
 
-    // Update SettingsManager with theme mode support (must be after both theme and settings init)
-    SettingsManager::instance().on_theme_changed();
+    // Update DisplaySettingsManager with theme mode support (must be after both theme and settings
+    // init)
+    DisplaySettingsManager::instance().on_theme_changed();
 
     // Phase 10: Create UI and wire panels
     if (!init_ui()) {
@@ -409,22 +415,29 @@ int Application::run(int argc, char** argv) {
     // On framebuffer displays with PARTIAL render mode, some widgets may not paint
     // on the first frame. Schedule a deferred refresh after the first few frames
     // to ensure all widgets are fully rendered.
-    lv_obj_update_layout(m_screen);
-    invalidate_all_recursive(m_screen);
-    lv_refr_now(nullptr);
+    //
+    // Skip when splash is active: the external splash process owns the framebuffer.
+    // lv_display_create() queues an initial dirty area that would flush the wizard
+    // UI to fb0 before splash exits, causing a visible flash. The post-splash
+    // handler in main_loop() performs this refresh after splash exits.
+    if (get_runtime_config()->splash_pid <= 0 || m_splash_manager.has_exited()) {
+        lv_obj_update_layout(m_screen);
+        invalidate_all_recursive(m_screen);
+        lv_refr_now(nullptr);
 
-    // Deferred refresh: Some widgets (nav icons, printer image) may not have their
-    // content fully set until after the first frame. Schedule a second refresh.
-    static auto deferred_refresh_cb = [](lv_timer_t* timer) {
-        lv_obj_t* screen = static_cast<lv_obj_t*>(lv_timer_get_user_data(timer));
-        if (screen) {
-            lv_obj_update_layout(screen);
-            invalidate_all_recursive(screen);
-            lv_refr_now(nullptr);
-        }
-        lv_timer_delete(timer);
-    };
-    lv_timer_create(deferred_refresh_cb, 100, m_screen); // 100ms delay
+        // Deferred refresh: Some widgets (nav icons, printer image) may not have their
+        // content fully set until after the first frame. Schedule a second refresh.
+        static auto deferred_refresh_cb = [](lv_timer_t* timer) {
+            lv_obj_t* screen = static_cast<lv_obj_t*>(lv_timer_get_user_data(timer));
+            if (screen) {
+                lv_obj_update_layout(screen);
+                invalidate_all_recursive(screen);
+                lv_refr_now(nullptr);
+            }
+            lv_timer_delete(timer);
+        };
+        lv_timer_create(deferred_refresh_cb, 100, m_screen); // 100ms delay
+    }
 
     // Phase 17: Main loop
     helix::MemoryMonitor::log_now("before_main_loop");
@@ -584,10 +597,14 @@ bool Application::init_logging() {
 
     LogConfig log_config;
 
-    // Resolve log level with precedence: CLI verbosity > config file > defaults
+    // Resolve log level with precedence: --log-level > -v flags > config file > defaults
     std::string config_level = m_config->get<std::string>("/log_level", "");
-    log_config.level =
-        resolve_log_level(m_args.verbosity, config_level, get_runtime_config()->test_mode);
+    if (!g_log_level_cli.empty()) {
+        log_config.level = parse_level(g_log_level_cli, spdlog::level::warn);
+    } else {
+        log_config.level =
+            resolve_log_level(m_args.verbosity, config_level, get_runtime_config()->test_mode);
+    }
 
     // Resolve log destination: CLI > config > auto
     std::string log_dest_str = g_log_dest_cli;
@@ -645,6 +662,10 @@ bool Application::init_display() {
         spdlog::info("[Application] Pointer input not required (HELIX_REQUIRE_POINTER={})",
                      req_ptr);
     }
+
+    // Tell DisplayManager to skip framebuffer ioctls (FBIOBLANK, FBIOPAN_DISPLAY)
+    // when splash is active — the splash process already owns and configured the display.
+    config.splash_active = (get_runtime_config()->splash_pid > 0);
 
     if (!m_display->init(config)) {
         spdlog::error("[Application] Display initialization failed");
@@ -704,8 +725,26 @@ bool Application::init_display() {
     // Suppress LVGL rendering while splash is alive — prevents framebuffer flicker
     // from both processes writing to the same framebuffer simultaneously.
     // Re-enabled in main loop when splash exits.
-    if (get_runtime_config()->splash_pid > 0 && !m_splash_manager.has_exited()) {
+    // Validate PID exists: a stale PID from a crashed launcher would cause an
+    // unnecessary wait until the 8-second failsafe kicks in.
+    pid_t splash_pid = get_runtime_config()->splash_pid;
+    if (splash_pid > 0 && kill(splash_pid, 0) == 0 && !m_splash_manager.has_exited()) {
         lv_display_enable_invalidation(nullptr, false);
+
+        // Replace the flush callback with a no-op while splash is active.
+        // LVGL's invalidation system sends LV_EVENT_REFR_REQUEST which resumes
+        // the refresh timer (undoing lv_timer_pause). This means pausing the timer
+        // alone is insufficient — rendering still happens. By replacing the flush
+        // callback, we ensure nothing reaches the framebuffer even if LVGL renders.
+        lv_display_t* disp = lv_display_get_default();
+        if (disp) {
+            m_original_flush_cb = disp->flush_cb;
+            lv_display_set_flush_cb(disp, [](lv_display_t* d, const lv_area_t*, uint8_t*) {
+                lv_display_flush_ready(d); // Must signal ready to avoid hang
+            });
+            spdlog::debug("[Application] Flush callback replaced with no-op (splash PID {})",
+                          get_runtime_config()->splash_pid);
+        }
         spdlog::debug("[Application] Display invalidation suppressed while splash is active");
     }
 
@@ -852,7 +891,7 @@ bool Application::init_panel_subjects() {
     EmergencyStopOverlay::instance().init(get_printer_state(), m_moonraker->api());
     EmergencyStopOverlay::instance().create();
     EmergencyStopOverlay::instance().set_require_confirmation(
-        SettingsManager::instance().get_estop_require_confirmation());
+        SafetySettingsManager::instance().get_estop_require_confirmation());
 
     // Initialize AbortManager for smart print cancellation
     // Must happen after both API and AbortManager::init_subjects()
@@ -1399,8 +1438,8 @@ void Application::create_overlays() {
         lv_obj_t* editor_panel = theme_editor.create(m_screen);
         if (editor_panel) {
             // Load current theme for editing
-            std::string current_theme = SettingsManager::instance().get_theme_name();
-            theme_editor.set_editing_dark_mode(SettingsManager::instance().get_dark_mode());
+            std::string current_theme = DisplaySettingsManager::instance().get_theme_name();
+            theme_editor.set_editing_dark_mode(DisplaySettingsManager::instance().get_dark_mode());
             theme_editor.load_theme(current_theme);
             NavigationManager::instance().push_overlay(editor_panel);
             spdlog::info("[Application] Opened theme editor overlay via CLI");
@@ -1960,6 +1999,16 @@ void Application::init_action_prompt() {
     spdlog::debug("[Application] Action prompt system initialized");
 }
 
+void Application::restore_flush_callback() {
+    if (m_original_flush_cb) {
+        lv_display_t* disp = lv_display_get_default();
+        if (disp) {
+            lv_display_set_flush_cb(disp, m_original_flush_cb);
+        }
+        m_original_flush_cb = nullptr;
+    }
+}
+
 void Application::check_wifi_availability() {
     if (!m_config || !m_config->is_wifi_expected()) {
         return; // WiFi not expected, no need to check
@@ -1993,7 +2042,9 @@ int Application::main_loop() {
     // Failsafe: track invalidation suppression with a hard deadline.
     // If splash handoff doesn't complete within this time, force rendering back on
     // to avoid a permanently black screen.
-    bool invalidation_suppressed = !m_splash_manager.has_exited();
+    bool invalidation_suppressed =
+        get_runtime_config()->splash_pid > 0 && !m_splash_manager.has_exited();
+    uint32_t suppression_start_tick = DisplayManager::get_ticks();
     static constexpr uint32_t INVALIDATION_FAILSAFE_MS =
         8000; // Must exceed DISCOVERY_TIMEOUT_MS (5s)
 
@@ -2051,7 +2102,6 @@ int Application::main_loop() {
 
         // Run LVGL tasks
         lv_timer_handler();
-        fflush(stdout);
 
         // Signal splash to exit when discovery completes (or timeout)
         m_splash_manager.check_and_signal();
@@ -2062,7 +2112,8 @@ int Application::main_loop() {
         if (invalidation_suppressed && m_splash_manager.needs_post_splash_refresh()) {
             invalidation_suppressed = false;
             lv_display_enable_invalidation(nullptr, true);
-            spdlog::info("[Application] Display invalidation re-enabled after splash exit");
+            restore_flush_callback();
+            spdlog::info("[Application] Post-splash handoff: flush callback restored, painting UI");
 
             lv_obj_t* screen = lv_screen_active();
             if (screen) {
@@ -2075,9 +2126,11 @@ int Application::main_loop() {
 
         // Failsafe: if invalidation is still suppressed after hard deadline, force it back on.
         // Prevents permanent black screen if splash handoff fails for any reason.
-        if (invalidation_suppressed && (current_tick - start_time) >= INVALIDATION_FAILSAFE_MS) {
+        if (invalidation_suppressed &&
+            (current_tick - suppression_start_tick) >= INVALIDATION_FAILSAFE_MS) {
             invalidation_suppressed = false;
             lv_display_enable_invalidation(nullptr, true);
+            restore_flush_callback();
             spdlog::warn("[Application] Invalidation failsafe triggered after {}ms",
                          INVALIDATION_FAILSAFE_MS);
             lv_obj_invalidate(lv_screen_active());
@@ -2232,6 +2285,13 @@ void Application::shutdown() {
     if (m_plugin_manager) {
         m_plugin_manager->unload_all();
         m_plugin_manager.reset();
+    }
+
+    // Disconnect the client FIRST to stop background threads (mock simulation, WebSocket).
+    // This prevents races where the simulation thread dispatches callbacks from
+    // method_callbacks_ while we're erasing/destroying entries on the main thread.
+    if (m_moonraker && m_moonraker->client()) {
+        m_moonraker->client()->disconnect();
     }
 
     // Reset managers in reverse order (MoonrakerManager handles print_start_collector cleanup)

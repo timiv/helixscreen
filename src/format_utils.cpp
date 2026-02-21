@@ -3,7 +3,6 @@
 
 #include "format_utils.h"
 
-#include <algorithm>
 #include <cstdio>
 
 namespace helix::format {
@@ -78,29 +77,6 @@ char* format_accel_mm_s2(double accel, char* buf, size_t size) {
 
 char* format_frequency_hz(double hz, char* buf, size_t size) {
     std::snprintf(buf, size, "%.1f Hz", hz);
-    return buf;
-}
-
-// =============================================================================
-// Temperature Formatting
-// =============================================================================
-
-char* format_temp(int temp_c, char* buf, size_t size) {
-    std::snprintf(buf, size, "%d°C", temp_c);
-    return buf;
-}
-
-char* format_temp_pair(int current_c, int target_c, char* buf, size_t size) {
-    if (target_c == 0) {
-        std::snprintf(buf, size, "%d / %s°C", current_c, UNAVAILABLE);
-    } else {
-        std::snprintf(buf, size, "%d / %d°C", current_c, target_c);
-    }
-    return buf;
-}
-
-char* format_temp_range(int min_c, int max_c, char* buf, size_t size) {
-    std::snprintf(buf, size, "%d-%d°C", min_c, max_c);
     return buf;
 }
 
@@ -265,45 +241,6 @@ std::string format_filament_length(double mm) {
         std::snprintf(buf, sizeof(buf), "%.2fkm", mm / 1000000.0);
     }
     return std::string(buf);
-}
-
-HeaterDisplayResult heater_display(int current_centi, int target_centi) {
-    HeaterDisplayResult result;
-
-    // Convert centi-degrees to degrees (integer division is fine for display)
-    int current_deg = current_centi / 100;
-    int target_deg = target_centi / 100;
-
-    // Format temperature string
-    char buf[32];
-    if (target_centi > 0) {
-        std::snprintf(buf, sizeof(buf), "%d / %d°C", current_deg, target_deg);
-    } else {
-        std::snprintf(buf, sizeof(buf), "%d°C", current_deg);
-    }
-    result.temp = buf;
-
-    // Calculate percentage (clamped to 0-100)
-    if (target_centi <= 0) {
-        result.pct = 0;
-    } else {
-        int pct = (current_centi * 100) / target_centi;
-        result.pct = std::clamp(pct, 0, 100);
-    }
-
-    // Determine status using same tolerance logic as get_heating_state_color()
-    constexpr int tolerance_deg = 2;
-    if (target_centi <= 0) {
-        result.status = "Off";
-    } else if (current_deg < target_deg - tolerance_deg) {
-        result.status = "Heating...";
-    } else if (current_deg > target_deg + tolerance_deg) {
-        result.status = "Cooling";
-    } else {
-        result.status = "Ready";
-    }
-
-    return result;
 }
 
 } // namespace helix::format

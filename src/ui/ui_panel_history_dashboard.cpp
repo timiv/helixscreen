@@ -3,6 +3,7 @@
 
 #include "ui_panel_history_dashboard.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_nav_manager.h"
 #include "ui_panel_common.h"
 #include "ui_panel_history_list.h"
@@ -14,6 +15,7 @@
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
+#include "observer_factory.h"
 #include "printer_state.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
@@ -133,18 +135,14 @@ void HistoryDashboardPanel::register_callbacks() {
     spdlog::debug("[{}] Registering event callbacks", get_name());
 
     // Register XML event callbacks
-    lv_xml_register_event_cb(nullptr, "history_filter_day_clicked",
-                             HistoryDashboardPanel::on_filter_day_clicked);
-    lv_xml_register_event_cb(nullptr, "history_filter_week_clicked",
-                             HistoryDashboardPanel::on_filter_week_clicked);
-    lv_xml_register_event_cb(nullptr, "history_filter_month_clicked",
-                             HistoryDashboardPanel::on_filter_month_clicked);
-    lv_xml_register_event_cb(nullptr, "history_filter_year_clicked",
-                             HistoryDashboardPanel::on_filter_year_clicked);
-    lv_xml_register_event_cb(nullptr, "history_filter_all_clicked",
-                             HistoryDashboardPanel::on_filter_all_clicked);
-    lv_xml_register_event_cb(nullptr, "history_view_full_clicked",
-                             HistoryDashboardPanel::on_view_history_clicked);
+    register_xml_callbacks({
+        {"history_filter_day_clicked", HistoryDashboardPanel::on_filter_day_clicked},
+        {"history_filter_week_clicked", HistoryDashboardPanel::on_filter_week_clicked},
+        {"history_filter_month_clicked", HistoryDashboardPanel::on_filter_month_clicked},
+        {"history_filter_year_clicked", HistoryDashboardPanel::on_filter_year_clicked},
+        {"history_filter_all_clicked", HistoryDashboardPanel::on_filter_all_clicked},
+        {"history_view_full_clicked", HistoryDashboardPanel::on_view_history_clicked},
+    });
 
     // Register row click callback for opening from Advanced panel
     lv_xml_register_event_cb(nullptr, "on_history_row_clicked", [](lv_event_t* /*e*/) {
@@ -248,20 +246,14 @@ lv_obj_t* HistoryDashboardPanel::create(lv_obj_t* parent) {
 
     // Register connection state observer to auto-refresh when connected
     // This handles the case where the panel is opened before connection is established
-    // ObserverGuard handles cleanup automatically in destructor
     lv_subject_t* conn_subject = get_printer_state().get_printer_connection_state_subject();
-    connection_observer_ = ObserverGuard(
-        conn_subject,
-        [](lv_observer_t* observer, lv_subject_t* subject) {
-            auto* self = static_cast<HistoryDashboardPanel*>(lv_observer_get_user_data(observer));
-            int32_t state = lv_subject_get_int(subject);
-
+    connection_observer_ = helix::ui::observe_int_sync<HistoryDashboardPanel>(
+        conn_subject, this, [](HistoryDashboardPanel* self, int state) {
             if (state == static_cast<int>(ConnectionState::CONNECTED) && self->is_active_) {
                 spdlog::debug("[{}] Connection established - refreshing data", self->get_name());
                 self->refresh_data();
             }
-        },
-        this);
+        });
 
     // Initially hidden
     lv_obj_add_flag(overlay_root_, LV_OBJ_FLAG_HIDDEN);

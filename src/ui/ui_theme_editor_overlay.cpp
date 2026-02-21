@@ -3,6 +3,7 @@
 
 #include "ui_theme_editor_overlay.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_color_picker.h"
 #include "ui_event_safety.h"
 #include "ui_global_panel_helper.h"
@@ -11,6 +12,7 @@
 #include "ui_nav_manager.h"
 #include "ui_toast_manager.h"
 
+#include "display_settings_manager.h"
 #include "helix-xml/src/xml/lv_xml.h"
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "settings_manager.h"
@@ -128,29 +130,25 @@ lv_obj_t* ThemeEditorOverlay::create(lv_obj_t* parent) {
 }
 
 void ThemeEditorOverlay::register_callbacks() {
-    // Swatch click callback for color editing
-    lv_xml_register_event_cb(nullptr, "on_theme_swatch_clicked", on_swatch_clicked);
-
-    // Unified slider callback for property adjustments (uses user_data to identify property)
-    lv_xml_register_event_cb(nullptr, "on_theme_property_changed", on_property_changed);
-
-    // Action button callbacks
-    lv_xml_register_event_cb(nullptr, "on_theme_save_clicked", on_theme_save_clicked);
-    lv_xml_register_event_cb(nullptr, "on_theme_save_as_clicked", on_theme_save_as_clicked);
-    lv_xml_register_event_cb(nullptr, "on_theme_reset_clicked", on_theme_reset_clicked);
-
-    // Custom back button callback to intercept close and check dirty state
-    lv_xml_register_event_cb(nullptr, "on_theme_editor_back_clicked", on_back_clicked);
-
-    // Save As dialog callbacks
-    lv_xml_register_event_cb(nullptr, "on_theme_save_as_confirm", on_save_as_confirm);
-    lv_xml_register_event_cb(nullptr, "on_theme_save_as_cancel", on_save_as_cancel);
-
-    // Theme preset dropdown callback
-    lv_xml_register_event_cb(nullptr, "on_theme_preset_changed", on_theme_preset_changed);
-
-    // Preview button callback (shows editing theme, not saved theme)
-    lv_xml_register_event_cb(nullptr, "on_theme_preview_clicked", on_theme_preview_clicked);
+    register_xml_callbacks({
+        // Swatch click callback for color editing
+        {"on_theme_swatch_clicked", on_swatch_clicked},
+        // Unified slider callback for property adjustments
+        {"on_theme_property_changed", on_property_changed},
+        // Action button callbacks
+        {"on_theme_save_clicked", on_theme_save_clicked},
+        {"on_theme_save_as_clicked", on_theme_save_as_clicked},
+        {"on_theme_reset_clicked", on_theme_reset_clicked},
+        // Custom back button callback to intercept close and check dirty state
+        {"on_theme_editor_back_clicked", on_back_clicked},
+        // Save As dialog callbacks
+        {"on_theme_save_as_confirm", on_save_as_confirm},
+        {"on_theme_save_as_cancel", on_save_as_cancel},
+        // Theme preset dropdown callback
+        {"on_theme_preset_changed", on_theme_preset_changed},
+        // Preview button callback
+        {"on_theme_preview_clicked", on_theme_preview_clicked},
+    });
 
     spdlog::debug("[{}] Callbacks registered", get_name());
 }
@@ -160,7 +158,7 @@ void ThemeEditorOverlay::on_activate() {
 
     // Load the current theme for editing
     // (Theme selection happens in the preview overlay's dropdown, not here)
-    std::string theme_name = SettingsManager::instance().get_theme_name();
+    std::string theme_name = DisplaySettingsManager::instance().get_theme_name();
     load_theme(theme_name);
 
     spdlog::debug("[{}] Activated", get_name());
@@ -558,7 +556,7 @@ void ThemeEditorOverlay::handle_save_clicked() {
         original_theme_ = editing_theme_;
 
         // Persist as active theme and apply live (no restart needed)
-        SettingsManager::instance().set_theme_name(editing_theme_.filename);
+        DisplaySettingsManager::instance().set_theme_name(editing_theme_.filename);
         theme_manager_apply_theme(editing_theme_, theme_manager_is_dark_mode());
 
         spdlog::info("[{}] Theme '{}' saved and applied live", get_name(), editing_theme_.name);
@@ -844,7 +842,7 @@ void ThemeEditorOverlay::handle_save_as_confirm() {
     }
 
     // Update config to use new theme
-    SettingsManager::instance().set_theme_name(unique_filename);
+    DisplaySettingsManager::instance().set_theme_name(unique_filename);
 
     // Clear dirty state
     clear_dirty();
@@ -889,15 +887,15 @@ void ThemeEditorOverlay::init_theme_preset_dropdown() {
 
     if (theme_preset_dropdown) {
         // Set dropdown options from discovered theme files
-        std::string options = SettingsManager::instance().get_theme_options();
+        std::string options = DisplaySettingsManager::instance().get_theme_options();
         lv_dropdown_set_options(theme_preset_dropdown, options.c_str());
 
         // Set initial selection based on current theme
-        int current_index = SettingsManager::instance().get_theme_index();
+        int current_index = DisplaySettingsManager::instance().get_theme_index();
         lv_dropdown_set_selected(theme_preset_dropdown, static_cast<uint32_t>(current_index));
 
         spdlog::debug("[{}] Theme dropdown initialized to index {} ({})", get_name(), current_index,
-                      SettingsManager::instance().get_theme_name());
+                      DisplaySettingsManager::instance().get_theme_name());
     } else {
         spdlog::warn("[{}] Could not find theme preset dropdown", get_name());
     }
@@ -905,8 +903,8 @@ void ThemeEditorOverlay::init_theme_preset_dropdown() {
 
 void ThemeEditorOverlay::handle_theme_preset_changed(int index) {
     // Get theme filename from index
-    SettingsManager::instance().set_theme_by_index(index);
-    std::string theme_name = SettingsManager::instance().get_theme_name();
+    DisplaySettingsManager::instance().set_theme_by_index(index);
+    std::string theme_name = DisplaySettingsManager::instance().get_theme_name();
 
     // Load the selected theme into the editor
     load_theme(theme_name);

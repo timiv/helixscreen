@@ -3,6 +3,7 @@
 
 #include "ui_panel_filament.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_component_keypad.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
@@ -74,34 +75,30 @@ FilamentPanel::FilamentPanel(PrinterState& printer_state, MoonrakerAPI* api)
     format_target_or_off(0, bed_target_buf_, sizeof(bed_target_buf_));
 
     // Register XML event callbacks
-    lv_xml_register_event_cb(nullptr, "filament_manage_slots_cb", on_manage_slots_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_load", on_load_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_unload", on_unload_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_purge", on_purge_clicked);
-
-    // Material preset buttons
-    lv_xml_register_event_cb(nullptr, "on_filament_preset_pla", on_preset_pla_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_preset_petg", on_preset_petg_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_preset_abs", on_preset_abs_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_preset_tpu", on_preset_tpu_clicked);
-
-    // Temperature tap targets
-    lv_xml_register_event_cb(nullptr, "on_filament_nozzle_temp_tap", on_nozzle_temp_tap_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_bed_temp_tap", on_bed_temp_tap_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_nozzle_target_tap",
-                             on_nozzle_target_tap_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_bed_target_tap", on_bed_target_tap_clicked);
-
-    // Purge amount buttons
-    lv_xml_register_event_cb(nullptr, "on_filament_purge_5mm", on_purge_5mm_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_purge_10mm", on_purge_10mm_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_purge_25mm", on_purge_25mm_clicked);
-
-    // Cooldown button
-    lv_xml_register_event_cb(nullptr, "on_filament_cooldown", on_cooldown_clicked);
-
-    // Extruder selector dropdown
-    lv_xml_register_event_cb(nullptr, "on_extruder_dropdown_changed", on_extruder_dropdown_changed);
+    register_xml_callbacks({
+        {"filament_manage_slots_cb", on_manage_slots_clicked},
+        {"on_filament_load", on_load_clicked},
+        {"on_filament_unload", on_unload_clicked},
+        {"on_filament_purge", on_purge_clicked},
+        // Material preset buttons
+        {"on_filament_preset_pla", on_preset_pla_clicked},
+        {"on_filament_preset_petg", on_preset_petg_clicked},
+        {"on_filament_preset_abs", on_preset_abs_clicked},
+        {"on_filament_preset_tpu", on_preset_tpu_clicked},
+        // Temperature tap targets
+        {"on_filament_nozzle_temp_tap", on_nozzle_temp_tap_clicked},
+        {"on_filament_bed_temp_tap", on_bed_temp_tap_clicked},
+        {"on_filament_nozzle_target_tap", on_nozzle_target_tap_clicked},
+        {"on_filament_bed_target_tap", on_bed_target_tap_clicked},
+        // Purge amount buttons
+        {"on_filament_purge_5mm", on_purge_5mm_clicked},
+        {"on_filament_purge_10mm", on_purge_10mm_clicked},
+        {"on_filament_purge_25mm", on_purge_25mm_clicked},
+        // Cooldown button
+        {"on_filament_cooldown", on_cooldown_clicked},
+        // Extruder selector dropdown
+        {"on_extruder_dropdown_changed", on_extruder_dropdown_changed},
+    });
 
     // Subscribe to PrinterState temperatures using bundle pattern
     // NOTE: Observers must defer UI updates via ui_async_call to avoid render-phase assertions
@@ -265,37 +262,28 @@ void FilamentPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                                             self->update_multi_filament_card_visibility();
                                         });
 
-    // Subscribe to AMS type to expand temp graph when no AMS present [L020] [L029]
-    ams_type_observer_ = ObserverGuard(
-        AmsState::instance().get_ams_type_subject(),
-        [](lv_observer_t* observer, [[maybe_unused]] lv_subject_t* subject) {
-            auto* self = static_cast<FilamentPanel*>(lv_observer_get_user_data(observer));
-            if (!self || !self->temp_group_ || !self->temp_graph_card_)
+    // Subscribe to AMS type to expand temp graph when no AMS present
+    ams_type_observer_ = observe_int_sync<FilamentPanel>(
+        AmsState::instance().get_ams_type_subject(), this, [](FilamentPanel* self, int ams_type) {
+            if (!self->temp_group_ || !self->temp_graph_card_)
                 return;
 
-            helix::ui::async_call(
-                [](void* ctx) {
-                    auto* panel = static_cast<FilamentPanel*>(ctx);
-                    bool has_ams =
-                        (lv_subject_get_int(AmsState::instance().get_ams_type_subject()) != 0);
+            bool has_ams = (ams_type != 0);
 
-                    if (has_ams) {
-                        // AMS visible: standard 120px graph
-                        lv_obj_set_height(panel->temp_graph_card_, 120);
-                        lv_obj_set_flex_grow(panel->temp_group_, 0);
-                        lv_obj_set_flex_grow(panel->temp_graph_card_, 0);
-                    } else {
-                        // AMS hidden: expand graph to fill available space
-                        lv_obj_set_flex_grow(panel->temp_group_, 1);
-                        lv_obj_set_flex_grow(panel->temp_graph_card_, 1);
-                    }
+            if (has_ams) {
+                // AMS visible: standard 120px graph
+                lv_obj_set_height(self->temp_graph_card_, 120);
+                lv_obj_set_flex_grow(self->temp_group_, 0);
+                lv_obj_set_flex_grow(self->temp_graph_card_, 0);
+            } else {
+                // AMS hidden: expand graph to fill available space
+                lv_obj_set_flex_grow(self->temp_group_, 1);
+                lv_obj_set_flex_grow(self->temp_graph_card_, 1);
+            }
 
-                    // Update multi-filament card visibility (AMS state changed)
-                    panel->update_multi_filament_card_visibility();
-                },
-                self);
-        },
-        this);
+            // Update multi-filament card visibility (AMS state changed)
+            self->update_multi_filament_card_visibility();
+        });
 
     // Initialize visual state
     update_preset_buttons_visual();

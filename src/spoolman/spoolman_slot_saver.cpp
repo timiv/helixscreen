@@ -95,7 +95,7 @@ void SpoolmanSlotSaver::save(const SlotInfo& original, const SlotInfo& edited,
 
 void SpoolmanSlotSaver::update_weight(int spool_id, float weight_g,
                                       CompletionCallback on_complete) {
-    api_->update_spoolman_spool_weight(
+    api_->spoolman().update_spoolman_spool_weight(
         spool_id, static_cast<double>(weight_g),
         [on_complete]() {
             spdlog::debug("[SpoolmanSlotSaver] Weight update succeeded");
@@ -114,7 +114,7 @@ void SpoolmanSlotSaver::relink_spool(int spool_id, int filament_id,
     nlohmann::json spool_data;
     spool_data["filament_id"] = filament_id;
 
-    api_->update_spoolman_spool(
+    api_->spoolman().update_spoolman_spool(
         spool_id, spool_data,
         [on_complete, filament_id]() {
             spdlog::debug("[SpoolmanSlotSaver] Spool relinked to filament {}", filament_id);
@@ -133,7 +133,7 @@ void SpoolmanSlotSaver::find_or_create_filament_and_relink(int spool_id, const S
     auto edited_hex = color_to_hex(edited.color_rgb);
     auto edited_brand = edited.brand;
     auto edited_material = edited.material;
-    api_->get_spoolman_filaments(
+    api_->spoolman().get_spoolman_filaments(
         [this, spool_id, edited_hex, edited_brand, edited_material,
          on_complete](const std::vector<FilamentInfo>& filaments) {
             // Search for matching filament
@@ -161,7 +161,7 @@ void SpoolmanSlotSaver::find_or_create_filament_and_relink(int spool_id, const S
                     filament_data["vendor_name"] = edited_brand;
                 }
 
-                api_->create_spoolman_filament(
+                api_->spoolman().create_spoolman_filament(
                     filament_data,
                     [this, spool_id, on_complete](const FilamentInfo& created) {
                         spdlog::info("[SpoolmanSlotSaver] Created filament id={}", created.id);

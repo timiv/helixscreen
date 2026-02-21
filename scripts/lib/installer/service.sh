@@ -246,7 +246,12 @@ fix_install_ownership() {
     if [ -n "$user" ] && [ "$user" != "root" ] && [ -d "$INSTALL_DIR" ]; then
         log_info "Setting ownership to ${user}..."
         if [ -d "${INSTALL_DIR}/config" ]; then
-            $SUDO chown -R "${user}:${user}" "${INSTALL_DIR}/config"
+            # Try without sudo first: during self-update under NoNewPrivileges,
+            # sudo is blocked but config is already user-owned so chown succeeds
+            # without it (or is a no-op).  Fall back to sudo for fresh installs
+            # where root may own the directory.
+            chown -R "${user}:${user}" "${INSTALL_DIR}/config" 2>/dev/null || \
+                $SUDO chown -R "${user}:${user}" "${INSTALL_DIR}/config" 2>/dev/null || true
         fi
     fi
 }

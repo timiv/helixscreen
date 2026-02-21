@@ -9,8 +9,8 @@
 #include "ui_utils.h"
 
 #include "config.h"
+#include "display_settings_manager.h"
 #include "keyboard_layout_provider.h"
-#include "settings_manager.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -279,31 +279,6 @@ void KeyboardManager::apply_keyboard_mode() {
 }
 
 // ============================================================================
-// HELPER FUNCTIONS (for event callbacks)
-// ============================================================================
-
-static size_t get_utf8_length(const char* str) {
-    size_t len = 0;
-    while (*str) {
-        if ((*str & 0xC0) != 0x80) {
-            len++;
-        }
-        str++;
-    }
-    return len;
-}
-
-static bool str_ends_with(const char* str, const char* suffix) {
-    if (!str || !suffix)
-        return false;
-    size_t str_len = strlen(str);
-    size_t suffix_len = strlen(suffix);
-    if (suffix_len > str_len)
-        return false;
-    return strcmp(str + str_len - suffix_len, suffix) == 0;
-}
-
-// ============================================================================
 // EVENT CALLBACKS
 // ============================================================================
 
@@ -325,6 +300,17 @@ void KeyboardManager::textarea_focus_event_cb(lv_event_t* e) {
     }
 
     LVGL_SAFE_EVENT_CB_END();
+}
+
+void KeyboardManager::textarea_delete_event_cb(lv_event_t* e) {
+    auto& mgr = KeyboardManager::instance();
+    lv_obj_t* textarea = lv_event_get_target_obj(e);
+
+    if (mgr.context_textarea_ == textarea) {
+        spdlog::debug("[KeyboardManager] Textarea deleted while focused: {}", (void*)textarea);
+        mgr.context_textarea_ = nullptr;
+        mgr.hide();
+    }
 }
 
 void KeyboardManager::longpress_event_handler(lv_event_t* e) {
@@ -381,15 +367,31 @@ void KeyboardManager::longpress_event_handler(lv_event_t* e) {
             mgr.pressed_key_area_ = btn_area;
             mgr.show_overlay(&btn_area, mgr.alternatives_);
 
-            spdlog::info("[KeyboardManager] LONG_PRESSED detected for '{}' - overlay shown",
-                         mgr.pressed_char_ ? mgr.pressed_char_ : "?");
+            // Auto-insert mode: insert the first alt char immediately on long-press
+            if (mgr.auto_insert_alt_ && mgr.alternatives_[0] && mgr.context_textarea_ != nullptr) {
+                char str[2] = {mgr.alternatives_[0], '\0'};
+                lv_textarea_add_text(mgr.context_textarea_, str);
+                mgr.longpress_state_ = LP_ALT_SELECTED;
+                spdlog::info("[KeyboardManager] LONG_PRESSED '{}' - auto-inserted alt '{}'",
+                             mgr.pressed_char_ ? mgr.pressed_char_ : "?", mgr.alternatives_[0]);
+            } else {
+                spdlog::info("[KeyboardManager] LONG_PRESSED detected for '{}' - overlay shown",
+                             mgr.pressed_char_ ? mgr.pressed_char_ : "?");
+            }
         }
 
     } else if (code == LV_EVENT_RELEASED) {
         spdlog::info("[KeyboardManager] RELEASED event - state={}, overlay={}, textarea={}",
                      (int)mgr.longpress_state_, (void*)mgr.overlay_, (void*)mgr.context_textarea_);
 
-        if (mgr.longpress_state_ == LP_LONG_DETECTED && mgr.overlay_ != nullptr) {
+        if (mgr.longpress_state_ == LP_ALT_SELECTED) {
+            // Auto-insert mode: alt char already inserted, just clean up
+            spdlog::info("[KeyboardManager] Cleaning up overlay (alt already auto-inserted)");
+            mgr.overlay_cleanup();
+            mgr.longpress_state_ = LP_IDLE;
+
+        } else if (mgr.longpress_state_ == LP_LONG_DETECTED && mgr.overlay_ != nullptr) {
+            // Slide-to-select mode: check release position to pick a character
             lv_indev_t* indev = lv_indev_active();
             lv_point_t release_point;
 
@@ -489,19 +491,6 @@ void KeyboardManager::keyboard_event_cb(lv_event_t* e) {
             btn_text ? btn_text : "NULL", is_non_printing);
 
         if (is_non_printing) {
-            if (mgr.context_textarea_ && btn_text) {
-                const char* current_text = lv_textarea_get_text(mgr.context_textarea_);
-
-                if (str_ends_with(current_text, btn_text)) {
-                    size_t char_count = get_utf8_length(btn_text);
-                    spdlog::info("[KeyboardManager] Removing inserted text '{}' ({} chars)",
-                                 btn_text, char_count);
-                    for (size_t i = 0; i < char_count; i++) {
-                        lv_textarea_delete_char(mgr.context_textarea_);
-                    }
-                }
-            }
-
             if (btn_text && strcmp(btn_text, "?123") == 0) {
                 mgr.mode_ = MODE_NUMBERS_SYMBOLS;
                 mgr.shift_just_pressed_ = false;
@@ -553,18 +542,13 @@ void KeyboardManager::keyboard_event_cb(lv_event_t* e) {
 
             } else if (btn_text && strcmp(btn_text, ICON_KEYBOARD_RETURN) == 0) {
                 if (mgr.context_textarea_) {
-                    // Multiline textareas: keep the newline, keep keyboard open
+                    // Multiline textareas: insert newline, keep keyboard open
                     if (!lv_textarea_get_one_line(mgr.context_textarea_)) {
+                        lv_textarea_add_char(mgr.context_textarea_, '\n');
                         spdlog::debug("[KeyboardManager] Enter: newline inserted (multiline)");
                         return;
                     }
-                    // Single-line: remove the inserted newline
-                    const char* current_text = lv_textarea_get_text(mgr.context_textarea_);
-                    if (str_ends_with(current_text, "\n")) {
-                        lv_textarea_delete_char(mgr.context_textarea_);
-                        spdlog::debug("[KeyboardManager] Removed inserted newline");
-                    }
-                    // Fire READY on the textarea so forms can handle Enter-to-next-field.
+                    // Single-line: fire READY so forms can handle Enter-to-next-field.
                     // Save current textarea — if a handler switches to another field via
                     // show(), context_textarea_ will change and we should NOT hide.
                     lv_obj_t* ta_before = mgr.context_textarea_;
@@ -588,13 +572,14 @@ void KeyboardManager::keyboard_event_cb(lv_event_t* e) {
                 spdlog::debug("[KeyboardManager] Backspace");
             }
         } else {
-            // Regular printing key
-            if (btn_text && strcmp(btn_text, keyboard_layout_get_spacebar_text()) == 0 &&
-                mgr.context_textarea_) {
-                lv_textarea_delete_char(mgr.context_textarea_);
-                lv_textarea_delete_char(mgr.context_textarea_);
-                lv_textarea_add_char(mgr.context_textarea_, ' ');
-                spdlog::debug("[KeyboardManager] Converted double-space to single space");
+            // Regular printing key — insert text into textarea
+            if (mgr.context_textarea_ && btn_text) {
+                if (strcmp(btn_text, keyboard_layout_get_spacebar_text()) == 0) {
+                    lv_textarea_add_char(mgr.context_textarea_, ' ');
+                    spdlog::debug("[KeyboardManager] Space");
+                } else {
+                    lv_textarea_add_text(mgr.context_textarea_, btn_text);
+                }
             }
 
             mgr.shift_just_pressed_ = false;
@@ -720,6 +705,11 @@ void KeyboardManager::init(lv_obj_t* parent) {
 
     keyboard_ = lv_keyboard_create(parent);
 
+    // Remove LVGL's built-in keyboard handler — our custom handler manages all keys.
+    // The default handler doesn't recognize our custom icon keys (ICON_BACKSPACE, etc.)
+    // and inserts their UTF-8 bytes as text, causing corruption when cursor is mid-string.
+    lv_obj_remove_event_cb(keyboard_, lv_keyboard_def_event_cb);
+
     lv_keyboard_set_mode(keyboard_, LV_KEYBOARD_MODE_TEXT_LOWER);
     lv_keyboard_set_popovers(keyboard_, true);
 
@@ -791,6 +781,7 @@ void KeyboardManager::register_textarea(lv_obj_t* textarea) {
 
     lv_obj_add_event_cb(textarea, textarea_focus_event_cb, LV_EVENT_FOCUSED, nullptr);
     lv_obj_add_event_cb(textarea, textarea_focus_event_cb, LV_EVENT_DEFOCUSED, nullptr);
+    lv_obj_add_event_cb(textarea, textarea_delete_event_cb, LV_EVENT_DELETE, nullptr);
 
     lv_group_t* default_group = lv_group_get_default();
     if (default_group) {
@@ -854,7 +845,7 @@ void KeyboardManager::show(lv_obj_t* textarea) {
     lv_obj_update_layout(screen);
 
     // Animate keyboard sliding up from bottom
-    if (SettingsManager::instance().get_animations_enabled()) {
+    if (DisplaySettingsManager::instance().get_animations_enabled()) {
         int32_t keyboard_height = lv_obj_get_height(keyboard_);
         lv_obj_set_style_translate_y(keyboard_, keyboard_height, LV_PART_MAIN);
 
@@ -892,7 +883,7 @@ void KeyboardManager::show(lv_obj_t* textarea) {
         spdlog::debug("[KeyboardManager] Shifting screen UP by {} px", shift_up);
 
         uint32_t child_count = lv_obj_get_child_count(screen);
-        bool animations_enabled = SettingsManager::instance().get_animations_enabled();
+        bool animations_enabled = DisplaySettingsManager::instance().get_animations_enabled();
 
         for (uint32_t i = 0; i < child_count; i++) {
             lv_obj_t* child = lv_obj_get_child(screen, static_cast<int32_t>(i));
@@ -947,7 +938,7 @@ void KeyboardManager::hide() {
     lv_keyboard_set_textarea(keyboard_, nullptr);
 
     // Animate keyboard sliding down (or hide instantly if animations disabled)
-    if (SettingsManager::instance().get_animations_enabled()) {
+    if (DisplaySettingsManager::instance().get_animations_enabled()) {
         int32_t keyboard_height = lv_obj_get_height(keyboard_);
 
         lv_anim_t slide_anim;
@@ -970,7 +961,7 @@ void KeyboardManager::hide() {
     }
 
     uint32_t child_count = lv_obj_get_child_count(screen);
-    bool animations_enabled = SettingsManager::instance().get_animations_enabled();
+    bool animations_enabled = DisplaySettingsManager::instance().get_animations_enabled();
 
     spdlog::debug("[KeyboardManager] Restoring screen children to y=0");
 

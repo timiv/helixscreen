@@ -42,6 +42,10 @@ static lv_subject_t theme_changed_subject;
 static int32_t theme_generation = 0;
 static bool theme_subject_initialized = false;
 
+// Breakpoint index subject for reactive responsive visibility (0=TINY..4=XLARGE)
+static lv_subject_t ui_breakpoint_subject;
+static bool breakpoint_subject_initialized = false;
+
 // Swatch description subjects for theme editor (file-scope for deinit access)
 static constexpr size_t SWATCH_DESC_COUNT = 16;
 static constexpr size_t SWATCH_DESC_BUF_SIZE = 32;
@@ -1088,6 +1092,32 @@ void theme_manager_init(lv_display_t* display, bool use_dark_mode_param) {
     theme_manager_register_responsive_spacing(display);
     theme_manager_register_responsive_fonts(display);
 
+    // Initialize ui_breakpoint subject for reactive responsive visibility
+    {
+        int32_t ver_res_bp = lv_display_get_vertical_resolution(display);
+        int32_t bp_index;
+        if (ver_res_bp <= UI_BREAKPOINT_TINY_MAX)
+            bp_index = UI_BP_TINY;
+        else if (ver_res_bp <= UI_BREAKPOINT_SMALL_MAX)
+            bp_index = UI_BP_SMALL;
+        else if (ver_res_bp <= UI_BREAKPOINT_MEDIUM_MAX)
+            bp_index = UI_BP_MEDIUM;
+        else if (ver_res_bp <= UI_BREAKPOINT_LARGE_MAX)
+            bp_index = UI_BP_LARGE;
+        else
+            bp_index = UI_BP_XLARGE;
+
+        if (!breakpoint_subject_initialized) {
+            lv_subject_init_int(&ui_breakpoint_subject, bp_index);
+            breakpoint_subject_initialized = true;
+        } else {
+            lv_subject_set_int(&ui_breakpoint_subject, bp_index);
+        }
+        lv_xml_register_subject(nullptr, "ui_breakpoint", &ui_breakpoint_subject);
+        spdlog::debug("[Theme] Registered ui_breakpoint subject: {} (height={})", bp_index,
+                      ver_res_bp);
+    }
+
     // Validate critical color pairs were registered (fail-fast if missing)
     static const char* required_colors[] = {"screen_bg", "text", "text_muted", nullptr};
     for (const char** name = required_colors; *name != nullptr; ++name) {
@@ -1145,6 +1175,10 @@ void theme_manager_deinit() {
         lv_subject_deinit(&theme_changed_subject);
         theme_subject_initialized = false;
         theme_generation = 0;
+    }
+    if (breakpoint_subject_initialized) {
+        lv_subject_deinit(&ui_breakpoint_subject);
+        breakpoint_subject_initialized = false;
     }
     if (swatch_descs_initialized) {
         for (size_t i = 0; i < SWATCH_DESC_COUNT; ++i) {
@@ -1352,6 +1386,10 @@ bool theme_manager_supports_light_mode() {
 
 lv_subject_t* theme_manager_get_changed_subject() {
     return &theme_changed_subject;
+}
+
+lv_subject_t* theme_manager_get_breakpoint_subject() {
+    return &ui_breakpoint_subject;
 }
 
 void theme_manager_notify_change() {

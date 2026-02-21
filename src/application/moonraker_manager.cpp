@@ -367,7 +367,7 @@ void MoonrakerManager::create_api(const RuntimeConfig& runtime_config) {
         const char* spoolman_env = std::getenv("HELIX_MOCK_SPOOLMAN");
         if (spoolman_env &&
             (std::string(spoolman_env) == "0" || std::string(spoolman_env) == "off")) {
-            mock_api->set_mock_spoolman_enabled(false);
+            mock_api->spoolman_mock().set_mock_spoolman_enabled(false);
             spdlog::info("[MoonrakerManager] Mock Spoolman disabled via HELIX_MOCK_SPOOLMAN=0");
         }
 

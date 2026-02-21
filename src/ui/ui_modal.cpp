@@ -3,11 +3,14 @@
 
 #include "ui_modal.h"
 
+#include "ui_callback_helpers.h"
+#include "ui_effects.h"
 #include "ui_event_safety.h"
 #include "ui_keyboard_manager.h"
 #include "ui_update_queue.h"
 #include "ui_utils.h"
 
+#include "display_settings_manager.h"
 #include "helix-xml/src/xml/lv_xml.h"
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "settings_manager.h"
@@ -154,7 +157,7 @@ void ModalStack::animate_entrance(lv_obj_t* dialog) {
     lv_obj_set_style_transform_pivot_y(dialog, LV_PCT(50), LV_PART_MAIN);
 
     // Skip animation if disabled - show in final state
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_set_style_opa(backdrop, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_transform_scale(dialog, MODAL_SCALE_END, LV_PART_MAIN);
         lv_obj_set_style_opa(dialog, LV_OPA_COVER, LV_PART_MAIN);
@@ -240,7 +243,7 @@ void ModalStack::animate_exit(lv_obj_t* backdrop, lv_obj_t* dialog) {
     }
 
     // Skip animation if disabled
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         lv_obj_set_style_transform_scale(dialog, MODAL_SCALE_END, LV_PART_MAIN);
         lv_obj_set_style_opa(dialog, LV_OPA_COVER, LV_PART_MAIN);
         spdlog::debug("[ModalStack] Animations disabled - deleting modal instantly");
@@ -314,7 +317,7 @@ Modal::~Modal() {
         }
 
         // Hide immediately without calling virtual on_hide() - derived class already destroyed
-        // Note: lv_obj_safe_delete handles focus group cleanup (ui_defocus_tree)
+        // Note: lv_obj_safe_delete handles focus group cleanup (helix::ui::defocus_tree)
         ModalStack::instance().remove(backdrop_);
         helix::ui::safe_delete(backdrop_);
         // dialog_ is a child of backdrop_ and was destroyed with it
@@ -346,7 +349,7 @@ Modal& Modal::operator=(Modal&& other) noexcept {
             if (dialog_) {
                 lv_anim_delete(dialog_, nullptr);
             }
-            // Note: lv_obj_safe_delete handles focus group cleanup (ui_defocus_tree)
+            // Note: lv_obj_safe_delete handles focus group cleanup (helix::ui::defocus_tree)
             ModalStack::instance().remove(backdrop_);
             helix::ui::safe_delete(backdrop_);
             // dialog_ is a child of backdrop_ and was destroyed with it
@@ -381,7 +384,8 @@ lv_obj_t* Modal::show(const char* component_name, const char** attrs) {
     lv_obj_t* parent = lv_screen_active();
 
     // Create backdrop using shared utility
-    lv_obj_t* backdrop = ui_create_fullscreen_backdrop(parent, get_modal_backdrop_opacity());
+    lv_obj_t* backdrop =
+        helix::ui::create_fullscreen_backdrop(parent, get_modal_backdrop_opacity());
     if (!backdrop) {
         spdlog::error("[Modal] Failed to create backdrop");
         return nullptr;
@@ -460,7 +464,7 @@ void Modal::hide(lv_obj_t* dialog) {
     spdlog::info("[Modal] Hiding modal");
 
     // Remove entire tree from focus group to prevent scroll-on-focus during exit animation
-    ui_defocus_tree(backdrop);
+    helix::ui::defocus_tree(backdrop);
 
     // Mark as exiting (stays in stack until animation completes)
     stack.mark_exiting(backdrop);
@@ -501,23 +505,24 @@ bool Modal::show(lv_obj_t* parent, const char** attrs) {
     spdlog::info("[{}] Showing modal", get_name());
 
     // Register event callbacks for XML components
-    lv_xml_register_event_cb(nullptr, "on_modal_ok_clicked", ok_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_modal_cancel_clicked", cancel_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_modal_tertiary_clicked", tertiary_button_cb);
-
-    // Register unique callback aliases for specific modals (same handlers, unique names)
-    lv_xml_register_event_cb(nullptr, "on_print_cancel_confirm", ok_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_print_cancel_dismiss", cancel_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_z_offset_save", ok_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_z_offset_cancel", cancel_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_exclude_object_confirm", ok_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_exclude_object_cancel", cancel_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_runout_load_filament", ok_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_runout_resume", cancel_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_runout_cancel_print", tertiary_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_runout_unload_filament", quaternary_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_runout_purge", quinary_button_cb);
-    lv_xml_register_event_cb(nullptr, "on_runout_ok", senary_button_cb);
+    register_xml_callbacks({
+        {"on_modal_ok_clicked", ok_button_cb},
+        {"on_modal_cancel_clicked", cancel_button_cb},
+        {"on_modal_tertiary_clicked", tertiary_button_cb},
+        // Register unique callback aliases for specific modals (same handlers, unique names)
+        {"on_print_cancel_confirm", ok_button_cb},
+        {"on_print_cancel_dismiss", cancel_button_cb},
+        {"on_z_offset_save", ok_button_cb},
+        {"on_z_offset_cancel", cancel_button_cb},
+        {"on_exclude_object_confirm", ok_button_cb},
+        {"on_exclude_object_cancel", cancel_button_cb},
+        {"on_runout_load_filament", ok_button_cb},
+        {"on_runout_resume", cancel_button_cb},
+        {"on_runout_cancel_print", tertiary_button_cb},
+        {"on_runout_unload_filament", quaternary_button_cb},
+        {"on_runout_purge", quinary_button_cb},
+        {"on_runout_ok", senary_button_cb},
+    });
 
     // Use internal create method
     if (!create_and_show(parent_, component_name(), attrs)) {
@@ -556,7 +561,7 @@ void Modal::hide() {
     dialog_ = nullptr;
 
     // Remove entire tree from focus group to prevent scroll-on-focus during exit animation
-    ui_defocus_tree(backdrop);
+    helix::ui::defocus_tree(backdrop);
 
     // Mark as exiting (stays in stack until animation completes)
     ModalStack::instance().mark_exiting(backdrop);
@@ -613,7 +618,7 @@ void Modal::wire_senary_button(const char* name) {
 
 bool Modal::create_and_show(lv_obj_t* parent, const char* comp_name, const char** attrs) {
     // Create backdrop using shared utility
-    backdrop_ = ui_create_fullscreen_backdrop(parent, get_modal_backdrop_opacity());
+    backdrop_ = helix::ui::create_fullscreen_backdrop(parent, get_modal_backdrop_opacity());
     if (!backdrop_) {
         spdlog::error("[{}] Failed to create backdrop", get_name());
         return false;
@@ -791,10 +796,12 @@ void helix::ui::modal_init_subjects() {
                                "dialog_cancel_text", g_subjects);
 
     // Register event callbacks for modals using static Modal::show() API
-    // Generic close callback - closes topmost modal (use for OK/Cancel that just dismiss)
-    lv_xml_register_event_cb(nullptr, "on_modal_close", static_modal_close_cb);
-    // Legacy alias for print complete dialog
-    lv_xml_register_event_cb(nullptr, "on_print_complete_ok", static_modal_close_cb);
+    register_xml_callbacks({
+        // Generic close callback - closes topmost modal (use for OK/Cancel that just dismiss)
+        {"on_modal_close", static_modal_close_cb},
+        // Legacy alias for print complete dialog
+        {"on_print_complete_ok", static_modal_close_cb},
+    });
 
     g_subjects_initialized = true;
     spdlog::trace("[Modal] Modal dialog subjects registered");

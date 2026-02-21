@@ -88,6 +88,133 @@ class MockScrewsTiltState {
 };
 
 /**
+ * @brief Mock Spoolman API for testing without a real Spoolman server
+ *
+ * Overrides all MoonrakerSpoolmanAPI methods to return mock filament
+ * inventory data. Also provides mock-specific helpers for AMS slot
+ * mapping and filament consumption simulation.
+ */
+class MoonrakerSpoolmanAPIMock : public MoonrakerSpoolmanAPI {
+  public:
+    using SuccessCallback = MoonrakerSpoolmanAPI::SuccessCallback;
+    using ErrorCallback = MoonrakerSpoolmanAPI::ErrorCallback;
+
+    explicit MoonrakerSpoolmanAPIMock(helix::MoonrakerClient& client);
+    ~MoonrakerSpoolmanAPIMock() override = default;
+
+    // ========================================================================
+    // Overridden Spoolman Methods (return mock filament inventory)
+    // ========================================================================
+
+    void get_spoolman_status(std::function<void(bool, int)> on_success,
+                             ErrorCallback on_error) override;
+    void get_spoolman_spools(helix::SpoolListCallback on_success, ErrorCallback on_error) override;
+    void get_spoolman_spool(int spool_id, helix::SpoolCallback on_success,
+                            ErrorCallback on_error) override;
+    void set_active_spool(int spool_id, SuccessCallback on_success,
+                          ErrorCallback on_error) override;
+    void update_spoolman_spool_weight(int spool_id, double remaining_weight_g,
+                                      SuccessCallback on_success, ErrorCallback on_error) override;
+    void update_spoolman_spool(int spool_id, const nlohmann::json& spool_data,
+                               SuccessCallback on_success, ErrorCallback on_error) override;
+    void update_spoolman_filament(int filament_id, const nlohmann::json& filament_data,
+                                  SuccessCallback on_success, ErrorCallback on_error) override;
+    void update_spoolman_filament_color(int filament_id, const std::string& color_hex,
+                                        SuccessCallback on_success,
+                                        ErrorCallback on_error) override;
+    void get_spoolman_vendors(helix::VendorListCallback on_success,
+                              ErrorCallback on_error) override;
+    void get_spoolman_filaments(helix::FilamentListCallback on_success,
+                                ErrorCallback on_error) override;
+    void get_spoolman_filaments(int vendor_id, helix::FilamentListCallback on_success,
+                                ErrorCallback on_error) override;
+    void create_spoolman_vendor(const nlohmann::json& vendor_data,
+                                helix::VendorCreateCallback on_success,
+                                ErrorCallback on_error) override;
+    void create_spoolman_filament(const nlohmann::json& filament_data,
+                                  helix::FilamentCreateCallback on_success,
+                                  ErrorCallback on_error) override;
+    void create_spoolman_spool(const nlohmann::json& spool_data,
+                               helix::SpoolCreateCallback on_success,
+                               ErrorCallback on_error) override;
+    void delete_spoolman_spool(int spool_id, SuccessCallback on_success,
+                               ErrorCallback on_error) override;
+    void delete_spoolman_vendor(int vendor_id, SuccessCallback on_success,
+                                ErrorCallback on_error) override;
+    void delete_spoolman_filament(int filament_id, SuccessCallback on_success,
+                                  ErrorCallback on_error) override;
+    void get_spoolman_external_vendors(helix::VendorListCallback on_success,
+                                       ErrorCallback on_error) override;
+    void get_spoolman_external_filaments(const std::string& vendor_name,
+                                         helix::FilamentListCallback on_success,
+                                         ErrorCallback on_error) override;
+
+    // ========================================================================
+    // Mock-Specific Helpers
+    // ========================================================================
+
+    /**
+     * @brief Enable or disable mock Spoolman integration
+     */
+    void set_mock_spoolman_enabled(bool enabled) {
+        mock_spoolman_enabled_ = enabled;
+    }
+
+    [[nodiscard]] bool is_mock_spoolman_enabled() const {
+        return mock_spoolman_enabled_;
+    }
+
+    /**
+     * @brief Assign a Spoolman spool to an AMS slot
+     */
+    void assign_spool_to_slot(int slot_index, int spool_id);
+
+    /**
+     * @brief Remove spool assignment from an AMS slot
+     */
+    void unassign_spool_from_slot(int slot_index);
+
+    /**
+     * @brief Get the Spoolman spool ID assigned to a slot
+     */
+    [[nodiscard]] int get_spool_for_slot(int slot_index) const;
+
+    /**
+     * @brief Get SpoolInfo for a slot (if assigned)
+     */
+    [[nodiscard]] std::optional<SpoolInfo> get_spool_info_for_slot(int slot_index) const;
+
+    /**
+     * @brief Simulate filament consumption during a print
+     */
+    void consume_filament(float grams, int slot_index = -1);
+
+    /**
+     * @brief Get mutable reference to mock spools for testing
+     */
+    std::vector<SpoolInfo>& get_mock_spools() {
+        return mock_spools_;
+    }
+
+    /**
+     * @brief Get const reference to mock spools
+     */
+    [[nodiscard]] const std::vector<SpoolInfo>& get_mock_spools() const {
+        return mock_spools_;
+    }
+
+  private:
+    bool mock_spoolman_enabled_ = true;
+    int mock_active_spool_id_ = 1;
+    std::vector<SpoolInfo> mock_spools_;
+    std::vector<FilamentInfo> mock_filaments_;
+    int next_filament_id_ = 300;
+    std::map<int, int> slot_spool_map_;
+
+    void init_mock_spools();
+};
+
+/**
  * @brief Mock MoonrakerAPI for testing without real printer connection
  *
  * Overrides HTTP file transfer methods to use local test files instead
@@ -370,155 +497,18 @@ class MoonrakerAPIMock : public MoonrakerAPI {
     }
 
     // ========================================================================
-    // Overridden Spoolman Methods (return mock filament inventory)
+    // Spoolman Mock Access
     // ========================================================================
 
     /**
-     * @brief Get mock Spoolman status
+     * @brief Get the Spoolman mock sub-API for mock-specific helpers
      *
-     * Returns mock connection status and active spool ID for testing
-     * Spoolman integration without a real Spoolman server.
+     * Provides access to mock-only methods like assign_spool_to_slot(),
+     * consume_filament(), get_mock_spools(), etc.
      *
-     * @param on_success Callback with (connected, active_spool_id)
-     * @param on_error Error callback (never called - mock always succeeds)
+     * @return Reference to MoonrakerSpoolmanAPIMock
      */
-    void get_spoolman_status(std::function<void(bool, int)> on_success,
-                             ErrorCallback on_error) override;
-
-    /**
-     * @brief Get mock spool list
-     *
-     * Returns a predefined list of spools with realistic data for testing
-     * the Spoolman UI without a real Spoolman server.
-     *
-     * @param on_success Callback with list of mock SpoolInfo
-     * @param on_error Error callback (never called - mock always succeeds)
-     */
-    void get_spoolman_spools(helix::SpoolListCallback on_success, ErrorCallback on_error) override;
-
-    /**
-     * @brief Get a single spool by ID from mock inventory
-     *
-     * Looks up the spool in mock_spools_ and returns it if found.
-     * Used by AmsBackend to enrich slot info when a Spoolman spool is assigned.
-     *
-     * @param spool_id Spoolman spool ID to lookup
-     * @param on_success Callback with SpoolInfo (empty optional if not found)
-     * @param on_error Error callback (never called - mock always succeeds)
-     */
-    void get_spoolman_spool(int spool_id, helix::SpoolCallback on_success,
-                            ErrorCallback on_error) override;
-
-    /**
-     * @brief Mock set active spool (updates internal state)
-     *
-     * Updates mock_active_spool_id_ and marks the corresponding spool as active.
-     * Always calls success callback.
-     *
-     * @param spool_id Spool ID to set as active (0 or negative to clear)
-     * @param on_success Success callback (always called)
-     * @param on_error Error callback (never called)
-     */
-    void set_active_spool(int spool_id, SuccessCallback on_success,
-                          ErrorCallback on_error) override;
-
-    /**
-     * @brief Update spool remaining weight in mock storage
-     *
-     * Updates the remaining_weight_g field for the specified spool.
-     *
-     * @param spool_id Spool ID to update
-     * @param remaining_weight_g New remaining weight in grams
-     * @param on_success Success callback (always called)
-     * @param on_error Error callback (never called)
-     */
-    void update_spoolman_spool_weight(int spool_id, double remaining_weight_g,
-                                      SuccessCallback on_success, ErrorCallback on_error) override;
-
-    /**
-     * @brief General-purpose spool update in mock storage
-     *
-     * Updates spool fields from JSON (remaining_weight, price, lot_nr, comment).
-     *
-     * @param spool_id Spool ID to update
-     * @param spool_data JSON with fields to update
-     * @param on_success Success callback (always called)
-     * @param on_error Error callback (never called)
-     */
-    void update_spoolman_spool(int spool_id, const nlohmann::json& spool_data,
-                               SuccessCallback on_success, ErrorCallback on_error) override;
-
-    /**
-     * @brief Update filament color in mock storage
-     *
-     * Logs the color update (mock doesn't track filament definitions separately).
-     *
-     * @param filament_id Filament definition ID
-     * @param color_hex New color as hex string
-     * @param on_success Success callback (always called)
-     * @param on_error Error callback (never called)
-     */
-    void update_spoolman_filament(int filament_id, const nlohmann::json& filament_data,
-                                  SuccessCallback on_success, ErrorCallback on_error) override;
-    void update_spoolman_filament_color(int filament_id, const std::string& color_hex,
-                                        SuccessCallback on_success,
-                                        ErrorCallback on_error) override;
-
-    void get_spoolman_vendors(helix::VendorListCallback on_success,
-                              ErrorCallback on_error) override;
-
-    void get_spoolman_filaments(helix::FilamentListCallback on_success,
-                                ErrorCallback on_error) override;
-
-    void create_spoolman_vendor(const nlohmann::json& vendor_data,
-                                helix::VendorCreateCallback on_success,
-                                ErrorCallback on_error) override;
-
-    void create_spoolman_filament(const nlohmann::json& filament_data,
-                                  helix::FilamentCreateCallback on_success,
-                                  ErrorCallback on_error) override;
-
-    void create_spoolman_spool(const nlohmann::json& spool_data,
-                               helix::SpoolCreateCallback on_success,
-                               ErrorCallback on_error) override;
-
-    void delete_spoolman_spool(int spool_id, SuccessCallback on_success,
-                               ErrorCallback on_error) override;
-
-    void get_spoolman_external_vendors(helix::VendorListCallback on_success,
-                                       ErrorCallback on_error) override;
-
-    void get_spoolman_external_filaments(const std::string& vendor_name,
-                                         helix::FilamentListCallback on_success,
-                                         ErrorCallback on_error) override;
-
-    void get_spoolman_filaments(int vendor_id, helix::FilamentListCallback on_success,
-                                ErrorCallback on_error) override;
-
-    void delete_spoolman_vendor(int vendor_id, SuccessCallback on_success,
-                                ErrorCallback on_error) override;
-
-    void delete_spoolman_filament(int filament_id, SuccessCallback on_success,
-                                  ErrorCallback on_error) override;
-
-    /**
-     * @brief Enable or disable mock Spoolman integration
-     *
-     * Controls whether get_spoolman_status returns connected=true or false.
-     * When disabled, the Spoolman panel should be hidden.
-     *
-     * @param enabled true to enable mock Spoolman, false to disable
-     */
-    void set_mock_spoolman_enabled(bool enabled) {
-        mock_spoolman_enabled_ = enabled;
-    }
-
-    /**
-     * @brief Check if mock Spoolman is enabled
-     */
-    [[nodiscard]] bool is_mock_spoolman_enabled() const {
-        return mock_spoolman_enabled_;
-    }
+    MoonrakerSpoolmanAPIMock& spoolman_mock();
 
     // ========================================================================
     // Overridden REST Methods (return mock responses)
@@ -583,83 +573,4 @@ class MoonrakerAPIMock : public MoonrakerAPI {
 
     // Mock subscription ID counter
     helix::SubscriptionId mock_next_subscription_id_ = 100;
-
-    // Mock Spoolman state
-    bool mock_spoolman_enabled_ = true;        ///< Whether Spoolman is "connected"
-    int mock_active_spool_id_ = 1;             ///< Currently active spool ID
-    std::vector<SpoolInfo> mock_spools_;       ///< Mock spool inventory
-    std::vector<FilamentInfo> mock_filaments_; ///< Persistent filament storage (from create calls)
-    int next_filament_id_ = 300;               ///< Next ID for created filaments
-
-    /// Slot-to-spool mapping (AMS slot index → Spoolman spool_id)
-    std::map<int, int> slot_spool_map_;
-
-    /**
-     * @brief Initialize mock spool data with realistic sample inventory
-     */
-    void init_mock_spools();
-
-  public:
-    // ========================================================================
-    // Slot-Spool Mapping (for realistic AMS↔Spoolman integration)
-    // ========================================================================
-
-    /**
-     * @brief Assign a Spoolman spool to an AMS slot
-     *
-     * Creates a mapping between the slot and spool. The AMS backend should
-     * call this when the user assigns a spool via the picker.
-     *
-     * @param slot_index AMS slot index (0-based)
-     * @param spool_id Spoolman spool ID to assign
-     */
-    void assign_spool_to_slot(int slot_index, int spool_id);
-
-    /**
-     * @brief Remove spool assignment from an AMS slot
-     *
-     * @param slot_index AMS slot index to unassign
-     */
-    void unassign_spool_from_slot(int slot_index);
-
-    /**
-     * @brief Get the Spoolman spool ID assigned to a slot
-     *
-     * @param slot_index AMS slot index
-     * @return Spool ID if assigned, 0 if not assigned
-     */
-    [[nodiscard]] int get_spool_for_slot(int slot_index) const;
-
-    /**
-     * @brief Get SpoolInfo for a slot (if assigned)
-     *
-     * @param slot_index AMS slot index
-     * @return SpoolInfo if assigned, std::nullopt if not
-     */
-    [[nodiscard]] std::optional<SpoolInfo> get_spool_info_for_slot(int slot_index) const;
-
-    /**
-     * @brief Simulate filament consumption during a print
-     *
-     * Decrements remaining_weight_g on the active spool by the specified amount.
-     * Also updates the spool assigned to the given slot if provided.
-     *
-     * @param grams Amount of filament consumed in grams
-     * @param slot_index Optional slot to update (-1 uses active spool only)
-     */
-    void consume_filament(float grams, int slot_index = -1);
-
-    /**
-     * @brief Get mutable reference to mock spools for testing
-     */
-    std::vector<SpoolInfo>& get_mock_spools() {
-        return mock_spools_;
-    }
-
-    /**
-     * @brief Get const reference to mock spools
-     */
-    [[nodiscard]] const std::vector<SpoolInfo>& get_mock_spools() const {
-        return mock_spools_;
-    }
 };

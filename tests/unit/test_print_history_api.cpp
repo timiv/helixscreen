@@ -86,7 +86,7 @@ TEST_CASE_METHOD(PrintHistoryTestFixture, "get_history_list returns mock jobs", 
     std::vector<PrintHistoryJob> captured_jobs;
     uint64_t captured_total = 0;
 
-    api_->get_history_list(
+    api_->history().get_history_list(
         50, 0, 0.0, 0.0,
         [&](const std::vector<PrintHistoryJob>& jobs, uint64_t total) {
             captured_jobs = jobs;
@@ -119,7 +119,7 @@ TEST_CASE_METHOD(PrintHistoryTestFixture, "get_history_list jobs have valid stat
     std::atomic<bool> done{false};
     std::vector<PrintHistoryJob> captured_jobs;
 
-    api_->get_history_list(
+    api_->history().get_history_list(
         50, 0, 0.0, 0.0,
         [&](const std::vector<PrintHistoryJob>& jobs, uint64_t) {
             captured_jobs = jobs;
@@ -154,7 +154,7 @@ TEST_CASE_METHOD(PrintHistoryTestFixture, "get_history_totals returns statistics
     std::atomic<bool> error_called{false};
     PrintHistoryTotals captured_totals;
 
-    api_->get_history_totals(
+    api_->history().get_history_totals(
         [&](const PrintHistoryTotals& totals) {
             captured_totals = totals;
             success_called.store(true);
@@ -190,7 +190,7 @@ TEST_CASE_METHOD(PrintHistoryTestFixture, "delete_history_job calls success call
 
     // First get a job ID to delete
     std::string job_id_to_delete;
-    api_->get_history_list(
+    api_->history().get_history_list(
         1, 0, 0.0, 0.0,
         [&](const std::vector<PrintHistoryJob>& jobs, uint64_t) {
             if (!jobs.empty()) {
@@ -206,7 +206,7 @@ TEST_CASE_METHOD(PrintHistoryTestFixture, "delete_history_job calls success call
     REQUIRE_FALSE(job_id_to_delete.empty());
 
     // Now delete it
-    api_->delete_history_job(
+    api_->history().delete_history_job(
         job_id_to_delete, [&]() { success_called.store(true); },
         [&](const MoonrakerError&) { error_called.store(true); });
 

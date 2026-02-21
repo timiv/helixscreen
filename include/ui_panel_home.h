@@ -9,6 +9,7 @@
 #include "ui_panel_print_status.h" // For RunoutGuidanceModal
 
 #include "led/led_controller.h"
+#include "panel_widget.h"
 #include "subject_managed_panel.h"
 #include "tips_manager.h"
 
@@ -34,10 +35,7 @@ enum class PrintJobState;
  * @see TipsManager for tip of the day functionality
  */
 
-// Network connection types
-namespace helix {
-enum class NetworkType { Wifi, Ethernet, Disconnected };
-} // namespace helix
+#include "network_type.h"
 
 class HomePanel : public PanelBase {
   public:
@@ -62,9 +60,9 @@ class HomePanel : public PanelBase {
     }
 
     /**
-     * @brief Rebuild the widget list from current HomeWidgetConfig
+     * @brief Rebuild the widget list from current PanelWidgetConfig
      *
-     * Called from HomeWidgetsOverlay when widget toggles change.
+     * Called from PanelWidgetsOverlay when widget toggles change.
      */
     void populate_widgets();
 
@@ -112,20 +110,28 @@ class HomePanel : public PanelBase {
      */
     void set_temp_control_panel(TempControlPanel* temp_panel);
 
+    // Transition: widget callbacks delegate to these HomePanel handlers.
+    // These will move into widget classes once HomePanel code is removed.
+    void handle_light_toggle();
+    void handle_light_long_press();
+    void handle_power_toggle();
+    void handle_power_long_press();
+    void handle_temp_clicked();
+    void handle_network_clicked();
+
   private:
     SubjectManager subjects_;
     TempControlPanel* temp_control_panel_ = nullptr;
     lv_subject_t status_subject_;
     lv_subject_t temp_subject_;
-    lv_subject_t network_icon_state_; // Integer subject: 0-5 for conditional icon visibility
-    lv_subject_t network_label_subject_;
+    // Network subjects (home_network_icon_state, network_label) are owned by
+    // NetworkWidget module — looked up by name via lv_xml_get_subject() when needed
     lv_subject_t printer_type_subject_;
     lv_subject_t printer_host_subject_;
     lv_subject_t printer_info_visible_;
 
     char status_buffer_[512];
     char temp_buffer_[32];
-    char network_label_buffer_[32];
     char printer_type_buffer_[64];
     char printer_host_buffer_[64];
 
@@ -162,16 +168,12 @@ class HomePanel : public PanelBase {
     void update_network_icon_state(); // Updates the subject
     static void signal_poll_timer_cb(lv_timer_t* timer);
 
-    void handle_light_toggle();
-    void handle_light_long_press();
     void flash_light_icon();
     void ensure_led_observers();
     void handle_print_card_clicked();
     void handle_tip_text_clicked();
     void handle_tip_rotation_timer();
-    void handle_temp_clicked();
     void handle_printer_status_clicked();
-    void handle_network_clicked();
     void handle_printer_manager_clicked();
     void handle_ams_clicked();
     void on_extruder_temp_changed(int temp);
@@ -179,8 +181,6 @@ class HomePanel : public PanelBase {
     void on_led_state_changed(int state);
     void update_temp_icon_animation();
     void update_light_icon();
-    void handle_power_toggle();
-    void handle_power_long_press();
     void update_power_icon(bool is_on);
     void refresh_power_state(); // Query API to sync icon with actual device state
 
@@ -203,8 +203,8 @@ class HomePanel : public PanelBase {
     ObserverGuard led_brightness_observer_;
     ObserverGuard ams_slot_count_observer_;
 
-    // Observers for widget hardware gate subjects — triggers populate_widgets() on change
-    std::vector<ObserverGuard> widget_gate_observers_;
+    // Active PanelWidget instances (factory-created, lifecycle-managed)
+    std::vector<std::unique_ptr<helix::PanelWidget>> active_widgets_;
 
     // Print card observers (for showing progress during active print)
     ObserverGuard print_state_observer_;

@@ -3,6 +3,7 @@
 
 #include "ui_overlay_network_settings.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_modal.h"
 #include "ui_nav_manager.h"
 #include "ui_step_progress.h"
@@ -188,23 +189,22 @@ void NetworkSettingsOverlay::register_callbacks() {
 
     spdlog::debug("[NetworkSettingsOverlay] Registering event callbacks");
 
-    lv_xml_register_event_cb(nullptr, "on_wlan_toggle_changed", on_wlan_toggle_changed);
-    lv_xml_register_event_cb(nullptr, "on_refresh_clicked", on_refresh_clicked);
-    lv_xml_register_event_cb(nullptr, "on_test_network_clicked", on_test_network_clicked);
-    lv_xml_register_event_cb(nullptr, "on_add_other_clicked", on_add_other_clicked);
-    lv_xml_register_event_cb(nullptr, "on_network_item_clicked", on_network_item_clicked);
-
-    // Network test modal callbacks
-    lv_xml_register_event_cb(nullptr, "on_network_test_close", on_network_test_close);
-
-    // Hidden network modal callbacks
-    lv_xml_register_event_cb(nullptr, "on_hidden_cancel_clicked", on_hidden_cancel_clicked);
-    lv_xml_register_event_cb(nullptr, "on_hidden_connect_clicked", on_hidden_connect_clicked);
-    lv_xml_register_event_cb(nullptr, "on_security_changed", on_security_changed);
-
-    // Password modal callbacks
-    lv_xml_register_event_cb(nullptr, "on_wifi_password_cancel", on_wifi_password_cancel);
-    lv_xml_register_event_cb(nullptr, "on_wifi_password_connect", on_wifi_password_connect);
+    register_xml_callbacks({
+        {"on_wlan_toggle_changed", on_wlan_toggle_changed},
+        {"on_refresh_clicked", on_refresh_clicked},
+        {"on_test_network_clicked", on_test_network_clicked},
+        {"on_add_other_clicked", on_add_other_clicked},
+        {"on_network_item_clicked", on_network_item_clicked},
+        // Network test modal
+        {"on_network_test_close", on_network_test_close},
+        // Hidden network modal
+        {"on_hidden_cancel_clicked", on_hidden_cancel_clicked},
+        {"on_hidden_connect_clicked", on_hidden_connect_clicked},
+        {"on_security_changed", on_security_changed},
+        // Password modal
+        {"on_wifi_password_cancel", on_wifi_password_cancel},
+        {"on_wifi_password_connect", on_wifi_password_connect},
+    });
 
     callbacks_registered_ = true;
     spdlog::debug("[NetworkSettingsOverlay] Event callbacks registered");
@@ -946,6 +946,22 @@ void NetworkSettingsOverlay::handle_add_other_clicked() {
             spdlog::error("[NetworkSettingsOverlay] Failed to show hidden network modal");
             return;
         }
+
+        // Register soft keyboard for text inputs
+        lv_obj_t* ssid_input = lv_obj_find_by_name(hidden_network_modal_, "ssid_input");
+        if (ssid_input) {
+            helix::ui::modal_register_keyboard(hidden_network_modal_, ssid_input);
+            // Focus SSID input so user can start typing immediately
+            lv_group_t* group = lv_group_get_default();
+            if (group) {
+                lv_group_focus_obj(ssid_input);
+            }
+        }
+
+        lv_obj_t* password_input = lv_obj_find_by_name(hidden_network_modal_, "password_input");
+        if (password_input) {
+            helix::ui::modal_register_keyboard(hidden_network_modal_, password_input);
+        }
     }
 
     spdlog::debug("[NetworkSettingsOverlay] Hidden network modal shown");
@@ -1047,7 +1063,7 @@ void NetworkSettingsOverlay::handle_security_changed(lv_event_t* e) {
 }
 
 void NetworkSettingsOverlay::handle_network_item_clicked(lv_event_t* e) {
-    lv_obj_t* item = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    lv_obj_t* item = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
     if (!item)
         return;
 

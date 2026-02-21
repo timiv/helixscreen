@@ -246,11 +246,12 @@ class PrinterState {
     /**
      * @brief Get raw JSON state for complex queries
      *
-     * Thread-safe access to cached printer state.
+     * Thread-safe access to cached printer state. Returns a copy to avoid
+     * holding the mutex after the call returns.
      *
-     * @return Reference to JSON state object
+     * @return Copy of JSON state object
      */
-    json& get_json_state();
+    json get_json_state();
 
     //
     // Subject accessors for XML binding

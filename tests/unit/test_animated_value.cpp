@@ -8,6 +8,7 @@
  */
 
 #include "../lvgl_test_fixture.h"
+#include "display_settings_manager.h"
 #include "settings_manager.h"
 #include "ui/animated_value.h"
 
@@ -23,11 +24,11 @@ using namespace helix::ui;
 class AnimatedValueTestFixture : public LVGLTestFixture {
   public:
     AnimatedValueTestFixture() : LVGLTestFixture() {
-        // Ensure SettingsManager subjects are initialized for animations_enabled check
+        // Ensure settings subjects are initialized for animations_enabled check
         // init_subjects() is idempotent - safe to call multiple times
         SettingsManager::instance().init_subjects();
         // Enable animations for all tests by default
-        SettingsManager::instance().set_animations_enabled(true);
+        DisplaySettingsManager::instance().set_animations_enabled(true);
     }
 };
 
@@ -201,7 +202,7 @@ TEST_CASE_METHOD(AnimatedValueTestFixture, "AnimatedValue: instant update when a
     lv_subject_init_int(&subject, 0);
 
     // Disable animations
-    SettingsManager::instance().set_animations_enabled(false);
+    DisplaySettingsManager::instance().set_animations_enabled(false);
 
     int received_value = -1;
     AnimatedValue<int> animated;
@@ -217,7 +218,7 @@ TEST_CASE_METHOD(AnimatedValueTestFixture, "AnimatedValue: instant update when a
     REQUIRE(received_value == 100);
 
     // Re-enable animations for other tests
-    SettingsManager::instance().set_animations_enabled(true);
+    DisplaySettingsManager::instance().set_animations_enabled(true);
 
     animated.unbind();
     lv_subject_deinit(&subject);

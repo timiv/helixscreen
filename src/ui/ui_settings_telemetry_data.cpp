@@ -13,7 +13,6 @@
 #include "ui_toast_manager.h"
 
 #include "lvgl/src/others/translation/lv_translation.h"
-#include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "system/telemetry_manager.h"
 #include "theme_manager.h"

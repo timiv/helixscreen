@@ -8,6 +8,7 @@
 #include "device_display_name.h"
 #include "spdlog/spdlog.h"
 #include "static_subject_registry.h"
+#include "unit_conversions.h"
 
 #include <algorithm>
 
@@ -512,8 +513,8 @@ void TemperatureSensorManager::update_subjects() {
             continue;
         }
 
-        // Convert temperature to centidegrees (temp * 100)
-        int centidegrees = static_cast<int>(state_it->second.temperature * 100.0f);
+        // Convert temperature to centidegrees (×10 for 0.1°C resolution)
+        int centidegrees = helix::units::to_centidegrees(state_it->second.temperature);
         lv_subject_set_int(&subj_it->second->subject, centidegrees);
     }
 

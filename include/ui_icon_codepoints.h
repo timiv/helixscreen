@@ -122,6 +122,7 @@ static const IconMapping ICON_MAP[] = {
     {"folder_arrow_up",    "\xF3\xB1\xA7\xB0"},  // F19F0 folder-arrow-up (parent dir)
     {"folder_open",        "\xF3\xB0\x9D\xB0"},  // F0770 folder-open
     {"folder_upload",      "\xF3\xB0\x89\x99"},  // F0259 folder-upload
+    {"fridge_industrial",  "\xF3\xB1\x97\xAE"},  // F15EE fridge-industrial (chamber)
 
     // Grid icons
     {"grid_large",         "\xF3\xB0\x9D\x98"},  // F0758 grid-large

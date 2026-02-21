@@ -3,6 +3,7 @@
 
 #include "ui_panel_advanced.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_nav_manager.h"
 #include "ui_overlay_timelapse_install.h"
 #include "ui_overlay_timelapse_settings.h"
@@ -62,19 +63,19 @@ AdvancedPanel::AdvancedPanel(PrinterState& printer_state, MoonrakerAPI* api)
 
 void AdvancedPanel::init_subjects() {
     // Register XML event callbacks (must be done BEFORE XML is created)
-    lv_xml_register_event_cb(nullptr, "on_advanced_spoolman", on_spoolman_clicked);
-    lv_xml_register_event_cb(nullptr, "on_advanced_macros", on_macros_clicked);
-    lv_xml_register_event_cb(nullptr, "on_console_row_clicked", on_console_clicked);
-    lv_xml_register_event_cb(nullptr, "on_history_row_clicked", on_history_clicked);
-    lv_xml_register_event_cb(nullptr, "on_configure_print_start", on_configure_print_start_clicked);
-    lv_xml_register_event_cb(nullptr, "on_helix_plugin_install_clicked",
-                             on_helix_plugin_install_clicked);
-    lv_xml_register_event_cb(nullptr, "on_helix_plugin_uninstall_clicked",
-                             on_helix_plugin_uninstall_clicked);
-    lv_xml_register_event_cb(nullptr, "on_phase_tracking_changed", on_phase_tracking_changed);
-    lv_xml_register_event_cb(nullptr, "on_pid_tuning_clicked", on_pid_tuning_clicked);
-    lv_xml_register_event_cb(nullptr, "on_timelapse_setup_clicked", on_timelapse_setup_clicked);
-    lv_xml_register_event_cb(nullptr, "on_power_row_clicked", on_power_row_clicked);
+    register_xml_callbacks({
+        {"on_advanced_spoolman", on_spoolman_clicked},
+        {"on_advanced_macros", on_macros_clicked},
+        {"on_console_row_clicked", on_console_clicked},
+        {"on_history_row_clicked", on_history_clicked},
+        {"on_configure_print_start", on_configure_print_start_clicked},
+        {"on_helix_plugin_install_clicked", on_helix_plugin_install_clicked},
+        {"on_helix_plugin_uninstall_clicked", on_helix_plugin_uninstall_clicked},
+        {"on_phase_tracking_changed", on_phase_tracking_changed},
+        {"on_pid_tuning_clicked", on_pid_tuning_clicked},
+        {"on_timelapse_setup_clicked", on_timelapse_setup_clicked},
+        {"on_power_row_clicked", on_power_row_clicked},
+    });
 
     // Note: Input shaping uses on_input_shaper_row_clicked registered by InputShaperPanel
     // Note: Restart row doesn't exist - restart buttons have their own callbacks in

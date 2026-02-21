@@ -521,7 +521,7 @@ extract_release() {
             log_info "Backed up existing configuration (legacy location)"
         fi
 
-        # Backup helixscreen.env (preserves HELIX_DEBUG and other env customizations)
+        # Backup helixscreen.env (preserves HELIX_LOG_LEVEL and other env customizations)
         if [ -f "${INSTALL_DIR}/config/helixscreen.env" ]; then
             BACKUP_ENV="${TMP_DIR}/helixscreen.env.backup"
             cp "${INSTALL_DIR}/config/helixscreen.env" "$BACKUP_ENV"

@@ -2,12 +2,14 @@
 
 #include "abort_manager.h"
 
+#include "ui_effects.h"
 #include "ui_update_queue.h"
 #include "ui_utils.h"
 
 #include "moonraker_api.h"
+#include "observer_factory.h"
 #include "printer_state.h"
-#include "settings_manager.h"
+#include "safety_settings_manager.h"
 #include "static_panel_registry.h"
 
 #include <spdlog/spdlog.h>
@@ -282,8 +284,11 @@ void AbortManager::send_cancel_print() {
     // Register observer on print_state_enum to detect when Klipper reports print ended
     // This allows early completion before the timeout when the CANCEL_PRINT macro finishes
     if (printer_state_) {
-        cancel_state_observer_ = ObserverGuard(printer_state_->get_print_state_enum_subject(),
-                                               cancel_state_observer_cb, this);
+        cancel_state_observer_ = helix::ui::observe_int_immediate<AbortManager>(
+            printer_state_->get_print_state_enum_subject(), this,
+            [](AbortManager* self, int value) {
+                self->on_print_state_during_cancel(static_cast<PrintJobState>(value));
+            });
         spdlog::debug("[AbortManager] Registered print_state_enum observer for cancel detection");
     }
 
@@ -297,11 +302,11 @@ void AbortManager::send_cancel_print() {
     commands_sent_++;
 
     // Start timeout timer — only if escalation is enabled
-    bool escalation_enabled = SettingsManager::instance().get_cancel_escalation_enabled();
+    bool escalation_enabled = SafetySettingsManager::instance().get_cancel_escalation_enabled();
     if (escalation_enabled) {
         uint32_t timeout_ms =
             static_cast<uint32_t>(
-                SettingsManager::instance().get_cancel_escalation_timeout_seconds()) *
+                SafetySettingsManager::instance().get_cancel_escalation_timeout_seconds()) *
             1000;
         spdlog::info("[AbortManager] Cancel escalation enabled, timeout: {}ms", timeout_ms);
         cancel_timer_ = lv_timer_create(cancel_timer_cb, timeout_ms, this);
@@ -426,8 +431,10 @@ void AbortManager::wait_for_reconnect() {
 
     // Register observer on klippy_state subject to detect when klippy becomes ready
     if (printer_state_) {
-        klippy_observer_ = ObserverGuard(printer_state_->get_klippy_state_subject(),
-                                         klippy_state_observer_cb, this);
+        klippy_observer_ = helix::ui::observe_int_immediate<AbortManager>(
+            printer_state_->get_klippy_state_subject(), this, [](AbortManager* self, int value) {
+                self->on_klippy_state_changed(static_cast<KlippyState>(value));
+            });
         spdlog::debug("[AbortManager] Registered klippy_state observer for reconnect detection");
     }
 }
@@ -659,16 +666,6 @@ void AbortManager::on_print_state_during_cancel(PrintJobState state) {
     }
 }
 
-void AbortManager::cancel_state_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
-    auto* self = static_cast<AbortManager*>(lv_observer_get_user_data(observer));
-    if (!self) {
-        return;
-    }
-
-    auto print_state = static_cast<PrintJobState>(lv_subject_get_int(subject));
-    self->on_print_state_during_cancel(print_state);
-}
-
 // ============================================================================
 // Helper Methods
 // ============================================================================
@@ -725,7 +722,7 @@ void AbortManager::create_modal() {
     // Create fullscreen backdrop on lv_layer_top() so it survives screen changes
     // (Same pattern as Modal::show() but targeting lv_layer_top() instead of lv_screen_active())
     // Opacity 200 matches modal_backdrop_opacity in globals.xml
-    backdrop_ = ui_create_fullscreen_backdrop(lv_layer_top(), 200);
+    backdrop_ = helix::ui::create_fullscreen_backdrop(lv_layer_top(), 200);
     if (!backdrop_) {
         spdlog::error("[AbortManager] Failed to create backdrop on lv_layer_top()");
         return;
@@ -760,16 +757,6 @@ void AbortManager::update_visibility() {
         lv_obj_add_flag(backdrop_, LV_OBJ_FLAG_HIDDEN);
     }
     spdlog::debug("[AbortManager] Visibility updated: {}", visible ? "visible" : "hidden");
-}
-
-void AbortManager::klippy_state_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
-    auto* self = static_cast<AbortManager*>(lv_observer_get_user_data(observer));
-    if (!self) {
-        return;
-    }
-
-    auto klippy_state = static_cast<KlippyState>(lv_subject_get_int(subject));
-    self->on_klippy_state_changed(klippy_state);
 }
 
 // ============================================================================

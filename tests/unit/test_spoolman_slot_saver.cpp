@@ -181,7 +181,7 @@ TEST_CASE("SpoolmanSlotSaver save only updates weight when no filament-level cha
     MoonrakerAPIMock api(client, state);
 
     // Ensure mock has a spool with id=42
-    auto& spools = api.get_mock_spools();
+    auto& spools = api.spoolman_mock().get_mock_spools();
     SpoolInfo test_spool;
     test_spool.id = 42;
     test_spool.filament_id = 100;
@@ -210,7 +210,7 @@ TEST_CASE("SpoolmanSlotSaver save only updates weight when no filament-level cha
     REQUIRE(callback_success);
 
     // Verify weight was updated in mock
-    for (const auto& spool : api.get_mock_spools()) {
+    for (const auto& spool : api.spoolman_mock().get_mock_spools()) {
         if (spool.id == 42) {
             REQUIRE(spool.remaining_weight_g == Catch::Approx(650.0));
             break;
@@ -225,7 +225,7 @@ TEST_CASE("SpoolmanSlotSaver save re-links spool to existing filament when vendo
     MoonrakerAPIMock api(client, state);
 
     // Set up mock spool for id=42
-    auto& spools = api.get_mock_spools();
+    auto& spools = api.spoolman_mock().get_mock_spools();
     SpoolInfo test_spool;
     test_spool.id = 42;
     test_spool.filament_id = 100;
@@ -246,7 +246,7 @@ TEST_CASE("SpoolmanSlotSaver save re-links spool to existing filament when vendo
     // Create the target filament via mock API so get_spoolman_filaments returns it
     bool filament_created = false;
     int target_filament_id = 0;
-    api.create_spoolman_filament(
+    api.spoolman().create_spoolman_filament(
         target_filament_json,
         [&](const FilamentInfo& info) {
             target_filament_id = info.id;
@@ -284,7 +284,7 @@ TEST_CASE("SpoolmanSlotSaver save creates new filament when no match exists",
     MoonrakerAPIMock api(client, state);
 
     // Set up mock spool for id=42
-    auto& spools = api.get_mock_spools();
+    auto& spools = api.spoolman_mock().get_mock_spools();
     SpoolInfo test_spool;
     test_spool.id = 42;
     test_spool.filament_id = 100;
@@ -323,7 +323,7 @@ TEST_CASE("SpoolmanSlotSaver save chains filament relink then weight update when
     MoonrakerAPIMock api(client, state);
 
     // Set up mock spool
-    auto& spools = api.get_mock_spools();
+    auto& spools = api.spoolman_mock().get_mock_spools();
     SpoolInfo test_spool;
     test_spool.id = 42;
     test_spool.filament_id = 100;
@@ -353,7 +353,7 @@ TEST_CASE("SpoolmanSlotSaver save chains filament relink then weight update when
     REQUIRE(callback_success);
 
     // Verify weight was updated
-    for (const auto& spool : api.get_mock_spools()) {
+    for (const auto& spool : api.spoolman_mock().get_mock_spools()) {
         if (spool.id == 42) {
             REQUIRE(spool.remaining_weight_g == Catch::Approx(500.0));
             break;

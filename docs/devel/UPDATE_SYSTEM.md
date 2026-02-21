@@ -572,7 +572,7 @@ Enable verbose logging for full update system trace:
 ./build/bin/helix-screen -vvv # TRACE level for maximum detail
 ```
 
-Or for deployed installations, set `HELIX_DEBUG=1` in `~/helixscreen/config/helixscreen.env` and restart the service.
+Or for deployed installations, set `HELIX_LOG_LEVEL=debug` in `~/helixscreen/config/helixscreen.env` and restart the service.
 
 ---
 

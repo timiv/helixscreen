@@ -1077,7 +1077,7 @@ sudo ./bin/helix-launcher.sh --debug --log-dest=console
 Add to the service file:
 ```ini
 [Service]
-Environment="HELIX_DEBUG=1"
+Environment="HELIX_LOG_LEVEL=debug"
 ```
 
 #### Adventurer 5M / Forge-X (SysV init)

@@ -219,6 +219,76 @@ POLKIT_EOF
     grep -q '"mks"' "$rules_dest"
 }
 
+@test "install_permission_rules: JS polkit rule never contains @@HELIX_USER@@ placeholder" {
+    # Regression: the .pkla template has @@HELIX_USER@@ which must be templated.
+    # The JS rules path generates the rule inline with the actual username.
+    # Verify no template placeholders leak into the generated rule.
+    for user in biqu mks pi klipper pbrown; do
+        local helix_user="$user"
+        local rules_dest="$BATS_TEST_TMPDIR/50-helixscreen-network-${user}.rules"
+
+        cat > "$rules_dest" << POLKIT_EOF
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.freedesktop.NetworkManager.") === 0 &&
+        subject.user === "${helix_user}") {
+        return polkit.Result.YES;
+    }
+});
+POLKIT_EOF
+
+        ! grep -q "@@HELIX_USER@@" "$rules_dest"
+        grep -q "\"${user}\"" "$rules_dest"
+    done
+}
+
+@test "install_permission_rules: JS polkit rule has valid JavaScript syntax" {
+    local helix_user="biqu"
+    local rules_dest="$BATS_TEST_TMPDIR/50-helixscreen-network.rules"
+
+    cat > "$rules_dest" << POLKIT_EOF
+// Installed by HelixScreen — allow service user to manage NetworkManager
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.freedesktop.NetworkManager.") === 0 &&
+        subject.user === "${helix_user}") {
+        return polkit.Result.YES;
+    }
+});
+POLKIT_EOF
+
+    # Must be a complete, balanced JS block
+    grep -q "polkit.addRule(function" "$rules_dest"
+    grep -q "});" "$rules_dest"
+    # Must use strict equality (===) not loose (==)
+    grep -q "===" "$rules_dest"
+    # Must match NetworkManager actions
+    grep -q "org.freedesktop.NetworkManager." "$rules_dest"
+}
+
+# =============================================================================
+# Regression: pkla template must not be deployed untemplated
+# =============================================================================
+
+@test "install_permission_rules: pkla source file contains placeholder (not a real username)" {
+    # The .pkla file in config/ is a TEMPLATE — it must have the placeholder.
+    # If someone accidentally replaces the placeholder with a real user,
+    # the installer will deploy it for all users with the wrong identity.
+    local pkla_src="$INSTALL_DIR/config/helixscreen-network.pkla"
+    [ -f "$pkla_src" ]
+    grep -q "@@HELIX_USER@@" "$pkla_src"
+    # Must NOT contain any hardcoded real usernames
+    ! grep -q "unix-user:biqu" "$pkla_src"
+    ! grep -q "unix-user:root" "$pkla_src"
+    ! grep -q "unix-user:pi" "$pkla_src"
+}
+
+@test "install_permission_rules: pkla deployed without templating would be broken" {
+    # Regression guard: deploying the raw .pkla template without sed would match
+    # no real user ("@@HELIX_USER@@" is not a valid username)
+    local pkla_src="$INSTALL_DIR/config/helixscreen-network.pkla"
+    # The raw template must match the literal placeholder
+    grep -q "Identity=unix-user:@@HELIX_USER@@" "$pkla_src"
+}
+
 # =============================================================================
 # nmcli requirement
 # =============================================================================

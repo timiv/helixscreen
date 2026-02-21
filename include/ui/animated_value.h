@@ -10,7 +10,7 @@
  * Key features:
  * - Retarget pattern: mid-animation value changes chase the new target
  * - Threshold skipping: ignores tiny changes to prevent jitter
- * - Animation toggle: respects SettingsManager::get_animations_enabled()
+ * - Animation toggle: respects DisplaySettingsManager::get_animations_enabled()
  * - RAII cleanup: automatically stops animation on destruction
  *
  * @pattern Observer + Animation - Subjects update DATA, animations update DISPLAY
@@ -37,8 +37,9 @@
 
 #include "ui_observer_guard.h"
 
+#include "display_settings_manager.h"
 #include "lvgl/lvgl.h"
-#include "settings_manager.h"
+#include "observer_factory.h"
 
 #include <spdlog/spdlog.h>
 
@@ -135,8 +136,12 @@ template <typename T> class AnimatedValue {
         // Invoke callback with initial value
         display_callback_(display_value_);
 
-        // Create observer for subject changes
-        observer_ = ObserverGuard(subject, observer_callback, this);
+        // Create observer for subject changes (immediate - callback only updates animation state,
+        // never modifies observer lifecycle)
+        observer_ = helix::ui::observe_int_immediate<AnimatedValue<T>>(
+            subject, this, [](AnimatedValue<T>* self, int value) {
+                self->on_subject_changed(static_cast<T>(value));
+            });
     }
 
     /**
@@ -225,7 +230,7 @@ template <typename T> class AnimatedValue {
         target_value_ = new_value;
 
         // Check if animations are enabled
-        if (!SettingsManager::instance().get_animations_enabled()) {
+        if (!DisplaySettingsManager::instance().get_animations_enabled()) {
             // Instant update
             spdlog::trace("[AnimatedValue] Animations disabled, instant update");
             stop_animation();
@@ -275,17 +280,6 @@ template <typename T> class AnimatedValue {
             // synchronously during deletion, it will see anim_running_ == false and bail
             anim_running_ = false;
             lv_anim_delete(this, anim_exec_cb);
-        }
-    }
-
-    /**
-     * @brief Static observer callback (C-style for LVGL)
-     */
-    static void observer_callback(lv_observer_t* observer, lv_subject_t* subject) {
-        auto* self = static_cast<AnimatedValue*>(lv_observer_get_user_data(observer));
-        if (self) {
-            T new_value = static_cast<T>(lv_subject_get_int(subject));
-            self->on_subject_changed(new_value);
         }
     }
 

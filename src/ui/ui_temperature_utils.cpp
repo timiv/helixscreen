@@ -6,6 +6,7 @@
 #include "spdlog/spdlog.h"
 #include "theme_manager.h"
 
+#include <algorithm>
 #include <cstdio>
 
 namespace helix {
@@ -110,6 +111,51 @@ lv_color_t get_heating_state_color(int current_deg, int target_deg, int toleranc
         // AT_TEMP: Within tolerance of target - GREEN
         return theme_manager_get_color("success");
     }
+}
+
+// ============================================================================
+// Heater Display
+// ============================================================================
+
+HeaterDisplayResult heater_display(int current_centi, int target_centi) {
+    HeaterDisplayResult result;
+
+    // Convert centi-degrees to degrees (integer division is fine for display)
+    int current_deg = current_centi / 100;
+    int target_deg = target_centi / 100;
+
+    // Format temperature string
+    char buf[32];
+    if (target_centi > 0) {
+        std::snprintf(buf, sizeof(buf), "%d / %d°C", current_deg, target_deg);
+    } else {
+        std::snprintf(buf, sizeof(buf), "%d°C", current_deg);
+    }
+    result.temp = buf;
+
+    // Calculate percentage (clamped to 0-100)
+    if (target_centi <= 0) {
+        result.pct = 0;
+    } else {
+        int pct = (current_centi * 100) / target_centi;
+        result.pct = std::clamp(pct, 0, 100);
+    }
+
+    // Determine status using shared tolerance constant
+    if (target_centi <= 0) {
+        result.status = "Off";
+    } else if (current_deg < target_deg - DEFAULT_AT_TEMP_TOLERANCE) {
+        result.status = "Heating...";
+    } else if (current_deg > target_deg + DEFAULT_AT_TEMP_TOLERANCE) {
+        result.status = "Cooling";
+    } else {
+        result.status = "Ready";
+    }
+
+    // Get color from the same heating state logic
+    result.color = get_heating_state_color(current_deg, target_deg, DEFAULT_AT_TEMP_TOLERANCE);
+
+    return result;
 }
 
 } // namespace temperature

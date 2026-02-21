@@ -3,6 +3,7 @@
 
 #include "ui_panel_step_test.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_event_safety.h"
 
 #include "app_globals.h"
@@ -50,9 +51,11 @@ void StepTestPanel::init_subjects() {
     }
 
     // Register XML event callbacks (must be done BEFORE XML is created)
-    lv_xml_register_event_cb(nullptr, "on_step_test_prev", on_prev_clicked);
-    lv_xml_register_event_cb(nullptr, "on_step_test_next", on_next_clicked);
-    lv_xml_register_event_cb(nullptr, "on_step_test_complete", on_complete_clicked);
+    register_xml_callbacks({
+        {"on_step_test_prev", on_prev_clicked},
+        {"on_step_test_next", on_next_clicked},
+        {"on_step_test_complete", on_complete_clicked},
+    });
 
     subjects_initialized_ = true;
     spdlog::debug("[{}] Subjects initialized, event callbacks registered", get_name());

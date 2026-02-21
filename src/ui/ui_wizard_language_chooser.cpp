@@ -5,8 +5,9 @@
 #include "ui_wizard.h"
 
 #include "config.h"
-#include "settings_manager.h"
+#include "display_settings_manager.h"
 #include "static_panel_registry.h"
+#include "system_settings_manager.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -187,9 +188,9 @@ static void on_language_selected(lv_event_t* e) {
     lv_obj_t* clicked_btn = static_cast<lv_obj_t*>(lv_event_get_target(e));
     update_language_list_selection(clicked_btn);
 
-    // Apply language immediately via SettingsManager (hot-reload)
+    // Apply language immediately via SystemSettingsManager (hot-reload)
     // This updates the subject, calls lv_translation_set_language(), and persists to config
-    SettingsManager::instance().set_language(LANGUAGE_CODES[index]);
+    SystemSettingsManager::instance().set_language(LANGUAGE_CODES[index]);
 
     // Refresh the wizard header with new translations
     ui_wizard_refresh_header_translations();
@@ -247,7 +248,7 @@ void WizardLanguageChooserStep::animate_crossfade(const char* new_text) {
     }
 
     // Check if animations are enabled
-    if (!SettingsManager::instance().get_animations_enabled()) {
+    if (!DisplaySettingsManager::instance().get_animations_enabled()) {
         // No animation: just update the text immediately
         lv_subject_copy_string(&welcome_text_, new_text);
         return;

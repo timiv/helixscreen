@@ -3,6 +3,7 @@
 
 #include "ui_print_tune_overlay.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_nav_manager.h"
 #include "ui_panel_common.h"
@@ -206,14 +207,16 @@ void PrintTuneOverlay::init_subjects_internal() {
     UI_MANAGED_SUBJECT_INT(z_step_active_subjects_[3], 0, "z_step_3_active", subjects_);
 
     // Register XML event callbacks
-    lv_xml_register_event_cb(nullptr, "on_tune_speed_display", on_tune_speed_display_cb);
-    lv_xml_register_event_cb(nullptr, "on_tune_speed_send", on_tune_speed_send_cb);
-    lv_xml_register_event_cb(nullptr, "on_tune_flow_display", on_tune_flow_display_cb);
-    lv_xml_register_event_cb(nullptr, "on_tune_flow_send", on_tune_flow_send_cb);
-    lv_xml_register_event_cb(nullptr, "on_tune_reset_clicked", on_tune_reset_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "on_tune_save_z_offset", on_tune_save_z_offset_cb);
-    lv_xml_register_event_cb(nullptr, "on_tune_z_step", on_tune_z_step_cb);
-    lv_xml_register_event_cb(nullptr, "on_tune_z_adjust", on_tune_z_adjust_cb);
+    register_xml_callbacks({
+        {"on_tune_speed_display", on_tune_speed_display_cb},
+        {"on_tune_speed_send", on_tune_speed_send_cb},
+        {"on_tune_flow_display", on_tune_flow_display_cb},
+        {"on_tune_flow_send", on_tune_flow_send_cb},
+        {"on_tune_reset_clicked", on_tune_reset_clicked_cb},
+        {"on_tune_save_z_offset", on_tune_save_z_offset_cb},
+        {"on_tune_z_step", on_tune_z_step_cb},
+        {"on_tune_z_adjust", on_tune_z_adjust_cb},
+    });
 
     subjects_initialized_ = true;
     spdlog::debug("[PrintTuneOverlay] Subjects initialized");

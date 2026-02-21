@@ -3,11 +3,12 @@
 
 #include "ui_touch_calibration_overlay.h"
 
+#include "ui_callback_helpers.h"
+#include "ui_effects.h"
 #include "ui_event_safety.h"
 #include "ui_nav_manager.h"
 #include "ui_step_progress.h"
 #include "ui_toast_manager.h"
-#include "ui_utils.h"
 
 #include "config.h"
 #include "display_manager.h"
@@ -201,11 +202,13 @@ void TouchCalibrationOverlay::init_subjects() {
 void TouchCalibrationOverlay::register_callbacks() {
     spdlog::debug("[{}] Registering event callbacks", get_name());
 
-    lv_xml_register_event_cb(nullptr, "on_touch_cal_start_clicked", on_touch_cal_start_clicked);
-    lv_xml_register_event_cb(nullptr, "on_touch_cal_accept_clicked", on_touch_cal_accept_clicked);
-    lv_xml_register_event_cb(nullptr, "on_touch_cal_retry_clicked", on_touch_cal_retry_clicked);
-    lv_xml_register_event_cb(nullptr, "on_touch_cal_overlay_touched", on_touch_cal_overlay_touched);
-    lv_xml_register_event_cb(nullptr, "on_touch_cal_back_clicked", on_touch_cal_back_clicked);
+    register_xml_callbacks({
+        {"on_touch_cal_start_clicked", on_touch_cal_start_clicked},
+        {"on_touch_cal_accept_clicked", on_touch_cal_accept_clicked},
+        {"on_touch_cal_retry_clicked", on_touch_cal_retry_clicked},
+        {"on_touch_cal_overlay_touched", on_touch_cal_overlay_touched},
+        {"on_touch_cal_back_clicked", on_touch_cal_back_clicked},
+    });
 
     spdlog::debug("[{}] Event callbacks registered", get_name());
 }
@@ -531,7 +534,7 @@ void TouchCalibrationOverlay::handle_screen_touched(lv_event_t* e) {
             // Use overlay_root_ as parent (full screen) with screen coordinates
             lv_obj_t* content = lv_obj_find_by_name(overlay_root_, "calibration_content");
             if (content) {
-                ui_create_ripple(content, transformed.x, transformed.y);
+                create_ripple(content, transformed.x, transformed.y);
             }
 
             spdlog::debug("[{}] Verify: raw({},{}) -> transformed({},{})", get_name(), raw.x, raw.y,
