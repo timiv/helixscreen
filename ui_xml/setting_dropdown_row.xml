@@ -30,18 +30,18 @@
     <!-- Left side: Optional icon -->
     <icon name="row_icon" src="$icon" size="sm" variant="secondary"/>
     <!-- Middle: Label and optional description -->
-    <lv_obj height="content"
+    <lv_obj height="content" width="0"
             style_pad_all="0" flex_flow="column" style_pad_gap="#space_xs" flex_grow="1" scrollable="false">
-      <text_body name="label" text="$label" translation_tag="$label_tag">
+      <text_body name="label" text="$label" translation_tag="$label_tag" long_mode="wrap" width="100%">
         <bind_style name="label_enabled" subject="$disabled" ref_value="0"/>
         <bind_style name="label_disabled" subject="$disabled" ref_value="1"/>
       </text_body>
       <!-- Description shown only if provided -->
-      <text_small name="description" text="$description" translation_tag="$description_tag"/>
+      <text_small name="description" text="$description" translation_tag="$description_tag" long_mode="wrap" width="100%"/>
     </lv_obj>
     <!-- Right side: Dropdown -->
     <lv_dropdown name="dropdown"
-                 width="255" height="40" options="$options" style_radius="#border_radius" style_border_width="0">
+                 width="33%" height="content" options="$options" style_radius="#border_radius" style_border_width="0">
       <bind_state_if_eq subject="$disabled" state="disabled" ref_value="1"/>
       <event_cb trigger="value_changed" callback="$callback"/>
     </lv_dropdown>
