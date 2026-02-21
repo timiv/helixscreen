@@ -5,9 +5,12 @@
 
 #include "ams_types.h"
 #include "audio_settings_manager.h"
+#include "display_settings_manager.h"
+#include "input_settings_manager.h"
 #include "lvgl/lvgl.h"
 #include "safety_settings_manager.h"
 #include "subject_managed_panel.h"
+#include "system_settings_manager.h"
 
 #include <functional>
 #include <memory>
@@ -20,9 +23,6 @@ class MoonrakerClient;
 /** @brief Print completion notification mode (Off=0, Notification=1, Alert=2) */
 enum class CompletionAlertMode { OFF = 0, NOTIFICATION = 1, ALERT = 2 };
 
-/** @brief Time display format (12-hour with AM/PM or 24-hour) */
-enum class TimeFormat { HOUR_12 = 0, HOUR_24 = 1 };
-
 /** @brief Z movement style override (Auto=detect from kinematics, or force) */
 enum class ZMovementStyle { AUTO = 0, BED_MOVES = 1, NOZZLE_MOVES = 2 };
 
@@ -32,32 +32,20 @@ enum class ZMovementStyle { AUTO = 0, BED_MOVES = 1, NOZZLE_MOVES = 2 };
  * Coordinates persistence (Config), reactive subjects (lv_subject_t), immediate
  * effects (theme changes, Moonraker commands), and user preferences.
  *
- * Architecture:
- * ```
- * SettingsManager
- * ├── Persistence Layer (wraps Config)
- * │   └── JSON storage in helixconfig.json
- * ├── Reactive Layer (lv_subject_t)
- * │   └── UI automatically updates when settings change
- * ├── Effect Layer (immediate actions)
- * │   └── Apply dark mode, set LED, adjust sleep timer
- * └── Remote Layer (Moonraker API)
- *     └── LED commands, calibration triggers
- * ```
+ * Domain-specific settings are delegated to specialized managers:
+ * - DisplaySettingsManager: dark mode, theme, dim, sleep, brightness, animations, etc.
+ * - SystemSettingsManager: language, update channel, telemetry
+ * - InputSettingsManager: scroll throw, scroll limit
+ * - AudioSettingsManager: sounds, volume, UI sounds, sound theme, completion alerts
+ * - SafetySettingsManager: e-stop confirmation, cancel escalation
+ *
+ * SettingsManager retains ownership of:
+ * - LED control (depends on MoonrakerClient)
+ * - Z movement style (depends on PrinterState)
+ * - External spool info (depends on AMS types)
+ * - Printer image (config-only, simple delegation candidate for later)
  *
  * Thread safety: Single-threaded, main LVGL thread only.
- *
- * Usage:
- * ```cpp
- * auto& settings = SettingsManager::instance();
- * settings.init_subjects();  // Before XML creation
- *
- * // Toggle dark mode (updates UI, applies theme, persists)
- * settings.set_dark_mode(true);
- *
- * // Get subject for XML binding
- * lv_subject_t* subject = settings.subject_dark_mode();
- * ```
  */
 class SettingsManager {
   public:
@@ -76,6 +64,7 @@ class SettingsManager {
      *
      * MUST be called BEFORE creating XML components that bind to settings subjects.
      * Loads initial values from Config and registers subjects with LVGL XML system.
+     * Also initializes all domain-specific managers.
      */
     void init_subjects();
 
@@ -98,281 +87,220 @@ class SettingsManager {
     void set_moonraker_client(MoonrakerClient* client);
 
     // =========================================================================
-    // APPEARANCE SETTINGS
+    // APPEARANCE SETTINGS (delegated to DisplaySettingsManager)
     // =========================================================================
 
-    /**
-     * @brief Get dark mode state
-     * @return true if dark mode enabled
-     */
-    bool get_dark_mode() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    bool get_dark_mode() const {
+        return DisplaySettingsManager::instance().get_dark_mode();
+    }
 
-    /**
-     * @brief Set dark mode state
-     *
-     * Updates subject (UI reacts) and persists to Config.
-     * Note: Theme change requires application restart to take effect.
-     *
-     * @param enabled true for dark mode, false for light mode
-     */
-    void set_dark_mode(bool enabled);
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void set_dark_mode(bool enabled) {
+        DisplaySettingsManager::instance().set_dark_mode(enabled);
+    }
 
-    /**
-     * @brief Check if current theme supports dark mode toggle
-     * @return true if theme supports both dark and light modes
-     */
-    bool is_dark_mode_available() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    bool is_dark_mode_available() const {
+        return DisplaySettingsManager::instance().is_dark_mode_available();
+    }
 
-    /**
-     * @brief Called when theme changes to update mode availability
-     *
-     * If theme is single-mode:
-     * - Sets dark_mode_available subject to 0 (toggle disabled)
-     * - Auto-switches to supported mode
-     * - Updates dark_mode subject to match
-     *
-     * If theme is dual-mode:
-     * - Sets dark_mode_available subject to 1 (toggle enabled)
-     */
-    void on_theme_changed();
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void on_theme_changed() {
+        DisplaySettingsManager::instance().on_theme_changed();
+    }
 
-    /** @brief Get current theme filename (without .json) */
-    std::string get_theme_name() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    std::string get_theme_name() const {
+        return DisplaySettingsManager::instance().get_theme_name();
+    }
 
-    /** @brief Set theme by filename, marks restart pending */
-    void set_theme_name(const std::string& name);
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void set_theme_name(const std::string& name) {
+        DisplaySettingsManager::instance().set_theme_name(name);
+    }
 
-    /** @brief Get dropdown options string for discovered themes */
-    std::string get_theme_options() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    std::string get_theme_options() const {
+        return DisplaySettingsManager::instance().get_theme_options();
+    }
 
-    /** @brief Get index of current theme in options list */
-    int get_theme_index() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    int get_theme_index() const {
+        return DisplaySettingsManager::instance().get_theme_index();
+    }
 
-    /** @brief Set theme by dropdown index */
-    void set_theme_by_index(int index);
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void set_theme_by_index(int index) {
+        DisplaySettingsManager::instance().set_theme_by_index(index);
+    }
 
-    /**
-     * @brief Get display dim timeout in seconds
-     * @return Dim timeout (0 = disabled)
-     */
-    int get_display_dim_sec() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    int get_display_dim_sec() const {
+        return DisplaySettingsManager::instance().get_display_dim_sec();
+    }
 
-    /**
-     * @brief Set display dim timeout
-     *
-     * Updates subject, persists, and notifies DisplayManager immediately.
-     * Screen dims to lower brightness after this timeout of inactivity.
-     *
-     * @param seconds Dim timeout (0 to disable)
-     */
-    void set_display_dim_sec(int seconds);
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void set_display_dim_sec(int seconds) {
+        DisplaySettingsManager::instance().set_display_dim_sec(seconds);
+    }
 
-    /**
-     * @brief Get display sleep timeout in seconds
-     * @return Sleep timeout (0 = disabled)
-     */
-    int get_display_sleep_sec() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    int get_display_sleep_sec() const {
+        return DisplaySettingsManager::instance().get_display_sleep_sec();
+    }
 
-    /**
-     * @brief Set display sleep timeout
-     *
-     * Updates subject and persists. Effect applied elsewhere (display driver).
-     *
-     * @param seconds Sleep timeout (0 to disable)
-     */
-    void set_display_sleep_sec(int seconds);
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void set_display_sleep_sec(int seconds) {
+        DisplaySettingsManager::instance().set_display_sleep_sec(seconds);
+    }
 
-    /**
-     * @brief Get display brightness (0-100)
-     * @return Brightness percentage
-     */
-    int get_brightness() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    int get_brightness() const {
+        return DisplaySettingsManager::instance().get_brightness();
+    }
 
-    /**
-     * @brief Set display brightness
-     *
-     * Updates subject and persists. Effect applied elsewhere (display driver).
-     *
-     * @param percent Brightness percentage (0-100, clamped to 10-100 minimum)
-     */
-    void set_brightness(int percent);
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void set_brightness(int percent) {
+        DisplaySettingsManager::instance().set_brightness(percent);
+    }
 
-    /**
-     * @brief Check if hardware backlight control is available
-     *
-     * Returns true if a hardware backend is active (Sysfs or Allwinner).
-     * In test mode, returns true (simulated backlight for UI testing).
-     * On desktop without hardware, returns false.
-     *
-     * @return true if brightness slider should be shown in UI
-     */
-    bool has_backlight_control() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    bool has_backlight_control() const {
+        return DisplaySettingsManager::instance().has_backlight_control();
+    }
 
-    /**
-     * @brief Get sleep while printing state
-     * @return true if display is allowed to sleep during active prints
-     */
-    bool get_sleep_while_printing() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    bool get_sleep_while_printing() const {
+        return DisplaySettingsManager::instance().get_sleep_while_printing();
+    }
 
-    /**
-     * @brief Set sleep while printing state
-     *
-     * When enabled (default), the display can dim and sleep during active prints
-     * based on the normal inactivity timeout. When disabled, the display stays
-     * awake for the entire duration of a print.
-     *
-     * @param enabled true to allow sleep during prints, false to inhibit
-     */
-    void set_sleep_while_printing(bool enabled);
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void set_sleep_while_printing(bool enabled) {
+        DisplaySettingsManager::instance().set_sleep_while_printing(enabled);
+    }
 
-    /**
-     * @brief Get animations enabled state
-     * @return true if UI animations are enabled
-     */
-    bool get_animations_enabled() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    bool get_animations_enabled() const {
+        return DisplaySettingsManager::instance().get_animations_enabled();
+    }
 
-    /**
-     * @brief Set animations enabled state
-     *
-     * Controls whether delightful UI animations (toasts, modals, progress bars,
-     * etc.) play or are instant. Useful for accessibility or performance.
-     *
-     * @param enabled true to enable animations, false for instant transitions
-     */
-    void set_animations_enabled(bool enabled);
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void set_animations_enabled(bool enabled) {
+        DisplaySettingsManager::instance().set_animations_enabled(enabled);
+    }
 
-    /**
-     * @brief Get G-code 3D preview enabled state
-     * @return true if 3D G-code rendering is enabled during print status
-     */
-    bool get_gcode_3d_enabled() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    bool get_gcode_3d_enabled() const {
+        return DisplaySettingsManager::instance().get_gcode_3d_enabled();
+    }
 
-    /**
-     * @brief Set G-code 3D preview enabled state
-     *
-     * When enabled, print status shows interactive 3D G-code preview.
-     * When disabled, shows thumbnail only (saves memory on constrained devices).
-     *
-     * @param enabled true to enable 3D preview, false for thumbnail only
-     */
-    void set_gcode_3d_enabled(bool enabled);
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void set_gcode_3d_enabled(bool enabled) {
+        DisplaySettingsManager::instance().set_gcode_3d_enabled(enabled);
+    }
 
-    /**
-     * @brief Get bed mesh render mode
-     * @return Render mode (0=Auto, 1=3D, 2=2D heatmap)
-     */
-    int get_bed_mesh_render_mode() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    int get_bed_mesh_render_mode() const {
+        return DisplaySettingsManager::instance().get_bed_mesh_render_mode();
+    }
 
-    /**
-     * @brief Set bed mesh render mode
-     *
-     * Controls how bed mesh visualization is rendered:
-     * - Auto (0): System decides based on measured FPS
-     * - 3D (1): Always use 3D perspective view
-     * - 2D (2): Always use 2D heatmap (faster on slow hardware)
-     *
-     * @param mode Render mode (0=Auto, 1=3D, 2=2D)
-     */
-    void set_bed_mesh_render_mode(int mode);
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void set_bed_mesh_render_mode(int mode) {
+        DisplaySettingsManager::instance().set_bed_mesh_render_mode(mode);
+    }
 
-    /** @brief Get dropdown options string "Auto\n3D View\n2D Heatmap" */
-    static const char* get_bed_mesh_render_mode_options();
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    static const char* get_bed_mesh_render_mode_options() {
+        return DisplaySettingsManager::get_bed_mesh_render_mode_options();
+    }
 
-    /** @brief Get custom printer image ID (empty = auto-detect) */
-    std::string get_printer_image() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    std::string get_printer_image() const {
+        return DisplaySettingsManager::instance().get_printer_image();
+    }
 
-    /** @brief Set custom printer image ID and persist. Empty = auto-detect. */
-    void set_printer_image(const std::string& id);
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void set_printer_image(const std::string& id) {
+        DisplaySettingsManager::instance().set_printer_image(id);
+    }
 
-    /**
-     * @brief Get bed mesh zero plane visibility
-     * @return true if translucent Z=0 reference plane should be shown in 3D view
-     */
-    bool get_bed_mesh_show_zero_plane() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    bool get_bed_mesh_show_zero_plane() const {
+        return DisplaySettingsManager::instance().get_bed_mesh_show_zero_plane();
+    }
 
-    /**
-     * @brief Get G-code render mode
-     * @return Render mode (0=Auto, 1=3D View, 2=2D Layer View)
-     */
-    int get_gcode_render_mode() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    int get_gcode_render_mode() const {
+        return DisplaySettingsManager::instance().get_gcode_render_mode();
+    }
 
-    /**
-     * @brief Set G-code render mode
-     *
-     * Controls how G-code visualization is rendered:
-     * - Auto (0): System decides based on measured FPS
-     * - 3D View (1): Always use TinyGL 3D ribbon view
-     * - 2D Layers (2): Always use 2D orthographic layer view (fast on AD5M)
-     *
-     * @param mode Render mode (0=Auto, 1=3D, 2=2D)
-     */
-    void set_gcode_render_mode(int mode);
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void set_gcode_render_mode(int mode) {
+        DisplaySettingsManager::instance().set_gcode_render_mode(mode);
+    }
 
-    /** @brief Get dropdown options string "Auto\n3D View\n2D Layers" */
-    static const char* get_gcode_render_mode_options();
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    static const char* get_gcode_render_mode_options() {
+        return DisplaySettingsManager::get_gcode_render_mode_options();
+    }
 
-    /**
-     * @brief Get time format setting
-     * @return Current time format (12-hour or 24-hour)
-     */
-    TimeFormat get_time_format() const;
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    TimeFormat get_time_format() const {
+        return DisplaySettingsManager::instance().get_time_format();
+    }
 
-    /**
-     * @brief Set time format
-     *
-     * Controls whether times are displayed as 12-hour (with AM/PM) or 24-hour format.
-     * Affects temp graph, file dates, history timestamps, etc.
-     *
-     * @param format HOUR_12 for "2:30 PM" style, HOUR_24 for "14:30" style
-     */
-    void set_time_format(TimeFormat format);
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    void set_time_format(TimeFormat format) {
+        DisplaySettingsManager::instance().set_time_format(format);
+    }
 
-    /** @brief Get dropdown options string "12 Hour\n24 Hour" */
-    static const char* get_time_format_options();
+    /** @deprecated Use DisplaySettingsManager::instance() directly */
+    static const char* get_time_format_options() {
+        return DisplaySettingsManager::get_time_format_options();
+    }
 
     // =========================================================================
-    // LANGUAGE SETTINGS
+    // LANGUAGE SETTINGS (delegated to SystemSettingsManager)
     // =========================================================================
 
-    /**
-     * @brief Get current language code
-     * @return Language code (e.g., "en", "de", "fr", "es", "ru")
-     */
-    std::string get_language() const;
+    /** @deprecated Use SystemSettingsManager::instance() directly */
+    std::string get_language() const {
+        return SystemSettingsManager::instance().get_language();
+    }
 
-    /**
-     * @brief Set language and apply translations
-     *
-     * Updates subject, calls lv_translation_set_language() for hot-reload,
-     * and persists to Config. UI automatically updates via LVGL events.
-     *
-     * @param lang Language code (e.g., "en", "de", "fr", "es", "ru")
-     */
-    void set_language(const std::string& lang);
+    /** @deprecated Use SystemSettingsManager::instance() directly */
+    void set_language(const std::string& lang) {
+        SystemSettingsManager::instance().set_language(lang);
+    }
 
-    /**
-     * @brief Set language by dropdown index
-     * @param index Index in language options dropdown (0=English, 1=German, etc.)
-     */
-    void set_language_by_index(int index);
+    /** @deprecated Use SystemSettingsManager::instance() directly */
+    void set_language_by_index(int index) {
+        SystemSettingsManager::instance().set_language_by_index(index);
+    }
 
-    /**
-     * @brief Get current language dropdown index
-     * @return Index of current language in dropdown options
-     */
-    int get_language_index() const;
+    /** @deprecated Use SystemSettingsManager::instance() directly */
+    int get_language_index() const {
+        return SystemSettingsManager::instance().get_language_index();
+    }
 
-    /** @brief Get dropdown options string "English\nDeutsch\nFrançais\nEspañol\nРусский" */
-    static const char* get_language_options();
+    /** @deprecated Use SystemSettingsManager::instance() directly */
+    static const char* get_language_options() {
+        return SystemSettingsManager::get_language_options();
+    }
 
-    /** @brief Get language code for dropdown index */
-    static std::string language_index_to_code(int index);
+    /** @deprecated Use SystemSettingsManager::instance() directly */
+    static std::string language_index_to_code(int index) {
+        return SystemSettingsManager::language_index_to_code(index);
+    }
 
-    /** @brief Get dropdown index for language code */
-    static int language_code_to_index(const std::string& code);
+    /** @deprecated Use SystemSettingsManager::instance() directly */
+    static int language_code_to_index(const std::string& code) {
+        return SystemSettingsManager::language_code_to_index(code);
+    }
 
     // =========================================================================
-    // PRINTER SETTINGS
+    // PRINTER SETTINGS (owned by SettingsManager — MoonrakerClient dependency)
     // =========================================================================
 
     /**
@@ -392,7 +320,7 @@ class SettingsManager {
     void set_led_enabled(bool enabled);
 
     // =========================================================================
-    // Z MOVEMENT STYLE (override auto-detected bed vs nozzle movement)
+    // Z MOVEMENT STYLE (owned by SettingsManager — PrinterState dependency)
     // =========================================================================
 
     /** @brief Get Z movement style override (Auto/Bed Moves/Nozzle Moves) */
@@ -410,7 +338,7 @@ class SettingsManager {
     }
 
     // =========================================================================
-    // FILAMENT SETTINGS
+    // FILAMENT SETTINGS (owned by SettingsManager — AMS types dependency)
     // =========================================================================
 
     /**
@@ -431,52 +359,37 @@ class SettingsManager {
     void clear_external_spool_info();
 
     // =========================================================================
-    // INPUT SETTINGS (require restart)
+    // INPUT SETTINGS (delegated to InputSettingsManager)
     // =========================================================================
 
-    /**
-     * @brief Get scroll throw (momentum decay rate)
-     * @return Scroll throw value (1-99, higher = faster decay)
-     */
-    int get_scroll_throw() const;
-
-    /**
-     * @brief Set scroll throw (momentum decay rate)
-     *
-     * Persists to config. Requires restart to take effect.
-     *
-     * @param value Scroll throw (1-99)
-     */
-    void set_scroll_throw(int value);
-
-    /**
-     * @brief Get scroll limit (pixels before scrolling starts)
-     * @return Scroll limit in pixels
-     */
-    int get_scroll_limit() const;
-
-    /**
-     * @brief Set scroll limit (pixels before scrolling starts)
-     *
-     * Persists to config. Requires restart to take effect.
-     *
-     * @param value Scroll limit in pixels
-     */
-    void set_scroll_limit(int value);
-
-    /**
-     * @brief Check if restart is pending due to settings changes
-     * @return true if settings changed that require restart
-     */
-    bool is_restart_pending() const {
-        return restart_pending_;
+    /** @deprecated Use InputSettingsManager::instance() directly */
+    int get_scroll_throw() const {
+        return InputSettingsManager::instance().get_scroll_throw();
     }
 
-    /**
-     * @brief Clear restart pending flag
-     */
+    /** @deprecated Use InputSettingsManager::instance() directly */
+    void set_scroll_throw(int value) {
+        InputSettingsManager::instance().set_scroll_throw(value);
+    }
+
+    /** @deprecated Use InputSettingsManager::instance() directly */
+    int get_scroll_limit() const {
+        return InputSettingsManager::instance().get_scroll_limit();
+    }
+
+    /** @deprecated Use InputSettingsManager::instance() directly */
+    void set_scroll_limit(int value) {
+        InputSettingsManager::instance().set_scroll_limit(value);
+    }
+
+    /** @deprecated Use InputSettingsManager::instance() directly */
+    bool is_restart_pending() const {
+        return InputSettingsManager::instance().is_restart_pending();
+    }
+
+    /** @deprecated Use InputSettingsManager::instance() directly */
     void clear_restart_pending() {
-        restart_pending_ = false;
+        InputSettingsManager::instance().clear_restart_pending();
     }
 
     // =========================================================================
@@ -573,78 +486,144 @@ class SettingsManager {
     }
 
     // =========================================================================
-    // SUBJECT ACCESSORS (for XML binding)
+    // TELEMETRY SETTINGS (delegated to SystemSettingsManager)
     // =========================================================================
 
-    /** @brief Dark mode subject (integer: 0=light, 1=dark) */
+    /** @deprecated Use SystemSettingsManager::instance() directly */
+    bool get_telemetry_enabled() const {
+        return SystemSettingsManager::instance().get_telemetry_enabled();
+    }
+
+    /** @deprecated Use SystemSettingsManager::instance() directly */
+    void set_telemetry_enabled(bool enabled) {
+        SystemSettingsManager::instance().set_telemetry_enabled(enabled);
+    }
+
+    // =========================================================================
+    // UPDATE SETTINGS (delegated to SystemSettingsManager)
+    // =========================================================================
+
+    /** @deprecated Use SystemSettingsManager::instance() directly */
+    int get_update_channel() const {
+        return SystemSettingsManager::instance().get_update_channel();
+    }
+
+    /** @deprecated Use SystemSettingsManager::instance() directly */
+    void set_update_channel(int channel) {
+        SystemSettingsManager::instance().set_update_channel(channel);
+    }
+
+    /** @deprecated Use SystemSettingsManager::instance() directly */
+    static const char* get_update_channel_options() {
+        return SystemSettingsManager::get_update_channel_options();
+    }
+
+    // =========================================================================
+    // DISPLAY DIM/SLEEP OPTIONS (delegated to DisplaySettingsManager)
+    // =========================================================================
+
+    /** @deprecated Use DisplaySettingsManager directly */
+    static const char* get_display_dim_options() {
+        return DisplaySettingsManager::get_display_dim_options();
+    }
+
+    /** @deprecated Use DisplaySettingsManager directly */
+    static int dim_seconds_to_index(int seconds) {
+        return DisplaySettingsManager::dim_seconds_to_index(seconds);
+    }
+
+    /** @deprecated Use DisplaySettingsManager directly */
+    static int index_to_dim_seconds(int index) {
+        return DisplaySettingsManager::index_to_dim_seconds(index);
+    }
+
+    /** @deprecated Use DisplaySettingsManager directly */
+    static const char* get_display_sleep_options() {
+        return DisplaySettingsManager::get_display_sleep_options();
+    }
+
+    /** @deprecated Use DisplaySettingsManager directly */
+    static int sleep_seconds_to_index(int seconds) {
+        return DisplaySettingsManager::sleep_seconds_to_index(seconds);
+    }
+
+    /** @deprecated Use DisplaySettingsManager directly */
+    static int index_to_sleep_seconds(int index) {
+        return DisplaySettingsManager::index_to_sleep_seconds(index);
+    }
+
+    // =========================================================================
+    // SUBJECT ACCESSORS (for XML binding) — forwarding to domain managers
+    // =========================================================================
+
+    /** @deprecated Use DisplaySettingsManager::instance().subject_dark_mode() */
     lv_subject_t* subject_dark_mode() {
-        return &dark_mode_subject_;
+        return DisplaySettingsManager::instance().subject_dark_mode();
     }
 
-    /** @brief Dark mode available subject (integer: 0=theme doesn't support toggle, 1=theme
-     * supports both modes) */
+    /** @deprecated Use DisplaySettingsManager::instance().subject_dark_mode_available() */
     lv_subject_t* subject_dark_mode_available() {
-        return &dark_mode_available_subject_;
+        return DisplaySettingsManager::instance().subject_dark_mode_available();
     }
 
-    /** @brief Theme preset subject (integer: preset index) */
+    /** @deprecated Use DisplaySettingsManager::instance().subject_theme_preset() */
     lv_subject_t* subject_theme_preset() {
-        return &theme_preset_subject_;
+        return DisplaySettingsManager::instance().subject_theme_preset();
     }
 
-    /** @brief Display dim subject (integer: seconds, 0=disabled) */
+    /** @deprecated Use DisplaySettingsManager::instance().subject_display_dim() */
     lv_subject_t* subject_display_dim() {
-        return &display_dim_subject_;
+        return DisplaySettingsManager::instance().subject_display_dim();
     }
 
-    /** @brief Display sleep subject (integer: seconds, 0=disabled) */
+    /** @deprecated Use DisplaySettingsManager::instance().subject_display_sleep() */
     lv_subject_t* subject_display_sleep() {
-        return &display_sleep_subject_;
+        return DisplaySettingsManager::instance().subject_display_sleep();
     }
 
-    /** @brief Brightness subject (integer: 10-100 percent) */
+    /** @deprecated Use DisplaySettingsManager::instance().subject_brightness() */
     lv_subject_t* subject_brightness() {
-        return &brightness_subject_;
+        return DisplaySettingsManager::instance().subject_brightness();
     }
 
-    /** @brief Has backlight control subject (integer: 0=no, 1=yes) */
+    /** @deprecated Use DisplaySettingsManager::instance().subject_has_backlight() */
     lv_subject_t* subject_has_backlight() {
-        return &has_backlight_subject_;
+        return DisplaySettingsManager::instance().subject_has_backlight();
     }
 
-    /** @brief Sleep while printing subject (integer: 0=inhibit, 1=allow) */
+    /** @deprecated Use DisplaySettingsManager::instance().subject_sleep_while_printing() */
     lv_subject_t* subject_sleep_while_printing() {
-        return &sleep_while_printing_subject_;
+        return DisplaySettingsManager::instance().subject_sleep_while_printing();
     }
 
-    /** @brief Animations enabled subject (integer: 0=off, 1=on) */
+    /** @deprecated Use DisplaySettingsManager::instance().subject_animations_enabled() */
     lv_subject_t* subject_animations_enabled() {
-        return &animations_enabled_subject_;
+        return DisplaySettingsManager::instance().subject_animations_enabled();
     }
 
-    /** @brief G-code 3D preview subject (integer: 0=off, 1=on) */
+    /** @deprecated Use DisplaySettingsManager::instance().subject_gcode_3d_enabled() */
     lv_subject_t* subject_gcode_3d_enabled() {
-        return &gcode_3d_enabled_subject_;
+        return DisplaySettingsManager::instance().subject_gcode_3d_enabled();
     }
 
-    /** @brief Bed mesh render mode subject (integer: 0=auto, 1=3D, 2=2D) */
+    /** @deprecated Use DisplaySettingsManager::instance().subject_bed_mesh_render_mode() */
     lv_subject_t* subject_bed_mesh_render_mode() {
-        return &bed_mesh_render_mode_subject_;
+        return DisplaySettingsManager::instance().subject_bed_mesh_render_mode();
     }
 
-    /** @brief G-code render mode subject (integer: 0=auto, 1=3D, 2=2D) */
+    /** @deprecated Use DisplaySettingsManager::instance().subject_gcode_render_mode() */
     lv_subject_t* subject_gcode_render_mode() {
-        return &gcode_render_mode_subject_;
+        return DisplaySettingsManager::instance().subject_gcode_render_mode();
     }
 
-    /** @brief Time format subject (integer: 0=12H, 1=24H) */
+    /** @deprecated Use DisplaySettingsManager::instance().subject_time_format() */
     lv_subject_t* subject_time_format() {
-        return &time_format_subject_;
+        return DisplaySettingsManager::instance().subject_time_format();
     }
 
-    /** @brief Language subject (integer: index into language options) */
+    /** @deprecated Use SystemSettingsManager::instance().subject_language() */
     lv_subject_t* subject_language() {
-        return &language_subject_;
+        return SystemSettingsManager::instance().subject_language();
     }
 
     /** @brief LED enabled subject (integer: 0=off, 1=on) */
@@ -672,14 +651,14 @@ class SettingsManager {
         return AudioSettingsManager::instance().subject_completion_alert();
     }
 
-    /** @brief Scroll throw subject (integer: 1-99) */
+    /** @deprecated Use InputSettingsManager::instance().subject_scroll_throw() */
     lv_subject_t* subject_scroll_throw() {
-        return &scroll_throw_subject_;
+        return InputSettingsManager::instance().subject_scroll_throw();
     }
 
-    /** @brief Scroll limit subject (integer: pixels) */
+    /** @deprecated Use InputSettingsManager::instance().subject_scroll_limit() */
     lv_subject_t* subject_scroll_limit() {
-        return &scroll_limit_subject_;
+        return InputSettingsManager::instance().subject_scroll_limit();
     }
 
     /** @deprecated Use SafetySettingsManager::instance().subject_estop_require_confirmation() */
@@ -697,86 +676,15 @@ class SettingsManager {
         return SafetySettingsManager::instance().subject_cancel_escalation_timeout();
     }
 
-    /** @brief Update channel subject (integer: 0=Stable, 1=Beta, 2=Dev) */
+    /** @deprecated Use SystemSettingsManager::instance().subject_update_channel() */
     lv_subject_t* subject_update_channel() {
-        return &update_channel_subject_;
+        return SystemSettingsManager::instance().subject_update_channel();
     }
 
-    // =========================================================================
-    // TELEMETRY SETTINGS
-    // =========================================================================
-
-    /** @brief Get telemetry enabled state */
-    bool get_telemetry_enabled() const;
-
-    /** @brief Set telemetry enabled state (persists to config + notifies TelemetryManager) */
-    void set_telemetry_enabled(bool enabled);
-
-    /** @brief Telemetry enabled subject (integer: 0=off, 1=on) */
+    /** @deprecated Use SystemSettingsManager::instance().subject_telemetry_enabled() */
     lv_subject_t* subject_telemetry_enabled() {
-        return &telemetry_enabled_subject_;
+        return SystemSettingsManager::instance().subject_telemetry_enabled();
     }
-
-    // =========================================================================
-    // UPDATE SETTINGS
-    // =========================================================================
-
-    /** @brief Get current update channel (0=Stable, 1=Beta, 2=Dev) */
-    int get_update_channel() const;
-
-    /** @brief Set update channel, persist, and clear update cache */
-    void set_update_channel(int channel);
-
-    /** @brief Get dropdown options string "Stable\nBeta\nDev" */
-    static const char* get_update_channel_options();
-
-    // =========================================================================
-    // DISPLAY DIM OPTIONS (for dropdown population)
-    // =========================================================================
-
-    /**
-     * @brief Get display dim options for dropdown
-     * @return Newline-separated string of options (e.g., "Never\n30 seconds\n1 minute")
-     */
-    static const char* get_display_dim_options();
-
-    /**
-     * @brief Get dropdown index for current dim seconds value
-     * @param seconds Current dim timeout in seconds
-     * @return Dropdown index (0-based)
-     */
-    static int dim_seconds_to_index(int seconds);
-
-    /**
-     * @brief Convert dropdown index to dim seconds
-     * @param index Dropdown index (0-based)
-     * @return Dim timeout in seconds
-     */
-    static int index_to_dim_seconds(int index);
-
-    // =========================================================================
-    // DISPLAY SLEEP OPTIONS (for dropdown population)
-    // =========================================================================
-
-    /**
-     * @brief Get display sleep options for dropdown
-     * @return Newline-separated string of options (e.g., "Never\n1 minute\n5 minutes")
-     */
-    static const char* get_display_sleep_options();
-
-    /**
-     * @brief Get dropdown index for current sleep seconds value
-     * @param seconds Current sleep timeout in seconds
-     * @return Dropdown index (0-based)
-     */
-    static int sleep_seconds_to_index(int seconds);
-
-    /**
-     * @brief Convert dropdown index to sleep seconds
-     * @param index Dropdown index (0-based)
-     * @return Sleep timeout in seconds
-     */
-    static int index_to_sleep_seconds(int index);
 
   private:
     SettingsManager();
@@ -785,36 +693,15 @@ class SettingsManager {
     // Subject manager for RAII cleanup
     SubjectManager subjects_;
 
-    // LVGL subjects
-    lv_subject_t dark_mode_subject_;
-    lv_subject_t dark_mode_available_subject_;
-    lv_subject_t theme_preset_subject_;
-    lv_subject_t display_dim_subject_;
-    lv_subject_t display_sleep_subject_;
-    lv_subject_t brightness_subject_;
-    lv_subject_t has_backlight_subject_;
-    lv_subject_t sleep_while_printing_subject_;
-    lv_subject_t animations_enabled_subject_;
-    lv_subject_t gcode_3d_enabled_subject_;
-    lv_subject_t bed_mesh_render_mode_subject_;
-    lv_subject_t gcode_render_mode_subject_;
-    lv_subject_t time_format_subject_;
-    lv_subject_t language_subject_;
+    // LVGL subjects — only those owned by SettingsManager
     lv_subject_t led_enabled_subject_;
-    // Audio subjects moved to AudioSettingsManager
-    // Safety subjects moved to SafetySettingsManager
-    lv_subject_t scroll_throw_subject_;
-    lv_subject_t scroll_limit_subject_;
-    lv_subject_t update_channel_subject_;
     lv_subject_t z_movement_style_subject_;
-    lv_subject_t telemetry_enabled_subject_;
 
     // External references
     MoonrakerClient* moonraker_client_ = nullptr;
 
     // State
     bool subjects_initialized_ = false;
-    bool restart_pending_ = false;
 };
 
 } // namespace helix
