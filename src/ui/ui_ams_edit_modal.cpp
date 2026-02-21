@@ -4,6 +4,7 @@
 #include "ui_ams_edit_modal.h"
 
 #include "ui_button.h"
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_keyboard_manager.h"
 #include "ui_update_queue.h"
@@ -1035,22 +1036,24 @@ void AmsEditModal::register_callbacks() {
         return;
     }
 
-    lv_xml_register_event_cb(nullptr, "ams_edit_modal_close_cb", on_close_cb);
-    lv_xml_register_event_cb(nullptr, "ams_edit_vendor_changed_cb", on_vendor_changed_cb);
-    lv_xml_register_event_cb(nullptr, "ams_edit_material_changed_cb", on_material_changed_cb);
-    lv_xml_register_event_cb(nullptr, "ams_edit_color_clicked_cb", on_color_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "ams_edit_remaining_changed_cb", on_remaining_changed_cb);
-    lv_xml_register_event_cb(nullptr, "ams_edit_remaining_edit_cb", on_remaining_edit_cb);
-    lv_xml_register_event_cb(nullptr, "ams_edit_remaining_accept_cb", on_remaining_accept_cb);
-    lv_xml_register_event_cb(nullptr, "ams_edit_remaining_cancel_cb", on_remaining_cancel_cb);
-    lv_xml_register_event_cb(nullptr, "ams_edit_reset_cb", on_reset_cb);
-    lv_xml_register_event_cb(nullptr, "ams_edit_save_cb", on_save_cb);
-    lv_xml_register_event_cb(nullptr, "ams_edit_manual_entry_cb", on_manual_entry_cb);
-    lv_xml_register_event_cb(nullptr, "ams_edit_change_spool_cb", on_change_spool_cb);
-    lv_xml_register_event_cb(nullptr, "ams_edit_unlink_cb", on_unlink_cb);
-    lv_xml_register_event_cb(nullptr, "ams_edit_picker_search_cb", on_picker_search_cb);
-    // Register handler for spool_item clicks (shared component uses this callback name)
-    lv_xml_register_event_cb(nullptr, "spoolman_spool_item_clicked_cb", on_spool_item_cb);
+    register_xml_callbacks({
+        {"ams_edit_modal_close_cb", on_close_cb},
+        {"ams_edit_vendor_changed_cb", on_vendor_changed_cb},
+        {"ams_edit_material_changed_cb", on_material_changed_cb},
+        {"ams_edit_color_clicked_cb", on_color_clicked_cb},
+        {"ams_edit_remaining_changed_cb", on_remaining_changed_cb},
+        {"ams_edit_remaining_edit_cb", on_remaining_edit_cb},
+        {"ams_edit_remaining_accept_cb", on_remaining_accept_cb},
+        {"ams_edit_remaining_cancel_cb", on_remaining_cancel_cb},
+        {"ams_edit_reset_cb", on_reset_cb},
+        {"ams_edit_save_cb", on_save_cb},
+        {"ams_edit_manual_entry_cb", on_manual_entry_cb},
+        {"ams_edit_change_spool_cb", on_change_spool_cb},
+        {"ams_edit_unlink_cb", on_unlink_cb},
+        {"ams_edit_picker_search_cb", on_picker_search_cb},
+        // Register handler for spool_item clicks (shared component uses this callback name)
+        {"spoolman_spool_item_clicked_cb", on_spool_item_cb},
+    });
 
     callbacks_registered_ = true;
     spdlog::debug("[AmsEditModal] Callbacks registered");

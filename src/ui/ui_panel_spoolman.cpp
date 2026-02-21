@@ -3,6 +3,7 @@
 
 #include "ui_panel_spoolman.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_global_panel_helper.h"
 #include "ui_keyboard_manager.h"
 #include "ui_modal.h"
@@ -89,11 +90,13 @@ void SpoolmanPanel::register_callbacks() {
     spdlog::debug("[{}] Registering event callbacks", get_name());
 
     // Register XML event callbacks
-    lv_xml_register_event_cb(nullptr, "on_spoolman_spool_row_clicked", on_spool_row_clicked);
-    lv_xml_register_event_cb(nullptr, "on_spoolman_refresh_clicked", on_refresh_clicked);
-    lv_xml_register_event_cb(nullptr, "on_spoolman_add_spool_clicked", on_add_spool_clicked);
-    lv_xml_register_event_cb(nullptr, "on_spoolman_search_changed", on_search_changed);
-    lv_xml_register_event_cb(nullptr, "on_spoolman_search_clear", on_search_clear);
+    register_xml_callbacks({
+        {"on_spoolman_spool_row_clicked", on_spool_row_clicked},
+        {"on_spoolman_refresh_clicked", on_refresh_clicked},
+        {"on_spoolman_add_spool_clicked", on_add_spool_clicked},
+        {"on_spoolman_search_changed", on_search_changed},
+        {"on_spoolman_search_clear", on_search_clear},
+    });
 
     callbacks_registered_ = true;
     spdlog::debug("[{}] Event callbacks registered", get_name());

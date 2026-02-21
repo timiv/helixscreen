@@ -3,6 +3,7 @@
 
 #include "ui_panel_calibration_zoffset.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_nav_manager.h"
@@ -93,17 +94,15 @@ void ZOffsetCalibrationPanel::init_subjects() {
 
     // Register XML event callbacks (once globally)
     if (!s_callbacks_registered) {
-        lv_xml_register_event_cb(nullptr, "on_zoffset_start_clicked", on_start_clicked);
-        lv_xml_register_event_cb(nullptr, "on_zoffset_abort_clicked", on_abort_clicked);
-        lv_xml_register_event_cb(nullptr, "on_zoffset_accept_clicked", on_accept_clicked);
-        lv_xml_register_event_cb(nullptr, "on_zoffset_done_clicked", on_done_clicked);
-        lv_xml_register_event_cb(nullptr, "on_zoffset_retry_clicked", on_retry_clicked);
-
-        // Z adjustment (single callback — user_data carries the delta as a string)
-        lv_xml_register_event_cb(nullptr, "on_zoffset_z_adjust", on_z_adjust);
-
-        // Warm bed toggle
-        lv_xml_register_event_cb(nullptr, "on_zoffset_warm_bed_toggled", on_warm_bed_toggled);
+        register_xml_callbacks({
+            {"on_zoffset_start_clicked", on_start_clicked},
+            {"on_zoffset_abort_clicked", on_abort_clicked},
+            {"on_zoffset_accept_clicked", on_accept_clicked},
+            {"on_zoffset_done_clicked", on_done_clicked},
+            {"on_zoffset_retry_clicked", on_retry_clicked},
+            {"on_zoffset_z_adjust", on_z_adjust},
+            {"on_zoffset_warm_bed_toggled", on_warm_bed_toggled},
+        });
 
         s_callbacks_registered = true;
     }

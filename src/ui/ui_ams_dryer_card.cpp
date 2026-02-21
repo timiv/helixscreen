@@ -3,6 +3,7 @@
 
 #include "ui_ams_dryer_card.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_error_reporting.h"
 #include "ui_modal.h"
 
@@ -214,15 +215,17 @@ void AmsDryerCard::register_callbacks_static() {
         return;
     }
 
-    lv_xml_register_event_cb(nullptr, "dryer_open_modal_cb", on_open_modal_cb);
-    lv_xml_register_event_cb(nullptr, "dryer_modal_close_cb", on_close_modal_cb);
-    lv_xml_register_event_cb(nullptr, "dryer_preset_changed_cb", on_preset_changed_cb);
-    lv_xml_register_event_cb(nullptr, "dryer_stop_clicked_cb", on_stop_cb);
-    lv_xml_register_event_cb(nullptr, "dryer_temp_minus_cb", on_temp_minus_cb);
-    lv_xml_register_event_cb(nullptr, "dryer_temp_plus_cb", on_temp_plus_cb);
-    lv_xml_register_event_cb(nullptr, "dryer_duration_minus_cb", on_duration_minus_cb);
-    lv_xml_register_event_cb(nullptr, "dryer_duration_plus_cb", on_duration_plus_cb);
-    lv_xml_register_event_cb(nullptr, "dryer_power_toggled_cb", on_power_toggled_cb);
+    register_xml_callbacks({
+        {"dryer_open_modal_cb", on_open_modal_cb},
+        {"dryer_modal_close_cb", on_close_modal_cb},
+        {"dryer_preset_changed_cb", on_preset_changed_cb},
+        {"dryer_stop_clicked_cb", on_stop_cb},
+        {"dryer_temp_minus_cb", on_temp_minus_cb},
+        {"dryer_temp_plus_cb", on_temp_plus_cb},
+        {"dryer_duration_minus_cb", on_duration_minus_cb},
+        {"dryer_duration_plus_cb", on_duration_plus_cb},
+        {"dryer_power_toggled_cb", on_power_toggled_cb},
+    });
 
     callbacks_registered_ = true;
     spdlog::debug("[AmsDryerCard] Static callbacks registered");

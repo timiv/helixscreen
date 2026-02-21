@@ -3,6 +3,7 @@
 
 #include "ui_panel_filament.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_component_keypad.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
@@ -74,34 +75,30 @@ FilamentPanel::FilamentPanel(PrinterState& printer_state, MoonrakerAPI* api)
     format_target_or_off(0, bed_target_buf_, sizeof(bed_target_buf_));
 
     // Register XML event callbacks
-    lv_xml_register_event_cb(nullptr, "filament_manage_slots_cb", on_manage_slots_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_load", on_load_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_unload", on_unload_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_purge", on_purge_clicked);
-
-    // Material preset buttons
-    lv_xml_register_event_cb(nullptr, "on_filament_preset_pla", on_preset_pla_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_preset_petg", on_preset_petg_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_preset_abs", on_preset_abs_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_preset_tpu", on_preset_tpu_clicked);
-
-    // Temperature tap targets
-    lv_xml_register_event_cb(nullptr, "on_filament_nozzle_temp_tap", on_nozzle_temp_tap_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_bed_temp_tap", on_bed_temp_tap_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_nozzle_target_tap",
-                             on_nozzle_target_tap_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_bed_target_tap", on_bed_target_tap_clicked);
-
-    // Purge amount buttons
-    lv_xml_register_event_cb(nullptr, "on_filament_purge_5mm", on_purge_5mm_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_purge_10mm", on_purge_10mm_clicked);
-    lv_xml_register_event_cb(nullptr, "on_filament_purge_25mm", on_purge_25mm_clicked);
-
-    // Cooldown button
-    lv_xml_register_event_cb(nullptr, "on_filament_cooldown", on_cooldown_clicked);
-
-    // Extruder selector dropdown
-    lv_xml_register_event_cb(nullptr, "on_extruder_dropdown_changed", on_extruder_dropdown_changed);
+    register_xml_callbacks({
+        {"filament_manage_slots_cb", on_manage_slots_clicked},
+        {"on_filament_load", on_load_clicked},
+        {"on_filament_unload", on_unload_clicked},
+        {"on_filament_purge", on_purge_clicked},
+        // Material preset buttons
+        {"on_filament_preset_pla", on_preset_pla_clicked},
+        {"on_filament_preset_petg", on_preset_petg_clicked},
+        {"on_filament_preset_abs", on_preset_abs_clicked},
+        {"on_filament_preset_tpu", on_preset_tpu_clicked},
+        // Temperature tap targets
+        {"on_filament_nozzle_temp_tap", on_nozzle_temp_tap_clicked},
+        {"on_filament_bed_temp_tap", on_bed_temp_tap_clicked},
+        {"on_filament_nozzle_target_tap", on_nozzle_target_tap_clicked},
+        {"on_filament_bed_target_tap", on_bed_target_tap_clicked},
+        // Purge amount buttons
+        {"on_filament_purge_5mm", on_purge_5mm_clicked},
+        {"on_filament_purge_10mm", on_purge_10mm_clicked},
+        {"on_filament_purge_25mm", on_purge_25mm_clicked},
+        // Cooldown button
+        {"on_filament_cooldown", on_cooldown_clicked},
+        // Extruder selector dropdown
+        {"on_extruder_dropdown_changed", on_extruder_dropdown_changed},
+    });
 
     // Subscribe to PrinterState temperatures using bundle pattern
     // NOTE: Observers must defer UI updates via ui_async_call to avoid render-phase assertions

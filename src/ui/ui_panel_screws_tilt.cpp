@@ -3,6 +3,7 @@
 
 #include "ui_panel_screws_tilt.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_fonts.h"
 #include "ui_nav_manager.h"
 #include "ui_utils.h"
@@ -102,24 +103,17 @@ static void on_screws_tilt_row_clicked(lv_event_t* e) {
 
 void ui_panel_screws_tilt_register_callbacks() {
     // Register event callbacks
-    lv_xml_register_event_cb(nullptr, "screws_tilt_start_cb", [](lv_event_t* /*e*/) {
-        get_global_screws_tilt_panel().handle_start_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "screws_tilt_cancel_cb", [](lv_event_t* /*e*/) {
-        get_global_screws_tilt_panel().handle_cancel_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "screws_tilt_done_cb", [](lv_event_t* /*e*/) {
-        get_global_screws_tilt_panel().handle_done_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "screws_tilt_reprobe_cb", [](lv_event_t* /*e*/) {
-        get_global_screws_tilt_panel().handle_reprobe_clicked();
-    });
-
-    lv_xml_register_event_cb(nullptr, "screws_tilt_retry_cb", [](lv_event_t* /*e*/) {
-        get_global_screws_tilt_panel().handle_retry_clicked();
+    register_xml_callbacks({
+        {"screws_tilt_start_cb",
+         [](lv_event_t* /*e*/) { get_global_screws_tilt_panel().handle_start_clicked(); }},
+        {"screws_tilt_cancel_cb",
+         [](lv_event_t* /*e*/) { get_global_screws_tilt_panel().handle_cancel_clicked(); }},
+        {"screws_tilt_done_cb",
+         [](lv_event_t* /*e*/) { get_global_screws_tilt_panel().handle_done_clicked(); }},
+        {"screws_tilt_reprobe_cb",
+         [](lv_event_t* /*e*/) { get_global_screws_tilt_panel().handle_reprobe_clicked(); }},
+        {"screws_tilt_retry_cb",
+         [](lv_event_t* /*e*/) { get_global_screws_tilt_panel().handle_retry_clicked(); }},
     });
 
     // Initialize subjects BEFORE XML creation (bindings resolve at parse time)

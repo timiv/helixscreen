@@ -8,6 +8,7 @@
 
 #include "ui_settings_sound.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_event_safety.h"
 #include "ui_nav_manager.h"
 
@@ -72,11 +73,13 @@ void SoundSettingsOverlay::init_subjects() {
 }
 
 void SoundSettingsOverlay::register_callbacks() {
-    lv_xml_register_event_cb(nullptr, "on_sounds_changed", on_sounds_changed);
-    lv_xml_register_event_cb(nullptr, "on_ui_sounds_changed", on_ui_sounds_changed);
-    lv_xml_register_event_cb(nullptr, "on_volume_changed", on_volume_changed);
-    lv_xml_register_event_cb(nullptr, "on_sound_theme_changed", on_sound_theme_changed);
-    lv_xml_register_event_cb(nullptr, "on_test_beep", on_test_beep);
+    register_xml_callbacks({
+        {"on_sounds_changed", on_sounds_changed},
+        {"on_ui_sounds_changed", on_ui_sounds_changed},
+        {"on_volume_changed", on_volume_changed},
+        {"on_sound_theme_changed", on_sound_theme_changed},
+        {"on_test_beep", on_test_beep},
+    });
 
     spdlog::debug("[{}] Callbacks registered", get_name());
 }

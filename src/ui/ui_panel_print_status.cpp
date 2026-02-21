@@ -4,6 +4,7 @@
 #include "ui_panel_print_status.h"
 
 #include "ui_ams_current_tool.h"
+#include "ui_callback_helpers.h"
 #include "ui_component_header_bar.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
@@ -295,13 +296,15 @@ void PrintStatusPanel::init_subjects() {
     // Register XML event callbacks for print status panel buttons
     // (tune overlay subjects/callbacks registered by singleton on first show())
     // (light and timelapse callbacks are registered by light_timelapse_controls_.init_subjects())
-    lv_xml_register_event_cb(nullptr, "on_print_status_pause", on_pause_clicked);
-    lv_xml_register_event_cb(nullptr, "on_print_status_tune", on_tune_clicked);
-    lv_xml_register_event_cb(nullptr, "on_print_status_cancel", on_cancel_clicked);
-    lv_xml_register_event_cb(nullptr, "on_print_status_reprint", on_reprint_clicked);
-    lv_xml_register_event_cb(nullptr, "on_print_status_nozzle_clicked", on_nozzle_card_clicked);
-    lv_xml_register_event_cb(nullptr, "on_print_status_bed_clicked", on_bed_card_clicked);
-    lv_xml_register_event_cb(nullptr, "on_print_status_objects", on_objects_clicked);
+    register_xml_callbacks({
+        {"on_print_status_pause", on_pause_clicked},
+        {"on_print_status_tune", on_tune_clicked},
+        {"on_print_status_cancel", on_cancel_clicked},
+        {"on_print_status_reprint", on_reprint_clicked},
+        {"on_print_status_nozzle_clicked", on_nozzle_card_clicked},
+        {"on_print_status_bed_clicked", on_bed_card_clicked},
+        {"on_print_status_objects", on_objects_clicked},
+    });
 
     subjects_initialized_ = true;
 

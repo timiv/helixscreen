@@ -8,6 +8,7 @@
 
 #include "ui_settings_led.h"
 
+#include "ui_callback_helpers.h"
 #include "ui_event_safety.h"
 #include "ui_keyboard_manager.h"
 #include "ui_led_chip_factory.h"
@@ -67,9 +68,11 @@ void LedSettingsOverlay::init_subjects() {
 }
 
 void LedSettingsOverlay::register_callbacks() {
-    lv_xml_register_event_cb(nullptr, "on_led_on_at_start_changed", on_led_on_at_start_changed);
-    lv_xml_register_event_cb(nullptr, "on_auto_state_changed", on_auto_state_changed);
-    lv_xml_register_event_cb(nullptr, "on_add_macro_device", on_add_macro_device);
+    register_xml_callbacks({
+        {"on_led_on_at_start_changed", on_led_on_at_start_changed},
+        {"on_auto_state_changed", on_auto_state_changed},
+        {"on_add_macro_device", on_add_macro_device},
+    });
 
     spdlog::debug("[{}] Callbacks registered", get_name());
 }
