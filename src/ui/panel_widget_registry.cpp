@@ -24,6 +24,7 @@ static std::vector<PanelWidgetDef> s_widget_defs = {
     {"width_sensor",     "Width Sensor",      "ruler",            "Filament width sensor readings",               "Width Sensor",     "width_sensor_count"},
     {"probe",            "Probe",             "target",           "Z probe status and offset",                    "Probe",            "probe_count"},
     {"filament",         "Filament Sensor",   "filament_alert",   "Filament runout detection status",             "Filament Sensor",  "filament_sensor_count"},
+    {"fan_stack",        "Fan Speeds",        "fan",              "Part, hotend, and auxiliary fan speeds",        "Fan Speeds",       nullptr,             false},
     {"thermistor",       "Thermistor",        "thermometer",      "Monitor a custom temperature sensor",          "Thermistor",       "temp_sensor_count", false},
     {"notifications",    "Notifications",     "notifications",    "Pending alerts and system messages",           "Notifications",    nullptr},
 };

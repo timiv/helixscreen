@@ -257,6 +257,7 @@ void register_xml_components() {
     register_xml("components/panel_widget_probe.xml");
     register_xml("components/panel_widget_filament.xml");
     register_xml("components/panel_widget_thermistor.xml");
+    register_xml("components/panel_widget_fan_stack.xml");
     register_xml("thermistor_sensor_picker.xml");
 
     // Main navigation and panels
