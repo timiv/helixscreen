@@ -149,48 +149,6 @@ char* format_accel_mm_s2(double accel, char* buf, size_t size);
 char* format_frequency_hz(double hz, char* buf, size_t size);
 
 // =============================================================================
-// Temperature Formatting
-// =============================================================================
-
-/**
- * @brief Format single temperature with °C suffix
- *
- * Produces consistent output like "210°C" (no space before °C).
- *
- * @param temp_c Temperature in degrees Celsius
- * @param buf Output buffer
- * @param size Buffer size (recommended: 16)
- * @return Pointer to buffer for chaining
- */
-char* format_temp(int temp_c, char* buf, size_t size);
-
-/**
- * @brief Format temperature pair as "current / target°C"
- *
- * Produces output like "150 / 200°C" or "150 / —°C" when target is 0 (heater off).
- *
- * @param current_c Current temperature in degrees Celsius
- * @param target_c Target temperature in degrees Celsius (0 = heater off, shows "—")
- * @param buf Output buffer
- * @param size Buffer size (recommended: 24)
- * @return Pointer to buffer for chaining
- */
-char* format_temp_pair(int current_c, int target_c, char* buf, size_t size);
-
-/**
- * @brief Format temperature range as "min-max°C"
- *
- * Produces output like "200-230°C" for material temperature ranges.
- *
- * @param min_c Minimum temperature in degrees Celsius
- * @param max_c Maximum temperature in degrees Celsius
- * @param buf Output buffer
- * @param size Buffer size (recommended: 16)
- * @return Pointer to buffer for chaining
- */
-char* format_temp_range(int min_c, int max_c, char* buf, size_t size);
-
-// =============================================================================
 // Duration Formatting
 // =============================================================================
 
@@ -264,37 +222,5 @@ std::string duration_padded(int total_seconds);
  * @return Formatted string (e.g., "850mm", "12.5m", "1.23km")
  */
 std::string format_filament_length(double mm);
-
-/**
- * @brief Result of formatting a heater display
- *
- * Contains all the information needed to display a heater status:
- * - temp: formatted temperature string (e.g., "150°C" or "150 / 200°C")
- * - status: semantic status ("Off", "Heating...", "Ready", or "Cooling")
- * - pct: percentage towards target (0-100, clamped)
- */
-struct HeaterDisplayResult {
-    std::string temp;
-    std::string status;
-    int pct;
-};
-
-/**
- * @brief Format heater display information from centi-degree values
- *
- * Takes current and target temperatures in centi-degrees (100 = 1°C) and
- * produces a consistent display result used across all heater displays.
- *
- * Status logic (2°C tolerance, matches get_heating_state_color):
- * - target <= 0: "Off"
- * - current < target - 2: "Heating..."
- * - current > target + 2: "Cooling"
- * - within ±2°C: "Ready"
- *
- * @param current_centi Current temperature in centi-degrees
- * @param target_centi Target temperature in centi-degrees (0 = off)
- * @return HeaterDisplayResult with formatted temp, status, and percentage
- */
-HeaterDisplayResult heater_display(int current_centi, int target_centi);
 
 } // namespace helix::format

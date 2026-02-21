@@ -1097,7 +1097,7 @@ void HomePanel::on_extruder_temp_changed(int temp_centi) {
 
     // Format temperature for display and update the string subject
     // Guard: Observer callback fires during constructor before init_subjects()
-    helix::format::format_temp(temp_deg, temp_buffer_, sizeof(temp_buffer_));
+    helix::ui::temperature::format_temperature(temp_deg, temp_buffer_, sizeof(temp_buffer_));
     if (subjects_initialized_) {
         lv_subject_copy_string(&temp_subject_, temp_buffer_);
     }
@@ -1311,7 +1311,7 @@ void HomePanel::update(const char* status_text, int temp) {
     }
 
     char buf[32];
-    helix::format::format_temp(temp, buf, sizeof(buf));
+    helix::ui::temperature::format_temperature(temp, buf, sizeof(buf));
     lv_subject_copy_string(&temp_subject_, buf);
     spdlog::debug("[{}] Updated temp_text subject to: {}", get_name(), buf);
 }

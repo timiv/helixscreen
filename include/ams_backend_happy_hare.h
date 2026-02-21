@@ -3,18 +3,10 @@
 
 #pragma once
 
-#include "ui_subscription_guard.h"
-
-#include "ams_backend.h"
-#include "moonraker_client.h"
+#include "ams_subscription_backend.h"
 #include "slot_registry.h"
 
-#include <atomic>
-#include <mutex>
 #include <string>
-
-// Forward declaration
-class MoonrakerAPI;
 
 /**
  * @file ams_backend_happy_hare.h
@@ -41,7 +33,7 @@ class MoonrakerAPI;
  * - MMU_HOME            - Home the selector
  * - MMU_RECOVER         - Attempt error recovery
  */
-class AmsBackendHappyHare : public AmsBackend {
+class AmsBackendHappyHare : public AmsSubscriptionBackend {
   public:
     /**
      * @brief Construct Happy Hare backend
@@ -53,25 +45,10 @@ class AmsBackendHappyHare : public AmsBackend {
      */
     AmsBackendHappyHare(MoonrakerAPI* api, helix::MoonrakerClient* client);
 
-    ~AmsBackendHappyHare() override;
-
-    // Lifecycle
-    AmsError start() override;
-    void stop() override;
-    void release_subscriptions() override;
-    [[nodiscard]] bool is_running() const override;
-
-    // Events
-    void set_event_callback(EventCallback callback) override;
-
     // State queries
     [[nodiscard]] AmsSystemInfo get_system_info() const override;
     [[nodiscard]] AmsType get_type() const override;
     [[nodiscard]] SlotInfo get_slot_info(int slot_index) const override;
-    [[nodiscard]] AmsAction get_current_action() const override;
-    [[nodiscard]] int get_current_tool() const override;
-    [[nodiscard]] int get_current_slot() const override;
-    [[nodiscard]] bool is_filament_loaded() const override;
 
     // Path visualization
     [[nodiscard]] PathTopology get_topology() const override;
@@ -118,7 +95,7 @@ class AmsBackendHappyHare : public AmsBackend {
     /**
      * @brief Reset all tool mappings to defaults
      *
-     * Resets tool-to-gate mappings to 1:1 (T0→Gate0, T1→Gate1, etc.)
+     * Resets tool-to-gate mappings to 1:1 (T0->Gate0, T1->Gate1, etc.)
      * by iterating through all tools and calling set_tool_mapping().
      *
      * @return AmsError with result
@@ -171,18 +148,16 @@ class AmsBackendHappyHare : public AmsBackend {
     friend class AmsBackendHappyHareEndlessSpoolHelper;
     friend class AmsBackendHHMultiUnitHelper;
     friend class HappyHareErrorStateHelper;
+    friend class HappyHareCharHelper;
+
+    // --- AmsSubscriptionBackend hooks ---
+    void on_started() override;
+    void handle_status_update(const nlohmann::json& notification) override;
+    const char* backend_log_tag() const override {
+        return "[AMS HappyHare]";
+    }
 
   private:
-    /**
-     * @brief Handle status update notifications from Moonraker
-     *
-     * Called when printer.mmu.* values change via notify_status_update.
-     * Parses the JSON and updates internal state.
-     *
-     * @param notification JSON notification from Moonraker
-     */
-    void handle_status_update(const nlohmann::json& notification);
-
     /**
      * @brief Parse MMU state from Moonraker JSON
      *
@@ -203,34 +178,6 @@ class AmsBackendHappyHare : public AmsBackend {
     void initialize_slots(int gate_count);
 
     /**
-     * @brief Emit event to registered callback
-     * @param event Event name
-     * @param data Event data (JSON or empty)
-     */
-    void emit_event(const std::string& event, const std::string& data = "");
-
-    /**
-     * @brief Execute a G-code command via MoonrakerAPI
-     *
-     * Virtual to allow test overrides for G-code capture.
-     *
-     * @param gcode The G-code command to execute
-     * @return AmsError indicating success or failure to queue command
-     */
-    virtual AmsError execute_gcode(const std::string& gcode);
-
-    /**
-     * @brief Check common preconditions before operations
-     *
-     * Validates:
-     * - Backend is running
-     * - System is not busy
-     *
-     * @return AmsError (SUCCESS if ok, appropriate error otherwise)
-     */
-    AmsError check_preconditions() const;
-
-    /**
      * @brief Validate gate index is within range
      *
      * @param gate_index Slot index to validate
@@ -248,18 +195,7 @@ class AmsBackendHappyHare : public AmsBackend {
      */
     void query_tip_method_from_config();
 
-    // Dependencies
-    MoonrakerAPI* api_;              ///< For sending G-code commands
-    helix::MoonrakerClient* client_; ///< For subscribing to updates
-
-    // State
-    mutable std::mutex mutex_;         ///< Protects state access
-    std::atomic<bool> running_{false}; ///< Backend running state
-    EventCallback event_callback_;     ///< Registered event handler
-    SubscriptionGuard subscription_;   ///< RAII subscription (auto-unsubscribes)
-
     // Cached MMU state
-    AmsSystemInfo system_info_;          ///< Non-slot fields (action, current_tool, etc.)
     helix::printer::SlotRegistry slots_; ///< Single source of truth for per-slot state
     int num_units_{1};                   ///< Number of physical units (default 1)
 

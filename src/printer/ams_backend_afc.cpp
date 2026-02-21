@@ -26,16 +26,10 @@ using namespace helix;
 // ============================================================================
 
 AmsBackendAfc::AmsBackendAfc(MoonrakerAPI* api, MoonrakerClient* client)
-    : api_(api), client_(client) {
+    : AmsSubscriptionBackend(api, client) {
     // Initialize system info with AFC defaults
     system_info_.type = AmsType::AFC;
     system_info_.type_name = "AFC";
-    system_info_.version = "unknown";
-    system_info_.current_tool = -1;
-    system_info_.current_slot = -1;
-    system_info_.filament_loaded = false;
-    system_info_.action = AmsAction::IDLE;
-    system_info_.total_slots = 0;
     // AFC capabilities from shared defaults
     auto caps = helix::printer::afc_default_capabilities();
     system_info_.supports_endless_spool = caps.supports_endless_spool;
@@ -50,68 +44,28 @@ AmsBackendAfc::AmsBackendAfc(MoonrakerAPI* api, MoonrakerClient* client)
     spdlog::debug("[AMS AFC] Backend created");
 }
 
-AmsBackendAfc::~AmsBackendAfc() {
-    // During static destruction (e.g., program exit), the mutex and client may be
-    // in an invalid state. Release the subscription guard WITHOUT trying to
-    // unsubscribe - the MoonrakerClient may already be destroyed.
-    subscription_.release();
-}
+// Destructor not needed -- base class handles subscription cleanup
 
 // ============================================================================
 // Lifecycle Management
 // ============================================================================
 
-AmsError AmsBackendAfc::start() {
-    bool should_emit = false;
+void AmsBackendAfc::on_started() {
+    // Detect AFC version (async - results come via callback)
+    // This will set has_lane_data_db_ for v1.0.32+
+    detect_afc_version();
 
+    // If we have discovered lanes (from PrinterCapabilities), initialize them now.
+    // This provides immediate lane data for ALL AFC versions (including < 1.0.32).
+    // For v1.0.32+, query_lane_data() may later supplement this with richer data.
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
-
-        if (running_) {
-            return AmsErrorHelper::success();
-        }
-
-        if (!client_) {
-            spdlog::error("[AMS AFC] Cannot start: MoonrakerClient is null");
-            return AmsErrorHelper::not_connected("MoonrakerClient not provided");
-        }
-
-        if (!api_) {
-            spdlog::error("[AMS AFC] Cannot start: MoonrakerAPI is null");
-            return AmsErrorHelper::not_connected("MoonrakerAPI not provided");
-        }
-
-        // Register for status update notifications from Moonraker
-        // AFC state comes via notify_status_update when printer.afc.* changes
-        SubscriptionId id = client_->register_notify_update(
-            [this](const nlohmann::json& notification) { handle_status_update(notification); });
-
-        if (id == INVALID_SUBSCRIPTION_ID) {
-            spdlog::error("[AMS AFC] Failed to register for status updates");
-            return AmsErrorHelper::not_connected("Failed to subscribe to Moonraker updates");
-        }
-
-        // RAII guard - automatically unsubscribes when backend is destroyed or stop() called
-        subscription_ = SubscriptionGuard(client_, id);
-
-        running_ = true;
-        spdlog::info("[AMS AFC] Backend started, subscription ID: {}", id);
-
-        // Detect AFC version (async - results come via callback)
-        // This will set has_lane_data_db_ for v1.0.32+
-        detect_afc_version();
-
-        // If we have discovered lanes (from PrinterCapabilities), initialize them now.
-        // This provides immediate lane data for ALL AFC versions (including < 1.0.32).
-        // For v1.0.32+, query_lane_data() may later supplement this with richer data.
+        std::lock_guard<std::mutex> lock(mutex_);
         if (!discovered_lane_names_.empty() && !slots_.is_initialized()) {
             spdlog::info("[AMS AFC] Initializing {} lanes from discovery",
                          discovered_lane_names_.size());
             initialize_slots(discovered_lane_names_);
         }
-
-        should_emit = true;
-    } // Release lock before emitting
+    }
 
     // Note: With the early hardware discovery callback architecture, this backend is
     // created and started BEFORE printer.objects.subscribe is called. The notification
@@ -120,18 +74,11 @@ AmsError AmsBackendAfc::start() {
 
     // Load AFC config files for device settings
     load_afc_configs();
-
-    // Emit initial state event OUTSIDE the lock to avoid deadlock
-    if (should_emit) {
-        emit_event(EVENT_STATE_CHANGED);
-    }
-
-    return AmsErrorHelper::success();
 }
 
 void AmsBackendAfc::set_discovered_lanes(const std::vector<std::string>& lane_names,
                                          const std::vector<std::string>& hub_names) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     // Store discovered lane and hub names (from printer.objects.list)
     // These will be used as a fallback for AFC versions < 1.0.32
@@ -147,7 +94,7 @@ void AmsBackendAfc::set_discovered_lanes(const std::vector<std::string>& lane_na
 }
 
 void AmsBackendAfc::set_discovered_sensors(const std::vector<std::string>& sensor_names) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     // Detect hardware vs virtual bypass from Klipper object names.
     // AFC creates "filament_switch_sensor virtual_bypass" when no hardware sensor is configured,
@@ -172,55 +119,20 @@ void AmsBackendAfc::set_discovered_sensors(const std::vector<std::string>& senso
     // If neither found, keep the default (true — assumes hardware)
 }
 
-void AmsBackendAfc::stop() {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-
-    if (!running_) {
-        return;
-    }
-
-    // RAII guard handles unsubscription automatically
-    subscription_.reset();
-
-    running_ = false;
-    spdlog::info("[AMS AFC] Backend stopped");
-}
-
-void AmsBackendAfc::release_subscriptions() {
-    subscription_.release();
-}
-
-bool AmsBackendAfc::is_running() const {
-    return running_;
-}
+// stop(), release_subscriptions(), is_running() provided by AmsSubscriptionBackend
 
 // ============================================================================
 // Event System
 // ============================================================================
 
-void AmsBackendAfc::set_event_callback(EventCallback callback) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    event_callback_ = std::move(callback);
-}
-
-void AmsBackendAfc::emit_event(const std::string& event, const std::string& data) {
-    EventCallback cb;
-    {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
-        cb = event_callback_;
-    }
-
-    if (cb) {
-        cb(event, data);
-    }
-}
+// set_event_callback() and emit_event() provided by AmsSubscriptionBackend
 
 // ============================================================================
 // State Queries
 // ============================================================================
 
 AmsSystemInfo AmsBackendAfc::get_system_info() const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     if (!slots_.is_initialized()) {
         return system_info_;
@@ -268,7 +180,7 @@ AmsType AmsBackendAfc::get_type() const {
 }
 
 SlotInfo AmsBackendAfc::get_slot_info(int slot_index) const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     const auto* entry = slots_.get(slot_index);
     if (entry) {
@@ -282,25 +194,8 @@ SlotInfo AmsBackendAfc::get_slot_info(int slot_index) const {
     return empty;
 }
 
-AmsAction AmsBackendAfc::get_current_action() const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return system_info_.action;
-}
-
-int AmsBackendAfc::get_current_tool() const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return system_info_.current_tool;
-}
-
-int AmsBackendAfc::get_current_slot() const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return system_info_.current_slot;
-}
-
-bool AmsBackendAfc::is_filament_loaded() const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    return system_info_.filament_loaded;
-}
+// get_current_action(), get_current_tool(), get_current_slot(), is_filament_loaded()
+// provided by AmsSubscriptionBackend
 
 PathTopology AmsBackendAfc::get_topology() const {
     // AFC uses a hub topology (Box Turtle / Armored Turtle style)
@@ -308,7 +203,7 @@ PathTopology AmsBackendAfc::get_topology() const {
 }
 
 PathTopology AmsBackendAfc::get_unit_topology(int unit_index) const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     // unit_infos_ is in AFC JSON order, system_info_.units is alphabetically sorted.
     // Must match by name, not by index.
     if (unit_index >= 0 && unit_index < static_cast<int>(system_info_.units.size())) {
@@ -325,12 +220,12 @@ PathTopology AmsBackendAfc::get_unit_topology(int unit_index) const {
 }
 
 PathSegment AmsBackendAfc::get_filament_segment() const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return compute_filament_segment_unlocked();
 }
 
 PathSegment AmsBackendAfc::get_slot_filament_segment(int slot_index) const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
 
     // Check if this is the active slot - return the current filament segment
     if (slot_index == system_info_.current_slot && system_info_.filament_loaded) {
@@ -366,12 +261,12 @@ PathSegment AmsBackendAfc::get_slot_filament_segment(int slot_index) const {
 }
 
 PathSegment AmsBackendAfc::infer_error_segment() const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return error_segment_;
 }
 
 bool AmsBackendAfc::slot_has_prep_sensor(int slot_index) const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     // AFC always has prep sensors on all lanes
     return slot_index >= 0 && slot_index < system_info_.total_slots;
 }
@@ -484,7 +379,7 @@ void AmsBackendAfc::handle_status_update(const nlohmann::json& notification) {
     bool state_changed = false;
 
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         // Parse global AFC state if present
         if (params.contains("AFC") && params["AFC"].is_object()) {
@@ -1346,7 +1241,7 @@ void AmsBackendAfc::detect_afc_version() {
                 const auto& value = response["value"];
                 if (value.contains("version") && value["version"].is_string()) {
                     {
-                        std::lock_guard<std::recursive_mutex> lock(mutex_);
+                        std::lock_guard<std::mutex> lock(mutex_);
                         afc_version_ = value["version"].get<std::string>();
                         system_info_.version = afc_version_;
 
@@ -1386,7 +1281,7 @@ void AmsBackendAfc::detect_afc_version() {
         },
         [this](const MoonrakerError& err) {
             spdlog::warn("[AMS AFC] Could not detect AFC version: {}", err.message);
-            std::lock_guard<std::recursive_mutex> lock(mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
             afc_version_ = "unknown";
             system_info_.version = "unknown";
             // Don't query lane_data - we'll rely on discovered lanes from capabilities
@@ -1520,7 +1415,7 @@ void AmsBackendAfc::query_lane_data() {
         [this](const nlohmann::json& response) {
             if (response.contains("value") && response["value"].is_object()) {
                 {
-                    std::lock_guard<std::recursive_mutex> lock(mutex_);
+                    std::lock_guard<std::mutex> lock(mutex_);
                     parse_lane_data(response["value"]);
                 }
                 // Emit OUTSIDE the lock to avoid deadlock with callbacks
@@ -1779,17 +1674,7 @@ void AmsBackendAfc::reorganize_slots() {
 // Filament Operations
 // ============================================================================
 
-AmsError AmsBackendAfc::check_preconditions() const {
-    if (!running_) {
-        return AmsErrorHelper::not_connected("AFC backend not started");
-    }
-
-    if (system_info_.is_busy()) {
-        return AmsErrorHelper::busy(ams_action_to_string(system_info_.action));
-    }
-
-    return AmsErrorHelper::success();
-}
+// check_preconditions() provided by AmsSubscriptionBackend
 
 AmsError AmsBackendAfc::validate_slot_index(int slot_index) const {
     if (slot_index < 0 || slot_index >= system_info_.total_slots) {
@@ -1798,28 +1683,7 @@ AmsError AmsBackendAfc::validate_slot_index(int slot_index) const {
     return AmsErrorHelper::success();
 }
 
-AmsError AmsBackendAfc::execute_gcode(const std::string& gcode) {
-    if (!api_) {
-        return AmsErrorHelper::not_connected("MoonrakerAPI not available");
-    }
-
-    spdlog::info("[AMS AFC] Executing G-code: {}", gcode);
-
-    // Execute G-code asynchronously via MoonrakerAPI
-    api_->execute_gcode(
-        gcode, []() { spdlog::debug("[AMS AFC] G-code executed successfully"); },
-        [gcode](const MoonrakerError& err) {
-            if (err.type == MoonrakerErrorType::TIMEOUT) {
-                spdlog::warn("[AMS AFC] G-code response timed out (may still be running): {}",
-                             gcode);
-            } else {
-                spdlog::error("[AMS AFC] G-code failed: {} - {}", gcode, err.message);
-            }
-        },
-        MoonrakerAPI::AMS_OPERATION_TIMEOUT_MS);
-
-    return AmsErrorHelper::success();
-}
+// execute_gcode() provided by AmsSubscriptionBackend
 
 AmsError AmsBackendAfc::execute_gcode_notify(const std::string& gcode,
                                              const std::string& success_msg,
@@ -1859,7 +1723,7 @@ AmsError AmsBackendAfc::execute_gcode_notify(const std::string& gcode,
 AmsError AmsBackendAfc::load_filament(int slot_index) {
     std::string lane_name;
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         AmsError precondition = check_preconditions();
         if (!precondition) {
@@ -1893,7 +1757,7 @@ AmsError AmsBackendAfc::load_filament(int slot_index) {
 
 AmsError AmsBackendAfc::unload_filament() {
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         AmsError precondition = check_preconditions();
         if (!precondition) {
@@ -1913,7 +1777,7 @@ AmsError AmsBackendAfc::unload_filament() {
 AmsError AmsBackendAfc::select_slot(int slot_index) {
     std::string lane_name;
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         AmsError precondition = check_preconditions();
         if (!precondition) {
@@ -1939,7 +1803,7 @@ AmsError AmsBackendAfc::select_slot(int slot_index) {
 
 AmsError AmsBackendAfc::change_tool(int tool_number) {
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         AmsError precondition = check_preconditions();
         if (!precondition) {
@@ -1967,7 +1831,7 @@ AmsError AmsBackendAfc::change_tool(int tool_number) {
 
 AmsError AmsBackendAfc::recover() {
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         // Only check running_, NOT is_busy() — recovery must work even when
         // the system is stuck in a busy/error state
@@ -1983,7 +1847,7 @@ AmsError AmsBackendAfc::recover() {
 
 AmsError AmsBackendAfc::reset() {
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         AmsError precondition = check_preconditions();
         if (!precondition) {
@@ -1999,7 +1863,7 @@ AmsError AmsBackendAfc::reset() {
 AmsError AmsBackendAfc::reset_lane(int slot_index) {
     std::string lane_name;
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         AmsError precondition = check_preconditions();
         if (!precondition) {
@@ -2020,7 +1884,7 @@ AmsError AmsBackendAfc::reset_lane(int slot_index) {
 AmsError AmsBackendAfc::eject_lane(int slot_index) {
     std::string lane_name;
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         AmsError precondition = check_preconditions();
         if (!precondition) {
@@ -2049,7 +1913,7 @@ AmsError AmsBackendAfc::eject_lane(int slot_index) {
 
 AmsError AmsBackendAfc::cancel() {
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         if (!running_) {
             return AmsErrorHelper::not_connected("AFC backend not started");
@@ -2072,7 +1936,7 @@ AmsError AmsBackendAfc::cancel() {
 
 AmsError AmsBackendAfc::set_slot_info(int slot_index, const SlotInfo& info, bool persist) {
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         auto* entry = slots_.get_mut(slot_index);
         if (!entry) {
@@ -2169,7 +2033,7 @@ AmsError AmsBackendAfc::set_slot_info(int slot_index, const SlotInfo& info, bool
 AmsError AmsBackendAfc::set_tool_mapping(int tool_number, int slot_index) {
     std::string lane_name; // Declare outside lock for use after release
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         if (tool_number < 0 || tool_number >= slots_.slot_count()) {
             return AmsError(AmsResult::INVALID_TOOL,
@@ -2207,7 +2071,7 @@ AmsError AmsBackendAfc::set_tool_mapping(int tool_number, int slot_index) {
 
 AmsError AmsBackendAfc::enable_bypass() {
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         AmsError precondition = check_preconditions();
         if (!precondition) {
@@ -2232,7 +2096,7 @@ AmsError AmsBackendAfc::enable_bypass() {
 AmsError AmsBackendAfc::disable_bypass() {
     const char* sensor = nullptr;
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         if (!running_) {
             return AmsErrorHelper::not_connected("AFC backend not started");
@@ -2251,7 +2115,7 @@ AmsError AmsBackendAfc::disable_bypass() {
 }
 
 bool AmsBackendAfc::is_bypass_active() const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return bypass_active_;
 }
 
@@ -2274,12 +2138,12 @@ helix::printer::ToolMappingCapabilities AmsBackendAfc::get_tool_mapping_capabili
 }
 
 std::vector<int> AmsBackendAfc::get_tool_mapping() const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return slots_.build_system_info().tool_to_slot_map;
 }
 
 std::vector<helix::printer::EndlessSpoolConfig> AmsBackendAfc::get_endless_spool_config() const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     std::vector<helix::printer::EndlessSpoolConfig> configs;
     for (int i = 0; i < slots_.slot_count(); ++i) {
         configs.push_back({i, slots_.backup_for_slot(i)});
@@ -2292,7 +2156,7 @@ AmsError AmsBackendAfc::set_endless_spool_backup(int slot_index, int backup_slot
     std::string backup_lane_name;
 
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
 
         int lane_count = slots_.slot_count();
 
@@ -2366,7 +2230,7 @@ AmsError AmsBackendAfc::reset_endless_spool() {
 
     int slot_count = 0;
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         slot_count = slots_.slot_count();
     }
 
@@ -2494,7 +2358,7 @@ void AmsBackendAfc::update_tip_method_from_config() {
     }
 
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         system_info_.tip_method = method;
     }
 
@@ -2511,7 +2375,7 @@ std::vector<helix::printer::DeviceSection> AmsBackendAfc::get_device_sections() 
 }
 
 std::vector<helix::printer::DeviceAction> AmsBackendAfc::get_device_actions() const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     using helix::printer::ActionType;
     using helix::printer::DeviceAction;
 
@@ -2707,7 +2571,7 @@ AmsError AmsBackendAfc::execute_device_action(const std::string& action_id, cons
         }
         try {
             float length = std::any_cast<float>(value);
-            std::lock_guard<std::recursive_mutex> lock(mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
             float max_len = std::max(2000.0f, bowden_length_ * 1.5f);
             if (length < 100.0f || length > max_len) {
                 return AmsError(AmsResult::WRONG_STATE,
@@ -2734,7 +2598,7 @@ AmsError AmsBackendAfc::execute_device_action(const std::string& action_id, cons
         }
         try {
             float length = std::any_cast<float>(value);
-            std::lock_guard<std::recursive_mutex> lock(mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
             float max_len = std::max(2000.0f, bowden_length_ * 1.5f);
             if (length < 100.0f || length > max_len) {
                 return AmsError(AmsResult::WRONG_STATE,
@@ -2818,7 +2682,7 @@ AmsError AmsBackendAfc::execute_device_action(const std::string& action_id, cons
         }
         return AmsErrorHelper::success();
     } else if (action_id == "led_toggle") {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         return execute_gcode(afc_led_state_ ? "TURN_OFF_AFC_LED" : "TURN_ON_AFC_LED");
     } else if (action_id == "quiet_mode") {
         return execute_gcode("AFC_QUIET_MODE");

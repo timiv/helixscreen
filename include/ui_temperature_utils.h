@@ -6,6 +6,7 @@
 #include "unit_conversions.h"
 
 #include <cstddef>
+#include <string>
 
 /**
  * @file ui_temperature_utils.h
@@ -246,6 +247,45 @@ constexpr int DEFAULT_AT_TEMP_TOLERANCE = 2;
  */
 lv_color_t get_heating_state_color(int current_deg, int target_deg,
                                    int tolerance = DEFAULT_AT_TEMP_TOLERANCE);
+
+// ============================================================================
+// Heater Display
+// ============================================================================
+
+/**
+ * @brief Result of formatting a heater display
+ *
+ * Contains all the information needed to display a heater status:
+ * - temp: formatted temperature string (e.g., "150°C" or "150 / 200°C")
+ * - status: semantic status ("Off", "Heating...", "Ready", or "Cooling")
+ * - pct: percentage towards target (0-100, clamped)
+ * - color: theme color matching the heating state (from get_heating_state_color)
+ */
+struct HeaterDisplayResult {
+    std::string temp;
+    std::string status;
+    int pct;
+    lv_color_t color;
+};
+
+/**
+ * @brief Format heater display information from centi-degree values
+ *
+ * Takes current and target temperatures in centi-degrees (100 = 1°C) and
+ * produces a consistent display result used across all heater displays.
+ * Includes a color field from get_heating_state_color() for one-call convenience.
+ *
+ * Status logic (DEFAULT_AT_TEMP_TOLERANCE, matches get_heating_state_color):
+ * - target <= 0: "Off"
+ * - current < target - tolerance: "Heating..."
+ * - current > target + tolerance: "Cooling"
+ * - within +/- tolerance: "Ready"
+ *
+ * @param current_centi Current temperature in centi-degrees
+ * @param target_centi Target temperature in centi-degrees (0 = off)
+ * @return HeaterDisplayResult with formatted temp, status, percentage, and color
+ */
+HeaterDisplayResult heater_display(int current_centi, int target_centi);
 
 } // namespace temperature
 } // namespace ui

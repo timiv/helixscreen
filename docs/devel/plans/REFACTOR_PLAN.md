@@ -1564,6 +1564,130 @@ MoonrakerClient (orchestrator, ~300 lines)
 
 ---
 
+### 2.6 AMS Backend Base Class Extraction
+
+**Status**: [ ] Not Started  [ ] In Progress  [x] Complete
+
+> **Completed 2026-02-20**: Extracted `AmsSubscriptionBackend` base class from AFC, HappyHare, and ToolChanger.
+> Net -361 lines. AFC migrated from `recursive_mutex` to `std::mutex` with structured lock scoping.
+> See `docs/devel/plans/2026-02-20-refactor-ams-formatting.md` for detailed plan.
+>
+> **Commits:** `daa07b57` (characterization tests), `3e01ea17` (base class + migrations)
+
+#### Problem Statement
+AFC, HappyHare, and ToolChanger shared 85-95% identical code for lifecycle management (`start`/`stop`), event handling (`emit_event`), state queries (`get_current_tool`, etc.), and utilities (`check_preconditions`, `execute_gcode`).
+
+AFC used `std::recursive_mutex` (tech debt from Dec 2025 quick fix `8f726504`) while the other backends used `std::mutex` with the proper pattern (release lock before `emit_event()`).
+
+#### Solution
+- Created `AmsSubscriptionBackend` base class (245 lines) with `final` lifecycle methods and virtual hooks (`on_started()`, `on_stopping()`, `additional_start_checks()`)
+- All three backends migrated to inherit from base class
+- AFC migrated from `recursive_mutex` to `std::mutex`
+- ValgACE (bit-rotten, polling-based) and Mock (different architecture) excluded by design
+
+#### Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| Duplicated lifecycle code | ~700 lines across 3 backends | 0 (in base class) |
+| AFC mutex type | `recursive_mutex` (tech debt) | `std::mutex` (consistent) |
+| Net lines | - | -361 |
+| Tests | 7 characterization cases, 42 assertions | All pass |
+
+---
+
+### 2.7 Temperature Formatting Consolidation
+
+**Status**: [ ] Not Started  [ ] In Progress  [x] Complete
+
+> **Completed 2026-02-20**: Consolidated duplicate temperature formatting from `format_utils` into
+> `ui_temperature_utils` as single source of truth. Net -61 lines. Added `color` field to `HeaterDisplayResult`.
+>
+> **Commit:** `4c17fd66`
+
+#### Problem Statement
+Two parallel systems for temperature formatting:
+- `format_utils.h` (`helix::format`): `format_temp()`, `format_temp_pair()`, `heater_display()`
+- `ui_temperature_utils.h` (`helix::ui::temperature`): `format_temperature()`, `format_temperature_pair()`, `get_heating_state_color()`
+
+Both hardcoded `tolerance = 2°C` for heating state logic. Both produced identical output formats.
+
+#### Solution
+- Moved `HeaterDisplayResult` and `heater_display()` to `ui_temperature_utils`
+- Added `lv_color_t color` field to `HeaterDisplayResult` (single call returns text + color)
+- Uses `DEFAULT_AT_TEMP_TOLERANCE` shared constant instead of duplicate hardcoded values
+- Removed duplicate `format_temp*()` functions from `format_utils`
+- Migrated callers in home, controls, and print-status panels
+- 17 new tests for consolidated API
+
+#### Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| Temperature format functions | 6 (3 duplicated across 2 files) | 6 (all in one file) |
+| Tolerance hardcoded locations | 2 | 1 (shared constant) |
+| Net lines | - | -61 |
+| Tests | 442 assertions in 99 cases | All pass |
+
+---
+
+### 2.8 SettingsManager Domain Split
+
+**Status**: [x] Not Started  [ ] In Progress  [ ] Complete
+
+#### Problem Statement
+`SettingsManager` (854-line header, 1,156-line implementation) manages 27 LVGL subjects across 6 unrelated domains: display, audio, safety, print behavior, hardware, and network/system. The settings panel has 7+ nearly identical dropdown callback handlers.
+
+#### Proposed Solution
+Split into domain-specific managers:
+1. `DisplaySettingsManager` — brightness, dim, sleep, theme, backlight
+2. `AudioSettingsManager` — sounds, volume, completion alerts
+3. `PrintSettingsManager` — animations, gcode rendering, bed mesh, Z movement
+4. `SafetySettingsManager` — E-stop confirmation, cancel escalation
+5. `SystemSettingsManager` — language, time format, telemetry, update channel, LED
+
+Create a generic dropdown handler factory to eliminate repetitive callback boilerplate.
+
+#### Effort Estimate
+Medium (3-5 days)
+
+---
+
+### 2.9 Panel/Overlay Base Class Broader Adoption
+
+**Status**: [x] Not Started  [ ] In Progress  [ ] Complete
+
+#### Problem Statement
+60+ panels/overlays share identical structural patterns: `register_callbacks()` → list of `lv_xml_register_event_cb()` calls, `init_subjects()` → guarded macro calls, `create()` → XML load + widget lookup. Base class helpers like `create_overlay_from_xml()` exist but are used by only 1-2 overlays.
+
+#### Proposed Solution
+- Audit existing base class facilities and document what's available
+- Create a standard `create_from_xml()` helper that handles the common XML load + error check + widget lookup pattern
+- Migrate overlays to use the helper (starting with the simplest ones)
+- Consider a declarative callback registration pattern (array of name/function pairs)
+
+#### Effort Estimate
+Low-medium (2-3 days)
+
+---
+
+### 2.10 ui_utils.cpp Split
+
+**Status**: [x] Not Started  [ ] In Progress  [ ] Complete
+
+#### Problem Statement
+`ui_utils.cpp` (520 lines) is a dumping ground mixing: string formatting (filenames, times, layer counts), image scaling, color operations, ripple effects, and responsive layout calculations.
+
+#### Proposed Solution
+Split into focused files:
+1. `ui_string_formatters.cpp` — time, file, layer, filament formatting
+2. `ui_image_helpers.cpp` — image scaling, layout
+3. `ui_effects.cpp` — ripple, animations
+4. `ui_responsive_layout.cpp` — breakpoint calculations
+
+#### Effort Estimate
+Low (1 day)
+
+---
+
 ## Quick Wins
 
 > **Assessment (2026-01-09)**: Original estimates were optimistic. Actual analysis revealed
@@ -1656,10 +1780,15 @@ MoonrakerClient (orchestrator, ~300 lines)
 ### Phase 4: Polish (ongoing)
 | Item | Effort | Owner | Status |
 |------|--------|-------|--------|
+| AMS backend base class extraction | 1d | | [x] Complete (2026-02-20) |
+| Temperature formatting consolidation | 0.5d | | [x] Complete (2026-02-20) |
+| SettingsManager domain split | 3-5d | | [ ] |
 | Unified error handling | 3d | | [ ] |
+| Panel/overlay base class adoption | 2-3d | | [ ] |
 | Namespace organization | 5d | | [ ] |
 | Dependency injection | 5d | | [ ] |
 | MoonrakerClient decomposition | 3d | | [ ] |
+| ui_utils.cpp split | 1d | | [ ] |
 
 ---
 
@@ -1671,22 +1800,25 @@ MoonrakerClient (orchestrator, ~300 lines)
 | Phase 1: Quick Wins | 5 | 5 | 100% |
 | Phase 2: Foundation | 4 | 4 | 100% |
 | Phase 3: Architecture | 5 | 4 | 80% |
-| Phase 4: Polish | 4 | 0 | 0% |
-| **Total** | **18** | **13** | **72%** |
+| Phase 4: Polish | 7 | 2 | 29% |
+| **Total** | **21** | **15** | **71%** |
 
-> **Note (2026-02-10)**: Phase 3 at 90% - PrinterState and PrintStatusPanel decomposition both COMPLETE.
-> MoonrakerAPI abstraction boundary enforced (UI no longer accesses Client directly). Full domain sub-API
-> split remains.
+> **Note (2026-02-20)**: Added 3 new Tier 2 items from codebase analysis (2.8-2.10).
+> Completed 2 new items: AMS backend base class extraction (2.6, -361 lines) and
+> temperature formatting consolidation (2.7, -61 lines). MoonrakerAPI domain split
+> still in progress.
 
 ### Metrics Dashboard
 | Metric | Current | Target | Progress |
 |--------|---------|--------|----------|
-| Lines of duplicated code | ~2000 | <1000 | 70% |
+| Lines of duplicated code | ~1500 | <1000 | 80% |
 | PrinterState lines | 2,032 (facade) | <500 | 70% |
 | PrintStatusPanel lines | 1,959 | <1000 | 50% (over target but acceptable) |
+| AMS backend duplication | 0 (base class) | 0 | 100% |
+| Temperature format duplication | 0 (consolidated) | 0 | 100% |
 | Panels using SubjectManagedPanel | 100% | 100% | 100% |
 | Observer boilerplate instances | ~90 | <20 | 30% |
-| Extracted components | 13 domain + 8 overlays | - | Done |
+| Extracted components | 13 domain + 8 overlays + 1 AMS base | - | Done |
 | Quick Wins completion | 5/5 | 5/5 | 100% |
 
 > **Note (2026-01-25)**: PrinterState = 13 domain classes. PrintStatusPanel decomposed into 8 extracted
@@ -1697,43 +1829,51 @@ MoonrakerClient (orchestrator, ~300 lines)
 
 ## Recommended Next Priorities
 
-Based on current codebase state and remaining work, here are the recommended next steps:
+Based on current codebase state and remaining work (updated 2026-02-20):
 
 ### High Value / Moderate Effort
 
-1. **PrintStatusPanel overlay extraction** (Section 1.3)
-   - Implementation still 2,119 lines
-   - 4 overlays remain: TuneOverlay, ZOffsetOverlay, ExcludeObjectOverlay, FilamentRunoutOverlay
-   - Would bring file under 1,000 lines target
+1. **MoonrakerAPI domain split** (Section 1.5)
+   - 70+ methods in single class, abstraction boundary already enforced
+   - Would improve API discoverability and testing
+   - Partially started: proxy methods added, full sub-API split remaining
 
-2. **Observer factory broader adoption**
+2. **SettingsManager domain split** (Section 2.8) — NEW
+   - 27 subjects across 6 unrelated domains
+   - 7+ identical dropdown callback handlers
+   - Would reduce coupling across 30+ UI panels
+
+3. **Observer factory broader adoption** (Section 1.2)
    - 10 panels still use legacy observer pattern
    - Migration would reduce ~1,000 lines of boilerplate
    - Optional but improves consistency
 
 ### Medium Value / Higher Effort
 
-3. **MoonrakerAPI domain split** (Section 1.5)
-   - 70+ methods in single class
-   - Not started
-   - Would improve API discoverability and testing
-
 4. **MoonrakerClient decomposition** (Section 2.4)
    - 808 line header, 1618 line implementation
    - Mixes connection, protocol, subscriptions, discovery caching
    - Moderate complexity but high maintainability impact
 
+5. **Panel/Overlay base class broader adoption** (Section 2.9) — NEW
+   - 60+ panels share identical structural patterns
+   - Base class helpers exist but are underutilized
+
 ### Lower Priority (Nice to Have)
 
-5. **Unified error handling with Result<T>** (Section 2.1)
+6. **Unified error handling with Result<T>** (Section 2.1)
    - Three incompatible error patterns exist
    - Would standardize error handling across codebase
 
-6. **Namespace organization** (Section 2.2)
+7. **ui_utils.cpp split** (Section 2.10) — NEW
+   - 520-line dumping ground mixing unrelated concerns
+   - Low effort, low urgency
+
+8. **Namespace organization** (Section 2.2)
    - Inconsistent namespace usage currently
    - Large effort, low immediate impact
 
-7. **Dependency injection for panels** (Section 2.3)
+9. **Dependency injection for panels** (Section 2.3)
    - Would improve testability
    - Large scope, consider for major refactor phase
 
@@ -1892,3 +2032,4 @@ private:
 | 2026-01-11 | Claude | **Hardware Discovery Refactor complete** (separate effort from this plan). Created `PrinterDiscovery` as single source of truth. Deleted `PrinterCapabilities`. Moved bed mesh to MoonrakerAPI. Clean architecture: MoonrakerClient (transport) -> callbacks -> MoonrakerAPI (domain). See `docs/HARDWARE_DISCOVERY_REFACTOR.md`. |
 | 2026-02-10 | Claude | **MoonrakerAPI abstraction boundary enforced.** Deleted dead `IMoonrakerDomainService` interface. Added proxy methods to MoonrakerAPI (connection state, subscriptions, database, plugin RPCs, gcode store). Migrated all UI code from `get_client()`/`get_moonraker_client()` to API proxies. Moved `BedMeshProfile` and `GcodeStoreEntry` to `moonraker_types.h`. Removed `client_` members from PID panel, retraction settings, spoolman overlay, console panel. ~17 legitimate `get_moonraker_client()` calls remain (mostly connection wizard). Commits: a5650da0, ec140f65, 4cabd79a. |
 | 2026-01-17 | Claude | **Major status update**: PrinterState decomposition COMPLETE (11+ domain classes extracted, facade now 2,002 lines). Quick Wins 100% complete (PrintStatusPanel modals extracted to 4 dedicated files). PrintStatusPanel now IN PROGRESS. Updated all progress tracking tables. Added Recommended Next Priorities section. Overall progress: 61% (was 28%). |
+| 2026-02-20 | Claude | **AMS backend base class extraction** (Section 2.6): Created `AmsSubscriptionBackend` base class, migrated AFC/HappyHare/ToolChanger. Net -361 lines. AFC `recursive_mutex` → `std::mutex`. **Temperature formatting consolidation** (Section 2.7): Moved `HeaterDisplayResult`/`heater_display()` to `ui_temperature_utils`, added `color` field, removed duplicates from `format_utils`. Net -61 lines. **New sections added** (2.8-2.10): SettingsManager domain split, Panel/Overlay base class adoption, ui_utils.cpp split. Updated recommended priorities. |

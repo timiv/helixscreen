@@ -816,12 +816,12 @@ void PrintStatusPanel::update_all_displays() {
     lv_subject_copy_string(&bed_temp_subject_, bed_temp_buf_);
 
     // Heater status text (Off / Heating... / Ready)
-    auto nozzle_heater = helix::format::heater_display(nozzle_current_, nozzle_target_);
+    auto nozzle_heater = helix::ui::temperature::heater_display(nozzle_current_, nozzle_target_);
     std::snprintf(nozzle_status_buf_, sizeof(nozzle_status_buf_), "%s",
                   nozzle_heater.status.c_str());
     lv_subject_copy_string(&nozzle_status_subject_, nozzle_status_buf_);
 
-    auto bed_heater = helix::format::heater_display(bed_current_, bed_target_);
+    auto bed_heater = helix::ui::temperature::heater_display(bed_current_, bed_target_);
     std::snprintf(bed_status_buf_, sizeof(bed_status_buf_), "%s", bed_heater.status.c_str());
     lv_subject_copy_string(&bed_status_subject_, bed_status_buf_);
 
@@ -1164,12 +1164,12 @@ void PrintStatusPanel::on_temperature_changed() {
                             bed_temp_buf_, sizeof(bed_temp_buf_));
     lv_subject_copy_string(&bed_temp_subject_, bed_temp_buf_);
 
-    auto nozzle_heater = helix::format::heater_display(nozzle_current_, nozzle_target_);
+    auto nozzle_heater = helix::ui::temperature::heater_display(nozzle_current_, nozzle_target_);
     std::snprintf(nozzle_status_buf_, sizeof(nozzle_status_buf_), "%s",
                   nozzle_heater.status.c_str());
     lv_subject_copy_string(&nozzle_status_subject_, nozzle_status_buf_);
 
-    auto bed_heater = helix::format::heater_display(bed_current_, bed_target_);
+    auto bed_heater = helix::ui::temperature::heater_display(bed_current_, bed_target_);
     std::snprintf(bed_status_buf_, sizeof(bed_status_buf_), "%s", bed_heater.status.c_str());
     lv_subject_copy_string(&bed_status_subject_, bed_status_buf_);
 

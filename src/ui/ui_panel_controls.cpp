@@ -19,6 +19,7 @@
 #include "ui_position_utils.h"
 #include "ui_settings_sensors.h"
 #include "ui_subject_registry.h"
+#include "ui_temperature_utils.h"
 #include "ui_toast_manager.h"
 #include "ui_update_queue.h"
 
@@ -501,7 +502,8 @@ void ControlsPanel::update_nozzle_label() {
 }
 
 void ControlsPanel::update_nozzle_temp_display() {
-    auto result = helix::format::heater_display(cached_extruder_temp_, cached_extruder_target_);
+    auto result =
+        helix::ui::temperature::heater_display(cached_extruder_temp_, cached_extruder_target_);
 
     std::snprintf(nozzle_temp_buf_, sizeof(nozzle_temp_buf_), "%s", result.temp.c_str());
     lv_subject_copy_string(&nozzle_temp_subject_, nozzle_temp_buf_);
@@ -515,7 +517,7 @@ void ControlsPanel::update_nozzle_temp_display() {
 }
 
 void ControlsPanel::update_bed_temp_display() {
-    auto result = helix::format::heater_display(cached_bed_temp_, cached_bed_target_);
+    auto result = helix::ui::temperature::heater_display(cached_bed_temp_, cached_bed_target_);
 
     std::snprintf(bed_temp_buf_, sizeof(bed_temp_buf_), "%s", result.temp.c_str());
     lv_subject_copy_string(&bed_temp_subject_, bed_temp_buf_);
