@@ -54,6 +54,13 @@ void FanStackWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
     hotend_icon_ = lv_obj_find_by_name(widget_obj_, "fan_stack_hotend_icon");
     aux_icon_ = lv_obj_find_by_name(widget_obj_, "fan_stack_aux_icon");
 
+    // Set initial text — text_small is a registered widget so XML inner content
+    // isn't reliably applied. Observers update with real values on next tick.
+    for (auto* label : {part_label_, hotend_label_, aux_label_}) {
+        if (label)
+            lv_label_set_text(label, "0%");
+    }
+
     // Set rotation pivots on icons (center of 16px icon)
     for (auto* icon : {part_icon_, hotend_icon_, aux_icon_}) {
         if (icon) {
@@ -131,7 +138,7 @@ void FanStackWidget::set_row_density(size_t widgets_in_row) {
     if (!font)
         return;
 
-    // Apply to all speed labels and name labels
+    // Apply to all speed labels
     for (auto* label : {part_label_, hotend_label_, aux_label_}) {
         if (label)
             lv_obj_set_style_text_font(label, font, 0);

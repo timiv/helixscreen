@@ -17,9 +17,7 @@
       <icon name="fan_stack_part_icon" src="fan" size="xs" variant="secondary" clickable="false" event_bubble="true"/>
       <text_muted name="fan_stack_part_name" text="P" style_text_font="#font_xs" clickable="false" event_bubble="true"/>
       <text_small name="fan_stack_part_speed"
-                  style_text_color="#text" style_text_font="#font_xs" clickable="false" event_bubble="true">
-        0%
-      </text_small>
+                  style_text_color="#text" style_text_font="#font_xs" clickable="false" event_bubble="true"/>
     </lv_obj>
 
     <!-- Hotend fan row -->
@@ -30,9 +28,7 @@
       <icon name="fan_stack_hotend_icon" src="fan" size="xs" variant="secondary" clickable="false" event_bubble="true"/>
       <text_muted name="fan_stack_hotend_name" text="H" style_text_font="#font_xs" clickable="false" event_bubble="true"/>
       <text_small name="fan_stack_hotend_speed"
-                  style_text_color="#text" style_text_font="#font_xs" clickable="false" event_bubble="true">
-        0%
-      </text_small>
+                  style_text_color="#text" style_text_font="#font_xs" clickable="false" event_bubble="true"/>
     </lv_obj>
 
     <!-- Aux fan row (hidden when no aux fan detected) -->
@@ -43,9 +39,7 @@
       <icon name="fan_stack_aux_icon" src="fan" size="xs" variant="secondary" clickable="false" event_bubble="true"/>
       <text_muted name="fan_stack_aux_name" text="C" style_text_font="#font_xs" clickable="false" event_bubble="true"/>
       <text_small name="fan_stack_aux_speed"
-                  style_text_color="#text" style_text_font="#font_xs" clickable="false" event_bubble="true">
-        0%
-      </text_small>
+                  style_text_color="#text" style_text_font="#font_xs" clickable="false" event_bubble="true"/>
     </lv_obj>
   </view>
 </component>
