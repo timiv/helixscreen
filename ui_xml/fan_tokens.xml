@@ -34,6 +34,10 @@
     <px name="fan_btn_row_height_small" value="28"/>
     <px name="fan_btn_row_height_medium" value="32"/>
     <px name="fan_btn_row_height_large" value="36"/>
+    <!-- Panel widget fan name max width (clip long names) -->
+    <px name="fan_name_max_width_small" value="24"/>
+    <px name="fan_name_max_width_medium" value="30"/>
+    <px name="fan_name_max_width_large" value="38"/>
     <!-- Button dimensions -->
     <px name="fan_btn_max_width_tiny" value="60"/>
     <px name="fan_btn_max_width_small" value="55"/>
