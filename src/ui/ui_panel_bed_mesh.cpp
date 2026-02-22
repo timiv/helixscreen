@@ -255,8 +255,8 @@ lv_obj_t* BedMeshPanel::create(lv_obj_t* parent) {
 
     // Load initial mesh data from MoonrakerAPI
     MoonrakerAPI* api = get_moonraker_api();
-    if (api && api->has_bed_mesh()) {
-        const BedMeshProfile* mesh = api->get_active_bed_mesh();
+    if (api && api->advanced().has_bed_mesh()) {
+        const BedMeshProfile* mesh = api->advanced().get_active_bed_mesh();
         if (mesh) {
             spdlog::info("[{}] Active mesh: profile='{}', size={}x{}", get_name(), mesh->name,
                          mesh->x_count, mesh->y_count);
@@ -366,8 +366,8 @@ void BedMeshPanel::on_activate() {
 
     // Refresh mesh data when panel becomes visible
     MoonrakerAPI* api = get_moonraker_api();
-    if (api && api->has_bed_mesh()) {
-        const BedMeshProfile* mesh = api->get_active_bed_mesh();
+    if (api && api->advanced().has_bed_mesh()) {
+        const BedMeshProfile* mesh = api->advanced().get_active_bed_mesh();
         if (mesh) {
             on_mesh_update_internal(*mesh);
         }
@@ -397,8 +397,8 @@ void BedMeshPanel::update_profile_list_subjects() {
         return;
     }
 
-    const auto profiles = api->get_bed_mesh_profiles();
-    const BedMeshProfile* active_mesh = api->get_active_bed_mesh();
+    const auto profiles = api->advanced().get_bed_mesh_profiles();
+    const BedMeshProfile* active_mesh = api->advanced().get_active_bed_mesh();
     std::string active_name = active_mesh ? active_mesh->name : "";
 
     spdlog::debug("[{}] update_profile_list_subjects: {} profiles, active='{}'", get_name(),
@@ -441,7 +441,7 @@ float BedMeshPanel::calculate_profile_range(const std::string& profile_name) {
         return 0.0f;
 
     // Get mesh data for this profile (supports both active and stored profiles)
-    const BedMeshProfile* mesh = api->get_bed_mesh_profile(profile_name);
+    const BedMeshProfile* mesh = api->advanced().get_bed_mesh_profile(profile_name);
     if (!mesh || mesh->probed_matrix.empty()) {
         return 0.0f;
     }
@@ -538,7 +538,7 @@ void BedMeshPanel::setup_moonraker_subscription() {
                 if (!c->alive->load()) {
                     return;
                 }
-                const BedMeshProfile* mesh = c->api->get_active_bed_mesh();
+                const BedMeshProfile* mesh = c->api->advanced().get_active_bed_mesh();
                 if (mesh) {
                     c->panel->on_mesh_update_internal(*mesh);
                 }
@@ -838,7 +838,7 @@ void BedMeshPanel::start_calibration() {
     auto alive = alive_;
 
     // Start calibration with progress tracking
-    api->start_bed_mesh_calibrate(
+    api->advanced().start_bed_mesh_calibrate(
         // Progress callback (from WebSocket thread)
         [this, alive](int current, int total) {
             if (!alive->load())

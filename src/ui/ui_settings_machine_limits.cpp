@@ -198,7 +198,7 @@ void MachineLimitsOverlay::on_deactivate() {
 
 void MachineLimitsOverlay::query_and_show(lv_obj_t* /*parent_screen*/) {
     if (api_) {
-        api_->get_machine_limits(
+        api_->advanced().get_machine_limits(
             [this](const MachineLimits& limits) {
                 // Capture limits by value and defer to main thread for LVGL calls
                 helix::ui::queue_update([this, limits]() {
@@ -393,7 +393,7 @@ void MachineLimitsOverlay::apply_limits() {
         return;
     }
 
-    api_->set_machine_limits(
+    api_->advanced().set_machine_limits(
         current_limits_,
         [this]() {
             // Defer to main thread for LVGL calls

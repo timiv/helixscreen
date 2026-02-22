@@ -246,7 +246,7 @@ bool StandardMacros::execute(StandardMacroSlot slot, MoonrakerAPI* api,
     }
 
     spdlog::info("[StandardMacros] Executing {} via {}", info.slot_name, macro_name);
-    api->execute_macro(macro_name, params, std::move(on_success), std::move(on_error));
+    api->advanced().execute_macro(macro_name, params, std::move(on_success), std::move(on_error));
     return true;
 }
 

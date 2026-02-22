@@ -209,7 +209,7 @@ void TimelapseInstallOverlay::step_check_webcam() {
     }
 
     auto alive = alive_guard_;
-    api_->get_webcam_list(
+    api_->timelapse().get_webcam_list(
         [this, alive](const std::vector<WebcamInfo>& webcams) {
             if (!alive || !*alive || !wizard_active_)
                 return;
@@ -253,7 +253,7 @@ void TimelapseInstallOverlay::step_check_plugin() {
         return;
 
     auto alive = alive_guard_;
-    api_->get_timelapse_settings(
+    api_->timelapse().get_timelapse_settings(
         [this, alive](const TimelapseSettings& /*settings*/) {
             if (!alive || !*alive || !wizard_active_)
                 return;
@@ -314,7 +314,7 @@ void TimelapseInstallOverlay::recheck_after_install() {
         return;
 
     auto alive = alive_guard_;
-    api_->get_timelapse_settings(
+    api_->timelapse().get_timelapse_settings(
         [this, alive](const TimelapseSettings& /*settings*/) {
             if (!alive || !*alive || !wizard_active_)
                 return;
@@ -367,7 +367,7 @@ void TimelapseInstallOverlay::download_and_modify_config() {
     auto alive = alive_guard_;
 
     // Download moonraker.conf
-    api_->download_file(
+    api_->transfers().download_file(
         "config", "moonraker.conf",
         [this, alive](const std::string& content) {
             if (!alive || !*alive || !wizard_active_)
@@ -389,7 +389,7 @@ void TimelapseInstallOverlay::download_and_modify_config() {
             std::string modified = append_timelapse_config(content);
 
             // Upload modified config (API call, fine on bg thread)
-            api_->upload_file(
+            api_->transfers().upload_file(
                 "config", "moonraker.conf", modified,
                 [this, alive]() {
                     if (!alive || !*alive || !wizard_active_)
@@ -533,7 +533,7 @@ void TimelapseInstallOverlay::step_verify() {
         return;
 
     auto alive = alive_guard_;
-    api_->get_timelapse_settings(
+    api_->timelapse().get_timelapse_settings(
         [this, alive](const TimelapseSettings& /*settings*/) {
             if (!alive || !*alive || !wizard_active_)
                 return;

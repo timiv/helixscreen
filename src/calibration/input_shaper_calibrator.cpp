@@ -96,7 +96,7 @@ void InputShaperCalibrator::check_accelerometer(AccelCheckCallback on_complete,
     // Ensure homed before measuring (toolhead needs to be positioned)
     ensure_homed_then(
         [this, on_complete, on_error]() {
-            api_->measure_axes_noise(
+            api_->advanced().measure_axes_noise(
                 [this, on_complete](float noise_level) {
                     results_.noise_level = noise_level;
                     state_ = State::IDLE;
@@ -174,7 +174,7 @@ void InputShaperCalibrator::run_calibration(char axis, ProgressCallback on_progr
                 }
             };
 
-            api_->start_resonance_test(
+            api_->advanced().start_resonance_test(
                 normalized_axis, api_progress,
                 [this, normalized_axis, on_complete](const InputShaperResult& result) {
                     if (normalized_axis == 'X') {
@@ -253,8 +253,9 @@ void InputShaperCalibrator::apply_settings(const ApplyConfig& config, SuccessCal
     };
 
     // Call API to set input shaper
-    api_->set_input_shaper(config.axis, config.shaper_type, static_cast<double>(config.frequency),
-                           on_success, error_adapter);
+    api_->advanced().set_input_shaper(config.axis, config.shaper_type,
+                                      static_cast<double>(config.frequency), on_success,
+                                      error_adapter);
 }
 
 // ============================================================================
@@ -281,7 +282,7 @@ void InputShaperCalibrator::save_to_config(SuccessCallback on_success, ErrorCall
     };
 
     // Call API to save config
-    api_->save_config(on_success, error_adapter);
+    api_->advanced().save_config(on_success, error_adapter);
 }
 
 } // namespace calibration

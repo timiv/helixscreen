@@ -5,8 +5,8 @@
 #include "ui_notification.h"
 
 #include "json_utils.h"
+#include "moonraker_advanced_api.h"
 #include "moonraker_api.h"
-#include "moonraker_api_internal.h"
 #include "shaper_csv_parser.h"
 #include "spdlog/spdlog.h"
 
@@ -20,13 +20,18 @@
 
 using namespace helix;
 
-using namespace moonraker_internal;
+// ============================================================================
+// MoonrakerAdvancedAPI Implementation
+// ============================================================================
+
+MoonrakerAdvancedAPI::MoonrakerAdvancedAPI(MoonrakerClient& client, MoonrakerAPI& api)
+    : client_(client), api_(api) {}
 
 // ============================================================================
 // Domain Service Operations - Bed Mesh
 // ============================================================================
 
-void MoonrakerAPI::update_bed_mesh(const json& bed_mesh) {
+void MoonrakerAdvancedAPI::update_bed_mesh(const json& bed_mesh) {
     std::lock_guard<std::mutex> lock(bed_mesh_mutex_);
 
     spdlog::debug("[MoonrakerAPI] update_bed_mesh called with keys: {}", [&]() {
@@ -158,7 +163,7 @@ void MoonrakerAPI::update_bed_mesh(const json& bed_mesh) {
     }
 }
 
-const BedMeshProfile* MoonrakerAPI::get_active_bed_mesh() const {
+const BedMeshProfile* MoonrakerAdvancedAPI::get_active_bed_mesh() const {
     std::lock_guard<std::mutex> lock(bed_mesh_mutex_);
 
     if (active_bed_mesh_.probed_matrix.empty()) {
@@ -167,17 +172,17 @@ const BedMeshProfile* MoonrakerAPI::get_active_bed_mesh() const {
     return &active_bed_mesh_;
 }
 
-std::vector<std::string> MoonrakerAPI::get_bed_mesh_profiles() const {
+std::vector<std::string> MoonrakerAdvancedAPI::get_bed_mesh_profiles() const {
     std::lock_guard<std::mutex> lock(bed_mesh_mutex_);
     return bed_mesh_profiles_;
 }
 
-bool MoonrakerAPI::has_bed_mesh() const {
+bool MoonrakerAdvancedAPI::has_bed_mesh() const {
     std::lock_guard<std::mutex> lock(bed_mesh_mutex_);
     return !active_bed_mesh_.probed_matrix.empty();
 }
 
-const BedMeshProfile* MoonrakerAPI::get_bed_mesh_profile(const std::string& profile_name) const {
+const BedMeshProfile* MoonrakerAdvancedAPI::get_bed_mesh_profile(const std::string& profile_name) const {
     std::lock_guard<std::mutex> lock(bed_mesh_mutex_);
 
     // Check stored profiles first
@@ -194,7 +199,7 @@ const BedMeshProfile* MoonrakerAPI::get_bed_mesh_profile(const std::string& prof
     return nullptr;
 }
 
-void MoonrakerAPI::get_excluded_objects(
+void MoonrakerAdvancedAPI::get_excluded_objects(
     std::function<void(const std::set<std::string>&)> on_success, ErrorCallback on_error) {
     // Query exclude_object state from Klipper
     json params = {{"objects", json::object({{"exclude_object", nullptr}})}};
@@ -235,7 +240,7 @@ void MoonrakerAPI::get_excluded_objects(
         on_error);
 }
 
-void MoonrakerAPI::get_available_objects(
+void MoonrakerAdvancedAPI::get_available_objects(
     std::function<void(const std::vector<std::string>&)> on_success, ErrorCallback on_error) {
     // Query exclude_object state from Klipper
     json params = {{"objects", json::object({{"exclude_object", nullptr}})}};
@@ -303,7 +308,7 @@ class PIDCalibrateCollector : public std::enable_shared_from_this<PIDCalibrateCo
     using PIDProgressCallback = std::function<void(int sample, float tolerance)>;
 
     PIDCalibrateCollector(MoonrakerClient& client, PIDCallback on_success,
-                          MoonrakerAPI::ErrorCallback on_error,
+                          MoonrakerAdvancedAPI::ErrorCallback on_error,
                           PIDProgressCallback on_progress = nullptr)
         : client_(client), on_success_(std::move(on_success)), on_error_(std::move(on_error)),
           on_progress_(std::move(on_progress)) {}
@@ -417,7 +422,7 @@ class PIDCalibrateCollector : public std::enable_shared_from_this<PIDCalibrateCo
 
     MoonrakerClient& client_;
     PIDCallback on_success_;
-    MoonrakerAPI::ErrorCallback on_error_;
+    MoonrakerAdvancedAPI::ErrorCallback on_error_;
     PIDProgressCallback on_progress_;
     std::string handler_name_;
     std::atomic<bool> registered_{false};
@@ -448,7 +453,7 @@ class PIDCalibrateCollector : public std::enable_shared_from_this<PIDCalibrateCo
 class ScrewsTiltCollector : public std::enable_shared_from_this<ScrewsTiltCollector> {
   public:
     ScrewsTiltCollector(MoonrakerClient& client, ScrewTiltCallback on_success,
-                        MoonrakerAPI::ErrorCallback on_error)
+                        MoonrakerAdvancedAPI::ErrorCallback on_error)
         : client_(client), on_success_(std::move(on_success)), on_error_(std::move(on_error)) {}
 
     ~ScrewsTiltCollector() {
@@ -650,7 +655,7 @@ class ScrewsTiltCollector : public std::enable_shared_from_this<ScrewsTiltCollec
 
     MoonrakerClient& client_;
     ScrewTiltCallback on_success_;
-    MoonrakerAPI::ErrorCallback on_error_;
+    MoonrakerAdvancedAPI::ErrorCallback on_error_;
     std::string handler_name_;
     std::atomic<bool> registered_{false}; // Thread-safe: accessed from callback and destructor
     std::atomic<bool> completed_{false};  // Thread-safe: prevents double-callback invocation
@@ -679,7 +684,7 @@ class ScrewsTiltCollector : public std::enable_shared_from_this<ScrewsTiltCollec
 class InputShaperCollector : public std::enable_shared_from_this<InputShaperCollector> {
   public:
     InputShaperCollector(MoonrakerClient& client, char axis, AdvancedProgressCallback on_progress,
-                         InputShaperCallback on_success, MoonrakerAPI::ErrorCallback on_error)
+                         InputShaperCallback on_success, MoonrakerAdvancedAPI::ErrorCallback on_error)
         : client_(client), axis_(axis), on_progress_(std::move(on_progress)),
           on_success_(std::move(on_success)), on_error_(std::move(on_error)),
           last_activity_(std::chrono::steady_clock::now()) {}
@@ -998,7 +1003,7 @@ class InputShaperCollector : public std::enable_shared_from_this<InputShaperColl
     char axis_;
     AdvancedProgressCallback on_progress_;
     InputShaperCallback on_success_;
-    MoonrakerAPI::ErrorCallback on_error_;
+    MoonrakerAdvancedAPI::ErrorCallback on_error_;
     std::string handler_name_;
     std::atomic<bool> registered_{false};
     std::atomic<bool> completed_{false};
@@ -1030,8 +1035,8 @@ class InputShaperCollector : public std::enable_shared_from_this<InputShaperColl
  */
 class NoiseCheckCollector : public std::enable_shared_from_this<NoiseCheckCollector> {
   public:
-    NoiseCheckCollector(MoonrakerClient& client, MoonrakerAPI::NoiseCheckCallback on_success,
-                        MoonrakerAPI::ErrorCallback on_error)
+    NoiseCheckCollector(MoonrakerClient& client, MoonrakerAdvancedAPI::NoiseCheckCallback on_success,
+                        MoonrakerAdvancedAPI::ErrorCallback on_error)
         : client_(client), on_success_(std::move(on_success)), on_error_(std::move(on_error)) {}
 
     ~NoiseCheckCollector() {
@@ -1170,8 +1175,8 @@ class NoiseCheckCollector : public std::enable_shared_from_this<NoiseCheckCollec
     }
 
     MoonrakerClient& client_;
-    MoonrakerAPI::NoiseCheckCallback on_success_;
-    MoonrakerAPI::ErrorCallback on_error_;
+    MoonrakerAdvancedAPI::NoiseCheckCallback on_success_;
+    MoonrakerAdvancedAPI::ErrorCallback on_error_;
     std::string handler_name_;
     std::atomic<bool> registered_{false};
     std::atomic<bool> completed_{false};
@@ -1201,8 +1206,8 @@ class BedMeshProgressCollector : public std::enable_shared_from_this<BedMeshProg
     using ProgressCallback = std::function<void(int current, int total)>;
 
     BedMeshProgressCollector(MoonrakerClient& client, ProgressCallback on_progress,
-                             MoonrakerAPI::SuccessCallback on_complete,
-                             MoonrakerAPI::ErrorCallback on_error)
+                             MoonrakerAdvancedAPI::SuccessCallback on_complete,
+                             MoonrakerAdvancedAPI::ErrorCallback on_error)
         : client_(client), on_progress_(std::move(on_progress)),
           on_complete_(std::move(on_complete)), on_error_(std::move(on_error)) {}
 
@@ -1336,8 +1341,8 @@ class BedMeshProgressCollector : public std::enable_shared_from_this<BedMeshProg
 
     MoonrakerClient& client_;
     ProgressCallback on_progress_;
-    MoonrakerAPI::SuccessCallback on_complete_;
-    MoonrakerAPI::ErrorCallback on_error_;
+    MoonrakerAdvancedAPI::SuccessCallback on_complete_;
+    MoonrakerAdvancedAPI::ErrorCallback on_error_;
     std::string handler_name_;
     std::atomic<bool> registered_{false};
     std::atomic<bool> completed_{false};
@@ -1346,7 +1351,7 @@ class BedMeshProgressCollector : public std::enable_shared_from_this<BedMeshProg
     int total_probes_ = 0;
 };
 
-void MoonrakerAPI::start_bed_mesh_calibrate(BedMeshProgressCallback on_progress,
+void MoonrakerAdvancedAPI::start_bed_mesh_calibrate(BedMeshProgressCallback on_progress,
                                             SuccessCallback on_complete, ErrorCallback on_error) {
     spdlog::info("[MoonrakerAPI] Starting bed mesh calibration with progress tracking");
 
@@ -1358,7 +1363,7 @@ void MoonrakerAPI::start_bed_mesh_calibrate(BedMeshProgressCallback on_progress,
 
     // Execute the calibration command
     // Note: No PROFILE= parameter - user will name the mesh after completion
-    execute_gcode(
+    api_.execute_gcode(
         "BED_MESH_CALIBRATE",
         [collector]() {
             // Command accepted - collector will handle completion via gcode_response
@@ -1379,7 +1384,7 @@ void MoonrakerAPI::start_bed_mesh_calibrate(BedMeshProgressCallback on_progress,
         CALIBRATION_TIMEOUT_MS);
 }
 
-void MoonrakerAPI::calculate_screws_tilt(ScrewTiltCallback on_success, ErrorCallback on_error) {
+void MoonrakerAdvancedAPI::calculate_screws_tilt(ScrewTiltCallback on_success, ErrorCallback on_error) {
     spdlog::info("[Moonraker API] Starting SCREWS_TILT_CALCULATE");
 
     // Create a collector to handle async response parsing
@@ -1389,7 +1394,7 @@ void MoonrakerAPI::calculate_screws_tilt(ScrewTiltCallback on_success, ErrorCall
 
     // Send the G-code command
     // The command will trigger probing, and results come back via notify_gcode_response
-    execute_gcode(
+    api_.execute_gcode(
         "SCREWS_TILT_CALCULATE",
         []() {
             // Command was accepted by Klipper - actual results come via gcode_response
@@ -1412,7 +1417,7 @@ void MoonrakerAPI::calculate_screws_tilt(ScrewTiltCallback on_success, ErrorCall
         CALIBRATION_TIMEOUT_MS);
 }
 
-void MoonrakerAPI::run_qgl(SuccessCallback /*on_success*/, ErrorCallback on_error) {
+void MoonrakerAdvancedAPI::run_qgl(SuccessCallback /*on_success*/, ErrorCallback on_error) {
     spdlog::warn("[Moonraker API] run_qgl() not yet implemented");
     if (on_error) {
         MoonrakerError err;
@@ -1422,7 +1427,7 @@ void MoonrakerAPI::run_qgl(SuccessCallback /*on_success*/, ErrorCallback on_erro
     }
 }
 
-void MoonrakerAPI::run_z_tilt_adjust(SuccessCallback /*on_success*/, ErrorCallback on_error) {
+void MoonrakerAdvancedAPI::run_z_tilt_adjust(SuccessCallback /*on_success*/, ErrorCallback on_error) {
     spdlog::warn("[Moonraker API] run_z_tilt_adjust() not yet implemented");
     if (on_error) {
         MoonrakerError err;
@@ -1432,7 +1437,7 @@ void MoonrakerAPI::run_z_tilt_adjust(SuccessCallback /*on_success*/, ErrorCallba
     }
 }
 
-void MoonrakerAPI::start_resonance_test(char axis, AdvancedProgressCallback on_progress,
+void MoonrakerAdvancedAPI::start_resonance_test(char axis, AdvancedProgressCallback on_progress,
                                         InputShaperCallback on_complete, ErrorCallback on_error) {
     spdlog::info("[Moonraker API] Starting SHAPER_CALIBRATE AXIS={}", axis);
 
@@ -1446,7 +1451,7 @@ void MoonrakerAPI::start_resonance_test(char axis, AdvancedProgressCallback on_p
     std::string cmd = "SHAPER_CALIBRATE AXIS=";
     cmd += axis;
 
-    execute_gcode(
+    api_.execute_gcode(
         cmd, []() { spdlog::debug("[Moonraker API] SHAPER_CALIBRATE command accepted"); },
         [collector, on_error](const MoonrakerError& err) {
             if (err.type == MoonrakerErrorType::TIMEOUT) {
@@ -1464,7 +1469,7 @@ void MoonrakerAPI::start_resonance_test(char axis, AdvancedProgressCallback on_p
         SHAPER_TIMEOUT_MS);
 }
 
-void MoonrakerAPI::start_klippain_shaper_calibration(const std::string& /*axis*/,
+void MoonrakerAdvancedAPI::start_klippain_shaper_calibration(const std::string& /*axis*/,
                                                      SuccessCallback /*on_success*/,
                                                      ErrorCallback on_error) {
     spdlog::warn("[Moonraker API] start_klippain_shaper_calibration() not yet implemented");
@@ -1476,7 +1481,7 @@ void MoonrakerAPI::start_klippain_shaper_calibration(const std::string& /*axis*/
     }
 }
 
-void MoonrakerAPI::set_input_shaper(char axis, const std::string& shaper_type, double frequency,
+void MoonrakerAdvancedAPI::set_input_shaper(char axis, const std::string& shaper_type, double frequency,
                                     SuccessCallback on_success, ErrorCallback on_error) {
     spdlog::info("[Moonraker API] Setting input shaper: {}={} @ {:.1f} Hz", axis, shaper_type,
                  frequency);
@@ -1486,10 +1491,10 @@ void MoonrakerAPI::set_input_shaper(char axis, const std::string& shaper_type, d
     cmd << "SET_INPUT_SHAPER SHAPER_FREQ_" << axis << "=" << frequency << " SHAPER_TYPE_" << axis
         << "=" << shaper_type;
 
-    execute_gcode(cmd.str(), on_success, on_error);
+    api_.execute_gcode(cmd.str(), on_success, on_error);
 }
 
-void MoonrakerAPI::measure_axes_noise(NoiseCheckCallback on_complete, ErrorCallback on_error) {
+void MoonrakerAdvancedAPI::measure_axes_noise(NoiseCheckCallback on_complete, ErrorCallback on_error) {
     spdlog::info("[Moonraker API] Starting MEASURE_AXES_NOISE");
 
     // Create collector to handle async response parsing
@@ -1497,7 +1502,7 @@ void MoonrakerAPI::measure_axes_noise(NoiseCheckCallback on_complete, ErrorCallb
     collector->start();
 
     // Send the G-code command
-    execute_gcode(
+    api_.execute_gcode(
         "MEASURE_AXES_NOISE",
         []() { spdlog::debug("[Moonraker API] MEASURE_AXES_NOISE command accepted"); },
         [collector, on_error](const MoonrakerError& err) {
@@ -1515,7 +1520,7 @@ void MoonrakerAPI::measure_axes_noise(NoiseCheckCallback on_complete, ErrorCallb
         SHAPER_TIMEOUT_MS);
 }
 
-void MoonrakerAPI::get_input_shaper_config(InputShaperConfigCallback on_success,
+void MoonrakerAdvancedAPI::get_input_shaper_config(InputShaperConfigCallback on_success,
                                            ErrorCallback on_error) {
     spdlog::debug("[Moonraker API] Querying input shaper configuration");
 
@@ -1591,7 +1596,7 @@ void MoonrakerAPI::get_input_shaper_config(InputShaperConfigCallback on_success,
         on_error);
 }
 
-void MoonrakerAPI::get_machine_limits(MachineLimitsCallback on_success, ErrorCallback on_error) {
+void MoonrakerAdvancedAPI::get_machine_limits(MachineLimitsCallback on_success, ErrorCallback on_error) {
     spdlog::debug("[Moonraker API] Querying machine limits from toolhead");
 
     // Query toolhead object for current velocity/acceleration limits
@@ -1646,7 +1651,7 @@ void MoonrakerAPI::get_machine_limits(MachineLimitsCallback on_success, ErrorCal
         on_error);
 }
 
-void MoonrakerAPI::set_machine_limits(const MachineLimits& limits, SuccessCallback on_success,
+void MoonrakerAdvancedAPI::set_machine_limits(const MachineLimits& limits, SuccessCallback on_success,
                                       ErrorCallback on_error) {
     spdlog::info("[Moonraker API] Setting machine limits");
 
@@ -1693,15 +1698,15 @@ void MoonrakerAPI::set_machine_limits(const MachineLimits& limits, SuccessCallba
     }
 
     spdlog::debug("[Moonraker API] Executing: {}", cmd.str());
-    execute_gcode(cmd.str(), on_success, on_error);
+    api_.execute_gcode(cmd.str(), on_success, on_error);
 }
 
-void MoonrakerAPI::save_config(SuccessCallback on_success, ErrorCallback on_error) {
+void MoonrakerAdvancedAPI::save_config(SuccessCallback on_success, ErrorCallback on_error) {
     spdlog::info("[MoonrakerAPI] Sending SAVE_CONFIG");
-    execute_gcode("SAVE_CONFIG", std::move(on_success), std::move(on_error));
+    api_.execute_gcode("SAVE_CONFIG", std::move(on_success), std::move(on_error));
 }
 
-void MoonrakerAPI::execute_macro(const std::string& name,
+void MoonrakerAdvancedAPI::execute_macro(const std::string& name,
                                  const std::map<std::string, std::string>& params,
                                  SuccessCallback on_success, ErrorCallback on_error) {
     // Validate macro name - only allow alphanumeric, underscore (standard Klipper macro names)
@@ -1776,10 +1781,10 @@ void MoonrakerAPI::execute_macro(const std::string& name,
     std::string gcode_str = gcode.str();
     spdlog::debug("[Moonraker API] Executing macro: {}", gcode_str);
 
-    execute_gcode(gcode_str, std::move(on_success), std::move(on_error));
+    api_.execute_gcode(gcode_str, std::move(on_success), std::move(on_error));
 }
 
-std::vector<MacroInfo> MoonrakerAPI::get_user_macros(bool /*include_system*/) const {
+std::vector<MacroInfo> MoonrakerAdvancedAPI::get_user_macros(bool /*include_system*/) const {
     spdlog::warn("[Moonraker API] get_user_macros() not yet implemented");
     return {};
 }
@@ -1788,9 +1793,9 @@ std::vector<MacroInfo> MoonrakerAPI::get_user_macros(bool /*include_system*/) co
 // Advanced Panel Operations - PID Calibration
 // ============================================================================
 
-void MoonrakerAPI::get_heater_pid_values(const std::string& heater,
-                                         MoonrakerAPI::PIDCalibrateCallback on_complete,
-                                         MoonrakerAPI::ErrorCallback on_error) {
+void MoonrakerAdvancedAPI::get_heater_pid_values(const std::string& heater,
+                                         MoonrakerAdvancedAPI::PIDCalibrateCallback on_complete,
+                                         MoonrakerAdvancedAPI::ErrorCallback on_error) {
     json params = {{"objects", json::object({{"configfile", json::array({"settings"})}})}};
 
     client_.send_jsonrpc(
@@ -1855,8 +1860,8 @@ void MoonrakerAPI::get_heater_pid_values(const std::string& heater,
         });
 }
 
-void MoonrakerAPI::start_pid_calibrate(const std::string& heater, int target_temp,
-                                       MoonrakerAPI::PIDCalibrateCallback on_complete,
+void MoonrakerAdvancedAPI::start_pid_calibrate(const std::string& heater, int target_temp,
+                                       MoonrakerAdvancedAPI::PIDCalibrateCallback on_complete,
                                        ErrorCallback on_error, PIDProgressCallback on_progress) {
     spdlog::info("[MoonrakerAPI] Starting PID calibration for {} at {}°C", heater, target_temp);
 
@@ -1868,7 +1873,7 @@ void MoonrakerAPI::start_pid_calibrate(const std::string& heater, int target_tem
     snprintf(cmd, sizeof(cmd), "PID_CALIBRATE HEATER=%s TARGET=%d", heater.c_str(), target_temp);
 
     // silent=true: PID errors are handled by the collector and UI panel, not global toast
-    execute_gcode(
+    api_.execute_gcode(
         cmd, nullptr,
         [collector, on_error](const MoonrakerError& err) {
             if (err.type == MoonrakerErrorType::TIMEOUT) {

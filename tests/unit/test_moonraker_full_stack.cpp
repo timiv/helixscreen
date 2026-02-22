@@ -254,16 +254,16 @@ TEST_CASE_METHOD(FullStackTestFixture, "Full stack: Bed mesh access through API"
                  "[connection][integration][bedmesh]") {
     SECTION("API reports bed mesh state correctly") {
         // Check bed mesh availability through API
-        bool api_has_mesh = api_->has_bed_mesh();
+        bool api_has_mesh = api_->advanced().has_bed_mesh();
 
         // API method should return consistent state
         REQUIRE((api_has_mesh == true || api_has_mesh == false));
     }
 
     SECTION("Get active bed mesh returns valid data when available") {
-        const BedMeshProfile* mesh = api_->get_active_bed_mesh();
+        const BedMeshProfile* mesh = api_->advanced().get_active_bed_mesh();
 
-        if (api_->has_bed_mesh()) {
+        if (api_->advanced().has_bed_mesh()) {
             REQUIRE(mesh != nullptr);
             // Verify mesh has valid data
             REQUIRE(!mesh->probed_matrix.empty());
@@ -275,7 +275,7 @@ TEST_CASE_METHOD(FullStackTestFixture, "Full stack: Bed mesh access through API"
     }
 
     SECTION("Get bed mesh profiles returns list") {
-        std::vector<std::string> api_profiles = api_->get_bed_mesh_profiles();
+        std::vector<std::string> api_profiles = api_->advanced().get_bed_mesh_profiles();
 
         // Verify profiles list is reasonable
         REQUIRE(api_profiles.size() >= 0); // Should be non-negative size
@@ -674,7 +674,7 @@ TEST_CASE("Full stack: API error callbacks work correctly",
         bool success_called = false;
         bool error_called = false;
 
-        api.get_excluded_objects(
+        api.advanced().get_excluded_objects(
             [&success_called](const std::set<std::string>&) { success_called = true; },
             [&error_called](const MoonrakerError&) { error_called = true; });
 
@@ -689,8 +689,8 @@ TEST_CASE("Full stack: API error callbacks work correctly",
                            api.hardware().fans(), api.hardware().leds());
         std::string bed = hw.guess_bed_heater();
         std::string hotend = hw.guess_hotend_heater();
-        (void)api.has_bed_mesh();          // Verify doesn't crash
-        (void)api.get_bed_mesh_profiles(); // Verify doesn't crash
+        (void)api.advanced().has_bed_mesh();          // Verify doesn't crash
+        (void)api.advanced().get_bed_mesh_profiles(); // Verify doesn't crash
 
         // Values should be valid (not empty for standard printer)
         REQUIRE(!bed.empty());

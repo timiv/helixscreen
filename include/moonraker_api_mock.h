@@ -215,7 +215,118 @@ class MoonrakerSpoolmanAPIMock : public MoonrakerSpoolmanAPI {
 };
 
 /**
- * @brief Mock MoonrakerAPI for testing without real printer connection
+ * @brief Mock Timelapse API for testing without a real Moonraker connection
+ *
+ * Overrides all MoonrakerTimelapseAPI methods to return mock data.
+ * Render/frame operations are no-ops; settings are not persisted.
+ */
+class MoonrakerTimelapseAPIMock : public MoonrakerTimelapseAPI {
+  public:
+    using SuccessCallback = MoonrakerTimelapseAPI::SuccessCallback;
+    using ErrorCallback = MoonrakerTimelapseAPI::ErrorCallback;
+
+    explicit MoonrakerTimelapseAPIMock(helix::MoonrakerClient& client,
+                                       const std::string& http_base_url);
+    ~MoonrakerTimelapseAPIMock() override = default;
+
+    void render_timelapse(SuccessCallback on_success, ErrorCallback on_error) override;
+    void save_timelapse_frames(SuccessCallback on_success, ErrorCallback on_error) override;
+    void get_last_frame_info(std::function<void(const LastFrameInfo&)> on_success,
+                             ErrorCallback on_error) override;
+};
+
+/**
+ * @brief Mock REST API for testing without real Moonraker REST endpoints
+ *
+ * Overrides all MoonrakerRestAPI methods to return mock data.
+ * WLED state is tracked internally for toggle/brightness/preset testing.
+ */
+/**
+ * @brief Mock Advanced API for testing calibration and macro operations
+ *
+ * Overrides bed mesh calibration and screws tilt methods with mock implementations
+ * that simulate realistic behavior without real hardware.
+ */
+class MoonrakerAdvancedAPIMock : public MoonrakerAdvancedAPI {
+  public:
+    using SuccessCallback = MoonrakerAdvancedAPI::SuccessCallback;
+    using ErrorCallback = MoonrakerAdvancedAPI::ErrorCallback;
+    using BedMeshProgressCallback = MoonrakerAdvancedAPI::BedMeshProgressCallback;
+
+    MoonrakerAdvancedAPIMock(helix::MoonrakerClient& client, MoonrakerAPI& api);
+    ~MoonrakerAdvancedAPIMock() override = default;
+
+    // ========================================================================
+    // Overridden Calibration Methods (simulate realistic behavior)
+    // ========================================================================
+
+    /**
+     * @brief Mock bed mesh calibration with progress simulation
+     */
+    void start_bed_mesh_calibrate(BedMeshProgressCallback on_progress, SuccessCallback on_complete,
+                                  ErrorCallback on_error) override;
+
+    /**
+     * @brief Simulate SCREWS_TILT_CALCULATE with iterative bed leveling
+     */
+    void calculate_screws_tilt(helix::ScrewTiltCallback on_success,
+                               ErrorCallback on_error) override;
+
+    /**
+     * @brief Reset the mock bed to initial out-of-level state
+     */
+    void reset_mock_bed_state();
+
+    /**
+     * @brief Get the mock bed state for inspection/testing
+     */
+    MockScrewsTiltState& get_mock_bed_state() {
+        return mock_bed_state_;
+    }
+
+  private:
+    /// Mock bed state for screws tilt simulation
+    MockScrewsTiltState mock_bed_state_;
+};
+
+class MoonrakerRestAPIMock : public MoonrakerRestAPI {
+  public:
+    using SuccessCallback = MoonrakerRestAPI::SuccessCallback;
+    using ErrorCallback = MoonrakerRestAPI::ErrorCallback;
+    using RestCallback = MoonrakerRestAPI::RestCallback;
+
+    explicit MoonrakerRestAPIMock(helix::MoonrakerClient& client, const std::string& http_base_url);
+    ~MoonrakerRestAPIMock() override = default;
+
+    // ========================================================================
+    // Overridden REST Methods (return mock responses)
+    // ========================================================================
+
+    void call_rest_get(const std::string& endpoint, RestCallback on_complete) override;
+    void call_rest_post(const std::string& endpoint, const nlohmann::json& params,
+                        RestCallback on_complete) override;
+
+    // ========================================================================
+    // Overridden WLED Methods (return mock data with tracked state)
+    // ========================================================================
+
+    void wled_get_strips(RestCallback on_success, ErrorCallback on_error) override;
+    void wled_set_strip(const std::string& strip, const std::string& action, int brightness,
+                        int preset, SuccessCallback on_success, ErrorCallback on_error) override;
+    void wled_get_status(RestCallback on_success, ErrorCallback on_error) override;
+    void get_server_config(RestCallback on_success, ErrorCallback on_error) override;
+
+  private:
+    /// Mock WLED strip on/off states (strip_id -> is_on)
+    std::map<std::string, bool> mock_wled_states_;
+    /// Mock WLED active presets (strip_id -> preset_id, -1 = none)
+    std::map<std::string, int> mock_wled_presets_;
+    /// Mock WLED brightness per strip (strip_id -> 0-255)
+    std::map<std::string, int> mock_wled_brightness_;
+};
+
+/**
+ * @brief Mock File Transfer API for testing without real Moonraker HTTP
  *
  * Overrides HTTP file transfer methods to use local test files instead
  * of making actual HTTP requests to a Moonraker server.
@@ -224,12 +335,72 @@ class MoonrakerSpoolmanAPIMock : public MoonrakerSpoolmanAPI {
  * The mock tries multiple paths to find test files, supporting both:
  * - Running from project root: assets/test_gcodes/
  * - Running from build/bin/: ../../assets/test_gcodes/
+ */
+class MoonrakerFileTransferAPIMock : public MoonrakerFileTransferAPI {
+  public:
+    using SuccessCallback = MoonrakerFileTransferAPI::SuccessCallback;
+    using ErrorCallback = MoonrakerFileTransferAPI::ErrorCallback;
+    using StringCallback = MoonrakerFileTransferAPI::StringCallback;
+
+    explicit MoonrakerFileTransferAPIMock(helix::MoonrakerClient& client,
+                                          const std::string& http_base_url);
+    ~MoonrakerFileTransferAPIMock() override = default;
+
+    // ========================================================================
+    // Overridden HTTP File Transfer Methods (use local files instead of HTTP)
+    // ========================================================================
+
+    void download_file(const std::string& root, const std::string& path, StringCallback on_success,
+                       ErrorCallback on_error) override;
+
+    void download_file_partial(const std::string& root, const std::string& path, size_t max_bytes,
+                               StringCallback on_success, ErrorCallback on_error) override;
+
+    void download_file_to_path(const std::string& root, const std::string& path,
+                               const std::string& dest_path, StringCallback on_success,
+                               ErrorCallback on_error,
+                               ProgressCallback on_progress = nullptr) override;
+
+    void upload_file(const std::string& root, const std::string& path, const std::string& content,
+                     SuccessCallback on_success, ErrorCallback on_error) override;
+
+    void upload_file_with_name(const std::string& root, const std::string& path,
+                               const std::string& filename, const std::string& content,
+                               SuccessCallback on_success, ErrorCallback on_error) override;
+
+    void download_thumbnail(const std::string& thumbnail_path, const std::string& cache_path,
+                            StringCallback on_success, ErrorCallback on_error) override;
+
+  private:
+    /**
+     * @brief Find test file using fallback path search
+     *
+     * Tries multiple paths to locate test files:
+     * - assets/test_gcodes/ (from project root)
+     * - ../assets/test_gcodes/ (from build/)
+     * - ../../assets/test_gcodes/ (from build/bin/)
+     *
+     * @param filename Filename to find
+     * @return Full path to file if found, empty string otherwise
+     */
+    std::string find_test_file(const std::string& filename) const;
+
+    /// Fallback path prefixes to search (from various CWDs)
+    /// Note: Base directory is RuntimeConfig::TEST_GCODE_DIR (defined in runtime_config.h)
+    static const std::vector<std::string> PATH_PREFIXES;
+};
+
+/**
+ * @brief Mock MoonrakerAPI for testing without real printer connection
+ *
+ * Overrides connection, database, and calibration methods for mock mode.
+ * File transfer mocking is handled by MoonrakerFileTransferAPIMock (sub-API).
  *
  * Usage:
  *   MoonrakerClientMock mock_client;
  *   helix::PrinterState state;
  *   MoonrakerAPIMock mock_api(mock_client, state);
- *   // mock_api.download_file() now reads from assets/test_gcodes/
+ *   // mock_api.transfers().download_file() now reads from assets/test_gcodes/
  */
 class MoonrakerAPIMock : public MoonrakerAPI {
   public:
@@ -273,106 +444,6 @@ class MoonrakerAPIMock : public MoonrakerAPI {
                                     ErrorCallback on_error = nullptr) override;
 
     // ========================================================================
-    // Overridden HTTP File Transfer Methods (use local files instead of HTTP)
-    // ========================================================================
-
-    /**
-     * @brief Download file from local test directory
-     *
-     * Instead of making HTTP request, reads from assets/test_gcodes/{filename}.
-     * Uses fallback path search to work regardless of current working directory.
-     *
-     * @param root Root directory (ignored in mock - always uses test_gcodes)
-     * @param path File path (directory components stripped, only filename used)
-     * @param on_success Callback with file content
-     * @param on_error Error callback (FILE_NOT_FOUND if file doesn't exist)
-     */
-    void download_file(const std::string& root, const std::string& path, StringCallback on_success,
-                       ErrorCallback on_error) override;
-
-    /**
-     * @brief Mock partial file download (first N bytes)
-     *
-     * Reads first max_bytes of a local test file from assets/test_gcodes/
-     * Useful for testing G-code preamble scanning without loading entire files.
-     *
-     * @param root Root directory (ignored in mock)
-     * @param path File path - only the filename is used
-     * @param max_bytes Maximum bytes to return
-     * @param on_success Success callback with partial content
-     * @param on_error Error callback (FILE_NOT_FOUND if file doesn't exist)
-     */
-    void download_file_partial(const std::string& root, const std::string& path, size_t max_bytes,
-                               StringCallback on_success, ErrorCallback on_error) override;
-
-    /**
-     * @brief Mock streaming file download to disk
-     *
-     * Instead of making HTTP request, copies from assets/test_gcodes/{filename}
-     * to the specified destination path.
-     *
-     * @param root Root directory (ignored in mock - always uses test_gcodes)
-     * @param path File path (directory components stripped, only filename used)
-     * @param dest_path Local filesystem path to write to
-     * @param on_success Callback with dest_path on success
-     * @param on_error Error callback (FILE_NOT_FOUND if source doesn't exist)
-     * @param on_progress Optional progress callback (ignored in mock)
-     */
-    void download_file_to_path(const std::string& root, const std::string& path,
-                               const std::string& dest_path, StringCallback on_success,
-                               ErrorCallback on_error,
-                               ProgressCallback on_progress = nullptr) override;
-
-    /**
-     * @brief Mock file upload (logs but doesn't write)
-     *
-     * Logs the upload request but doesn't actually write files.
-     * Always calls success callback.
-     *
-     * @param root Root directory
-     * @param path Destination path
-     * @param content File content
-     * @param on_success Success callback
-     * @param on_error Error callback (never called - mock always succeeds)
-     */
-    void upload_file(const std::string& root, const std::string& path, const std::string& content,
-                     SuccessCallback on_success, ErrorCallback on_error) override;
-
-    /**
-     * @brief Mock file upload with custom filename (logs but doesn't write)
-     *
-     * Logs the upload request but doesn't actually write files.
-     * Always calls success callback.
-     */
-    void upload_file_with_name(const std::string& root, const std::string& path,
-                               const std::string& filename, const std::string& content,
-                               SuccessCallback on_success, ErrorCallback on_error) override;
-
-    /**
-     * @brief Mock thumbnail download (reads from local test assets)
-     *
-     * Instead of downloading from Moonraker, looks for thumbnails in
-     * assets/test_thumbnails/ or assets/test_gcodes/. For mock mode,
-     * simply returns a placeholder path since we don't have real thumbnails.
-     *
-     * @param thumbnail_path Relative path from metadata
-     * @param cache_path Destination cache path (ignored - uses placeholder)
-     * @param on_success Callback with placeholder image path
-     * @param on_error Error callback (never called - mock always returns placeholder)
-     */
-    void download_thumbnail(const std::string& thumbnail_path, const std::string& cache_path,
-                            StringCallback on_success, ErrorCallback on_error) override;
-
-    // ========================================================================
-    // Overridden Timelapse Methods (mock render/frame operations)
-    // ========================================================================
-
-    void render_timelapse(SuccessCallback on_success, ErrorCallback on_error) override;
-    void save_timelapse_frames(SuccessCallback on_success, ErrorCallback on_error) override;
-    void get_last_frame_info(std::function<void(const LastFrameInfo&)> on_success,
-                             ErrorCallback on_error) override;
-
-    // ========================================================================
     // Overridden Power Device Methods (return mock data)
     // ========================================================================
 
@@ -400,13 +471,6 @@ class MoonrakerAPIMock : public MoonrakerAPI {
      */
     void set_device_power(const std::string& device, const std::string& action,
                           SuccessCallback on_success, ErrorCallback on_error) override;
-
-    // WLED control (mock: logs and calls on_success)
-    void wled_get_strips(RestCallback on_success, ErrorCallback on_error) override;
-    void wled_set_strip(const std::string& strip, const std::string& action, int brightness,
-                        int preset, SuccessCallback on_success, ErrorCallback on_error) override;
-    void wled_get_status(RestCallback on_success, ErrorCallback on_error) override;
-    void get_server_config(RestCallback on_success, ErrorCallback on_error) override;
 
     // ========================================================================
     // Shared State Methods
@@ -453,48 +517,28 @@ class MoonrakerAPIMock : public MoonrakerAPI {
     std::vector<std::string> get_available_objects_from_mock() const;
 
     // ========================================================================
-    // Overridden Calibration Methods (simulate realistic behavior)
+    // Advanced Mock Access
     // ========================================================================
 
     /**
-     * @brief Mock bed mesh calibration with progress simulation
+     * @brief Get the Advanced mock sub-API for mock-specific helpers
      *
-     * Logs the call and immediately calls on_complete for now.
-     * Phase 6 will add proper progress simulation.
+     * Provides access to mock-only methods like reset_mock_bed_state().
      *
-     * @param on_progress Progress callback (current, total)
-     * @param on_complete Completion callback
-     * @param on_error Error callback (rarely called - mock usually succeeds)
+     * @return Reference to MoonrakerAdvancedAPIMock
      */
-    void start_bed_mesh_calibrate(BedMeshProgressCallback on_progress, SuccessCallback on_complete,
-                                  ErrorCallback on_error) override;
+    MoonrakerAdvancedAPIMock& advanced_mock();
+
+    // ========================================================================
+    // File Transfer Mock Access
+    // ========================================================================
 
     /**
-     * @brief Simulate SCREWS_TILT_CALCULATE with iterative bed leveling
+     * @brief Get the File Transfer mock sub-API for mock-specific access
      *
-     * First call returns screws out of level. Subsequent calls show
-     * progressively better alignment as user "adjusts" screws.
-     * Typically reaches level state after 2-4 probes.
-     *
-     * @param on_success Callback with screw adjustment results
-     * @param on_error Error callback (rarely called - mock usually succeeds)
+     * @return Reference to MoonrakerFileTransferAPIMock
      */
-    void calculate_screws_tilt(helix::ScrewTiltCallback on_success,
-                               ErrorCallback on_error) override;
-
-    /**
-     * @brief Reset the mock bed to initial out-of-level state
-     *
-     * Call this to restart the bed leveling simulation from scratch.
-     */
-    void reset_mock_bed_state();
-
-    /**
-     * @brief Get the mock bed state for inspection/testing
-     */
-    MockScrewsTiltState& get_mock_bed_state() {
-        return mock_bed_state_;
-    }
+    MoonrakerFileTransferAPIMock& transfers_mock();
 
     // ========================================================================
     // Spoolman Mock Access
@@ -510,32 +554,23 @@ class MoonrakerAPIMock : public MoonrakerAPI {
      */
     MoonrakerSpoolmanAPIMock& spoolman_mock();
 
+    /**
+     * @brief Get the Timelapse mock sub-API for mock-specific helpers
+     *
+     * @return Reference to MoonrakerTimelapseAPIMock
+     */
+    MoonrakerTimelapseAPIMock& timelapse_mock();
+
     // ========================================================================
-    // Overridden REST Methods (return mock responses)
+    // REST Mock Access
     // ========================================================================
 
     /**
-     * @brief Mock REST GET request
+     * @brief Get the REST mock sub-API for mock-specific helpers
      *
-     * Returns mock responses for known endpoints (e.g., /server/ace/)
-     * or a generic success response for unknown endpoints.
-     *
-     * @param endpoint REST endpoint path (e.g., "/server/ace/info")
-     * @param on_complete Callback with RestResponse
+     * @return Reference to MoonrakerRestAPIMock
      */
-    void call_rest_get(const std::string& endpoint, RestCallback on_complete) override;
-
-    /**
-     * @brief Mock REST POST request
-     *
-     * Logs the request and returns a generic success response.
-     *
-     * @param endpoint REST endpoint path
-     * @param params JSON parameters
-     * @param on_complete Callback with RestResponse
-     */
-    void call_rest_post(const std::string& endpoint, const nlohmann::json& params,
-                        RestCallback on_complete) override;
+    MoonrakerRestAPIMock& rest_mock();
 
   private:
     // Shared mock state for coordination with MoonrakerClientMock
@@ -543,33 +578,6 @@ class MoonrakerAPIMock : public MoonrakerAPI {
 
     // Mock power device states (for toggle testing)
     std::map<std::string, bool> mock_power_states_;
-
-    /**
-     * @brief Find test file using fallback path search
-     *
-     * Tries multiple paths to locate test files:
-     * - assets/test_gcodes/ (from project root)
-     * - ../assets/test_gcodes/ (from build/)
-     * - ../../assets/test_gcodes/ (from build/bin/)
-     *
-     * @param filename Filename to find
-     * @return Full path to file if found, empty string otherwise
-     */
-    std::string find_test_file(const std::string& filename) const;
-
-    /// Fallback path prefixes to search (from various CWDs)
-    /// Note: Base directory is RuntimeConfig::TEST_GCODE_DIR (defined in runtime_config.h)
-    static const std::vector<std::string> PATH_PREFIXES;
-
-    /// Mock bed state for screws tilt simulation
-    MockScrewsTiltState mock_bed_state_;
-
-    /// Mock WLED strip on/off states (strip_id -> is_on)
-    std::map<std::string, bool> mock_wled_states_;
-    /// Mock WLED active presets (strip_id -> preset_id, -1 = none)
-    std::map<std::string, int> mock_wled_presets_;
-    /// Mock WLED brightness per strip (strip_id -> 0-255)
-    std::map<std::string, int> mock_wled_brightness_;
 
     // Mock subscription ID counter
     helix::SubscriptionId mock_next_subscription_id_ = 100;

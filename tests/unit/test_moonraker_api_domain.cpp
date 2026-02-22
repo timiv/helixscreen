@@ -217,7 +217,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture, "MoonrakerAPI::has_bed_mesh retu
     // Initially the mock client may or may not have bed mesh data
     // This tests that the API method delegates correctly
     // API method should return consistent state
-    bool has_mesh = api->has_bed_mesh();
+    bool has_mesh = api->advanced().has_bed_mesh();
     (void)has_mesh; // Test only verifies method doesn't crash
 }
 
@@ -225,7 +225,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
                  "MoonrakerAPI::get_active_bed_mesh returns nullptr when no mesh",
                  "[api][bedmesh]") {
     // Check current state
-    const BedMeshProfile* mesh = api->get_active_bed_mesh();
+    const BedMeshProfile* mesh = api->advanced().get_active_bed_mesh();
 
     // If no mesh, should return nullptr
     // If mesh exists, should return valid pointer
@@ -241,7 +241,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
 
 TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
                  "MoonrakerAPI::get_bed_mesh_profiles returns profile list", "[api][bedmesh]") {
-    std::vector<std::string> profiles = api->get_bed_mesh_profiles();
+    std::vector<std::string> profiles = api->advanced().get_bed_mesh_profiles();
 
     // Verify profiles list is reasonable
     REQUIRE(profiles.size() >= 0); // Should be non-negative size
@@ -260,7 +260,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
     bool callback_called = false;
     std::set<std::string> result;
 
-    api->get_excluded_objects(
+    api->advanced().get_excluded_objects(
         [&callback_called, &result](const std::set<std::string>& objects) {
             callback_called = true;
             result = objects;
@@ -278,7 +278,7 @@ TEST_CASE_METHOD(MoonrakerAPIDomainTestFixture,
     bool callback_called = false;
     std::vector<std::string> result;
 
-    api->get_available_objects(
+    api->advanced().get_available_objects(
         [&callback_called, &result](const std::vector<std::string>& objects) {
             callback_called = true;
             result = objects;
@@ -379,9 +379,9 @@ TEST_CASE("PrinterHardware and MoonrakerAPI domain methods work for all printer 
 
             // Test MoonrakerAPI bed mesh methods
             MoonrakerAPI api(mock, state);
-            bool has_mesh = api.has_bed_mesh();
-            const BedMeshProfile* mesh = api.get_active_bed_mesh();
-            std::vector<std::string> profiles = api.get_bed_mesh_profiles();
+            bool has_mesh = api.advanced().has_bed_mesh();
+            const BedMeshProfile* mesh = api.advanced().get_active_bed_mesh();
+            std::vector<std::string> profiles = api.advanced().get_bed_mesh_profiles();
 
             // Consistency check
             if (has_mesh) {

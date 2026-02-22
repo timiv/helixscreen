@@ -805,7 +805,7 @@ void PrintSelectPanel::fetch_metadata_range(size_t start, size_t end) {
         const std::string file_path =
             current_path_.empty() ? filename : current_path_ + "/" + filename;
 
-        api_->get_file_metadata(
+        api_->files().get_file_metadata(
             file_path,
             // Metadata success callback (runs on background thread)
             [self, i, filename, file_path, captured_gen,
@@ -830,7 +830,7 @@ void PrintSelectPanel::fetch_metadata_range(size_t start, size_t end) {
                     spdlog::debug("[{}] Empty metadata for {}, triggering metascan",
                                   self->get_name(), filename);
                     // Trigger metascan to generate metadata on-demand
-                    self->api_->metascan_file(
+                    self->api_->files().metascan_file(
                         file_path,
                         [self, i, filename, captured_gen, alive](const FileMetadata& scanned) {
                             if (!alive->load()) {
@@ -875,7 +875,7 @@ void PrintSelectPanel::fetch_metadata_range(size_t start, size_t end) {
                 if (self->api_) {
                     spdlog::debug("[{}] Triggering metascan for {} after metadata failure",
                                   self->get_name(), filename);
-                    self->api_->metascan_file(
+                    self->api_->files().metascan_file(
                         file_path,
                         [self, i, filename, captured_gen, alive](const FileMetadata& scanned) {
                             if (!alive->load()) {
@@ -1100,7 +1100,7 @@ void PrintSelectPanel::process_metadata_result(size_t i, const std::string& file
 
                 // Download first 100KB of gcode (thumbnails are always in header)
                 constexpr size_t THUMBNAIL_HEADER_SIZE = 100 * 1024;
-                self->api_->download_file_partial(
+                self->api_->transfers().download_file_partial(
                     "gcodes", gcode_path, THUMBNAIL_HEADER_SIZE,
                     // Success callback - extract thumbnails from gcode content
                     [self, file_idx, filename_copy, gcode_path](const std::string& content) {
@@ -1279,7 +1279,7 @@ void PrintSelectPanel::check_moonraker_usb_symlink() {
     // Query Moonraker for files in the "usb" directory
     // If it exists and has files, Klipper's mod has created a symlink
     auto* self = this;
-    api_->list_files(
+    api_->files().list_files(
         "gcodes", "usb", false,
         [self](const std::vector<FileInfo>& files) {
             // If there are any files or the directory exists, symlink is active
@@ -2099,7 +2099,7 @@ void PrintSelectPanel::delete_file() {
             std::weak_ptr<std::atomic<bool>> alive;
         };
 
-        api_->delete_file(
+        api_->files().delete_file(
             full_path,
             // Success callback - dispatch to main thread for LVGL safety
             [self, alive]() {

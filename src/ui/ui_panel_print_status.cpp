@@ -1037,7 +1037,7 @@ void PrintStatusPanel::handle_reprint_button() {
     auto alive = m_alive;
     std::string filename = current_print_filename_;
 
-    api_->start_print(
+    api_->job().start_print(
         filename,
         [this, alive, filename]() {
             spdlog::info("[{}] Reprint started: {}", get_name(), filename);
@@ -1914,7 +1914,7 @@ void PrintStatusPanel::load_thumbnail_for_file(const std::string& filename) {
     auto alive = m_alive;
 
     // First, get file metadata to find thumbnail path
-    api_->get_file_metadata(
+    api_->files().get_file_metadata(
         metadata_filename,
         [this, alive, current_gen](const FileMetadata& metadata) {
             // Abort if panel was destroyed during async operation
@@ -2065,7 +2065,7 @@ void PrintStatusPanel::load_gcode_for_viewing(const std::string& filename) {
     // Capture alive flag for shutdown safety [L012]
     auto alive = m_alive;
 
-    api_->get_file_metadata(
+    api_->files().get_file_metadata(
         metadata_filename,
         [this, alive, filename, temp_path](const FileMetadata& metadata) {
             // Abort if panel was destroyed during async operation
@@ -2101,7 +2101,7 @@ void PrintStatusPanel::load_gcode_for_viewing(const std::string& filename) {
             // Stream download directly to disk (no memory spike)
             // For mock mode, this copies from test_gcodes/ directory
             // For real mode, this streams from Moonraker using libhv's chunked download
-            api_->download_file_to_path(
+            api_->transfers().download_file_to_path(
                 "gcodes", filename, temp_path,
                 [this, alive, temp_path](const std::string& path) {
                     // Abort if panel was destroyed during download [L012]

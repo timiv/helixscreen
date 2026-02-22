@@ -80,7 +80,7 @@ class PIDCalibrateTestFixture {
 
 TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate collector parses results",
                  "[pid_calibrate]") {
-    api_->start_pid_calibrate(
+    api_->advanced().start_pid_calibrate(
         "extruder", 200,
         [this](float kp, float ki, float kd) {
             captured_kp_ = kp;
@@ -108,7 +108,7 @@ TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate collector parses result
 
 TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate collector handles errors",
                  "[pid_calibrate]") {
-    api_->start_pid_calibrate(
+    api_->advanced().start_pid_calibrate(
         "extruder", 200, [this](float, float, float) { result_received_.store(true); },
         [this](const MoonrakerError& err) {
             captured_error_ = err.message;
@@ -126,7 +126,7 @@ TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate collector handles error
 
 TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate handles unknown command",
                  "[pid_calibrate]") {
-    api_->start_pid_calibrate(
+    api_->advanced().start_pid_calibrate(
         "extruder", 200, [this](float, float, float) { result_received_.store(true); },
         [this](const MoonrakerError& err) {
             captured_error_ = err.message;
@@ -142,7 +142,7 @@ TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate handles unknown command
 }
 
 TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate bed heater", "[pid_calibrate]") {
-    api_->start_pid_calibrate(
+    api_->advanced().start_pid_calibrate(
         "heater_bed", 60,
         [this](float kp, float ki, float kd) {
             captured_kp_ = kp;
@@ -163,7 +163,7 @@ TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate bed heater", "[pid_cali
 
 TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate collector fires progress callback",
                  "[pid_calibrate]") {
-    api_->start_pid_calibrate(
+    api_->advanced().start_pid_calibrate(
         "extruder", 200,
         [this](float kp, float ki, float kd) {
             captured_kp_ = kp;
@@ -196,7 +196,7 @@ TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate collector fires progres
 }
 
 TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate progress then result", "[pid_calibrate]") {
-    api_->start_pid_calibrate(
+    api_->advanced().start_pid_calibrate(
         "extruder", 200,
         [this](float kp, float ki, float kd) {
             captured_kp_ = kp;
@@ -226,7 +226,7 @@ TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate progress then result", 
 
 TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate no progress after completion",
                  "[pid_calibrate]") {
-    api_->start_pid_calibrate(
+    api_->advanced().start_pid_calibrate(
         "extruder", 200, [this](float kp, float ki, float kd) { result_received_.store(true); },
         [this](const MoonrakerError& err) { error_received_.store(true); },
         [this](int sample, float tolerance) { progress_samples_.push_back(sample); });
@@ -245,7 +245,7 @@ TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate no progress after compl
 TEST_CASE_METHOD(PIDCalibrateTestFixture, "PID calibrate backward compat without progress",
                  "[pid_calibrate]") {
     // Call without progress callback (nullptr default)
-    api_->start_pid_calibrate(
+    api_->advanced().start_pid_calibrate(
         "extruder", 200,
         [this](float kp, float ki, float kd) {
             captured_kp_ = kp;
@@ -272,7 +272,7 @@ TEST_CASE_METHOD(PIDCalibrateTestFixture, "get_heater_pid_values returns extrude
     std::atomic<bool> cb_fired{false};
     float kp = 0, ki = 0, kd = 0;
 
-    api_->get_heater_pid_values(
+    api_->advanced().get_heater_pid_values(
         "extruder",
         [&](float p, float i, float d) {
             kp = p;
@@ -297,7 +297,7 @@ TEST_CASE_METHOD(PIDCalibrateTestFixture, "get_heater_pid_values returns bed val
     std::atomic<bool> cb_fired{false};
     float kp = 0;
 
-    api_->get_heater_pid_values(
+    api_->advanced().get_heater_pid_values(
         "heater_bed",
         [&](float p, float, float) {
             kp = p;

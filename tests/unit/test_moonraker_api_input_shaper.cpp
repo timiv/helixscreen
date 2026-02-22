@@ -107,7 +107,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test accepts X axis",
     std::atomic<bool> complete_called{false};
     InputShaperResult captured_result;
 
-    api_->start_resonance_test(
+    api_->advanced().start_resonance_test(
         'X', [](int) {}, // progress callback
         [&](const InputShaperResult& result) {
             captured_result = result;
@@ -134,7 +134,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test accepts Y axis",
     std::atomic<bool> complete_called{false};
     InputShaperResult captured_result;
 
-    api_->start_resonance_test(
+    api_->advanced().start_resonance_test(
         'Y', [](int) {}, // progress callback
         [&](const InputShaperResult& result) {
             captured_result = result;
@@ -158,7 +158,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test sends correct G-c
                  "[calibration][input_shaper]") {
     std::atomic<bool> complete_called{false};
 
-    api_->start_resonance_test(
+    api_->advanced().start_resonance_test(
         'X', [](int) {},
         [&](const InputShaperResult& result) {
             complete_called = true;
@@ -186,7 +186,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "set_input_shaper sends command for X a
                  "[calibration][input_shaper]") {
     std::atomic<bool> success_called{false};
 
-    api_->set_input_shaper(
+    api_->advanced().set_input_shaper(
         'X', "mzv", 36.7, [&]() { success_called = true; },
         [&](const MoonrakerError&) { FAIL("Error callback should not be called"); });
 
@@ -204,7 +204,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "set_input_shaper sends command for Y a
                  "[calibration][input_shaper]") {
     std::atomic<bool> success_called{false};
 
-    api_->set_input_shaper(
+    api_->advanced().set_input_shaper(
         'Y', "ei", 47.6, [&]() { success_called = true; },
         [&](const MoonrakerError&) { FAIL("Error callback should not be called"); });
 
@@ -226,7 +226,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "set_input_shaper accepts all valid sha
         INFO("Testing shaper type: " << type);
         std::atomic<bool> success_called{false};
 
-        api_->set_input_shaper(
+        api_->advanced().set_input_shaper(
             'X', type, 35.0, [&]() { success_called = true; },
             [&](const MoonrakerError& err) {
                 FAIL("Error callback should not be called for type: " << type << " - "
@@ -345,7 +345,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "API handles null callbacks gracefully"
                  "[calibration][edge_case][input_shaper]") {
     // Test that calling start_resonance_test with nullptr callbacks doesn't crash
     // Note: The InputShaperCollector handles null callbacks internally
-    REQUIRE_NOTHROW(api_->start_resonance_test('X', nullptr, nullptr, nullptr));
+    REQUIRE_NOTHROW(api_->advanced().start_resonance_test('X', nullptr, nullptr, nullptr));
 
     // Pump LVGL timers to let the timer-based mock dispatch complete
     for (int i = 0; i < 50; ++i) {
@@ -356,8 +356,8 @@ TEST_CASE_METHOD(InputShaperTestFixture, "API handles null callbacks gracefully"
 
     // set_input_shaper requires valid callbacks (by design), so we test with valid ones
     std::atomic<bool> success_called{false};
-    REQUIRE_NOTHROW(
-        api_->set_input_shaper('X', "mzv", 36.7, [&]() { success_called = true; }, nullptr));
+    REQUIRE_NOTHROW(api_->advanced().set_input_shaper(
+        'X', "mzv", 36.7, [&]() { success_called = true; }, nullptr));
 
     // Wait for async callback
     for (int i = 0; i < 200 && !success_called; ++i) {
@@ -483,7 +483,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "start_resonance_test returns all shape
     std::atomic<bool> complete_called{false};
     InputShaperResult captured_result;
 
-    api_->start_resonance_test(
+    api_->advanced().start_resonance_test(
         'X', [](int) {}, // progress callback
         [&](const InputShaperResult& result) {
             captured_result = result;
@@ -562,7 +562,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "measure_axes_noise returns noise level
     std::atomic<bool> complete_called{false};
     float captured_noise = -1.0f;
 
-    api_->measure_axes_noise(
+    api_->advanced().measure_axes_noise(
         [&](float noise_level) {
             captured_noise = noise_level;
             complete_called = true;
@@ -596,7 +596,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "measure_axes_noise handles no accelero
     std::atomic<bool> error_called{false};
     std::string captured_error;
 
-    api_->measure_axes_noise(
+    api_->advanced().measure_axes_noise(
         [&](float) { FAIL("Success callback should not be called when accelerometer missing"); },
         [&](const MoonrakerError& err) {
             error_called = true;
@@ -629,7 +629,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "get_input_shaper_config returns curren
     std::atomic<bool> complete_called{false};
     InputShaperConfig captured_config;
 
-    api_->get_input_shaper_config(
+    api_->advanced().get_input_shaper_config(
         [&](const InputShaperConfig& config) {
             captured_config = config;
             complete_called = true;
@@ -667,7 +667,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "get_input_shaper_config handles unconf
     std::atomic<bool> complete_called{false};
     InputShaperConfig captured_config;
 
-    api_->get_input_shaper_config(
+    api_->advanced().get_input_shaper_config(
         [&](const InputShaperConfig& config) {
             captured_config = config;
             complete_called = true;
@@ -696,7 +696,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "collector parses new Klipper recommend
     std::atomic<bool> complete_called{false};
     InputShaperResult captured_result;
 
-    api_->start_resonance_test(
+    api_->advanced().start_resonance_test(
         'X', [](int) {},
         [&](const InputShaperResult& result) {
             captured_result = result;
@@ -723,7 +723,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "collector parses max_accel per shaper"
     std::atomic<bool> complete_called{false};
     InputShaperResult captured_result;
 
-    api_->start_resonance_test(
+    api_->advanced().start_resonance_test(
         'X', [](int) {},
         [&](const InputShaperResult& result) {
             captured_result = result;
@@ -770,7 +770,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "collector captures CSV path",
     std::atomic<bool> complete_called{false};
     InputShaperResult captured_result;
 
-    api_->start_resonance_test(
+    api_->advanced().start_resonance_test(
         'X', [](int) {},
         [&](const InputShaperResult& result) {
             captured_result = result;
@@ -793,7 +793,7 @@ TEST_CASE_METHOD(InputShaperTestFixture, "collector emits progress callbacks dur
     std::atomic<bool> complete_called{false};
     std::vector<int> progress_values;
 
-    api_->start_resonance_test(
+    api_->advanced().start_resonance_test(
         'X', [&](int percent) { progress_values.push_back(percent); },
         [&](const InputShaperResult&) { complete_called = true; },
         [&](const MoonrakerError& err) { FAIL("Error: " << err.message); });
@@ -824,7 +824,7 @@ TEST_CASE_METHOD(InputShaperTestFixture,
     std::atomic<bool> complete_called{false};
     InputShaperResult captured_result;
 
-    api_->start_resonance_test(
+    api_->advanced().start_resonance_test(
         'Y', [](int) {},
         [&](const InputShaperResult& result) {
             captured_result = result;

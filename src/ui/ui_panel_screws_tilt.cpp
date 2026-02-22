@@ -343,7 +343,7 @@ void ScrewsTiltPanel::start_probing() {
 
     // Capture alive_ for async safety [L012]
     auto alive = alive_;
-    api_->calculate_screws_tilt(
+    api_->advanced().calculate_screws_tilt(
         [this, alive](const std::vector<ScrewTiltResult>& results) {
             // Check if panel was destroyed or cleanup was called
             if (!alive->load()) {

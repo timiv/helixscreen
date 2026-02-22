@@ -398,7 +398,7 @@ void InputShaperPanel::on_activate() {
     // Query current input shaper configuration from printer
     if (api_) {
         auto alive = alive_;
-        api_->get_input_shaper_config(
+        api_->advanced().get_input_shaper_config(
             [this, alive](const InputShaperConfig& config) {
                 helix::ui::queue_update([this, alive, config]() {
                     if (!alive->load())
@@ -788,7 +788,7 @@ void InputShaperPanel::apply_y_after_x() {
                                           lv_tr("Input shaper settings applied!"), 2500);
             // Refresh the current config display
             if (api_) {
-                api_->get_input_shaper_config(
+                api_->advanced().get_input_shaper_config(
                     [this, alive](const InputShaperConfig& config) {
                         helix::ui::queue_update([this, alive, config]() {
                             if (!alive->load())

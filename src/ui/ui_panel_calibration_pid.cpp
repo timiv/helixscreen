@@ -503,7 +503,7 @@ void PIDCalibrationPanel::send_pid_calibrate() {
 
     spdlog::info("[PIDCal] Starting PID calibration: {} at {}°C", heater_name, target_temp_);
 
-    api_->start_pid_calibrate(
+    api_->advanced().start_pid_calibrate(
         heater_name, target_temp_,
         [this](float kp, float ki, float kd) {
             // Callback from background thread - marshal to UI thread
@@ -551,7 +551,7 @@ void PIDCalibrationPanel::send_save_config() {
     EmergencyStopOverlay::instance().suppress_recovery_dialog(15000);
 
     spdlog::info("[PIDCal] Sending SAVE_CONFIG");
-    api_->save_config(
+    api_->advanced().save_config(
         [this]() {
             helix::ui::queue_update([this]() {
                 if (cleanup_called())
@@ -589,7 +589,7 @@ void PIDCalibrationPanel::fetch_old_pid_values() {
     const char* heater_name = (selected_heater_ == Heater::EXTRUDER) ? "extruder" : "heater_bed";
     spdlog::debug("[PIDCal] Fetching old PID values for '{}'", heater_name);
 
-    api_->get_heater_pid_values(
+    api_->advanced().get_heater_pid_values(
         heater_name,
         [this](float kp, float ki, float kd) {
             old_kp_ = kp;

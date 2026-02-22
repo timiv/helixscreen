@@ -868,8 +868,8 @@ TEST_CASE("MoonrakerClientMock hardware discovery", "[connection][slow][hardware
         MoonrakerAPIMock api(mock, state);
 
         // Test through API (non-deprecated methods)
-        REQUIRE(api.has_bed_mesh());
-        const auto* mesh = api.get_active_bed_mesh();
+        REQUIRE(api.advanced().has_bed_mesh());
+        const auto* mesh = api.advanced().get_active_bed_mesh();
         REQUIRE(mesh != nullptr);
         REQUIRE(mesh->x_count > 0);
         REQUIRE(mesh->y_count > 0);

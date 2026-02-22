@@ -476,7 +476,7 @@ void KlipperConfigEditor::download_with_includes(MoonrakerAPI& api, const std::s
 
     spdlog::debug("[ConfigEditor] Downloading config file: {}", file_path);
 
-    api.download_file(
+    api.transfers().download_file(
         "config", file_path,
         [this, &api, file_path, pending, on_all_done, on_error](const std::string& content) {
             // Cache the file content
@@ -536,7 +536,7 @@ void KlipperConfigEditor::load_config_files(MoonrakerAPI& api, SectionMapCallbac
     spdlog::info("[ConfigEditor] Loading config files from printer");
 
     // First, list all config files to support glob includes
-    api.list_files(
+    api.files().list_files(
         "config", "", true,
         [this, &api, on_complete, on_error](const std::vector<FileInfo>& files) {
             // Build a set of available config file paths for glob resolution
@@ -604,7 +604,7 @@ void KlipperConfigEditor::backup_file(MoonrakerAPI& api, const std::string& file
 
     spdlog::info("[ConfigEditor] Creating backup: {} -> {}", source, dest);
 
-    api.copy_file(
+    api.files().copy_file(
         source, dest,
         [file_path, on_success]() {
             spdlog::debug("[ConfigEditor] Backup created for {}", file_path);
@@ -663,7 +663,7 @@ void KlipperConfigEditor::edit_value(MoonrakerAPI& api, const std::string& secti
                 }
 
                 // Step 4: Upload modified content
-                api.upload_file(
+                api.transfers().upload_file(
                     "config", file_path, *modified,
                     [this, file_path, modified, on_success]() {
                         // Step 5: Update cache with new content
@@ -687,7 +687,7 @@ void KlipperConfigEditor::edit_value(MoonrakerAPI& api, const std::string& secti
                 do_edit(*cached_content);
             } else {
                 // Re-download if not cached
-                api.download_file(
+                api.transfers().download_file(
                     "config", file_path,
                     [do_edit](const std::string& content) { do_edit(content); },
                     [file_path, on_error](const MoonrakerError& err) {
@@ -705,7 +705,7 @@ void KlipperConfigEditor::restore_backups(MoonrakerAPI& api, SuccessCallback on_
                                           ErrorCallback on_error) {
     spdlog::info("[ConfigEditor] Restoring backup files");
 
-    api.list_files(
+    api.files().list_files(
         "config", "", true,
         [&api, on_complete, on_error](const std::vector<FileInfo>& files) {
             // Find all .helix_backup files
@@ -736,7 +736,7 @@ void KlipperConfigEditor::restore_backups(MoonrakerAPI& api, SuccessCallback on_
 
                 spdlog::info("[ConfigEditor] Restoring {} -> {}", source, dest);
 
-                api.copy_file(
+                api.files().copy_file(
                     source, dest,
                     [pending, on_complete, backup_path]() {
                         spdlog::debug("[ConfigEditor] Restored {}", backup_path);
@@ -767,7 +767,7 @@ void KlipperConfigEditor::restore_backups(MoonrakerAPI& api, SuccessCallback on_
 void KlipperConfigEditor::cleanup_backups(MoonrakerAPI& api, SuccessCallback on_complete) {
     spdlog::debug("[ConfigEditor] Cleaning up backup files");
 
-    api.list_files(
+    api.files().list_files(
         "config", "", true,
         [&api, on_complete](const std::vector<FileInfo>& files) {
             // Find all .helix_backup files
@@ -792,7 +792,7 @@ void KlipperConfigEditor::cleanup_backups(MoonrakerAPI& api, SuccessCallback on_
             for (const auto& backup_path : backup_files) {
                 std::string full_path = "config/" + backup_path;
 
-                api.delete_file(
+                api.files().delete_file(
                     full_path,
                     [pending, on_complete, backup_path]() {
                         spdlog::debug("[ConfigEditor] Deleted backup {}", backup_path);

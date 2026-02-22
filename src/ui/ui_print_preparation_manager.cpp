@@ -411,7 +411,7 @@ void PrintPreparationManager::scan_file_for_operations(const std::string& filena
     // This avoids downloading multi-MB files just to scan the first few hundred lines
     constexpr size_t SCAN_DOWNLOAD_LIMIT = 200 * 1024; // 200KB
 
-    api_->download_file_partial(
+    api_->transfers().download_file_partial(
         "gcodes", file_path, SCAN_DOWNLOAD_LIMIT,
         // Success: parse content and cache result
         // NOTE: This callback runs on a background HTTP thread, so we must defer
@@ -799,7 +799,7 @@ void PrintPreparationManager::start_print(const std::string& filename,
 
     // Enable timelapse recording if requested (Moonraker-Timelapse plugin)
     if (options.timelapse) {
-        api_->set_timelapse_enabled(
+        api_->timelapse().set_timelapse_enabled(
             true,
             []() { spdlog::info("[PrintPreparationManager] Timelapse enabled for this print"); },
             [](const MoonrakerError& err) {
@@ -1258,7 +1258,7 @@ void PrintPreparationManager::modify_and_print_streaming(
     };
 
     // Step 1: Download file to disk (streaming, not memory)
-    api_->download_file_to_path(
+    api_->transfers().download_file_to_path(
         "gcodes", file_path, local_download_path,
         // Download success - NOTE: runs on HTTP thread
         [self, alive, file_path, display_filename, ops_to_disable, macro_skip_params, mod_names,
@@ -1316,7 +1316,7 @@ void PrintPreparationManager::modify_and_print_streaming(
 
             // Step 3: Upload modified file from disk
             std::string modified_path = result.modified_path; // Copy for lambda
-            self->api_->upload_file_from_path(
+            self->api_->transfers().upload_file_from_path(
                 "gcodes", remote_temp_path, modified_path,
                 // Upload success - NOTE: runs on HTTP thread, defer LVGL ops
                 [self, alive, modified_path, display_filename, remote_temp_path, file_path,
@@ -1412,7 +1412,7 @@ void PrintPreparationManager::modify_and_print_streaming(
                         // Clean up remote temp file on failure
                         // Moonraker's delete_file requires full path including root
                         std::string full_path = "gcodes/" + remote_temp_path;
-                        self->api_->delete_file(
+                        self->api_->files().delete_file(
                             full_path,
                             []() {
                                 spdlog::debug("[PrintPreparationManager] Cleaned up "
@@ -1427,7 +1427,7 @@ void PrintPreparationManager::modify_and_print_streaming(
                     if (use_plugin) {
                         // Plugin path: Use path-based API (v2.0)
                         // The plugin will create symlink, patch history, and start print
-                        self->api_->start_modified_print(
+                        self->api_->job().start_modified_print(
                             file_path,        // Original filename for history
                             remote_temp_path, // Path to uploaded modified file
                             mod_names,
@@ -1440,7 +1440,8 @@ void PrintPreparationManager::modify_and_print_streaming(
                             on_print_error);
                     } else {
                         // Standard path: Just start print with modified file
-                        self->api_->start_print(remote_temp_path, on_print_success, on_print_error);
+                        self->api_->job().start_print(remote_temp_path, on_print_success,
+                                                      on_print_error);
                     }
                 },
                 // Upload error - clean up local file
@@ -1495,7 +1496,7 @@ void PrintPreparationManager::modify_and_print_streaming(
 void PrintPreparationManager::start_print_directly(const std::string& filename,
                                                    NavigateToStatusCallback on_navigate_to_status,
                                                    PrintCompletionCallback on_completion) {
-    api_->start_print(
+    api_->job().start_print(
         filename,
         // Success callback
         [on_navigate_to_status, on_completion]() {

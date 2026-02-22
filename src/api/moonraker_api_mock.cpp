@@ -24,22 +24,57 @@
 using namespace helix;
 
 // Static initialization of path prefixes for fallback search
-const std::vector<std::string> MoonrakerAPIMock::PATH_PREFIXES = {
+const std::vector<std::string> MoonrakerFileTransferAPIMock::PATH_PREFIXES = {
     "",      // From project root: assets/test_gcodes/
     "../",   // From build/: ../assets/test_gcodes/
     "../../" // From build/bin/: ../../assets/test_gcodes/
 };
 
+MoonrakerFileTransferAPIMock::MoonrakerFileTransferAPIMock(MoonrakerClient& client,
+                                                           const std::string& http_base_url)
+    : MoonrakerFileTransferAPI(client, http_base_url) {
+    spdlog::debug(
+        "[MoonrakerFileTransferAPIMock] Created - HTTP methods will use local test files");
+}
+
+// ============================================================================
+// MoonrakerAdvancedAPIMock Implementation
+// ============================================================================
+
+MoonrakerAdvancedAPIMock::MoonrakerAdvancedAPIMock(MoonrakerClient& client, MoonrakerAPI& api)
+    : MoonrakerAdvancedAPI(client, api) {}
+
 MoonrakerAPIMock::MoonrakerAPIMock(MoonrakerClient& client, PrinterState& state)
     : MoonrakerAPI(client, state) {
-    spdlog::debug("[MoonrakerAPIMock] Created - HTTP methods will use local test files");
+    spdlog::debug("[MoonrakerAPIMock] Created - using mock sub-APIs");
 
-    // Replace base MoonrakerSpoolmanAPI with mock version
+    // Replace base sub-APIs with mock versions
+    advanced_api_ = std::make_unique<MoonrakerAdvancedAPIMock>(client, *this);
+    file_transfer_api_ =
+        std::make_unique<MoonrakerFileTransferAPIMock>(client, get_http_base_url());
+    rest_api_ = std::make_unique<MoonrakerRestAPIMock>(client, get_http_base_url());
     spoolman_api_ = std::make_unique<MoonrakerSpoolmanAPIMock>(client);
+    timelapse_api_ = std::make_unique<MoonrakerTimelapseAPIMock>(client, get_http_base_url());
+}
+
+MoonrakerAdvancedAPIMock& MoonrakerAPIMock::advanced_mock() {
+    return static_cast<MoonrakerAdvancedAPIMock&>(*advanced_api_);
+}
+
+MoonrakerFileTransferAPIMock& MoonrakerAPIMock::transfers_mock() {
+    return static_cast<MoonrakerFileTransferAPIMock&>(*file_transfer_api_);
+}
+
+MoonrakerRestAPIMock& MoonrakerAPIMock::rest_mock() {
+    return static_cast<MoonrakerRestAPIMock&>(*rest_api_);
 }
 
 MoonrakerSpoolmanAPIMock& MoonrakerAPIMock::spoolman_mock() {
     return static_cast<MoonrakerSpoolmanAPIMock&>(*spoolman_api_);
+}
+
+MoonrakerTimelapseAPIMock& MoonrakerAPIMock::timelapse_mock() {
+    return static_cast<MoonrakerTimelapseAPIMock&>(*timelapse_api_);
 }
 
 // ============================================================================
@@ -124,7 +159,7 @@ void MoonrakerAPIMock::set_phase_tracking_enabled(bool enabled,
     }
 }
 
-std::string MoonrakerAPIMock::find_test_file(const std::string& filename) const {
+std::string MoonrakerFileTransferAPIMock::find_test_file(const std::string& filename) const {
     namespace fs = std::filesystem;
 
     for (const auto& prefix : PATH_PREFIXES) {
@@ -141,8 +176,9 @@ std::string MoonrakerAPIMock::find_test_file(const std::string& filename) const 
     return "";
 }
 
-void MoonrakerAPIMock::download_file(const std::string& root, const std::string& path,
-                                     StringCallback on_success, ErrorCallback on_error) {
+void MoonrakerFileTransferAPIMock::download_file(const std::string& root, const std::string& path,
+                                                 StringCallback on_success,
+                                                 ErrorCallback on_error) {
     // Strip any leading directory components to get just the filename
     std::string filename = path;
     size_t last_slash = path.rfind('/');
@@ -196,9 +232,10 @@ void MoonrakerAPIMock::download_file(const std::string& root, const std::string&
     }
 }
 
-void MoonrakerAPIMock::download_file_partial(const std::string& root, const std::string& path,
-                                             size_t max_bytes, StringCallback on_success,
-                                             ErrorCallback on_error) {
+void MoonrakerFileTransferAPIMock::download_file_partial(const std::string& root,
+                                                         const std::string& path, size_t max_bytes,
+                                                         StringCallback on_success,
+                                                         ErrorCallback on_error) {
     // Strip any leading directory components to get just the filename
     std::string filename = path;
     size_t last_slash = path.rfind('/');
@@ -251,10 +288,9 @@ void MoonrakerAPIMock::download_file_partial(const std::string& root, const std:
     }
 }
 
-void MoonrakerAPIMock::download_file_to_path(const std::string& root, const std::string& path,
-                                             const std::string& dest_path,
-                                             StringCallback on_success, ErrorCallback on_error,
-                                             ProgressCallback on_progress) {
+void MoonrakerFileTransferAPIMock::download_file_to_path(
+    const std::string& root, const std::string& path, const std::string& dest_path,
+    StringCallback on_success, ErrorCallback on_error, ProgressCallback on_progress) {
     (void)on_progress; // Progress callback ignored in mock
     // Extract just the filename from the path
     std::string filename = path;
@@ -325,9 +361,9 @@ void MoonrakerAPIMock::download_file_to_path(const std::string& root, const std:
     }
 }
 
-void MoonrakerAPIMock::upload_file(const std::string& root, const std::string& path,
-                                   const std::string& content, SuccessCallback on_success,
-                                   ErrorCallback on_error) {
+void MoonrakerFileTransferAPIMock::upload_file(const std::string& root, const std::string& path,
+                                               const std::string& content,
+                                               SuccessCallback on_success, ErrorCallback on_error) {
     (void)on_error; // Unused - mock always succeeds
 
     spdlog::info("[MoonrakerAPIMock] Mock upload_file: root='{}', path='{}', size={} bytes", root,
@@ -339,10 +375,9 @@ void MoonrakerAPIMock::upload_file(const std::string& root, const std::string& p
     }
 }
 
-void MoonrakerAPIMock::upload_file_with_name(const std::string& root, const std::string& path,
-                                             const std::string& filename,
-                                             const std::string& content, SuccessCallback on_success,
-                                             ErrorCallback on_error) {
+void MoonrakerFileTransferAPIMock::upload_file_with_name(
+    const std::string& root, const std::string& path, const std::string& filename,
+    const std::string& content, SuccessCallback on_success, ErrorCallback on_error) {
     (void)on_error; // Unused - mock always succeeds
 
     spdlog::info(
@@ -356,9 +391,10 @@ void MoonrakerAPIMock::upload_file_with_name(const std::string& root, const std:
     }
 }
 
-void MoonrakerAPIMock::download_thumbnail(const std::string& thumbnail_path,
-                                          const std::string& cache_path, StringCallback on_success,
-                                          ErrorCallback on_error) {
+void MoonrakerFileTransferAPIMock::download_thumbnail(const std::string& thumbnail_path,
+                                                      const std::string& cache_path,
+                                                      StringCallback on_success,
+                                                      ErrorCallback on_error) {
     (void)on_error; // Unused - mock falls back to placeholder on failure
 
     spdlog::debug("[MoonrakerAPIMock] download_thumbnail: path='{}' -> cache='{}'", thumbnail_path,
@@ -540,7 +576,15 @@ void MoonrakerAPIMock::set_device_power(const std::string& device, const std::st
     }
 }
 
-void MoonrakerAPIMock::wled_get_strips(RestCallback on_success, ErrorCallback /*on_error*/) {
+// ============================================================================
+// MoonrakerRestAPIMock Implementation
+// ============================================================================
+
+MoonrakerRestAPIMock::MoonrakerRestAPIMock(MoonrakerClient& client,
+                                           const std::string& http_base_url)
+    : MoonrakerRestAPI(client, http_base_url) {}
+
+void MoonrakerRestAPIMock::wled_get_strips(RestCallback on_success, ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] WLED get_strips (returning mock strips from tracked state)");
 
     // Initialize defaults if not already set (same pattern as wled_get_status)
@@ -582,9 +626,9 @@ void MoonrakerAPIMock::wled_get_strips(RestCallback on_success, ErrorCallback /*
     }
 }
 
-void MoonrakerAPIMock::wled_set_strip(const std::string& strip, const std::string& action,
-                                      int brightness, int preset, SuccessCallback on_success,
-                                      ErrorCallback /*on_error*/) {
+void MoonrakerRestAPIMock::wled_set_strip(const std::string& strip, const std::string& action,
+                                          int brightness, int preset, SuccessCallback on_success,
+                                          ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] WLED set_strip: strip={} action={} brightness={} preset={}",
                  strip, action, brightness, preset);
 
@@ -613,7 +657,7 @@ void MoonrakerAPIMock::wled_set_strip(const std::string& strip, const std::strin
     }
 }
 
-void MoonrakerAPIMock::wled_get_status(RestCallback on_success, ErrorCallback /*on_error*/) {
+void MoonrakerRestAPIMock::wled_get_status(RestCallback on_success, ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] WLED get_status");
 
     // Initialize default states if not already set
@@ -665,7 +709,7 @@ void MoonrakerAPIMock::wled_get_status(RestCallback on_success, ErrorCallback /*
     }
 }
 
-void MoonrakerAPIMock::get_server_config(RestCallback on_success, ErrorCallback /*on_error*/) {
+void MoonrakerRestAPIMock::get_server_config(RestCallback on_success, ErrorCallback /*on_error*/) {
     spdlog::info("[MoonrakerAPIMock] get_server_config");
 
     if (on_success) {
@@ -833,20 +877,17 @@ std::string MockScrewsTiltState::offset_to_adjustment(float offset_mm) {
 }
 
 // ============================================================================
-// MoonrakerAPIMock - Screws Tilt Override
+// MoonrakerAdvancedAPIMock - Calibration Overrides
 // ============================================================================
 
-void MoonrakerAPIMock::calculate_screws_tilt(ScrewTiltCallback on_success,
-                                             ErrorCallback /*on_error*/) {
-    spdlog::info("[MoonrakerAPIMock] calculate_screws_tilt called (probe #{})",
+void MoonrakerAdvancedAPIMock::calculate_screws_tilt(ScrewTiltCallback on_success,
+                                                     ErrorCallback /*on_error*/) {
+    spdlog::info("[MoonrakerAdvancedAPIMock] calculate_screws_tilt called (probe #{})",
                  mock_bed_state_.get_probe_count() + 1);
 
-    // Simulate probing delay (2 seconds) via timer
-    // For now, call synchronously - in real app this would be async
     auto results = mock_bed_state_.probe();
 
     // After showing results, simulate user making adjustments
-    // This prepares the state for the next probe call
     mock_bed_state_.simulate_user_adjustments();
 
     if (on_success) {
@@ -854,19 +895,20 @@ void MoonrakerAPIMock::calculate_screws_tilt(ScrewTiltCallback on_success,
     }
 }
 
-void MoonrakerAPIMock::reset_mock_bed_state() {
+void MoonrakerAdvancedAPIMock::reset_mock_bed_state() {
     mock_bed_state_.reset();
-    spdlog::info("[MoonrakerAPIMock] Mock bed state reset");
+    spdlog::info("[MoonrakerAdvancedAPIMock] Mock bed state reset");
 }
 
-void MoonrakerAPIMock::start_bed_mesh_calibrate(BedMeshProgressCallback on_progress,
-                                                SuccessCallback on_complete,
-                                                ErrorCallback /*on_error*/) {
-    spdlog::info("[MoonrakerAPIMock] start_bed_mesh_calibrate() - simulating probe sequence");
+void MoonrakerAdvancedAPIMock::start_bed_mesh_calibrate(BedMeshProgressCallback on_progress,
+                                                        SuccessCallback on_complete,
+                                                        ErrorCallback /*on_error*/) {
+    spdlog::info(
+        "[MoonrakerAdvancedAPIMock] start_bed_mesh_calibrate() - simulating probe sequence");
 
     // Context struct to track state across timer callbacks
     struct ProbeSimContext {
-        MoonrakerAPIMock* api;
+        MoonrakerAdvancedAPIMock* advanced;
         BedMeshProgressCallback on_progress;
         SuccessCallback on_complete;
         int current = 0;
@@ -882,7 +924,7 @@ void MoonrakerAPIMock::start_bed_mesh_calibrate(BedMeshProgressCallback on_progr
 
         if (c->current <= c->total) {
             // Report progress
-            spdlog::debug("[MoonrakerAPIMock] Probe {}/{}", c->current, c->total);
+            spdlog::debug("[MoonrakerAdvancedAPIMock] Probe {}/{}", c->current, c->total);
             if (c->on_progress) {
                 c->on_progress(c->current, c->total);
             }
@@ -890,22 +932,22 @@ void MoonrakerAPIMock::start_bed_mesh_calibrate(BedMeshProgressCallback on_progr
 
         if (c->current >= c->total) {
             // Simulation complete - regenerate mesh with new random data
-            spdlog::info("[MoonrakerAPIMock] Probe simulation complete, regenerating mesh");
+            spdlog::info("[MoonrakerAdvancedAPIMock] Probe simulation complete, regenerating mesh");
             lv_timer_delete(t);
 
             // Send BED_MESH_CALIBRATE to client mock to regenerate mesh data
             // Match real API: no PROFILE= parameter, mesh goes to "default" profile
-            c->api->execute_gcode(
+            c->advanced->api_.execute_gcode(
                 "BED_MESH_CALIBRATE",
                 [c]() {
-                    spdlog::debug("[MoonrakerAPIMock] Mesh regenerated");
+                    spdlog::debug("[MoonrakerAdvancedAPIMock] Mesh regenerated");
                     if (c->on_complete) {
                         c->on_complete();
                     }
                     delete c;
                 },
                 [c](const MoonrakerError& err) {
-                    spdlog::error("[MoonrakerAPIMock] Mesh regen failed: {}", err.message);
+                    spdlog::error("[MoonrakerAdvancedAPIMock] Mesh regen failed: {}", err.message);
                     if (c->on_complete) {
                         c->on_complete(); // Still complete the UI flow
                     }
@@ -1694,10 +1736,10 @@ void MoonrakerSpoolmanAPIMock::delete_spoolman_filament(int filament_id, Success
 }
 
 // ============================================================================
-// MoonrakerAPIMock - REST Endpoint Methods
+// MoonrakerRestAPIMock - REST Endpoint Methods
 // ============================================================================
 
-void MoonrakerAPIMock::call_rest_get(const std::string& endpoint, RestCallback on_complete) {
+void MoonrakerRestAPIMock::call_rest_get(const std::string& endpoint, RestCallback on_complete) {
     spdlog::debug("[MoonrakerAPIMock] REST GET: {}", endpoint);
 
     RestResponse resp;
@@ -1752,8 +1794,8 @@ void MoonrakerAPIMock::call_rest_get(const std::string& endpoint, RestCallback o
     }
 }
 
-void MoonrakerAPIMock::call_rest_post(const std::string& endpoint, const nlohmann::json& params,
-                                      RestCallback on_complete) {
+void MoonrakerRestAPIMock::call_rest_post(const std::string& endpoint, const nlohmann::json& params,
+                                          RestCallback on_complete) {
     spdlog::debug("[MoonrakerAPIMock] REST POST: {} ({} bytes)", endpoint, params.dump().size());
 
     RestResponse resp;
@@ -1860,24 +1902,29 @@ void MoonrakerSpoolmanAPIMock::consume_filament(float grams, int slot_index) {
 }
 
 // ============================================================================
-// Timelapse Mock Operations
+// MoonrakerTimelapseAPIMock Implementation
 // ============================================================================
 
-void MoonrakerAPIMock::render_timelapse(SuccessCallback on_success, ErrorCallback /*on_error*/) {
+MoonrakerTimelapseAPIMock::MoonrakerTimelapseAPIMock(MoonrakerClient& client,
+                                                     const std::string& http_base_url)
+    : MoonrakerTimelapseAPI(client, http_base_url) {}
+
+void MoonrakerTimelapseAPIMock::render_timelapse(SuccessCallback on_success,
+                                                 ErrorCallback /*on_error*/) {
     spdlog::debug("[MoonrakerAPIMock] render_timelapse (mock)");
     if (on_success)
         on_success();
 }
 
-void MoonrakerAPIMock::save_timelapse_frames(SuccessCallback on_success,
-                                             ErrorCallback /*on_error*/) {
+void MoonrakerTimelapseAPIMock::save_timelapse_frames(SuccessCallback on_success,
+                                                      ErrorCallback /*on_error*/) {
     spdlog::debug("[MoonrakerAPIMock] save_timelapse_frames (mock)");
     if (on_success)
         on_success();
 }
 
-void MoonrakerAPIMock::get_last_frame_info(std::function<void(const LastFrameInfo&)> on_success,
-                                           ErrorCallback /*on_error*/) {
+void MoonrakerTimelapseAPIMock::get_last_frame_info(
+    std::function<void(const LastFrameInfo&)> on_success, ErrorCallback /*on_error*/) {
     spdlog::debug("[MoonrakerAPIMock] get_last_frame_info (mock)");
     if (on_success) {
         LastFrameInfo info;
