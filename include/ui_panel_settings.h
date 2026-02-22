@@ -224,7 +224,6 @@ class SettingsPanel : public PanelBase {
     void handle_telemetry_changed(bool enabled);
     void handle_telemetry_view_data_clicked();
 
-    void handle_about_clicked();
     void handle_debug_bundle_clicked();
     void handle_discord_clicked();
     void handle_docs_clicked();
@@ -277,7 +276,6 @@ class SettingsPanel : public PanelBase {
     static void on_sound_settings_clicked(lv_event_t* e);
     static void on_estop_confirm_changed(lv_event_t* e);
     static void on_cancel_escalation_changed(lv_event_t* e);
-    static void on_about_clicked(lv_event_t* e);
     static void on_debug_bundle_clicked(lv_event_t* e);
     static void on_discord_clicked(lv_event_t* e);
     static void on_docs_clicked(lv_event_t* e);

@@ -342,7 +342,6 @@ void register_xml_components() {
     register_xml("bed_mesh_panel.xml");
 
     // Settings overlay panels
-    register_xml("about_overlay.xml");
     register_xml("display_settings_overlay.xml");
     register_xml("panel_widget_row.xml");
     register_xml("panel_widgets_overlay.xml");
