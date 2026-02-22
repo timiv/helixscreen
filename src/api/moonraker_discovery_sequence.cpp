@@ -28,15 +28,24 @@ void MoonrakerDiscoverySequence::clear_cache() {
     hardware_ = PrinterDiscovery{};
 }
 
+bool MoonrakerDiscoverySequence::is_stale() const {
+    return client_.connection_generation() != discovery_generation_;
+}
+
 void MoonrakerDiscoverySequence::start(std::function<void()> on_complete,
                                        std::function<void(const std::string& reason)> on_error) {
     spdlog::debug("[Moonraker Client] Starting printer auto-discovery");
+
+    // Store callbacks and snapshot the connection generation for stale detection
+    on_complete_discovery_ = std::move(on_complete);
+    on_error_discovery_ = std::move(on_error);
+    discovery_generation_ = client_.connection_generation();
 
     // Step 0: Identify ourselves to Moonraker to enable receiving notifications
     // Skip if we've already identified on this connection (e.g., wizard tested, then completed)
     if (identified_.load()) {
         spdlog::debug("[Moonraker Client] Already identified, skipping identify step");
-        continue_discovery(on_complete, on_error);
+        continue_discovery();
         return;
     }
 
@@ -47,7 +56,10 @@ void MoonrakerDiscoverySequence::start(std::function<void()> on_complete,
 
     client_.send_jsonrpc(
         "server.connection.identify", identify_params,
-        [this, on_complete, on_error](json identify_response) {
+        [this](json identify_response) {
+            if (is_stale())
+                return;
+
             if (identify_response.contains("result")) {
                 auto conn_id = identify_response["result"].value("connection_id", 0);
                 spdlog::info("[Moonraker Client] Identified to Moonraker (connection_id: {})",
@@ -60,21 +72,25 @@ void MoonrakerDiscoverySequence::start(std::function<void()> on_complete,
             }
 
             // Continue with discovery regardless of identify result
-            continue_discovery(on_complete, on_error);
+            continue_discovery();
         },
-        [this, on_complete, on_error](const MoonrakerError& err) {
+        [this](const MoonrakerError& err) {
+            if (is_stale())
+                return;
+
             // Log but continue - identify is not strictly required
             spdlog::warn("[Moonraker Client] Identify request failed: {}", err.message);
-            continue_discovery(on_complete, on_error);
+            continue_discovery();
         });
 }
 
-void MoonrakerDiscoverySequence::continue_discovery(
-    std::function<void()> on_complete, std::function<void(const std::string& reason)> on_error) {
+void MoonrakerDiscoverySequence::continue_discovery() {
     // Step 1: Query available printer objects (no params required)
     client_.send_jsonrpc(
         "printer.objects.list", json(),
-        [this, on_complete, on_error](json response) {
+        [this](json response) {
+            if (is_stale())
+                return;
             // Debug: Log raw response
             spdlog::debug("[Moonraker Client] printer.objects.list response: {}", response.dump());
 
@@ -101,9 +117,11 @@ void MoonrakerDiscoverySequence::continue_discovery(
                 // Invoke error callback if provided
                 spdlog::debug(
                     "[Moonraker Client] Invoking discovery on_error callback, on_error={}",
-                    on_error ? "valid" : "null");
-                if (on_error) {
-                    on_error(error_reason);
+                    on_error_discovery_ ? "valid" : "null");
+                if (on_error_discovery_) {
+                    auto cb = std::move(on_error_discovery_);
+                    on_complete_discovery_ = nullptr;
+                    cb(error_reason);
                 }
                 return;
             }
@@ -120,7 +138,9 @@ void MoonrakerDiscoverySequence::continue_discovery(
             }
 
             // Step 2: Get server information
-            client_.send_jsonrpc("server.info", {}, [this, on_complete](json info_response) {
+            client_.send_jsonrpc("server.info", {}, [this](json info_response) {
+                if (is_stale())
+                    return;
                 if (info_response.contains("result")) {
                     const json& result = info_response["result"];
                     std::string klippy_version = result.value("klippy_version", "unknown");
@@ -211,7 +231,9 @@ void MoonrakerDiscoverySequence::continue_discovery(
 
                 // Step 3: Get printer information
                 client_.send_jsonrpc(
-                    "printer.info", {}, [this, on_complete](json printer_response) {
+                    "printer.info", {}, [this](json printer_response) {
+                        if (is_stale())
+                            return;
                         if (printer_response.contains("result")) {
                             const json& result = printer_response["result"];
                             auto hostname = result.value("hostname", "unknown");
@@ -322,7 +344,7 @@ void MoonrakerDiscoverySequence::continue_discovery(
                             spdlog::debug(
                                 "[Moonraker Client] No MCU objects found, skipping MCU query");
                             // Continue to subscription step
-                            complete_discovery_subscription(on_complete);
+                            complete_discovery_subscription();
                             return;
                         }
 
@@ -339,8 +361,10 @@ void MoonrakerDiscoverySequence::continue_discovery(
                             json mcu_query = {{mcu_obj, nullptr}};
                             client_.send_jsonrpc(
                                 "printer.objects.query", {{"objects", mcu_query}},
-                                [this, on_complete, mcu_obj, pending_mcu_queries, mcu_results,
+                                [this, mcu_obj, pending_mcu_queries, mcu_results,
                                  mcu_version_results, mcu_results_mutex](json mcu_response) {
+                                    if (is_stale())
+                                        return;
                                     std::string chip_type;
                                     std::string mcu_version;
 
@@ -427,11 +451,14 @@ void MoonrakerDiscoverySequence::continue_discovery(
                                         }
 
                                         // Continue to subscription step
-                                        complete_discovery_subscription(on_complete);
+                                        complete_discovery_subscription();
                                     }
                                 },
-                                [this, on_complete, mcu_obj,
+                                [this, mcu_obj,
                                  pending_mcu_queries](const MoonrakerError& err) {
+                                    if (is_stale())
+                                        return;
+
                                     spdlog::warn("[Moonraker Client] MCU query for '{}' failed: {}",
                                                  mcu_obj, err.message);
 
@@ -439,27 +466,31 @@ void MoonrakerDiscoverySequence::continue_discovery(
                                     if (pending_mcu_queries->fetch_sub(1) == 1) {
                                         // Continue to subscription step even if some MCU queries
                                         // failed
-                                        complete_discovery_subscription(on_complete);
+                                        complete_discovery_subscription();
                                     }
                                 });
                         }
                     });
             });
         },
-        [this, on_error](const MoonrakerError& err) {
+        [this](const MoonrakerError& err) {
+            if (is_stale())
+                return;
+
             spdlog::error("[Moonraker Client] printer.objects.list request failed: {}",
                           err.message);
             client_.emit_event(MoonrakerEventType::DISCOVERY_FAILED, err.message, true);
             spdlog::debug("[Moonraker Client] Invoking discovery on_error callback, on_error={}",
-                          on_error ? "valid" : "null");
-            if (on_error) {
-                on_error(err.message);
+                          on_error_discovery_ ? "valid" : "null");
+            if (on_error_discovery_) {
+                auto cb = std::move(on_error_discovery_);
+                on_complete_discovery_ = nullptr;
+                cb(err.message);
             }
         });
 }
 
-void MoonrakerDiscoverySequence::complete_discovery_subscription(
-    std::function<void()> on_complete) {
+void MoonrakerDiscoverySequence::complete_discovery_subscription() {
     // Step 5: Subscribe to all discovered objects + core objects
     json subscription_objects;
 
@@ -552,7 +583,9 @@ void MoonrakerDiscoverySequence::complete_discovery_subscription(
 
     client_.send_jsonrpc(
         "printer.objects.subscribe", subscribe_params,
-        [this, on_complete, subscription_objects](json sub_response) {
+        [this, subscription_objects](json sub_response) {
+            if (is_stale())
+                return;
             if (sub_response.contains("result")) {
                 spdlog::info("[Moonraker Client] Subscription complete: {} objects subscribed",
                              subscription_objects.size());
@@ -590,7 +623,11 @@ void MoonrakerDiscoverySequence::complete_discovery_subscription(
             if (on_discovery_complete_) {
                 on_discovery_complete_(hardware_);
             }
-            on_complete();
+            if (on_complete_discovery_) {
+                auto cb = std::move(on_complete_discovery_);
+                on_error_discovery_ = nullptr;
+                cb();
+            }
         });
 }
 

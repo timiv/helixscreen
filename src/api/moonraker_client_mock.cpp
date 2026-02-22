@@ -59,8 +59,7 @@ MoonrakerClientMock::MoonrakerClientMock(PrinterType type, double speedup_factor
     // Generate synthetic bed mesh data
     generate_mock_bed_mesh();
 
-    // Pre-populate capabilities so they're available immediately for UI testing
-    // (without waiting for connect() -> discover_printer() to be called)
+    // Pre-populate so capabilities are available for UI tests that skip connect()
     populate_capabilities();
 
     // Rebuild discovery hardware from mock data (ensures hardware() accessors return complete data)
@@ -535,9 +534,7 @@ void MoonrakerClientMock::discover_printer(
         send_jsonrpc("printer.info", json::object(), [this, on_complete](json response) {
             spdlog::debug("[MoonrakerClientMock] printer.info response received");
 
-            // Populate capabilities - builds complete hardware state from mock data
-            // (heaters, fans, sensors, leds, plus all standard mock objects like
-            // mmu, timelapse, macros, etc.) via discovery_.hardware().parse_objects()
+            // Re-populate after mock discovery may have changed hardware data
             populate_capabilities();
 
             // Now set the metadata AFTER parse_objects() has run

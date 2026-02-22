@@ -167,12 +167,19 @@ class MoonrakerDiscoverySequence {
 
   private:
     /**
+     * @brief Check if the current discovery sequence is stale
+     *
+     * Returns true if the connection has been recycled since start() was called,
+     * meaning any in-flight callbacks should be silently dropped.
+     */
+    bool is_stale() const;
+
+    /**
      * @brief Continue discovery after server.connection.identify
      *
      * Chains: objects.list → server.info → printer.info → MCU queries → subscribe
      */
-    void continue_discovery(std::function<void()> on_complete,
-                            std::function<void(const std::string& reason)> on_error);
+    void continue_discovery();
 
     /**
      * @brief Complete discovery by subscribing to printer objects
@@ -180,9 +187,14 @@ class MoonrakerDiscoverySequence {
      * Builds subscription JSON from discovered objects, subscribes,
      * dispatches initial state to all registered callbacks.
      */
-    void complete_discovery_subscription(std::function<void()> on_complete);
+    void complete_discovery_subscription();
 
     MoonrakerClient& client_;
+
+    // Discovery sequence callbacks (stored once in start(), used by chained methods)
+    std::function<void()> on_complete_discovery_;
+    std::function<void(const std::string&)> on_error_discovery_;
+    uint64_t discovery_generation_{0};
 
     // Hardware vectors
     std::vector<std::string> heaters_;
