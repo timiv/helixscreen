@@ -1195,12 +1195,18 @@ void HomePanel::take_printer_image_snapshot() {
     }
     cached_printer_snapshot_ = snapshot;
 
+    // Diagnostic: verify snapshot header before setting as source
+    uint32_t snap_w = snapshot->header.w;
+    uint32_t snap_h = snapshot->header.h;
+    uint32_t snap_magic = snapshot->header.magic;
+    uint32_t snap_cf = snapshot->header.cf;
+    spdlog::debug("[{}] Snapshot header: magic=0x{:02x} cf={} {}x{} data={}", get_name(),
+                  snap_magic, snap_cf, snap_w, snap_h, fmt::ptr(snapshot->data));
+
     // Swap image source to the pre-scaled snapshot buffer — LVGL blits 1:1, no scaling
     lv_image_set_src(img, cached_printer_snapshot_);
     lv_image_set_inner_align(img, LV_IMAGE_ALIGN_CENTER);
 
-    uint32_t snap_w = snapshot->header.w;
-    uint32_t snap_h = snapshot->header.h;
     spdlog::debug("[{}] Printer image snapshot cached ({}x{}, {} bytes)", get_name(), snap_w,
                   snap_h, snap_w * snap_h * 4);
 }
