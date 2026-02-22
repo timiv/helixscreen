@@ -28,14 +28,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-extern "C" {
-#if defined(__GNUC__) || defined(__clang__)
 // Optional LVGL extension in some branches/builds; weak symbol allows probing at runtime.
-void lv_linux_fbdev_set_skip_unblank(lv_display_t* disp, bool enabled) __attribute__((weak));
-#else
-void lv_linux_fbdev_set_skip_unblank(lv_display_t* disp, bool enabled);
-#endif
-}
+extern "C" void lv_linux_fbdev_set_skip_unblank(lv_display_t* disp, bool enabled)
+    __attribute__((weak));
 
 namespace {
 
