@@ -14,6 +14,7 @@
 #include "panel_widget_registry.h"
 #include "printer_fan_state.h"
 #include "printer_state.h"
+#include "ui/fan_spin_animation.h"
 
 #include <spdlog/spdlog.h>
 
@@ -30,11 +31,6 @@ const bool s_registered = [] {
 } // namespace
 
 using namespace helix;
-
-/// Minimum spin duration at 100% fan speed (ms per full rotation)
-static constexpr uint32_t MIN_SPIN_DURATION_MS = 600;
-/// Maximum spin duration at ~1% fan speed (slow crawl)
-static constexpr uint32_t MAX_SPIN_DURATION_MS = 6000;
 
 FanStackWidget::FanStackWidget(PrinterState& printer_state) : printer_state_(printer_state) {}
 
@@ -251,9 +247,9 @@ void FanStackWidget::update_fan_animation(lv_obj_t* icon, int speed_pct) {
         return;
 
     if (!animations_enabled_ || speed_pct <= 0) {
-        stop_spin(icon);
+        helix::ui::fan_spin_stop(icon);
     } else {
-        start_spin(icon, speed_pct);
+        helix::ui::fan_spin_start(icon, speed_pct);
     }
 }
 
@@ -264,37 +260,15 @@ void FanStackWidget::refresh_all_animations() {
 }
 
 void FanStackWidget::spin_anim_cb(void* var, int32_t value) {
-    lv_obj_set_style_transform_rotation(static_cast<lv_obj_t*>(var), value, 0);
+    helix::ui::fan_spin_anim_cb(var, value);
 }
 
 void FanStackWidget::stop_spin(lv_obj_t* icon) {
-    if (!icon)
-        return;
-    lv_anim_delete(icon, spin_anim_cb);
-    lv_obj_set_style_transform_rotation(icon, 0, 0);
+    helix::ui::fan_spin_stop(icon);
 }
 
 void FanStackWidget::start_spin(lv_obj_t* icon, int speed_pct) {
-    if (!icon || speed_pct <= 0)
-        return;
-
-    // Scale duration inversely with speed: 100% → MIN, 1% → MAX
-    uint32_t duration =
-        MAX_SPIN_DURATION_MS -
-        static_cast<uint32_t>((MAX_SPIN_DURATION_MS - MIN_SPIN_DURATION_MS) * speed_pct / 100);
-
-    // Delete existing animation and restart with new duration
-    lv_anim_delete(icon, spin_anim_cb);
-
-    lv_anim_t anim;
-    lv_anim_init(&anim);
-    lv_anim_set_var(&anim, icon);
-    lv_anim_set_exec_cb(&anim, spin_anim_cb);
-    lv_anim_set_values(&anim, 0, 3600); // 0° to 360° (LVGL uses 0.1° units)
-    lv_anim_set_duration(&anim, duration);
-    lv_anim_set_repeat_count(&anim, LV_ANIM_REPEAT_INFINITE);
-    lv_anim_set_path_cb(&anim, lv_anim_path_linear);
-    lv_anim_start(&anim);
+    helix::ui::fan_spin_start(icon, speed_pct);
 }
 
 void FanStackWidget::handle_clicked() {

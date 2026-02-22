@@ -39,8 +39,15 @@
               style_bg_opa="0" style_border_width="0">
         <event_cb trigger="value_changed" callback="on_fan_dial_value_changed"/>
       </lv_arc>
-      <!-- Centered percentage label -->
-      <text_heading name="speed_label" text="Off" translation_tag="Off" align="center"/>
+      <!-- Centered icon + percentage column -->
+      <lv_obj name="center_content"
+              align="center" width="content" height="content"
+              style_pad_all="0" scrollable="false" flex_flow="column"
+              style_flex_main_place="center" style_flex_cross_place="center"
+              style_pad_gap="0">
+        <icon name="fan_icon" src="fan" size="sm" variant="secondary"/>
+        <text_heading name="speed_label" text="Off" translation_tag="Off"/>
+      </lv_obj>
     </lv_obj>
     <!-- Off/On button row at bottom -->
     <lv_obj name="button_row"

@@ -15,17 +15,13 @@
 #include "lvgl/src/xml/lv_xml.h"
 #include "moonraker_api.h"
 #include "observer_factory.h"
+#include "ui/fan_spin_animation.h"
 
 #include <spdlog/spdlog.h>
 
 #include <cstdio>
 
 using namespace helix;
-
-/// Minimum spin duration at 100% fan speed (ms per full rotation)
-static constexpr uint32_t MIN_SPIN_DURATION_MS = 600;
-/// Maximum spin duration at ~1% fan speed (slow crawl)
-static constexpr uint32_t MAX_SPIN_DURATION_MS = 6000;
 
 // ============================================================================
 // GLOBAL INSTANCE
@@ -122,11 +118,18 @@ void FanControlOverlay::on_activate() {
             });
     }
 
-    // Observe animation setting changes to refresh spin animations
+    // Observe animation setting changes to refresh spin animations on all fan cards
     anim_settings_observer_ = observe_int_sync<FanControlOverlay>(
         DisplaySettingsManager::instance().subject_animations_enabled(), this,
         [](FanControlOverlay* self, int /* enabled */) {
             if (self->is_visible()) {
+                // Refresh controllable fan dial animations
+                for (auto& afd : self->animated_fan_dials_) {
+                    if (afd.dial) {
+                        afd.dial->refresh_animation();
+                    }
+                }
+                // Refresh auto fan card animations
                 self->refresh_all_auto_fan_animations();
             }
         });
@@ -177,12 +180,17 @@ void FanControlOverlay::populate_fans() {
         return;
     }
 
-    // Clear existing widgets
-    lv_obj_clean(fans_container_);
-
-    // Clear tracking vectors
+    // Clear tracking vectors BEFORE lv_obj_clean — FanDial destructors call
+    // stop_spin(fan_icon_) which dereferences the icon widget pointer. If we
+    // destroy LVGL widgets first, that pointer is freed and we crash.
     animated_fan_dials_.clear();
+    for (auto& card : auto_fan_cards_) {
+        stop_spin(card.fan_icon);
+    }
     auto_fan_cards_.clear();
+
+    // Now safe to destroy the LVGL widget tree
+    lv_obj_clean(fans_container_);
 
     const auto& fans = printer_state_.get_fans();
 
@@ -386,9 +394,9 @@ void FanControlOverlay::update_auto_fan_animation(AutoFanCard& card, int speed_p
         return;
 
     if (!DisplaySettingsManager::instance().get_animations_enabled() || speed_pct <= 0) {
-        stop_spin(card.fan_icon);
+        helix::ui::fan_spin_stop(card.fan_icon);
     } else {
-        start_spin(card.fan_icon, speed_pct);
+        helix::ui::fan_spin_start(card.fan_icon, speed_pct);
     }
 }
 
@@ -399,35 +407,13 @@ void FanControlOverlay::refresh_all_auto_fan_animations() {
 }
 
 void FanControlOverlay::spin_anim_cb(void* var, int32_t value) {
-    lv_obj_set_style_transform_rotation(static_cast<lv_obj_t*>(var), value, 0);
+    helix::ui::fan_spin_anim_cb(var, value);
 }
 
 void FanControlOverlay::stop_spin(lv_obj_t* icon) {
-    if (!icon)
-        return;
-    lv_anim_delete(icon, spin_anim_cb);
-    lv_obj_set_style_transform_rotation(icon, 0, 0);
+    helix::ui::fan_spin_stop(icon);
 }
 
 void FanControlOverlay::start_spin(lv_obj_t* icon, int speed_pct) {
-    if (!icon || speed_pct <= 0)
-        return;
-
-    // Scale duration inversely with speed: 100% → MIN, 1% → MAX
-    uint32_t duration =
-        MAX_SPIN_DURATION_MS -
-        static_cast<uint32_t>((MAX_SPIN_DURATION_MS - MIN_SPIN_DURATION_MS) * speed_pct / 100);
-
-    // Delete existing animation and restart with new duration
-    lv_anim_delete(icon, spin_anim_cb);
-
-    lv_anim_t anim;
-    lv_anim_init(&anim);
-    lv_anim_set_var(&anim, icon);
-    lv_anim_set_exec_cb(&anim, spin_anim_cb);
-    lv_anim_set_values(&anim, 0, 3600); // 0° to 360° (LVGL uses 0.1° units)
-    lv_anim_set_duration(&anim, duration);
-    lv_anim_set_repeat_count(&anim, LV_ANIM_REPEAT_INFINITE);
-    lv_anim_set_path_cb(&anim, lv_anim_path_linear);
-    lv_anim_start(&anim);
+    helix::ui::fan_spin_start(icon, speed_pct);
 }
