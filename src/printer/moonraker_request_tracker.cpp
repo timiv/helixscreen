@@ -100,7 +100,7 @@ int MoonrakerRequestTracker::send_fire_and_forget(hv::WebSocketClient& ws,
     json rpc;
     rpc["jsonrpc"] = "2.0";
     rpc["method"] = method;
-    rpc["id"] = request_id_++;
+    rpc["id"] = request_id_.fetch_add(1) + 1;
 
     // Only include params if not null or empty
     if (!params.is_null() && !params.empty()) {
@@ -226,11 +226,16 @@ bool MoonrakerRequestTracker::cancel(RequestId id) {
 void MoonrakerRequestTracker::check_timeouts(
     std::function<void(MoonrakerEventType, const std::string&, bool, const std::string&)>
         emit_event) {
-    // Two-phase pattern: collect callbacks under lock, invoke outside lock
-    // This prevents deadlock if callback tries to send new request
-    std::vector<std::function<void()>> timed_out_callbacks;
+    // Two-phase pattern: collect events and callbacks under lock, invoke outside lock
+    // This prevents deadlock if event handler or callback tries to send new request
+    struct TimeoutInfo {
+        std::string method_name;
+        uint32_t timeout_ms;
+        std::function<void()> error_callback;
+    };
+    std::vector<TimeoutInfo> timed_out;
 
-    // Phase 1: Find timed out requests and copy callbacks (under lock)
+    // Phase 1: Find timed out requests and copy data (under lock)
     {
         std::lock_guard<std::mutex> lock(requests_mutex_);
         std::vector<uint64_t> timed_out_ids;
@@ -240,20 +245,16 @@ void MoonrakerRequestTracker::check_timeouts(
                 spdlog::warn("[Request Tracker] Request {} ({}) timed out after {}ms", id,
                              request.method, request.get_elapsed_ms());
 
-                // Emit timeout event
-                std::string method_name = request.method;
-                uint32_t timeout = request.timeout_ms;
-                emit_event(
-                    MoonrakerEventType::REQUEST_TIMEOUT,
-                    fmt::format("Printer command '{}' timed out after {}ms", method_name, timeout),
-                    false, method_name);
+                TimeoutInfo info;
+                info.method_name = request.method;
+                info.timeout_ms = request.timeout_ms;
 
-                // Capture callback in lambda if present
+                // Capture error callback in lambda if present
                 if (request.error_callback) {
                     MoonrakerError error =
                         MoonrakerError::timeout(request.method, request.timeout_ms);
-                    timed_out_callbacks.push_back([cb = request.error_callback, error,
-                                                   method_name]() {
+                    std::string method_name = request.method;
+                    info.error_callback = [cb = request.error_callback, error, method_name]() {
                         try {
                             cb(error);
                         } catch (const std::exception& e) {
@@ -265,9 +266,10 @@ void MoonrakerRequestTracker::check_timeouts(
                                                "threw unknown exception",
                                                method_name);
                         }
-                    });
+                    };
                 }
 
+                timed_out.push_back(std::move(info));
                 timed_out_ids.push_back(id);
             }
         }
@@ -278,9 +280,17 @@ void MoonrakerRequestTracker::check_timeouts(
         }
     } // Lock released here
 
-    // Phase 2: Invoke callbacks outside lock (safe - callbacks can call send)
-    for (auto& callback : timed_out_callbacks) {
-        callback();
+    // Phase 2: Emit events and invoke callbacks outside lock
+    // (safe - event handlers and callbacks can call send without deadlock)
+    for (auto& info : timed_out) {
+        emit_event(MoonrakerEventType::REQUEST_TIMEOUT,
+                   fmt::format("Printer command '{}' timed out after {}ms", info.method_name,
+                               info.timeout_ms),
+                   false, info.method_name);
+
+        if (info.error_callback) {
+            info.error_callback();
+        }
     }
 }
 

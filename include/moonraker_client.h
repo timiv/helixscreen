@@ -402,8 +402,8 @@ class MoonrakerClient : public hv::WebSocketClient {
     /**
      * @brief Get connection generation counter
      *
-     * Increments on each connect() call. Used by MoonrakerDiscoverySequence
-     * to detect stale callbacks from previous connections.
+     * Increments on each connect() call. Can be used to detect stale
+     * callbacks from previous connections.
      */
     uint64_t connection_generation() const {
         return connection_generation_.load();

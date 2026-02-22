@@ -118,6 +118,8 @@ class MoonrakerDiscoverySequence {
     }
 
     // ======== Hardware vector accessors (for mock to populate directly) ========
+    // Thread safety: mutable accessors must only be called before start() or
+    // from the same thread as discovery callbacks. Not safe for concurrent use.
 
     std::vector<std::string>& heaters() {
         return heaters_;
