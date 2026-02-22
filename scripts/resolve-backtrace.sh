@@ -24,6 +24,8 @@ readonly R2_BASE_URL="${HELIX_R2_URL:-https://releases.helixscreen.org}/symbols"
 LOAD_BASE=0
 AUTO_DETECT_BASE=false
 CRASH_FILE=""
+ISSUE_NUMBER=""
+ISSUE_REPO=""
 
 # Linker/runtime boundary symbols that are NOT real functions.
 # Resolving to these means the address wasn't in any real function.
@@ -41,12 +43,15 @@ MEMORY_MAPS=()
 usage() {
     echo "Usage: $(basename "$0") [options] <version> <platform> <addr1> [addr2] ..."
     echo "       $(basename "$0") --crash-file <crash.txt> [platform]"
+    echo "       $(basename "$0") --issue <number> [--repo owner/repo]"
     echo ""
     echo "Resolves raw backtrace addresses to function names using symbol maps."
     echo ""
     echo "Options:"
     echo "  --base <hex>         ELF load base (ASLR offset) to subtract from addresses"
     echo "  --crash-file <path>  Parse crash.txt directly (extracts version, backtrace, load_base)"
+    echo "  --issue <number>     Parse a GitHub crash report issue (extracts everything automatically)"
+    echo "  --repo <owner/repo>  GitHub repo for --issue (default: auto-detect from git remote)"
     echo ""
     echo "Arguments:"
     echo "  version   Release version (e.g., 0.9.9)"
@@ -61,6 +66,8 @@ usage() {
     echo "  $(basename "$0") 0.9.19 pi 0x00412abc 0x00401234"
     echo "  $(basename "$0") --base 0xaaaab0449000 0.9.19 pi 0xaaaab04a1234 0xaaaab04b5678"
     echo "  $(basename "$0") --crash-file ~/helixscreen/config/crash.txt"
+    echo "  $(basename "$0") --issue 154"
+    echo "  $(basename "$0") --issue 154 --repo prestonbrown/helixscreen"
     exit 1
 }
 
@@ -85,6 +92,22 @@ while [[ $# -gt 0 ]]; do
             CRASH_FILE="$2"
             shift 2
             ;;
+        --issue)
+            if [[ $# -lt 2 ]]; then
+                echo "Error: --issue requires a GitHub issue number" >&2
+                exit 1
+            fi
+            ISSUE_NUMBER="$2"
+            shift 2
+            ;;
+        --repo)
+            if [[ $# -lt 2 ]]; then
+                echo "Error: --repo requires owner/repo" >&2
+                exit 1
+            fi
+            ISSUE_REPO="$2"
+            shift 2
+            ;;
         --help|-h)
             usage
             ;;
@@ -94,8 +117,89 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# GitHub issue mode: fetch and parse a crash report issue
+if [[ -n "$ISSUE_NUMBER" ]]; then
+    if ! command -v gh &>/dev/null; then
+        echo "Error: gh CLI is required for --issue mode (install: https://cli.github.com)" >&2
+        exit 1
+    fi
+
+    # Auto-detect repo from git remote if not specified
+    if [[ -z "$ISSUE_REPO" ]]; then
+        ISSUE_REPO=$(git remote get-url origin 2>/dev/null | sed 's/.*github\.com[:/]\(.*\)\.git$/\1/' | sed 's/.*github\.com[:/]\(.*\)$/\1/')
+        if [[ -z "$ISSUE_REPO" ]]; then
+            echo "Error: Cannot detect repo from git remote. Use --repo owner/repo" >&2
+            exit 1
+        fi
+    fi
+
+    echo "Fetching issue #${ISSUE_NUMBER} from ${ISSUE_REPO}..." >&2
+    ISSUE_BODY=$(gh issue view "$ISSUE_NUMBER" --repo "$ISSUE_REPO" --json body -q '.body' 2>&1)
+    if [[ $? -ne 0 ]] || [[ -z "$ISSUE_BODY" ]]; then
+        echo "Error: Failed to fetch issue #${ISSUE_NUMBER}: ${ISSUE_BODY}" >&2
+        exit 1
+    fi
+
+    # Extract version from "| **Version** | X.Y.Z |"
+    VERSION=$(echo "$ISSUE_BODY" | grep -o '\*\*Version\*\* *| *[0-9][0-9.]*' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+    if [[ -z "$VERSION" ]]; then
+        echo "Error: Could not extract version from issue #${ISSUE_NUMBER} — is this a crash report?" >&2
+        exit 1
+    fi
+
+    # Extract platform from "| **Platform** | piXX |"
+    PLATFORM=$(echo "$ISSUE_BODY" | grep -o '\*\*Platform\*\* *| *[a-z0-9]*' | sed 's/.*| *//' | head -1 || true)
+    if [[ -z "$PLATFORM" ]]; then
+        echo "Error: Could not extract platform from issue #${ISSUE_NUMBER}" >&2
+        exit 1
+    fi
+
+    # Extract load_base from "<sub>load_base: 0xNNNN"
+    if (( LOAD_BASE == 0 )); then
+        issue_base=$(echo "$ISSUE_BODY" | grep -oE 'load_base: *0x[0-9a-fA-F]+' | grep -oE '0x[0-9a-fA-F]+' | head -1 || true)
+        if [[ -n "$issue_base" ]]; then
+            base_hex="${issue_base#0x}"
+            base_hex="${base_hex#0X}"
+            LOAD_BASE=$((16#$base_hex))
+            echo "Using load_base from issue: $issue_base" >&2
+        fi
+    fi
+
+    # Extract backtrace addresses from "| N | \`0xADDR\` | ... |"
+    ADDRS=()
+    while IFS= read -r addr; do
+        if [[ -n "$addr" ]]; then
+            ADDRS+=("$addr")
+        fi
+    done < <(echo "$ISSUE_BODY" | grep -oE '\| `0x[0-9a-fA-F]+`' | grep -oE '0x[0-9a-fA-F]+' || true)
+
+    # Also extract register addresses (PC, LR) as they may point to app code
+    while IFS= read -r addr; do
+        if [[ -n "$addr" ]]; then
+            # Don't add duplicates
+            local_dup=false
+            for existing in "${ADDRS[@]+"${ADDRS[@]}"}"; do
+                if [[ "$existing" == "$addr" ]]; then
+                    local_dup=true
+                    break
+                fi
+            done
+            if [[ "$local_dup" == "false" ]]; then
+                ADDRS+=("$addr")
+            fi
+        fi
+    done < <(echo "$ISSUE_BODY" | grep -E '\*\*(LR|PC)\*\*' | grep -oE '`0x[0-9a-fA-F]+`' | head -1 | grep -oE '0x[0-9a-fA-F]+' || true)
+
+    if [[ ${#ADDRS[@]} -eq 0 ]]; then
+        echo "Error: No backtrace addresses found in issue #${ISSUE_NUMBER}" >&2
+        exit 1
+    fi
+
+    echo "Parsed issue #${ISSUE_NUMBER}: v${VERSION}/${PLATFORM}, ${#ADDRS[@]} addresses" >&2
+    set -- "${ADDRS[@]}"
+
 # Crash file mode: extract version, platform, backtrace, load_base from file
-if [[ -n "$CRASH_FILE" ]]; then
+elif [[ -n "$CRASH_FILE" ]]; then
     if [[ ! -f "$CRASH_FILE" ]]; then
         echo "Error: Crash file not found: $CRASH_FILE" >&2
         exit 1

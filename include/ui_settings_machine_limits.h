@@ -204,6 +204,12 @@ class MachineLimitsOverlay : public OverlayBase {
      */
     void handle_reset();
 
+    /**
+     * @brief Handle extrude speed slider change
+     * @param value New speed value in mm/s
+     */
+    void handle_extrude_speed_changed(int value);
+
   private:
     //
     // === Internal Methods ===
@@ -272,12 +278,14 @@ class MachineLimitsOverlay : public OverlayBase {
     lv_subject_t max_accel_display_subject_{};
     lv_subject_t accel_to_decel_display_subject_{};
     lv_subject_t square_corner_velocity_display_subject_{};
+    lv_subject_t extrude_speed_display_subject_{};
 
     // String buffers for subject values
     char velocity_buf_[16]{};
     char accel_buf_[16]{};
     char a2d_buf_[16]{};
     char scv_buf_[16]{};
+    char extrude_speed_buf_[16]{};
 
     //
     // === Static Callbacks ===
@@ -288,6 +296,7 @@ class MachineLimitsOverlay : public OverlayBase {
     static void on_a2d_changed(lv_event_t* e);
     static void on_scv_changed(lv_event_t* e);
     static void on_reset(lv_event_t* e);
+    static void on_extrude_speed_changed(lv_event_t* e);
 };
 
 /**

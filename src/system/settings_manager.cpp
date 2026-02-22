@@ -66,6 +66,12 @@ void SettingsManager::init_subjects() {
         get_printer_state().apply_effective_bed_moves();
     }
 
+    // Extrude/retract speed (default: 5 mm/s, range 1-50)
+    int extrude_speed = config->get<int>("/filament/extrude_speed", 5);
+    extrude_speed = std::clamp(extrude_speed, 1, 50);
+    UI_MANAGED_SUBJECT_INT(extrude_speed_subject_, extrude_speed, "settings_extrude_speed",
+                           subjects_);
+
     subjects_initialized_ = true;
 
     // Self-register cleanup — ensures deinit runs before lv_deinit()
@@ -145,6 +151,27 @@ void SettingsManager::set_z_movement_style(ZMovementStyle style) {
 
 const char* SettingsManager::get_z_movement_style_options() {
     return Z_MOVEMENT_STYLE_OPTIONS_TEXT;
+}
+
+// ============================================================================
+// Extrude/Retract Speed
+// ============================================================================
+
+int SettingsManager::get_extrude_speed() const {
+    return lv_subject_get_int(const_cast<lv_subject_t*>(&extrude_speed_subject_));
+}
+
+void SettingsManager::set_extrude_speed(int mm_per_sec) {
+    mm_per_sec = std::clamp(mm_per_sec, 1, 50);
+    spdlog::info("[SettingsManager] set_extrude_speed({} mm/s)", mm_per_sec);
+
+    // 1. Update subject (UI reacts)
+    lv_subject_set_int(&extrude_speed_subject_, mm_per_sec);
+
+    // 2. Persist to config
+    Config* config = Config::get_instance();
+    config->set<int>("/filament/extrude_speed", mm_per_sec);
+    config->save();
 }
 
 // ============================================================================

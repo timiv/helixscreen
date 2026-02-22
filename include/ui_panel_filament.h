@@ -300,7 +300,8 @@ class FilamentPanel : public PanelBase {
     void handle_custom_bed_confirmed(float value);
     void handle_load_button();
     void handle_unload_button();
-    void handle_purge_button();
+    void handle_extrude_button();
+    void handle_retract_button();
     void handle_purge_amount_select(int amount);
     void handle_cooldown();
     void update_material_temp_display();
@@ -323,7 +324,8 @@ class FilamentPanel : public PanelBase {
     static void on_manage_slots_clicked(lv_event_t* e);
     static void on_load_clicked(lv_event_t* e);
     static void on_unload_clicked(lv_event_t* e);
-    static void on_purge_clicked(lv_event_t* e);
+    static void on_extrude_clicked(lv_event_t* e);
+    static void on_retract_clicked(lv_event_t* e);
 
     // Material preset callbacks (XML event_cb)
     static void on_preset_pla_clicked(lv_event_t* e);

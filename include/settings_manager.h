@@ -114,6 +114,21 @@ class SettingsManager {
     }
 
     // =========================================================================
+    // EXTRUDE/RETRACT SPEED (owned by SettingsManager — persisted)
+    // =========================================================================
+
+    /** @brief Get extrude/retract speed in mm/s (default 5, range 1-50) */
+    int get_extrude_speed() const;
+
+    /** @brief Set extrude/retract speed in mm/s (clamped 1-50, persisted) */
+    void set_extrude_speed(int mm_per_sec);
+
+    /** @brief Extrude speed subject (integer: mm/s) for UI binding */
+    lv_subject_t* subject_extrude_speed() {
+        return &extrude_speed_subject_;
+    }
+
+    // =========================================================================
     // FILAMENT SETTINGS (owned by SettingsManager — AMS types dependency)
     // =========================================================================
 
@@ -153,6 +168,7 @@ class SettingsManager {
     // LVGL subjects — only those owned by SettingsManager
     lv_subject_t led_enabled_subject_;
     lv_subject_t z_movement_style_subject_;
+    lv_subject_t extrude_speed_subject_;
 
     // External references
     MoonrakerClient* moonraker_client_ = nullptr;

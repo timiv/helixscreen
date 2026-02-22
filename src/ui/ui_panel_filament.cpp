@@ -26,6 +26,7 @@
 #include "moonraker_api.h"
 #include "observer_factory.h"
 #include "printer_state.h"
+#include "settings_manager.h"
 #include "standard_macros.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
@@ -79,7 +80,8 @@ FilamentPanel::FilamentPanel(PrinterState& printer_state, MoonrakerAPI* api)
         {"filament_manage_slots_cb", on_manage_slots_clicked},
         {"on_filament_load", on_load_clicked},
         {"on_filament_unload", on_unload_clicked},
-        {"on_filament_purge", on_purge_clicked},
+        {"on_filament_extrude", on_extrude_clicked},
+        {"on_filament_retract", on_retract_clicked},
         // Material preset buttons
         {"on_filament_preset_pla", on_preset_pla_clicked},
         {"on_filament_preset_petg", on_preset_petg_clicked},
@@ -694,9 +696,9 @@ void FilamentPanel::handle_unload_button() {
     execute_unload();
 }
 
-void FilamentPanel::handle_purge_button() {
+void FilamentPanel::handle_extrude_button() {
     if (!is_extrusion_allowed()) {
-        NOTIFY_WARNING("Nozzle too cold for purge ({}°C, min: {}°C)", nozzle_current_,
+        NOTIFY_WARNING("Nozzle too cold for extrude ({}°C, min: {}°C)", nozzle_current_,
                        min_extrude_temp_);
         return;
     }
@@ -706,50 +708,93 @@ void FilamentPanel::handle_purge_button() {
         return;
     }
 
-    spdlog::info("[{}] Purging {}mm", get_name(), purge_amount_);
+    spdlog::info("[{}] Extruding {}mm", get_name(), purge_amount_);
 
     if (!api_) {
         return;
     }
 
-    // Try StandardMacros Purge slot first
+    // Try StandardMacros Purge slot first (purge macro = extrude)
     const auto& info = StandardMacros::instance().get(StandardMacroSlot::Purge);
     if (!info.is_empty()) {
         spdlog::info("[{}] Using StandardMacros purge: {}", get_name(), info.get_macro());
-        NOTIFY_INFO("Purging...");
+        NOTIFY_INFO("Extruding...");
 
-        // Stateless callbacks match load/unload pattern and avoid use-after-free [L012]
         StandardMacros::instance().execute(
-            StandardMacroSlot::Purge, api_, []() { NOTIFY_SUCCESS("Purge complete"); },
+            StandardMacroSlot::Purge, api_, []() { NOTIFY_SUCCESS("Extrude complete"); },
             [](const MoonrakerError& error) {
-                NOTIFY_ERROR("Purge failed: {}", error.user_message());
+                NOTIFY_ERROR("Extrude failed: {}", error.user_message());
             });
         return;
     }
 
-    // Fallback: inline G-code (M83 = relative extrusion, G1 E{amount} F300)
-    // Note: FilamentPanel is a global singleton, so `this` capture is safe [L012]
+    // Fallback: inline G-code (M83 = relative extrusion, G1 E{amount} F{speed})
     operation_guard_.begin(OPERATION_TIMEOUT_MS,
-                           [this] { NOTIFY_WARNING("Filament operation timed out"); });
-    spdlog::info("[{}] No purge macro configured, using inline G-code ({}mm)", get_name(),
-                 purge_amount_);
-    std::string gcode = fmt::format("M83\nG1 E{} F300", purge_amount_);
-    NOTIFY_INFO("Purging {}mm...", purge_amount_);
+                           [] { NOTIFY_WARNING("Filament operation timed out"); });
+    int speed_mm_min = helix::SettingsManager::instance().get_extrude_speed() * 60;
+    spdlog::info("[{}] Extruding {}mm at F{}", get_name(), purge_amount_, speed_mm_min);
+    std::string gcode = fmt::format("M83\nG1 E{} F{}", purge_amount_, speed_mm_min);
+    NOTIFY_INFO("Extruding {}mm...", purge_amount_);
 
     api_->execute_gcode(
         gcode,
         [this, amount = purge_amount_]() {
             helix::ui::async_call(
                 [](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); }, this);
-            NOTIFY_SUCCESS("Purge complete ({}mm)", amount);
+            NOTIFY_SUCCESS("Extrude complete ({}mm)", amount);
         },
         [this](const MoonrakerError& error) {
             helix::ui::async_call(
                 [](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); }, this);
             if (error.type == MoonrakerErrorType::TIMEOUT) {
-                NOTIFY_WARNING("Purge may still be running — response timed out");
+                NOTIFY_WARNING("Extrude may still be running — response timed out");
             } else {
-                NOTIFY_ERROR("Purge failed: {}", error.user_message());
+                NOTIFY_ERROR("Extrude failed: {}", error.user_message());
+            }
+        },
+        MoonrakerAPI::EXTRUSION_TIMEOUT_MS);
+}
+
+void FilamentPanel::handle_retract_button() {
+    if (!is_extrusion_allowed()) {
+        NOTIFY_WARNING("Nozzle too cold for retract ({}°C, min: {}°C)", nozzle_current_,
+                       min_extrude_temp_);
+        return;
+    }
+
+    if (operation_guard_.is_active()) {
+        NOTIFY_WARNING("Operation already in progress");
+        return;
+    }
+
+    spdlog::info("[{}] Retracting {}mm", get_name(), purge_amount_);
+
+    if (!api_) {
+        return;
+    }
+
+    // Inline G-code: M83 = relative extrusion, negative E = retract
+    operation_guard_.begin(OPERATION_TIMEOUT_MS,
+                           [] { NOTIFY_WARNING("Filament operation timed out"); });
+    int speed_mm_min = helix::SettingsManager::instance().get_extrude_speed() * 60;
+    spdlog::info("[{}] Retracting {}mm at F{}", get_name(), purge_amount_, speed_mm_min);
+    std::string gcode = fmt::format("M83\nG1 E-{} F{}", purge_amount_, speed_mm_min);
+    NOTIFY_INFO("Retracting {}mm...", purge_amount_);
+
+    api_->execute_gcode(
+        gcode,
+        [this, amount = purge_amount_]() {
+            helix::ui::async_call(
+                [](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); }, this);
+            NOTIFY_SUCCESS("Retract complete ({}mm)", amount);
+        },
+        [this](const MoonrakerError& error) {
+            helix::ui::async_call(
+                [](void* ud) { static_cast<FilamentPanel*>(ud)->operation_guard_.end(); }, this);
+            if (error.type == MoonrakerErrorType::TIMEOUT) {
+                NOTIFY_WARNING("Retract may still be running — response timed out");
+            } else {
+                NOTIFY_ERROR("Retract failed: {}", error.user_message());
             }
         },
         MoonrakerAPI::EXTRUSION_TIMEOUT_MS);
@@ -891,10 +936,17 @@ void FilamentPanel::on_unload_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
-void FilamentPanel::on_purge_clicked(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_purge_clicked");
+void FilamentPanel::on_extrude_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_extrude_clicked");
     LV_UNUSED(e);
-    get_global_filament_panel().handle_purge_button();
+    get_global_filament_panel().handle_extrude_button();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void FilamentPanel::on_retract_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_retract_clicked");
+    LV_UNUSED(e);
+    get_global_filament_panel().handle_retract_button();
     LVGL_SAFE_EVENT_CB_END();
 }
 
@@ -1105,7 +1157,7 @@ void FilamentPanel::execute_load() {
     }
 
     operation_guard_.begin(OPERATION_TIMEOUT_MS,
-                           [this] { NOTIFY_WARNING("Filament operation timed out"); });
+                           [] { NOTIFY_WARNING("Filament operation timed out"); });
     spdlog::info("[{}] Loading filament via StandardMacros: {}", get_name(), info.get_macro());
     NOTIFY_INFO("Loading filament...");
     // FilamentPanel is a global singleton, so `this` capture is safe [L012]
@@ -1132,7 +1184,7 @@ void FilamentPanel::execute_unload() {
     }
 
     operation_guard_.begin(OPERATION_TIMEOUT_MS,
-                           [this] { NOTIFY_WARNING("Filament operation timed out"); });
+                           [] { NOTIFY_WARNING("Filament operation timed out"); });
     spdlog::info("[{}] Unloading filament via StandardMacros: {}", get_name(), info.get_macro());
     NOTIFY_INFO("Unloading filament...");
     // FilamentPanel is a global singleton, so `this` capture is safe [L012]

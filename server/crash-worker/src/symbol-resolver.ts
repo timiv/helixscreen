@@ -168,12 +168,36 @@ function parseHexAddr(addr: string): number {
 }
 
 /**
+ * Linker/runtime boundary symbols that are NOT real functions.
+ * Resolving to these means the address wasn't in any real function
+ * (e.g., it's in a shared library, not in the main binary).
+ */
+const GARBAGE_SYMBOLS = new Set([
+  "data_start", "_edata", "_end", "__bss_start", "__bss_start__",
+  "__bss_end__", "__data_start", "__dso_handle", "__libc_csu_init",
+  "__libc_csu_fini", "_fini", "_init", "_fp_hw", "_IO_stdin_used",
+  "__init_array_start", "__init_array_end", "__fini_array_start",
+  "__fini_array_end", "__FRAME_END__", "__GNU_EH_FRAME_HDR",
+  "__TMC_END__", "__ehdr_start", "__exidx_start", "__exidx_end",
+  "_GLOBAL_OFFSET_TABLE_", "_DYNAMIC", "_PROCEDURE_LINKAGE_TABLE_",
+  "completed.0",
+]);
+
+/** Maximum plausible offset from a symbol to still count as "within that function".
+ *  Anything larger means the address is in a different region (e.g., shared library). */
+const MAX_SYMBOL_OFFSET = 0x100000; // 1MB
+
+/**
  * Resolve a single address against the symbol table.
  */
 function resolveAddr(symbols: Symbol[], addr: number): string | null {
   const sym = lookupSymbol(symbols, addr);
   if (!sym) return null;
+  if (GARBAGE_SYMBOLS.has(sym.name)) return null;
   const offset = addr - sym.address;
+  // If the offset is unreasonably large, the address is likely in a shared
+  // library, not in the matched function. Return null instead of a bogus match.
+  if (offset > MAX_SYMBOL_OFFSET) return null;
   return `${sym.name}+0x${offset.toString(16)}`;
 }
 

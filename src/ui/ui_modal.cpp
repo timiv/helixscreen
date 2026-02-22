@@ -569,6 +569,13 @@ void Modal::hide() {
         clear_user_data_recursive(dialog_);
     }
 
+    // Remove event callbacks from backdrop to prevent stale Modal* dispatch.
+    // The backdrop has click and ESC handlers with `this` as user_data
+    // (lv_event_get_user_data, NOT lv_obj_get_user_data). If on_hide()
+    // schedules self-deletion, these callbacks would dispatch to freed memory.
+    lv_obj_remove_event_cb(backdrop_, backdrop_click_cb);
+    lv_obj_remove_event_cb(backdrop_, esc_key_cb);
+
     // Call hook before destruction
     on_hide();
 

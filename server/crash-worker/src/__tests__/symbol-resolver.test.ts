@@ -270,9 +270,9 @@ describe("resolveBacktrace", () => {
     expect(result.resolvedRegisters).toBeDefined();
     expect(result.resolvedRegisters!.pc).toBe("PrinterState::update()+0x0");
     expect(result.resolvedRegisters!.lr).toBe("Application::run()+0x0");
-    // SP resolves to the last code symbol (it's past all symbols), which is
-    // technically valid but not meaningful — the resolver doesn't know it's a stack addr
-    expect(result.resolvedRegisters!.sp).toBeDefined();
+    // SP (0x7ffff000) is way past all code symbols — the resolver correctly
+    // filters it out as an implausibly large offset (shared lib / stack space)
+    expect(result.resolvedRegisters!.sp).toBeUndefined();
   });
 
   it("handles missing version gracefully", async () => {

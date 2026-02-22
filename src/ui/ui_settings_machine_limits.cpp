@@ -11,6 +11,7 @@
 #include "format_utils.h"
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
+#include "settings_manager.h"
 #include "static_panel_registry.h"
 
 #include <spdlog/spdlog.h>
@@ -82,6 +83,12 @@ void MachineLimitsOverlay::init_subjects() {
 
         UI_MANAGED_SUBJECT_STRING(square_corner_velocity_display_subject_, scv_buf_, "— mm/s",
                                   "square_corner_velocity_display", subjects_);
+
+        // Extrude speed display (persisted via SettingsManager, not a Klipper override)
+        int extrude_speed = helix::SettingsManager::instance().get_extrude_speed();
+        std::snprintf(extrude_speed_buf_, sizeof(extrude_speed_buf_), "%d mm/s", extrude_speed);
+        UI_MANAGED_SUBJECT_STRING(extrude_speed_display_subject_, extrude_speed_buf_,
+                                  extrude_speed_buf_, "extrude_speed_display", subjects_);
     });
 }
 
@@ -94,6 +101,9 @@ void MachineLimitsOverlay::register_callbacks() {
 
     // Register button callbacks (Reset only - Apply removed for immediate mode)
     lv_xml_register_event_cb(nullptr, "on_limits_reset", on_reset);
+
+    // Extrude speed slider (persisted setting, not a Klipper override)
+    lv_xml_register_event_cb(nullptr, "on_extrude_speed_changed", on_extrude_speed_changed);
 
     spdlog::debug("[{}] Callbacks registered", get_name());
 }
@@ -301,6 +311,15 @@ void MachineLimitsOverlay::update_sliders() {
         lv_slider_set_value(scv_slider, static_cast<int>(current_limits_.square_corner_velocity),
                             LV_ANIM_OFF);
     }
+
+    // Update extrude speed slider (persisted setting, not from Klipper)
+    lv_obj_t* extrude_slider = lv_obj_find_by_name(overlay_root_, "extrude_speed_slider");
+    if (extrude_slider) {
+        int speed = helix::SettingsManager::instance().get_extrude_speed();
+        lv_slider_set_value(extrude_slider, speed, LV_ANIM_OFF);
+        std::snprintf(extrude_speed_buf_, sizeof(extrude_speed_buf_), "%d mm/s", speed);
+        lv_subject_copy_string(&extrude_speed_display_subject_, extrude_speed_buf_);
+    }
 }
 
 // ============================================================================
@@ -432,6 +451,20 @@ void MachineLimitsOverlay::on_reset(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_BEGIN("[MachineLimitsOverlay] on_reset");
     get_machine_limits_overlay().handle_reset();
     LVGL_SAFE_EVENT_CB_END();
+}
+
+void MachineLimitsOverlay::on_extrude_speed_changed(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[MachineLimitsOverlay] on_extrude_speed_changed");
+    auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+    int value = lv_slider_get_value(slider);
+    get_machine_limits_overlay().handle_extrude_speed_changed(value);
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void MachineLimitsOverlay::handle_extrude_speed_changed(int value) {
+    helix::SettingsManager::instance().set_extrude_speed(value);
+    std::snprintf(extrude_speed_buf_, sizeof(extrude_speed_buf_), "%d mm/s", value);
+    lv_subject_copy_string(&extrude_speed_display_subject_, extrude_speed_buf_);
 }
 
 } // namespace helix::settings
