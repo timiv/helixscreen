@@ -86,15 +86,18 @@ void ThermistorWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
     } else {
         // Re-bind observer to saved sensor
         auto& tsm = helix::sensors::TemperatureSensorManager::instance();
-        lv_subject_t* subject = tsm.get_temp_subject(selected_sensor_);
+        SubjectLifetime lifetime;
+        lv_subject_t* subject = tsm.get_temp_subject(selected_sensor_, lifetime);
         if (subject) {
             std::weak_ptr<bool> weak_alive = alive_;
             temp_observer_ = helix::ui::observe_int_sync<ThermistorWidget>(
-                subject, this, [weak_alive](ThermistorWidget* self, int temp) {
+                subject, this,
+                [weak_alive](ThermistorWidget* self, int temp) {
                     if (weak_alive.expired())
                         return;
                     self->on_temp_changed(temp);
-                });
+                },
+                lifetime);
         }
         update_display();
     }
@@ -148,15 +151,18 @@ void ThermistorWidget::select_sensor(const std::string& klipper_name) {
     strip_temperature_suffix(display_name_);
 
     // Subscribe to this sensor's temperature subject
-    lv_subject_t* subject = tsm.get_temp_subject(klipper_name);
+    SubjectLifetime lifetime;
+    lv_subject_t* subject = tsm.get_temp_subject(klipper_name, lifetime);
     if (subject) {
         std::weak_ptr<bool> weak_alive = alive_;
         temp_observer_ = helix::ui::observe_int_sync<ThermistorWidget>(
-            subject, this, [weak_alive](ThermistorWidget* self, int temp) {
+            subject, this,
+            [weak_alive](ThermistorWidget* self, int temp) {
                 if (weak_alive.expired())
                     return;
                 self->on_temp_changed(temp);
-            });
+            },
+            lifetime);
     } else {
         spdlog::warn("[ThermistorWidget] No subject for sensor: {}", klipper_name);
     }
@@ -397,18 +403,22 @@ void ThermistorWidget::show_sensor_picker() {
         // Position card below the widget, centered horizontally
         int card_w = std::clamp(screen_w * 3 / 10, 160, 240);
         lv_obj_set_width(card, card_w);
+
+        // Force layout so card gets its content height before positioning
+        lv_obj_update_layout(card);
+        int card_h = lv_obj_get_height(card);
+
         int card_x = (widget_area.x1 + widget_area.x2) / 2 - card_w / 2;
         int card_y = widget_area.y2 + space_xs;
-        int max_card_h = screen_h * 2 / 3;
 
         // Clamp to screen bounds using responsive margin
         if (card_x < space_md)
             card_x = space_md;
         if (card_x + card_w > screen_w - space_md)
             card_x = screen_w - card_w - space_md;
-        if (card_y + max_card_h > screen_h - space_md) {
+        if (card_y + card_h > screen_h - space_md) {
             // Show above widget instead
-            card_y = widget_area.y1 - max_card_h - space_xs;
+            card_y = widget_area.y1 - card_h - space_xs;
             if (card_y < space_md)
                 card_y = space_md;
         }
