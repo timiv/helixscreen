@@ -17,6 +17,7 @@
 #include "printer_state.h"
 #include "standard_macros.h"
 #include "static_panel_registry.h"
+#include "z_offset_utils.h"
 
 #include <spdlog/spdlog.h>
 
@@ -623,78 +624,34 @@ void ZOffsetCalibrationPanel::send_accept() {
                     this);
             });
     } else {
-        // Probe/endstop: ACCEPT then SAVE_CONFIG
+        // Probe/endstop: ACCEPT then apply+save
         spdlog::info("[ZOffsetCal] Sending ACCEPT");
         set_state(State::SAVING);
 
         api_->execute_gcode(
             "ACCEPT",
             [this, strategy]() {
-                if (strategy == ZOffsetCalibrationStrategy::ENDSTOP) {
-                    // Endstop needs Z_OFFSET_APPLY_ENDSTOP before SAVE_CONFIG
-                    api_->execute_gcode(
-                        "Z_OFFSET_APPLY_ENDSTOP",
-                        [this]() {
-                            spdlog::info(
-                                "[ZOffsetCal] Z_OFFSET_APPLY_ENDSTOP success, saving config");
-                            api_->execute_gcode(
-                                "SAVE_CONFIG",
-                                [this]() {
-                                    helix::ui::async_call(
-                                        [](void* ud) {
-                                            static_cast<ZOffsetCalibrationPanel*>(ud)
-                                                ->on_calibration_result(true, "");
-                                        },
-                                        this);
-                                },
-                                [this](const MoonrakerError& err) {
-                                    struct Ctx {
-                                        ZOffsetCalibrationPanel* panel;
-                                        std::string msg;
-                                    };
-                                    auto ctx = std::make_unique<Ctx>(
-                                        Ctx{this, "SAVE_CONFIG failed: " + err.user_message()});
-                                    helix::ui::queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
-                                        c->panel->on_calibration_result(false, c->msg);
-                                    });
-                                });
-                        },
-                        [this](const MoonrakerError& err) {
-                            struct Ctx {
-                                ZOffsetCalibrationPanel* panel;
-                                std::string msg;
-                            };
-                            auto ctx = std::make_unique<Ctx>(
-                                Ctx{this, "Z_OFFSET_APPLY_ENDSTOP failed: " + err.user_message()});
-                            helix::ui::queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
-                                c->panel->on_calibration_result(false, c->msg);
-                            });
+                spdlog::info("[ZOffsetCal] ACCEPT success, applying and saving");
+                helix::zoffset::apply_and_save(
+                    api_, strategy,
+                    [this]() {
+                        helix::ui::async_call(
+                            [](void* ud) {
+                                static_cast<ZOffsetCalibrationPanel*>(ud)->on_calibration_result(
+                                    true, "");
+                            },
+                            this);
+                    },
+                    [this](const std::string& error) {
+                        struct Ctx {
+                            ZOffsetCalibrationPanel* panel;
+                            std::string msg;
+                        };
+                        auto ctx = std::make_unique<Ctx>(Ctx{this, error});
+                        helix::ui::queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
+                            c->panel->on_calibration_result(false, c->msg);
                         });
-                } else {
-                    // Probe calibrate: just SAVE_CONFIG
-                    spdlog::info("[ZOffsetCal] Sending SAVE_CONFIG");
-                    api_->execute_gcode(
-                        "SAVE_CONFIG",
-                        [this]() {
-                            helix::ui::async_call(
-                                [](void* ud) {
-                                    static_cast<ZOffsetCalibrationPanel*>(ud)
-                                        ->on_calibration_result(true, "");
-                                },
-                                this);
-                        },
-                        [this](const MoonrakerError& err) {
-                            struct Ctx {
-                                ZOffsetCalibrationPanel* panel;
-                                std::string msg;
-                            };
-                            auto ctx = std::make_unique<Ctx>(
-                                Ctx{this, "SAVE_CONFIG failed: " + err.user_message()});
-                            helix::ui::queue_update<Ctx>(std::move(ctx), [](Ctx* c) {
-                                c->panel->on_calibration_result(false, c->msg);
-                            });
-                        });
-                }
+                    });
             },
             [this](const MoonrakerError& err) {
                 struct Ctx {

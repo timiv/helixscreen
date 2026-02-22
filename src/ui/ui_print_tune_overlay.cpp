@@ -15,6 +15,7 @@
 #include "moonraker_api.h"
 #include "printer_state.h"
 #include "static_panel_registry.h"
+#include "z_offset_utils.h"
 
 #include <spdlog/spdlog.h>
 
@@ -508,34 +509,28 @@ void PrintTuneOverlay::handle_z_adjust(int direction) {
 }
 
 void PrintTuneOverlay::handle_save_z_offset() {
-    // gcode_offset strategy auto-persists via firmware macro
     if (printer_state_) {
         auto strategy = printer_state_->get_z_offset_calibration_strategy();
-        if (strategy == ZOffsetCalibrationStrategy::GCODE_OFFSET) {
-            spdlog::debug(
-                "[PrintTuneOverlay] Z-offset auto-saved by firmware (gcode_offset strategy)");
-            ToastManager::instance().show(ToastSeverity::INFO,
-                                          lv_tr("Z-offset is auto-saved by firmware"), 3000);
+        if (helix::zoffset::is_auto_saved(strategy))
             return;
-        }
     }
 
-    // Show warning modal - SAVE_CONFIG restarts Klipper and cancels active prints!
     save_z_offset_modal_.set_on_confirm([this]() {
-        if (api_) {
-            api_->execute_gcode(
-                "SAVE_CONFIG",
-                []() {
-                    spdlog::info("[PrintTuneOverlay] Z-offset saved - Klipper restarting");
-                    ToastManager::instance().show(ToastSeverity::WARNING,
-                                                  lv_tr("Z-offset saved - Klipper restarting..."),
-                                                  5000);
-                },
-                [](const MoonrakerError& err) {
-                    spdlog::error("[PrintTuneOverlay] SAVE_CONFIG failed: {}", err.message);
-                    NOTIFY_ERROR("Save failed: {}", err.user_message());
-                });
-        }
+        if (!api_ || !printer_state_)
+            return;
+
+        auto strategy = printer_state_->get_z_offset_calibration_strategy();
+        helix::zoffset::apply_and_save(
+            api_, strategy,
+            []() {
+                spdlog::info("[PrintTuneOverlay] Z-offset saved — Klipper restarting");
+                ToastManager::instance().show(
+                    ToastSeverity::WARNING, lv_tr("Z-offset saved - Klipper restarting..."), 5000);
+            },
+            [](const std::string& error) {
+                spdlog::error("[PrintTuneOverlay] Save failed: {}", error);
+                NOTIFY_ERROR("Save failed: {}", error);
+            });
     });
     save_z_offset_modal_.show(lv_screen_active());
 }

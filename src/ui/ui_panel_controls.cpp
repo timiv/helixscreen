@@ -21,7 +21,6 @@
 #include "ui_settings_sensors.h"
 #include "ui_subject_registry.h"
 #include "ui_temperature_utils.h"
-#include "ui_toast_manager.h"
 #include "ui_update_queue.h"
 
 #include "app_globals.h"
@@ -41,6 +40,7 @@
 #include "ui/ui_event_trampoline.h"
 #include "ui/ui_lazy_panel_helper.h"
 #include "ui/ui_widget_helpers.h"
+#include "z_offset_utils.h"
 
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>
@@ -750,24 +750,16 @@ void ControlsPanel::populate_secondary_fans() {
 }
 
 void ControlsPanel::update_z_offset_delta_display(int delta_microns) {
-    // Format the delta in millimeters with sign: e.g., "+0.050mm" or "-0.025mm"
-    double delta_mm = static_cast<double>(delta_microns) / 1000.0;
-
-    if (delta_microns == 0) {
-        z_offset_delta_display_buf_[0] = '\0'; // Empty string when no delta
-    } else {
-        std::snprintf(z_offset_delta_display_buf_, sizeof(z_offset_delta_display_buf_), "%+.3fmm",
-                      delta_mm);
-    }
+    helix::zoffset::format_delta(delta_microns, z_offset_delta_display_buf_,
+                                 sizeof(z_offset_delta_display_buf_));
     lv_subject_copy_string(&z_offset_delta_display_subject_, z_offset_delta_display_buf_);
-
     spdlog::trace("[{}] Z-offset delta display updated: '{}'", get_name(),
                   z_offset_delta_display_buf_);
 }
 
 void ControlsPanel::update_controls_z_offset_display(int offset_microns) {
-    double offset_mm = static_cast<double>(offset_microns) / 1000.0;
-    std::snprintf(controls_z_offset_buf_, sizeof(controls_z_offset_buf_), "%+.3fmm", offset_mm);
+    helix::zoffset::format_offset(offset_microns, controls_z_offset_buf_,
+                                  sizeof(controls_z_offset_buf_));
     lv_subject_copy_string(&controls_z_offset_subject_, controls_z_offset_buf_);
 }
 
@@ -779,16 +771,10 @@ void ControlsPanel::handle_zoffset_tune() {
 }
 
 void ControlsPanel::handle_save_z_offset() {
-    // gcode_offset strategy auto-persists via firmware macro — nothing to save
     auto strategy = printer_state_.get_z_offset_calibration_strategy();
-    if (strategy == ZOffsetCalibrationStrategy::GCODE_OFFSET) {
-        spdlog::debug("[{}] Z-offset auto-saved by firmware (gcode_offset strategy)", get_name());
-        ToastManager::instance().show(ToastSeverity::INFO,
-                                      lv_tr("Z-offset is auto-saved by firmware"), 3000);
+    if (helix::zoffset::is_auto_saved(strategy))
         return;
-    }
 
-    // Get current gcode Z-offset (displayed offset, not pending delta)
     int offset_microns = 0;
     if (auto* subj = printer_state_.get_gcode_z_offset_subject()) {
         offset_microns = lv_subject_get_int(subj);
@@ -799,18 +785,9 @@ void ControlsPanel::handle_save_z_offset() {
         return;
     }
 
-    double offset_mm = static_cast<double>(offset_microns) / 1000.0;
-    spdlog::info("[{}] Save Z-offset clicked: {:+.3f}mm", get_name(), offset_mm);
+    spdlog::info("[{}] Save Z-offset clicked: {:+.3f}mm", get_name(),
+                 static_cast<double>(offset_microns) / 1000.0);
 
-    // Choose dialog text based on calibration strategy
-    const char* dialog_msg =
-        (strategy == ZOffsetCalibrationStrategy::PROBE_CALIBRATE)
-            ? "This will apply the Z-offset to your probe and restart Klipper to save the "
-              "configuration. The printer will briefly disconnect."
-            : "This will apply the Z-offset to your endstop and restart Klipper to save the "
-              "configuration. The printer will briefly disconnect.";
-
-    // Show confirmation dialog - SAVE_CONFIG will restart Klipper
     const char* confirm_msg =
         (strategy == ZOffsetCalibrationStrategy::PROBE_CALIBRATE)
             ? lv_tr("This will apply the Z-offset to your probe and restart Klipper to save the "
@@ -834,14 +811,12 @@ void ControlsPanel::handle_save_z_offset() {
 void ControlsPanel::handle_save_z_offset_confirm() {
     spdlog::debug("[{}] Save Z-offset confirmed", get_name());
 
-    // Guard against double-click race condition
     if (save_z_offset_in_progress_) {
         spdlog::warn("[{}] Save Z-offset already in progress, ignoring", get_name());
         return;
     }
     save_z_offset_in_progress_ = true;
 
-    // Hide dialog first - ModalGuard handles cleanup
     save_z_offset_confirmation_dialog_.hide();
 
     if (!api_) {
@@ -850,7 +825,6 @@ void ControlsPanel::handle_save_z_offset_confirm() {
         return;
     }
 
-    // Get current gcode Z-offset for logging
     int offset_microns = 0;
     if (auto* subj = printer_state_.get_gcode_z_offset_subject()) {
         offset_microns = lv_subject_get_int(subj);
@@ -859,47 +833,16 @@ void ControlsPanel::handle_save_z_offset_confirm() {
 
     auto strategy = printer_state_.get_z_offset_calibration_strategy();
 
-    // gcode_offset strategy auto-persists — should not reach here (handled by early return)
-    if (strategy == ZOffsetCalibrationStrategy::GCODE_OFFSET) {
-        spdlog::warn("[{}] save_z_offset_confirm called with gcode_offset strategy — ignoring",
-                     get_name());
-        save_z_offset_in_progress_ = false;
-        return;
-    }
-
-    // Select the apply command based on calibration strategy
-    const char* apply_cmd = (strategy == ZOffsetCalibrationStrategy::PROBE_CALIBRATE)
-                                ? "Z_OFFSET_APPLY_PROBE"
-                                : "Z_OFFSET_APPLY_ENDSTOP";
-
-    spdlog::info("[{}] Applying Z-offset with {} strategy (cmd: {})", get_name(),
-                 (strategy == ZOffsetCalibrationStrategy::PROBE_CALIBRATE) ? "probe_calibrate"
-                                                                           : "endstop",
-                 apply_cmd);
-
-    // Execute apply command first, then SAVE_CONFIG to persist and restart Klipper
     NOTIFY_INFO("Saving Z-offset...");
-    api_->execute_gcode(
-        apply_cmd,
-        [this, offset_mm, apply_cmd]() {
-            spdlog::info("[{}] {} success, executing SAVE_CONFIG", get_name(), apply_cmd);
 
-            // Now save the config (this will restart Klipper)
-            api_->execute_gcode(
-                "SAVE_CONFIG",
-                [this, offset_mm]() {
-                    NOTIFY_SUCCESS("Z-offset saved ({:+.3f}mm). Klipper restarting...", offset_mm);
-                    save_z_offset_in_progress_ = false;
-                },
-                [this](const MoonrakerError& err) {
-                    NOTIFY_ERROR("SAVE_CONFIG failed: {}. Z-offset was applied but not saved. "
-                                 "Run SAVE_CONFIG manually or the offset will be lost on restart.",
-                                 err.user_message());
-                    save_z_offset_in_progress_ = false;
-                });
+    helix::zoffset::apply_and_save(
+        api_, strategy,
+        [this, offset_mm]() {
+            NOTIFY_SUCCESS("Z-offset saved ({:+.3f}mm). Klipper restarting...", offset_mm);
+            save_z_offset_in_progress_ = false;
         },
-        [this, apply_cmd](const MoonrakerError& err) {
-            NOTIFY_ERROR("{} failed: {}", apply_cmd, err.user_message());
+        [this](const std::string& error) {
+            NOTIFY_ERROR("{}", error);
             save_z_offset_in_progress_ = false;
         });
 }

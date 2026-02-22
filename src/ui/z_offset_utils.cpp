@@ -1,0 +1,98 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+#include "z_offset_utils.h"
+
+#include "ui_toast_manager.h"
+
+#include "moonraker_api.h"
+
+#include <spdlog/fmt/fmt.h>
+#include <spdlog/spdlog.h>
+
+#include <cstdio>
+#include <lvgl.h>
+
+namespace helix::zoffset {
+
+bool is_auto_saved(ZOffsetCalibrationStrategy strategy) {
+    if (strategy == ZOffsetCalibrationStrategy::GCODE_OFFSET) {
+        spdlog::debug("[ZOffsetUtils] Z-offset auto-saved by firmware (gcode_offset strategy)");
+        ToastManager::instance().show(ToastSeverity::INFO,
+                                      lv_tr("Z-offset is auto-saved by firmware"), 3000);
+        return true;
+    }
+    return false;
+}
+
+void format_delta(int microns, char* buf, size_t buf_size) {
+    if (microns == 0) {
+        buf[0] = '\0';
+        return;
+    }
+    double mm = static_cast<double>(microns) / 1000.0;
+    std::snprintf(buf, buf_size, "%+.3fmm", mm);
+}
+
+void format_offset(int microns, char* buf, size_t buf_size) {
+    double mm = static_cast<double>(microns) / 1000.0;
+    std::snprintf(buf, buf_size, "%+.3fmm", mm);
+}
+
+void apply_and_save(MoonrakerAPI* api, ZOffsetCalibrationStrategy strategy,
+                    std::function<void()> on_success,
+                    std::function<void(const std::string& error)> on_error) {
+    if (!api) {
+        spdlog::error("[ZOffsetUtils] apply_and_save called with null API");
+        if (on_error)
+            on_error("No printer connection");
+        return;
+    }
+
+    if (strategy == ZOffsetCalibrationStrategy::GCODE_OFFSET) {
+        spdlog::warn("[ZOffsetUtils] apply_and_save called with gcode_offset strategy — ignoring");
+        if (on_success)
+            on_success();
+        return;
+    }
+
+    const char* apply_cmd = (strategy == ZOffsetCalibrationStrategy::PROBE_CALIBRATE)
+                                ? "Z_OFFSET_APPLY_PROBE"
+                                : "Z_OFFSET_APPLY_ENDSTOP";
+
+    const char* strategy_name =
+        (strategy == ZOffsetCalibrationStrategy::PROBE_CALIBRATE) ? "probe_calibrate" : "endstop";
+
+    spdlog::info("[ZOffsetUtils] Applying Z-offset with {} strategy (cmd: {})", strategy_name,
+                 apply_cmd);
+
+    api->execute_gcode(
+        apply_cmd,
+        [api, apply_cmd, on_success, on_error]() {
+            spdlog::info("[ZOffsetUtils] {} success, executing SAVE_CONFIG", apply_cmd);
+
+            api->execute_gcode(
+                "SAVE_CONFIG",
+                [on_success]() {
+                    spdlog::info("[ZOffsetUtils] SAVE_CONFIG success — Klipper restarting");
+                    if (on_success)
+                        on_success();
+                },
+                [on_error](const MoonrakerError& err) {
+                    std::string msg = fmt::format(
+                        "SAVE_CONFIG failed: {}. Z-offset was applied but not saved. "
+                        "Run SAVE_CONFIG manually or the offset will be lost on restart.",
+                        err.user_message());
+                    spdlog::error("[ZOffsetUtils] {}", msg);
+                    if (on_error)
+                        on_error(msg);
+                });
+        },
+        [apply_cmd, on_error](const MoonrakerError& err) {
+            std::string msg = fmt::format("{} failed: {}", apply_cmd, err.user_message());
+            spdlog::error("[ZOffsetUtils] {}", msg);
+            if (on_error)
+                on_error(msg);
+        });
+}
+
+} // namespace helix::zoffset
