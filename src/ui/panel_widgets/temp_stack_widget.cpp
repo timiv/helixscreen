@@ -7,6 +7,7 @@
 #include "ui_event_safety.h"
 #include "ui_nav_manager.h"
 #include "ui_panel_temp_control.h"
+#include "ui_utils.h"
 
 #include "app_globals.h"
 #include "observer_factory.h"
@@ -96,13 +97,11 @@ void TempStackWidget::detach() {
     // Clean up lazily-created overlays (children of parent_screen_, not widget container)
     if (nozzle_temp_panel_) {
         NavigationManager::instance().unregister_overlay_instance(nozzle_temp_panel_);
-        lv_obj_delete(nozzle_temp_panel_);
-        nozzle_temp_panel_ = nullptr;
+        helix::ui::safe_delete(nozzle_temp_panel_);
     }
     if (bed_temp_panel_) {
         NavigationManager::instance().unregister_overlay_instance(bed_temp_panel_);
-        lv_obj_delete(bed_temp_panel_);
-        bed_temp_panel_ = nullptr;
+        helix::ui::safe_delete(bed_temp_panel_);
     }
 
     if (s_active_instance == this) {

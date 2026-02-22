@@ -1580,8 +1580,9 @@ void ControlsPanel::populate_secondary_temps() {
     ++temp_populate_gen_;
 
     // Cleanup order: observers first, then tracking, then widgets.
+    // Use reset() not release() — subjects are alive, must properly unsubscribe
     for (auto& obs : secondary_temp_observers_) {
-        obs.release();
+        obs.reset();
     }
     secondary_temp_observers_.clear();
     secondary_temp_rows_.clear();

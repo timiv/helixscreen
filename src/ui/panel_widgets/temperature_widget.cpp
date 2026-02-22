@@ -8,6 +8,7 @@
 #include "ui_nav_manager.h"
 #include "ui_panel_temp_control.h"
 #include "ui_temperature_utils.h"
+#include "ui_utils.h"
 
 #include "app_globals.h"
 #include "observer_factory.h"
@@ -78,8 +79,7 @@ void TemperatureWidget::detach() {
     // Clean up lazily-created overlay (child of parent_screen_, not widget container)
     if (nozzle_temp_panel_) {
         NavigationManager::instance().unregister_overlay_instance(nozzle_temp_panel_);
-        lv_obj_delete(nozzle_temp_panel_);
-        nozzle_temp_panel_ = nullptr;
+        helix::ui::safe_delete(nozzle_temp_panel_);
     }
 
     if (widget_obj_) {

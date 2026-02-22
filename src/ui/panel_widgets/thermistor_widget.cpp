@@ -6,6 +6,7 @@
 #include "ui_event_safety.h"
 #include "ui_icon.h"
 #include "ui_temperature_utils.h"
+#include "ui_utils.h"
 
 #include "app_globals.h"
 #include "config.h"
@@ -265,8 +266,7 @@ void ThermistorWidget::show_sensor_picker() {
     lv_obj_t* sensor_list = lv_obj_find_by_name(picker_backdrop_, "sensor_list");
     if (!sensor_list) {
         spdlog::error("[ThermistorWidget] sensor_list not found in picker XML");
-        lv_obj_delete(picker_backdrop_);
-        picker_backdrop_ = nullptr;
+        helix::ui::safe_delete(picker_backdrop_);
         return;
     }
 
@@ -397,20 +397,22 @@ void ThermistorWidget::dismiss_sensor_picker() {
         return;
     }
 
-    // Clean up heap-allocated klipper_name strings
-    lv_obj_t* sensor_list = lv_obj_find_by_name(picker_backdrop_, "sensor_list");
-    if (sensor_list) {
-        uint32_t count = lv_obj_get_child_count(sensor_list);
-        for (uint32_t i = 0; i < count; ++i) {
-            lv_obj_t* row = lv_obj_get_child(sensor_list, i);
-            auto* name_ptr = static_cast<std::string*>(lv_obj_get_user_data(row));
-            delete name_ptr;
-            lv_obj_set_user_data(row, nullptr);
+    // Clean up heap-allocated klipper_name strings (only if object is still valid —
+    // parent screen deletion auto-frees children, leaving stale pointers)
+    if (lv_obj_is_valid(picker_backdrop_)) {
+        lv_obj_t* sensor_list = lv_obj_find_by_name(picker_backdrop_, "sensor_list");
+        if (sensor_list) {
+            uint32_t count = lv_obj_get_child_count(sensor_list);
+            for (uint32_t i = 0; i < count; ++i) {
+                lv_obj_t* row = lv_obj_get_child(sensor_list, i);
+                auto* name_ptr = static_cast<std::string*>(lv_obj_get_user_data(row));
+                delete name_ptr;
+                lv_obj_set_user_data(row, nullptr);
+            }
         }
     }
 
-    lv_obj_delete(picker_backdrop_);
-    picker_backdrop_ = nullptr;
+    helix::ui::safe_delete(picker_backdrop_);
     s_active_picker_ = nullptr;
 
     spdlog::debug("[ThermistorWidget] Sensor picker dismissed");
