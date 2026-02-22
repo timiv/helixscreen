@@ -67,7 +67,7 @@ namespace helix {
 using SubscriptionId = uint64_t;
 
 /** @brief Invalid subscription ID constant */
-constexpr SubscriptionId INVALID_SUBSCRIPTION_ID = 0;
+inline constexpr SubscriptionId INVALID_SUBSCRIPTION_ID = 0;
 
 // RequestId and INVALID_REQUEST_ID are defined in moonraker_request_tracker.h
 
