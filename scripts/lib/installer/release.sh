@@ -569,15 +569,49 @@ extract_release() {
     fi
 
     # Phase 6: Restore config and settings
-    if [ -n "${BACKUP_CONFIG:-}" ] && [ -f "$BACKUP_CONFIG" ]; then
-        $(file_sudo "${INSTALL_DIR}") mkdir -p "${INSTALL_DIR}/config"
-        $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_CONFIG" "${INSTALL_DIR}/config/helixconfig.json"
-        log_info "Restored existing configuration to config/"
+    # Try TMP_DIR backup first; fall back to the .old directory's copy.
+    # Under systemd's PrivateTmp=true, TMP_DIR lives in a volatile mount that
+    # can disappear if the service restarts.  The .old directory is on the real
+    # filesystem and survives any restart.
+    $(file_sudo "${INSTALL_DIR}") mkdir -p "${INSTALL_DIR}/config" 2>/dev/null || true
+    if [ ! -f "${INSTALL_DIR}/config/helixconfig.json" ]; then
+        if [ -n "${BACKUP_CONFIG:-}" ] && [ -f "$BACKUP_CONFIG" ]; then
+            $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_CONFIG" "${INSTALL_DIR}/config/helixconfig.json" 2>/dev/null && \
+                log_info "Restored configuration from backup" || \
+                log_warn "Failed to restore configuration from TMP_DIR backup"
+        fi
     fi
-    if [ -n "${BACKUP_ENV:-}" ] && [ -f "$BACKUP_ENV" ]; then
-        $(file_sudo "${INSTALL_DIR}") mkdir -p "${INSTALL_DIR}/config"
-        $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_ENV" "${INSTALL_DIR}/config/helixscreen.env"
-        log_info "Restored existing helixscreen.env to config/"
+    # Fallback: restore from .old directory if TMP_DIR backup was lost or failed
+    if [ ! -f "${INSTALL_DIR}/config/helixconfig.json" ] && [ -n "${INSTALL_BACKUP:-}" ]; then
+        if [ -f "${INSTALL_BACKUP}/config/helixconfig.json" ]; then
+            $(file_sudo "${INSTALL_DIR}/config") cp "${INSTALL_BACKUP}/config/helixconfig.json" "${INSTALL_DIR}/config/helixconfig.json" 2>/dev/null && \
+                log_info "Restored configuration from previous install backup" || \
+                log_warn "Failed to restore configuration from .old backup"
+        elif [ -f "${INSTALL_BACKUP}/helixconfig.json" ]; then
+            $(file_sudo "${INSTALL_DIR}/config") cp "${INSTALL_BACKUP}/helixconfig.json" "${INSTALL_DIR}/config/helixconfig.json" 2>/dev/null && \
+                log_info "Restored configuration from previous install backup (legacy location)" || \
+                log_warn "Failed to restore configuration from .old backup"
+        fi
+    fi
+    if [ ! -f "${INSTALL_DIR}/config/helixconfig.json" ] && [ "$ORIGINAL_INSTALL_EXISTS" = true ]; then
+        log_warn "Could not restore helixconfig.json from any backup source!"
+        log_warn "User configuration may have been lost."
+    fi
+
+    # Restore helixscreen.env
+    if [ ! -f "${INSTALL_DIR}/config/helixscreen.env" ]; then
+        if [ -n "${BACKUP_ENV:-}" ] && [ -f "$BACKUP_ENV" ]; then
+            $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_ENV" "${INSTALL_DIR}/config/helixscreen.env" 2>/dev/null && \
+                log_info "Restored helixscreen.env from backup" || \
+                log_warn "Failed to restore helixscreen.env from TMP_DIR backup"
+        fi
+    fi
+    if [ ! -f "${INSTALL_DIR}/config/helixscreen.env" ] && [ -n "${INSTALL_BACKUP:-}" ]; then
+        if [ -f "${INSTALL_BACKUP}/config/helixscreen.env" ]; then
+            $(file_sudo "${INSTALL_DIR}/config") cp "${INSTALL_BACKUP}/config/helixscreen.env" "${INSTALL_DIR}/config/helixscreen.env" 2>/dev/null && \
+                log_info "Restored helixscreen.env from previous install backup" || \
+                log_warn "Failed to restore helixscreen.env from .old backup"
+        fi
     fi
 
     # Cleanup

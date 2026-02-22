@@ -2,16 +2,13 @@
 <!-- Copyright (C) 2025-2026 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <component>
-  <!-- Reusable Header Bar Component - Improved Design v2 -->
-  <!-- Used in modal overlays, sub-screens, and detail views -->
-  <!-- Provides consistent back button + centered title + optional action button -->
-  <!-- Key improvements over v1:
-       - Flat 3-element layout (no nested containers) for true centering
-       - Symmetric padding (left + right) for visual balance
-       - Title uses flex_grow + text_align for perfect centering
-       - Uses text_heading/text_body components for theme consistency
-       - XML-controlled action button visibility via hide_action_button prop
+  <!-- MICRO OVERRIDE of ui_xml/components/header_bar.xml for 480x272 displays -->
+  <!-- Divergences from standard:
+       - Height: 40px (vs 48px standard)
+       - Title: left-aligned (vs centered) to maximize usable width
+       - Padding: #space_sm left, #space_xl right (vs larger standard padding)
   -->
+  <!-- Reusable Header Bar: back button + title + optional action button -->
   <!-- API Properties -->
   <api>
     <prop name="title" type="string"/>

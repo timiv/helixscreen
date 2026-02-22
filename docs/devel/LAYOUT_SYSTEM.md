@@ -30,8 +30,8 @@ any theme works with any layout.
 | `standard` | **Complete** | All panels — this is the default UI everyone uses today |
 | `ultrawide` | **Started** | `home_panel.xml` only (initial draft, needs refinement) |
 | `portrait` | Not started | Directory doesn't exist yet |
-| `micro` | Not started | Directory doesn't exist yet |
-| `micro-portrait` | Not started | Directory doesn't exist yet |
+| `micro` | **Started** | Controls panel, display settings, theme preview/editor, settings components |
+| `micro-portrait` | Not started | Directory exists (.gitkeep only) |
 | `tiny` | Not started | Directory doesn't exist yet |
 | `tiny-portrait` | Not started | Directory doesn't exist yet |
 
@@ -46,8 +46,8 @@ When HelixScreen starts up, it detects your screen's aspect ratio and picks a la
 | `portrait` | Tall/narrow (ratio < 0.8:1) | 480x800, 600x1024 |
 | `micro` | Very small landscape (max dimension ≤ 480 and min dimension ≤ 272) | 480x272 |
 | `micro-portrait` | Very small portrait (max dimension ≤ 480 and min dimension ≤ 272) | 272x480 |
-| `tiny` | Small landscape (max dimension ≤ 480) | 480x320, 320x240 |
-| `tiny-portrait` | Small portrait (max dimension ≤ 480) | 320x480, 240x320 |
+| `tiny` | Small landscape (max dimension ≤ 480, min dimension > 272) | 480x320, 480x400 |
+| `tiny-portrait` | Small portrait (max dimension ≤ 480, min dimension > 272) | 320x480, 400x480 |
 
 You can also force a layout manually:
 - **CLI flag:** `--layout ultrawide`
@@ -72,8 +72,8 @@ ui_xml/
     home_panel.xml         ← Ultrawide home panel (exists, needs work)
 
   portrait/                ← Portrait overrides (doesn't exist yet — create it!)
-  micro/                   ← Micro landscape overrides (doesn't exist yet)
-  micro-portrait/          ← Micro portrait overrides (doesn't exist yet)
+  micro/                   ← Micro landscape overrides (480x272, e.g. Ender 3 V3 KE)
+  micro-portrait/          ← Micro portrait overrides (not started)
   tiny/                    ← Tiny landscape overrides (doesn't exist yet)
   tiny-portrait/           ← Tiny portrait overrides (doesn't exist yet)
 ```
@@ -243,7 +243,14 @@ all layouts. Your layout XML should use these tokens — not hardcoded values:
 - Content stacks vertically naturally
 - Consider which elements can be stacked vs. side-by-side
 
-**Tiny (480x320, 320x240):**
+**Micro (480x272):**
+- Extremely height-constrained — only 272px vertical space
+- Use `#space_xs` padding everywhere (vs `#space_sm`/`#space_md`)
+- Header bar reduced to 40px, setting rows use compact padding
+- Action buttons should be pinned outside scroll areas (not inside)
+- Hide secondary information aggressively (status text, descriptions)
+
+**Tiny (480x320, 480x400):**
 - Very limited space in both directions
 - Reduce information density — show less, make touch targets bigger
 - Consider hiding optional elements (sensor indicators, etc.)

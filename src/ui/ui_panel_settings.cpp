@@ -1175,13 +1175,17 @@ void SettingsPanel::perform_factory_reset() {
         NavigationManager::instance().go_back();
     }
 
-    // Show confirmation toast
-    ToastManager::instance().show(ToastSeverity::SUCCESS, lv_tr("Settings reset to defaults"),
-                                  2000);
+    // Show confirmation toast and restart
+    ToastManager::instance().show(ToastSeverity::INFO,
+                                  lv_tr("Settings reset to defaults. Restarting..."), 1500);
 
-    // TODO: In production, this would restart the application
-    // or transition to the setup wizard. For now, just log.
-    spdlog::info("[{}] Device should restart or show wizard now", get_name());
+    // Schedule restart after brief delay to let toast display
+    helix::ui::async_call(
+        [](void*) {
+            spdlog::info("[SettingsPanel] Restarting after factory reset...");
+            app_request_restart_service();
+        },
+        nullptr);
 }
 
 void SettingsPanel::handle_hardware_health_clicked() {

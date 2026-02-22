@@ -444,6 +444,14 @@ endif
 
 .PHONY: pi pi32 ad5m cc1 k1 k1-dynamic k2 snapmaker-u1 pi-docker pi32-docker ad5m-docker cc1-docker k1-docker k1-dynamic-docker k2-docker snapmaker-u1-docker docker-toolchains docker-toolchain-snapmaker-u1 cross-info ensure-docker ensure-buildx maybe-stop-colima
 
+# Persistent ccache for Docker builds — bind-mounts a host directory so the
+# cache survives across container runs (the container is --rm).  Per-platform
+# subdirectories avoid cross-toolchain collisions.  The host dir is created
+# on first use with the current user's ownership (no root permission issues).
+DOCKER_CCACHE_BASE ?= $(HOME)/.cache/helixscreen-ccache
+docker-ccache-args = -v "$(DOCKER_CCACHE_BASE)/$(1)":/ccache -e CCACHE_DIR=/ccache
+ensure-ccache-dir = @mkdir -p "$(DOCKER_CCACHE_BASE)/$(1)"
+
 # Direct cross-compilation (requires toolchain installed)
 pi:
 	@echo "$(CYAN)$(BOLD)Cross-compiling for Raspberry Pi (aarch64)...$(RESET)"
@@ -561,7 +569,8 @@ pi-docker: ensure-docker
 		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
 		$(MAKE) docker-toolchain-pi; \
 	fi
-	$(Q)docker run --platform linux/amd64 --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src helixscreen/toolchain-pi \
+	$(call ensure-ccache-dir,pi)
+	$(Q)docker run --platform linux/amd64 --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src $(call docker-ccache-args,pi) helixscreen/toolchain-pi \
 		make PLATFORM_TARGET=pi SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@$(MAKE) --no-print-directory maybe-stop-colima
 
@@ -571,7 +580,8 @@ pi32-docker: ensure-docker
 		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
 		$(MAKE) docker-toolchain-pi32; \
 	fi
-	$(Q)docker run --platform linux/amd64 --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src helixscreen/toolchain-pi32 \
+	$(call ensure-ccache-dir,pi32)
+	$(Q)docker run --platform linux/amd64 --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src $(call docker-ccache-args,pi32) helixscreen/toolchain-pi32 \
 		make PLATFORM_TARGET=pi32 SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@$(MAKE) --no-print-directory maybe-stop-colima
 
@@ -581,7 +591,8 @@ ad5m-docker: ensure-docker
 		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
 		$(MAKE) docker-toolchain-ad5m; \
 	fi
-	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src helixscreen/toolchain-ad5m \
+	$(call ensure-ccache-dir,ad5m)
+	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src $(call docker-ccache-args,ad5m) helixscreen/toolchain-ad5m \
 		make PLATFORM_TARGET=ad5m SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@# Extract CA certificates from Docker image for HTTPS verification on device
 	@mkdir -p build/ad5m/certs
@@ -596,7 +607,8 @@ cc1-docker: ensure-docker
 		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
 		$(MAKE) docker-toolchain-cc1; \
 	fi
-	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src helixscreen/toolchain-cc1 \
+	$(call ensure-ccache-dir,cc1)
+	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src $(call docker-ccache-args,cc1) helixscreen/toolchain-cc1 \
 		make PLATFORM_TARGET=cc1 SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@# Extract CA certificates from Docker image for HTTPS verification on device
 	@mkdir -p build/cc1/certs
@@ -611,7 +623,8 @@ k1-docker: ensure-docker
 		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
 		$(MAKE) docker-toolchain-k1; \
 	fi
-	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src helixscreen/toolchain-k1 \
+	$(call ensure-ccache-dir,k1)
+	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src $(call docker-ccache-args,k1) helixscreen/toolchain-k1 \
 		make PLATFORM_TARGET=k1 SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@$(MAKE) --no-print-directory maybe-stop-colima
 
@@ -621,7 +634,8 @@ k1-dynamic-docker: ensure-docker
 		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
 		$(MAKE) docker-toolchain-k1-dynamic; \
 	fi
-	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src helixscreen/toolchain-k1-dynamic \
+	$(call ensure-ccache-dir,k1-dynamic)
+	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src $(call docker-ccache-args,k1-dynamic) helixscreen/toolchain-k1-dynamic \
 		make PLATFORM_TARGET=k1-dynamic SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@$(MAKE) --no-print-directory maybe-stop-colima
 
@@ -631,7 +645,8 @@ k2-docker: ensure-docker
 		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
 		$(MAKE) docker-toolchain-k2; \
 	fi
-	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src helixscreen/toolchain-k2 \
+	$(call ensure-ccache-dir,k2)
+	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src $(call docker-ccache-args,k2) helixscreen/toolchain-k2 \
 		make PLATFORM_TARGET=k2 SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@$(MAKE) --no-print-directory maybe-stop-colima
 
@@ -641,7 +656,8 @@ snapmaker-u1-docker: ensure-docker
 		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
 		$(MAKE) docker-toolchain-snapmaker-u1; \
 	fi
-	$(Q)docker run --platform linux/amd64 --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src helixscreen/toolchain-snapmaker-u1 \
+	$(call ensure-ccache-dir,snapmaker-u1)
+	$(Q)docker run --platform linux/amd64 --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src $(call docker-ccache-args,snapmaker-u1) helixscreen/toolchain-snapmaker-u1 \
 		make PLATFORM_TARGET=snapmaker-u1 SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@# Extract CA certificates from Docker image for HTTPS verification on device
 	@mkdir -p build/snapmaker-u1/certs
@@ -838,7 +854,7 @@ define deploy-common
 		echo "$(DIM)Generating pre-rendered splash images...$(RESET)"; \
 		$(MAKE) gen-images-ad5m; \
 	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+	@if [ ! -d build/assets/images/printers/prerendered ] || [ -z "$$(ls -A build/assets/images/printers/prerendered/*.bin 2>/dev/null)" ]; then \
 		echo "$(DIM)Generating pre-rendered printer images...$(RESET)"; \
 		$(MAKE) gen-printer-images; \
 	fi
@@ -851,7 +867,9 @@ define deploy-common
 		$(MAKE) gen-splash-3d; \
 	fi
 	@# Stop running processes and prepare directory
-	ssh $(1) "killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; mkdir -p $(2)/bin"
+	@# Stop systemd service first (prevents respawning), then kill any stragglers
+	ssh $(1) "sudo systemctl stop helixscreen 2>/dev/null; systemctl --user stop helix-screen 2>/dev/null; killall helix-watchdog helix-screen helix-splash 2>/dev/null; sleep 0.5; killall -9 helix-watchdog helix-screen helix-splash 2>/dev/null; true"
+	ssh $(1) "mkdir -p $(2)/bin"
 	ssh $(1) "rm -f $(2)/*.xml 2>/dev/null || true"
 	@# Sync binaries and launcher to bin/
 	rsync -avz --progress $(3)/helix-screen $(3)/helix-splash $(1):$(2)/bin/
@@ -1016,7 +1034,7 @@ deploy-ad5m:
 		echo "$(DIM)Generating pre-rendered splash images...$(RESET)"; \
 		$(MAKE) gen-images-ad5m; \
 	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+	@if [ ! -d build/assets/images/printers/prerendered ] || [ -z "$$(ls -A build/assets/images/printers/prerendered/*.bin 2>/dev/null)" ]; then \
 		echo "$(DIM)Generating pre-rendered printer images...$(RESET)"; \
 		$(MAKE) gen-printer-images; \
 	fi
@@ -1196,7 +1214,7 @@ deploy-cc1:
 		echo "$(DIM)Generating pre-rendered splash images...$(RESET)"; \
 		$(MAKE) gen-images; \
 	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+	@if [ ! -d build/assets/images/printers/prerendered ] || [ -z "$$(ls -A build/assets/images/printers/prerendered/*.bin 2>/dev/null)" ]; then \
 		echo "$(DIM)Generating pre-rendered printer images...$(RESET)"; \
 		$(MAKE) gen-printer-images; \
 	fi
@@ -1362,7 +1380,7 @@ deploy-k1:
 		echo "$(DIM)Generating pre-rendered splash images...$(RESET)"; \
 		$(MAKE) gen-images; \
 	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+	@if [ ! -d build/assets/images/printers/prerendered ] || [ -z "$$(ls -A build/assets/images/printers/prerendered/*.bin 2>/dev/null)" ]; then \
 		echo "$(DIM)Generating pre-rendered printer images...$(RESET)"; \
 		$(MAKE) gen-printer-images; \
 	fi
@@ -1446,7 +1464,7 @@ deploy-k1-dynamic:
 		echo "$(DIM)Generating pre-rendered splash images...$(RESET)"; \
 		$(MAKE) gen-images; \
 	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+	@if [ ! -d build/assets/images/printers/prerendered ] || [ -z "$$(ls -A build/assets/images/printers/prerendered/*.bin 2>/dev/null)" ]; then \
 		echo "$(DIM)Generating pre-rendered printer images...$(RESET)"; \
 		$(MAKE) gen-printer-images; \
 	fi
@@ -1548,7 +1566,7 @@ deploy-k2:
 		echo "$(DIM)Generating pre-rendered splash images...$(RESET)"; \
 		$(MAKE) gen-images; \
 	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+	@if [ ! -d build/assets/images/printers/prerendered ] || [ -z "$$(ls -A build/assets/images/printers/prerendered/*.bin 2>/dev/null)" ]; then \
 		echo "$(DIM)Generating pre-rendered printer images...$(RESET)"; \
 		$(MAKE) gen-printer-images; \
 	fi

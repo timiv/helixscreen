@@ -3,12 +3,18 @@
 
 #include "fan_stack_widget.h"
 
+#include "ui_event_safety.h"
+#include "ui_fan_control_overlay.h"
+#include "ui_nav_manager.h"
+
 #include "app_globals.h"
 #include "display_settings_manager.h"
+#include "moonraker_api.h"
 #include "observer_factory.h"
 #include "panel_widget_registry.h"
 #include "printer_fan_state.h"
 #include "printer_state.h"
+#include "ui/fan_spin_animation.h"
 
 #include <spdlog/spdlog.h>
 
@@ -26,29 +32,6 @@ const bool s_registered = [] {
 
 using namespace helix;
 
-/// Abbreviate a fan display name for compact display.
-/// Strips " Fan" suffix, then truncates to max_len chars.
-static std::string abbreviate_fan_name(const std::string& display_name, size_t max_len = 6) {
-    std::string name = display_name;
-
-    // Strip " Fan" suffix
-    const std::string suffix = " Fan";
-    if (name.size() > suffix.size() &&
-        name.compare(name.size() - suffix.size(), suffix.size(), suffix) == 0) {
-        name.erase(name.size() - suffix.size());
-    }
-
-    if (name.size() > max_len) {
-        name.resize(max_len);
-    }
-    return name;
-}
-
-/// Minimum spin duration at 100% fan speed (ms per full rotation)
-static constexpr uint32_t MIN_SPIN_DURATION_MS = 600;
-/// Maximum spin duration at ~1% fan speed (slow crawl)
-static constexpr uint32_t MAX_SPIN_DURATION_MS = 6000;
-
 FanStackWidget::FanStackWidget(PrinterState& printer_state) : printer_state_(printer_state) {}
 
 FanStackWidget::~FanStackWidget() {
@@ -57,16 +40,14 @@ FanStackWidget::~FanStackWidget() {
 
 void FanStackWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
     widget_obj_ = widget_obj;
-    (void)parent_screen; // Read-only widget, no overlays
+    parent_screen_ = parent_screen;
     *alive_ = true;
+    lv_obj_set_user_data(widget_obj_, this);
 
     // Cache label, name, and icon pointers
     part_label_ = lv_obj_find_by_name(widget_obj_, "fan_stack_part_speed");
     hotend_label_ = lv_obj_find_by_name(widget_obj_, "fan_stack_hotend_speed");
     aux_label_ = lv_obj_find_by_name(widget_obj_, "fan_stack_aux_speed");
-    part_name_ = lv_obj_find_by_name(widget_obj_, "fan_stack_part_name");
-    hotend_name_ = lv_obj_find_by_name(widget_obj_, "fan_stack_hotend_name");
-    aux_name_ = lv_obj_find_by_name(widget_obj_, "fan_stack_aux_name");
     aux_row_ = lv_obj_find_by_name(widget_obj_, "fan_stack_aux_row");
     part_icon_ = lv_obj_find_by_name(widget_obj_, "fan_stack_part_icon");
     hotend_icon_ = lv_obj_find_by_name(widget_obj_, "fan_stack_hotend_icon");
@@ -116,21 +97,21 @@ void FanStackWidget::detach() {
     anim_settings_observer_.reset();
 
     // Stop any running animations before clearing pointers
-    // Check validity first — parent deletion may have already freed these
-    if (part_icon_ && lv_obj_is_valid(part_icon_))
+    if (part_icon_)
         stop_spin(part_icon_);
-    if (hotend_icon_ && lv_obj_is_valid(hotend_icon_))
+    if (hotend_icon_)
         stop_spin(hotend_icon_);
-    if (aux_icon_ && lv_obj_is_valid(aux_icon_))
+    if (aux_icon_)
         stop_spin(aux_icon_);
 
+    if (widget_obj_)
+        lv_obj_set_user_data(widget_obj_, nullptr);
     widget_obj_ = nullptr;
+    parent_screen_ = nullptr;
+    fan_control_panel_ = nullptr;
     part_label_ = nullptr;
     hotend_label_ = nullptr;
     aux_label_ = nullptr;
-    part_name_ = nullptr;
-    hotend_name_ = nullptr;
-    aux_name_ = nullptr;
     aux_row_ = nullptr;
     part_icon_ = nullptr;
     hotend_icon_ = nullptr;
@@ -185,46 +166,41 @@ void FanStackWidget::bind_fans() {
         }
     }
 
-    // Update name labels with abbreviated display names
-    if (part_name_ && !part_display.empty()) {
-        lv_label_set_text(part_name_, abbreviate_fan_name(part_display).c_str());
-    }
-    if (hotend_name_ && !hotend_display.empty()) {
-        lv_label_set_text(hotend_name_, abbreviate_fan_name(hotend_display).c_str());
-    }
-    if (aux_name_ && !aux_display.empty()) {
-        lv_label_set_text(aux_name_, abbreviate_fan_name(aux_display).c_str());
-    }
-
     std::weak_ptr<bool> weak_alive = alive_;
 
     // Bind part fan
     if (!part_fan_name_.empty()) {
-        lv_subject_t* subject = printer_state_.get_fan_speed_subject(part_fan_name_);
+        SubjectLifetime lifetime;
+        lv_subject_t* subject = printer_state_.get_fan_speed_subject(part_fan_name_, lifetime);
         if (subject) {
             part_observer_ = helix::ui::observe_int_sync<FanStackWidget>(
-                subject, this, [weak_alive](FanStackWidget* self, int speed) {
+                subject, this,
+                [weak_alive](FanStackWidget* self, int speed) {
                     if (weak_alive.expired())
                         return;
                     self->part_speed_ = speed;
                     self->update_label(self->part_label_, speed);
                     self->update_fan_animation(self->part_icon_, speed);
-                });
+                },
+                lifetime);
         }
     }
 
     // Bind hotend fan
     if (!hotend_fan_name_.empty()) {
-        lv_subject_t* subject = printer_state_.get_fan_speed_subject(hotend_fan_name_);
+        SubjectLifetime lifetime;
+        lv_subject_t* subject = printer_state_.get_fan_speed_subject(hotend_fan_name_, lifetime);
         if (subject) {
             hotend_observer_ = helix::ui::observe_int_sync<FanStackWidget>(
-                subject, this, [weak_alive](FanStackWidget* self, int speed) {
+                subject, this,
+                [weak_alive](FanStackWidget* self, int speed) {
                     if (weak_alive.expired())
                         return;
                     self->hotend_speed_ = speed;
                     self->update_label(self->hotend_label_, speed);
                     self->update_fan_animation(self->hotend_icon_, speed);
-                });
+                },
+                lifetime);
         }
     }
 
@@ -233,16 +209,19 @@ void FanStackWidget::bind_fans() {
         if (aux_row_) {
             lv_obj_remove_flag(aux_row_, LV_OBJ_FLAG_HIDDEN);
         }
-        lv_subject_t* subject = printer_state_.get_fan_speed_subject(aux_fan_name_);
+        SubjectLifetime lifetime;
+        lv_subject_t* subject = printer_state_.get_fan_speed_subject(aux_fan_name_, lifetime);
         if (subject) {
             aux_observer_ = helix::ui::observe_int_sync<FanStackWidget>(
-                subject, this, [weak_alive](FanStackWidget* self, int speed) {
+                subject, this,
+                [weak_alive](FanStackWidget* self, int speed) {
                     if (weak_alive.expired())
                         return;
                     self->aux_speed_ = speed;
                     self->update_label(self->aux_label_, speed);
                     self->update_fan_animation(self->aux_icon_, speed);
-                });
+                },
+                lifetime);
         }
     } else {
         if (aux_row_) {
@@ -268,9 +247,9 @@ void FanStackWidget::update_fan_animation(lv_obj_t* icon, int speed_pct) {
         return;
 
     if (!animations_enabled_ || speed_pct <= 0) {
-        stop_spin(icon);
+        helix::ui::fan_spin_stop(icon);
     } else {
-        start_spin(icon, speed_pct);
+        helix::ui::fan_spin_start(icon, speed_pct);
     }
 }
 
@@ -281,35 +260,58 @@ void FanStackWidget::refresh_all_animations() {
 }
 
 void FanStackWidget::spin_anim_cb(void* var, int32_t value) {
-    lv_obj_set_style_transform_rotation(static_cast<lv_obj_t*>(var), value, 0);
+    helix::ui::fan_spin_anim_cb(var, value);
 }
 
 void FanStackWidget::stop_spin(lv_obj_t* icon) {
-    if (!icon)
-        return;
-    lv_anim_delete(icon, spin_anim_cb);
-    lv_obj_set_style_transform_rotation(icon, 0, 0);
+    helix::ui::fan_spin_stop(icon);
 }
 
 void FanStackWidget::start_spin(lv_obj_t* icon, int speed_pct) {
-    if (!icon || speed_pct <= 0)
-        return;
+    helix::ui::fan_spin_start(icon, speed_pct);
+}
 
-    // Scale duration inversely with speed: 100% → MIN, 1% → MAX
-    uint32_t duration =
-        MAX_SPIN_DURATION_MS -
-        static_cast<uint32_t>((MAX_SPIN_DURATION_MS - MIN_SPIN_DURATION_MS) * speed_pct / 100);
+void FanStackWidget::handle_clicked() {
+    spdlog::debug("[FanStackWidget] Clicked - opening fan control overlay");
 
-    // Delete existing animation and restart with new duration
-    lv_anim_delete(icon, spin_anim_cb);
+    if (!fan_control_panel_ && parent_screen_) {
+        auto& overlay = get_fan_control_overlay();
 
-    lv_anim_t anim;
-    lv_anim_init(&anim);
-    lv_anim_set_var(&anim, icon);
-    lv_anim_set_exec_cb(&anim, spin_anim_cb);
-    lv_anim_set_values(&anim, 0, 3600); // 0° to 360° (LVGL uses 0.1° units)
-    lv_anim_set_duration(&anim, duration);
-    lv_anim_set_repeat_count(&anim, LV_ANIM_REPEAT_INFINITE);
-    lv_anim_set_path_cb(&anim, lv_anim_path_linear);
-    lv_anim_start(&anim);
+        if (!overlay.are_subjects_initialized()) {
+            overlay.init_subjects();
+        }
+        overlay.register_callbacks();
+        overlay.set_api(get_moonraker_api());
+
+        fan_control_panel_ = overlay.create(parent_screen_);
+        if (!fan_control_panel_) {
+            spdlog::error("[FanStackWidget] Failed to create fan control overlay");
+            return;
+        }
+        NavigationManager::instance().register_overlay_instance(fan_control_panel_, &overlay);
+    }
+
+    if (fan_control_panel_) {
+        get_fan_control_overlay().set_api(get_moonraker_api());
+        NavigationManager::instance().push_overlay(fan_control_panel_);
+    }
+}
+
+void FanStackWidget::on_fan_stack_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FanStackWidget] on_fan_stack_clicked");
+    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    auto* self = static_cast<FanStackWidget*>(lv_obj_get_user_data(target));
+    if (!self) {
+        lv_obj_t* parent = lv_obj_get_parent(target);
+        while (parent && !self) {
+            self = static_cast<FanStackWidget*>(lv_obj_get_user_data(parent));
+            parent = lv_obj_get_parent(parent);
+        }
+    }
+    if (self) {
+        self->handle_clicked();
+    } else {
+        spdlog::warn("[FanStackWidget] on_fan_stack_clicked: could not recover widget instance");
+    }
+    LVGL_SAFE_EVENT_CB_END();
 }

@@ -1534,13 +1534,16 @@ void ControlsPanel::subscribe_to_secondary_fan_speeds() {
 
     const uint32_t gen = fan_populate_gen_;
     for (const auto& row : secondary_fan_rows_) {
-        if (auto* subject = printer_state_.get_fan_speed_subject(row.object_name)) {
+        SubjectLifetime lifetime;
+        if (auto* subject = printer_state_.get_fan_speed_subject(row.object_name, lifetime)) {
             secondary_fan_observers_.push_back(observe_int_sync<ControlsPanel>(
-                subject, this, [name = row.object_name, gen](ControlsPanel* self, int speed_pct) {
+                subject, this,
+                [name = row.object_name, gen](ControlsPanel* self, int speed_pct) {
                     if (gen != self->fan_populate_gen_)
                         return; // stale callback — widgets gone
                     self->update_secondary_fan_speed(name, speed_pct);
-                }));
+                },
+                lifetime));
             spdlog::trace("[{}] Subscribed to speed subject for secondary fan '{}'", get_name(),
                           row.object_name);
         }
@@ -1552,7 +1555,7 @@ void ControlsPanel::subscribe_to_secondary_fan_speeds() {
 
 void ControlsPanel::update_secondary_fan_speed(const std::string& object_name, int speed_pct) {
     for (const auto& row : secondary_fan_rows_) {
-        if (row.object_name == object_name && row.speed_label && lv_obj_is_valid(row.speed_label)) {
+        if (row.object_name == object_name && row.speed_label) {
             char speed_buf[16];
             if (speed_pct > 0) {
                 helix::format::format_percent(speed_pct, speed_buf, sizeof(speed_buf));
@@ -1708,14 +1711,16 @@ void ControlsPanel::subscribe_to_secondary_temp_subjects() {
     const uint32_t gen = temp_populate_gen_;
     auto& tsm = helix::sensors::TemperatureSensorManager::instance();
     for (const auto& row : secondary_temp_rows_) {
-        if (auto* subject = tsm.get_temp_subject(row.klipper_name)) {
+        SubjectLifetime lifetime;
+        if (auto* subject = tsm.get_temp_subject(row.klipper_name, lifetime)) {
             secondary_temp_observers_.push_back(observe_int_sync<ControlsPanel>(
                 subject, this,
                 [name = row.klipper_name, gen](ControlsPanel* self, int centidegrees) {
                     if (gen != self->temp_populate_gen_)
                         return; // stale callback — widgets gone
                     self->update_secondary_temp(name, centidegrees);
-                }));
+                },
+                lifetime));
             spdlog::trace("[{}] Subscribed to temp subject for sensor '{}'", get_name(),
                           row.klipper_name);
         }
@@ -1727,7 +1732,7 @@ void ControlsPanel::subscribe_to_secondary_temp_subjects() {
 
 void ControlsPanel::update_secondary_temp(const std::string& klipper_name, int centidegrees) {
     for (const auto& row : secondary_temp_rows_) {
-        if (row.klipper_name == klipper_name && row.temp_label && lv_obj_is_valid(row.temp_label)) {
+        if (row.klipper_name == klipper_name && row.temp_label) {
             char temp_buf[16];
             int temp_c = centidegrees / 100;
             std::snprintf(temp_buf, sizeof(temp_buf), "%d\u00B0C", temp_c);

@@ -21,6 +21,7 @@
 #include "ui_panel_settings.h"
 #include "ui_update_queue.h"
 
+#include "app_constants.h"
 #include "app_globals.h"
 #include "config.h"
 #include "hv/requests.h"
@@ -65,6 +66,10 @@ constexpr const char* GITHUB_RELEASES_URL =
 
 /// HTTP request timeout in seconds
 constexpr int HTTP_TIMEOUT_SECONDS = 30;
+
+/// Shorthand for pre-update backup paths (defined in app_constants.h)
+constexpr const char* PREUPDATE_CONFIG_BACKUP = AppConstants::Update::PREUPDATE_CONFIG_BACKUP;
+constexpr const char* PREUPDATE_ENV_BACKUP = AppConstants::Update::PREUPDATE_ENV_BACKUP;
 
 /**
  * @brief Strip 'v' or 'V' prefix from version tag
@@ -430,6 +435,12 @@ void cleanup_stale_old_install() {
     } else {
         spdlog::warn("[UpdateChecker] Could not remove stale backup {} (exit {})", old_dir, ret);
     }
+
+    // Clean up .pre-update safety net files from a successful previous update.
+    // These live in /var/log/ (outside INSTALL_DIR) so they survive the swap.
+    // If we're running, the update succeeded and we no longer need them.
+    std::remove(PREUPDATE_CONFIG_BACKUP);
+    std::remove(PREUPDATE_ENV_BACKUP);
 }
 
 /**
@@ -1048,6 +1059,48 @@ void UpdateChecker::do_install(const std::string& tarball_path) {
     }
 
     report_download_status(DownloadStatus::Installing, 100, "Installing update...");
+
+    // Safety net: copy config to /var/log/ BEFORE calling install.sh.
+    // The installer backs up config to TMP_DIR, but under systemd's PrivateTmp=true
+    // that backup lives in a volatile mount that's cleaned up on service restart.
+    // If install.sh crashes between the atomic swap and config restore, the TMP_DIR
+    // backup is lost.
+    //
+    // Why /var/log/? The installer does `mv INSTALL_DIR → INSTALL_DIR.old`, so any
+    // backup inside INSTALL_DIR/ gets swept into .old/.  Under ProtectSystem=strict,
+    // /var/log is the only writable path outside INSTALL_DIR (from ReadWritePaths).
+    // Config::init() auto-restores from these files if the config is missing.
+    {
+        std::string install_root = resolve_install_root();
+        if (!install_root.empty()) {
+            std::string config_src = install_root + "/config/helixconfig.json";
+            std::string env_src = install_root + "/config/helixscreen.env";
+            const std::string cp_bin = resolve_tool("cp");
+
+            struct stat st{};
+            if (stat(config_src.c_str(), &st) == 0) {
+                int ret = safe_exec({cp_bin, "-f", config_src, PREUPDATE_CONFIG_BACKUP});
+                if (ret == 0) {
+                    flog_info("[UpdateChecker] Pre-update config backup: {}",
+                              PREUPDATE_CONFIG_BACKUP);
+                } else {
+                    flog_warn("[UpdateChecker] Failed to create pre-update config backup (exit {})",
+                              ret);
+                }
+            }
+            if (stat(env_src.c_str(), &st) == 0) {
+                int ret = safe_exec({cp_bin, "-f", env_src, PREUPDATE_ENV_BACKUP});
+                if (ret == 0) {
+                    flog_info("[UpdateChecker] Pre-update env backup: {}", PREUPDATE_ENV_BACKUP);
+                } else {
+                    flog_warn("[UpdateChecker] Failed to create pre-update env backup (exit {})",
+                              ret);
+                }
+            }
+        } else {
+            flog_warn("[UpdateChecker] Could not resolve install root for pre-update backup");
+        }
+    }
 
     // Extract install.sh from the NEW tarball so we always run the version-matched
     // installer. This prevents failures when the local install.sh is outdated and
