@@ -530,3 +530,61 @@ Task 8 (Install script)    ─→ independent
 ```
 
 Tasks 1-6 can be done in order (each builds on prior). Task 7 is the integration test. Task 8 is independent.
+
+---
+
+## Phase 2: Port G-code 3D Rendering from TinyGL to OpenGL ES 2.0
+
+**Prerequisite:** Phase 1 complete and DRM+EGL proven working on Pi hardware.
+
+**Goal:** Replace the software TinyGL renderer with real GPU-accelerated OpenGL ES 2.0 rendering for the G-code viewer. Remove the TinyGL submodule entirely.
+
+**Why:** TinyGL is a *software* OpenGL 1.x emulator — it runs entirely on CPU, faking GPU work. With EGL/OpenGL ES available on the GPU, we can render the same 3M-triangle G-code geometry with actual hardware acceleration. This is the primary motivation for the DRM+EGL work.
+
+### Current Architecture (TinyGL)
+
+| Component | File | What it does |
+|-----------|------|-------------|
+| TinyGL library | `lib/tinygl/` | Software OpenGL 1.x rasterizer (CPU-only) |
+| G-code renderer | `src/rendering/gcode_tinygl_renderer.cpp` | 3D G-code visualization using TinyGL |
+| G-code renderer header | `include/gcode_tinygl_renderer.h` | Public API |
+| UI wrapper | `src/ui/ui_gcode_viewer.cpp` | LVGL panel hosting TinyGL output |
+| Build integration | `Makefile`, `mk/deps.mk` | `ENABLE_TINYGL_3D`, `libTinyGL.a` |
+| Bed mesh renderer | `src/rendering/bed_mesh_renderer.cpp` | Pure software 3D (NO TinyGL dependency) |
+
+### Target Architecture (OpenGL ES 2.0)
+
+| Component | Change |
+|-----------|--------|
+| `gcode_tinygl_renderer.cpp` | Rewrite → `gcode_gles_renderer.cpp` using OpenGL ES 2.0 |
+| TinyGL API calls (`glBegin/glEnd/glVertex`) | Replace with vertex buffers + shaders (ES 2.0 has no fixed pipeline) |
+| Lighting (TinyGL Gouraud) | GLSL vertex/fragment shaders |
+| Framebuffer → LVGL canvas | Render to FBO, blit texture into LVGL canvas widget |
+| `lib/tinygl/` | Remove submodule entirely |
+| Build flags | Remove `ENABLE_TINYGL_3D`, `libTinyGL.a` |
+
+### Key Design Decisions (to resolve during implementation)
+
+1. **Shared EGL context vs separate:** Should the G-code renderer share the LVGL EGL context or create its own? Sharing is simpler but risks state leaks.
+
+2. **Render target:** Render to an offscreen FBO and upload the result as an LVGL image/canvas, OR render directly into a region of the display buffer. FBO approach is cleaner and works with LVGL's partial refresh.
+
+3. **Shader complexity:** Start with a simple vertex-lit shader (matching TinyGL's Gouraud shading), add fancier effects later.
+
+4. **Fallback for non-GPU platforms:** AD5M, K1, CC1 don't have GPU. Options:
+   - Keep a software fallback (the existing bed mesh renderer pattern)
+   - Use the 2D layer preview (`gcode_layer_renderer.cpp`) on non-GPU platforms
+   - The 2D fallback already exists and works — just disable 3D viewer when no GPU
+
+5. **Bed mesh:** Leave as-is (pure software) initially. Port to OpenGL ES later if performance is needed — it's already 30+ FPS.
+
+### Rough Task Breakdown (to be detailed when Phase 2 starts)
+
+1. Create `gcode_gles_renderer.cpp` with OpenGL ES 2.0 pipeline
+2. Write GLSL shaders for vertex lighting + layer coloring
+3. Port geometry generation (triangle strips → vertex buffers)
+4. Implement FBO render target + LVGL canvas integration
+5. Port interactive features (rotation, layer filtering, object highlighting)
+6. Test on Pi 3/4/5 and BTT CB1
+7. Remove TinyGL submodule and all `ENABLE_TINYGL_3D` build scaffolding
+8. Update non-GPU platforms to use 2D layer fallback only
