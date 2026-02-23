@@ -736,7 +736,7 @@ void NavigationManager::switch_to_panel_impl(int panel_id) {
     for (lv_obj_t* panel : panel_stack_) {
         // Call on_deactivate() if this overlay has a registered instance
         auto inst_it = overlay_instances_.find(panel);
-        if (inst_it != overlay_instances_.end()) {
+        if (inst_it != overlay_instances_.end() && inst_it->second) {
             spdlog::trace("[NavigationManager] Calling on_deactivate() for overlay {} (navbar)",
                           (void*)panel);
             inst_it->second->on_deactivate();
