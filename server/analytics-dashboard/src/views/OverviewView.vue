@@ -28,6 +28,16 @@
           <h3>Events Over Time</h3>
           <LineChart :data="eventsChartData" />
         </div>
+
+        <div class="chart-section">
+          <h3>Daily Active Devices</h3>
+          <LineChart :data="dailyActiveChartData" />
+        </div>
+
+        <div class="chart-section">
+          <h3>Cumulative Device Growth</h3>
+          <LineChart :data="cumulativeChartData" />
+        </div>
       </template>
     </div>
   </AppLayout>
@@ -54,6 +64,30 @@ const eventsChartData = computed(() => ({
     data: data.value?.events_over_time.map(e => e.count) ?? [],
     borderColor: '#3b82f6',
     backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    fill: true,
+    tension: 0.3
+  }]
+}))
+
+const dailyActiveChartData = computed(() => ({
+  labels: data.value?.daily_active_devices.map(e => e.date) ?? [],
+  datasets: [{
+    label: 'Active Devices',
+    data: data.value?.daily_active_devices.map(e => e.devices) ?? [],
+    borderColor: '#8b5cf6',
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+    fill: true,
+    tension: 0.3
+  }]
+}))
+
+const cumulativeChartData = computed(() => ({
+  labels: data.value?.cumulative_devices.map(e => e.date) ?? [],
+  datasets: [{
+    label: 'Total Devices',
+    data: data.value?.cumulative_devices.map(e => e.total) ?? [],
+    borderColor: '#10b981',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
     fill: true,
     tension: 0.3
   }]

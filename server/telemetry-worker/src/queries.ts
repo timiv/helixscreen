@@ -72,6 +72,21 @@ export function overviewQueries(days: number): string[] {
     WHERE timestamp >= NOW() - INTERVAL '${days}' DAY
     GROUP BY date
     ORDER BY date`,
+    // Daily active devices (unique device_ids with sessions per day)
+    `SELECT
+      toDate(timestamp) as date,
+      count(DISTINCT blob1) as devices
+    FROM ${dataset}
+    WHERE timestamp >= NOW() - INTERVAL '${days}' DAY AND index1 = 'session'
+    GROUP BY date
+    ORDER BY date`,
+    // First-seen date per device (for cumulative growth curve)
+    `SELECT
+      toDate(min(timestamp)) as first_seen,
+      count() as new_devices
+    FROM ${dataset}
+    WHERE timestamp >= NOW() - INTERVAL '${days}' DAY AND index1 = 'session'
+    GROUP BY blob1`,
   ];
 }
 

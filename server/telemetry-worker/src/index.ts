@@ -251,7 +251,7 @@ export default {
         // GET /v1/dashboard/overview
         if (url.pathname === "/v1/dashboard/overview") {
           const queries = overviewQueries(days);
-          const [devicesRes, totalRes, rateRes, printRes, timeRes] =
+          const [devicesRes, totalRes, rateRes, printRes, timeRes, dailyActiveRes, firstSeenRes] =
             await Promise.all(queries.map((q) => executeQuery(queryConfig, q)));
 
           const devicesData = devicesRes as { data: Array<{ active_devices: number }> };
@@ -259,9 +259,24 @@ export default {
           const rateData = rateRes as { data: Array<{ crash_count: number; session_count: number }> };
           const printData = printRes as { data: Array<{ successes: number; total: number }> };
           const timeData = timeRes as { data: Array<{ date: string; count: number }> };
+          const dailyActiveData = dailyActiveRes as { data: Array<{ date: string; devices: number }> };
+          const firstSeenData = firstSeenRes as { data: Array<{ first_seen: string; new_devices: number }> };
 
           const crashRow = rateData.data?.[0] ?? { crash_count: 0, session_count: 0 };
           const printRow = printData.data?.[0] ?? { successes: 0, total: 0 };
+
+          // Build cumulative growth: aggregate new devices per first-seen date, then accumulate
+          const newPerDay = new Map<string, number>();
+          for (const row of firstSeenData.data ?? []) {
+            const d = row.first_seen;
+            newPerDay.set(d, (newPerDay.get(d) ?? 0) + row.new_devices);
+          }
+          const sortedDates = [...newPerDay.keys()].sort();
+          let cumulative = 0;
+          const cumulativeGrowth = sortedDates.map((date) => {
+            cumulative += newPerDay.get(date)!;
+            return { date, total: cumulative };
+          });
 
           return json({
             active_devices: devicesData.data?.[0]?.active_devices ?? 0,
@@ -272,6 +287,11 @@ export default {
               date: r.date,
               count: r.count,
             })),
+            daily_active_devices: (dailyActiveData.data ?? []).map((r) => ({
+              date: r.date,
+              devices: r.devices,
+            })),
+            cumulative_devices: cumulativeGrowth,
           });
         }
 

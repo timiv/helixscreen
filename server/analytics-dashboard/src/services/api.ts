@@ -9,6 +9,8 @@ export interface OverviewData {
   crash_rate: number
   print_success_rate: number
   events_over_time: { date: string; count: number }[]
+  daily_active_devices: { date: string; devices: number }[]
+  cumulative_devices: { date: string; total: number }[]
 }
 
 export interface AdoptionData {
