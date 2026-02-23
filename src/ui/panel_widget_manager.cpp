@@ -3,6 +3,8 @@
 
 #include "panel_widget_manager.h"
 
+#include "ui_ams_mini_status.h"
+
 #include "config.h"
 #include "observer_factory.h"
 #include "panel_widget.h"
@@ -171,6 +173,14 @@ PanelWidgetManager::populate_widgets(const std::string& panel_id, lv_obj_t* cont
                         hw->attach(widget, lv_scr_act());
                         hw->set_row_density(count);
                         result.push_back(std::move(hw));
+                    }
+                }
+
+                // Propagate row density to AMS mini status (pure XML widget, no PanelWidget)
+                if (enabled_widgets[i] == "panel_widget_ams") {
+                    lv_obj_t* ams_child = lv_obj_get_child(widget, 0);
+                    if (ams_child && ui_ams_mini_status_is_valid(ams_child)) {
+                        ui_ams_mini_status_set_row_density(ams_child, static_cast<int>(count));
                     }
                 }
             } else {

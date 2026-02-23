@@ -75,6 +75,9 @@ struct AmsMiniStatusData {
     int slot_count = 0;
     int max_visible = AMS_MINI_STATUS_MAX_VISIBLE;
 
+    // Row density (how many widgets share this home panel row)
+    int row_density = 0; // 0 = unknown/default, set by set_row_density()
+
     // Multi-unit support
     int unit_count = 0;       // Number of AMS units (0 or 1 = single row, 2+ = stacked rows)
     UnitRowInfo unit_rows[8]; // Max 8 units
@@ -139,6 +142,32 @@ static lv_obj_t* ensure_unit_row(AmsMiniStatusData* data, int unit_index) {
     return row->row_container;
 }
 
+/**
+ * @brief Compute effective max bar width based on row density
+ *
+ * When squeezed into a row with 5+ widgets, bars shrink to stay proportional.
+ */
+static int32_t effective_max_bar_width(const AmsMiniStatusData* data) {
+    if (data->row_density >= 5)
+        return 8; // Tight layout: narrow bars
+    if (data->row_density >= 4)
+        return 10;           // Medium layout: slightly reduced
+    return MAX_BAR_WIDTH_PX; // Default: 16
+}
+
+/**
+ * @brief Compute effective max visible slots based on row density
+ *
+ * In tight layouts, reduce visible slots to avoid overflow/clipping.
+ */
+static int effective_max_visible(const AmsMiniStatusData* data) {
+    if (data->row_density >= 5)
+        return std::min(data->max_visible, 6); // Tight: show max 6 bars
+    if (data->row_density >= 4)
+        return std::min(data->max_visible, 8); // Medium: show all
+    return data->max_visible;
+}
+
 /** Rebuild the bars based on slot_count, max_visible, and unit_count */
 static void rebuild_bars(AmsMiniStatusData* data) {
     if (!data || !data->bars_container)
@@ -157,7 +186,8 @@ static void rebuild_bars(AmsMiniStatusData* data) {
         }
     }
 
-    int visible_count = std::min(data->slot_count, data->max_visible);
+    int max_vis = effective_max_visible(data);
+    int visible_count = std::min(data->slot_count, max_vis);
     int overflow_count = data->slot_count - visible_count;
 
     // Calculate dimensions from container
@@ -186,11 +216,11 @@ static void rebuild_bars(AmsMiniStatusData* data) {
         // Reset column padding (not used in column flow)
         lv_obj_set_style_pad_column(data->bars_container, 0, LV_PART_MAIN);
 
-        // Count visible rows (units with bars within max_visible)
+        // Count visible rows (units with bars within max visible)
         int visible_rows = 0;
         for (int u = 0; u < data->unit_count && u < 8; ++u) {
-            int row_slots = std::min(data->unit_rows[u].slot_count,
-                                     data->max_visible - data->unit_rows[u].first_slot);
+            int row_slots =
+                std::min(data->unit_rows[u].slot_count, max_vis - data->unit_rows[u].first_slot);
             if (row_slots > 0)
                 ++visible_rows;
         }
@@ -223,13 +253,13 @@ static void rebuild_bars(AmsMiniStatusData* data) {
             lv_obj_t* row = ensure_unit_row(data, u);
 
             // Calculate bar width for this row based on its slot count
-            int row_slots =
-                std::min(row_info->slot_count, data->max_visible - row_info->first_slot);
+            int row_slots = std::min(row_info->slot_count, max_vis - row_info->first_slot);
             if (row_slots < 0)
                 row_slots = 0;
 
+            int32_t max_bw = effective_max_bar_width(data);
             int32_t bar_width = ams_draw::calc_bar_width(container_width, row_slots, gap,
-                                                         MIN_BAR_WIDTH_PX, MAX_BAR_WIDTH_PX, 90);
+                                                         MIN_BAR_WIDTH_PX, max_bw, 90);
 
             // Create/update slots in this unit row
             for (int s = 0; s < row_info->slot_count; ++s) {
@@ -244,9 +274,15 @@ static void rebuild_bars(AmsMiniStatusData* data) {
                         // Create new slot column in this row
                         slot->col = ams_draw::create_slot_column(row, bar_width, bar_height,
                                                                  BAR_BORDER_RADIUS_PX);
-                    } else if (lv_obj_get_parent(slot->col.container) != row) {
-                        // Reparent slot container into correct unit row
-                        lv_obj_set_parent(slot->col.container, row);
+                    } else {
+                        if (lv_obj_get_parent(slot->col.container) != row) {
+                            // Reparent slot container into correct unit row
+                            lv_obj_set_parent(slot->col.container, row);
+                        }
+                        // Update existing bar dimensions
+                        lv_obj_set_width(slot->col.container, bar_width);
+                        lv_obj_set_width(slot->col.bar_bg, bar_width);
+                        lv_obj_set_width(slot->col.status_line, bar_width);
                     }
 
                     // Override to fill row height (multi-unit responsive mode)
@@ -303,8 +339,9 @@ static void rebuild_bars(AmsMiniStatusData* data) {
             effective_height - ams_draw::STATUS_LINE_HEIGHT_PX - ams_draw::STATUS_LINE_GAP_PX;
 
         // Use 90% of container width for bars (leave 10% margin for centering)
+        int32_t max_bw = effective_max_bar_width(data);
         int32_t bar_width = ams_draw::calc_bar_width(container_width, visible_count, gap,
-                                                     MIN_BAR_WIDTH_PX, MAX_BAR_WIDTH_PX, 90);
+                                                     MIN_BAR_WIDTH_PX, max_bw, 90);
 
         // Create/update bars
         for (int i = 0; i < AMS_MINI_STATUS_MAX_VISIBLE; i++) {
@@ -314,6 +351,11 @@ static void rebuild_bars(AmsMiniStatusData* data) {
                 if (!slot->col.container) {
                     slot->col = ams_draw::create_slot_column(data->bars_container, bar_width,
                                                              bar_height, BAR_BORDER_RADIUS_PX);
+                } else {
+                    // Update existing bar dimensions (density or container width may have changed)
+                    lv_obj_set_width(slot->col.container, bar_width);
+                    lv_obj_set_width(slot->col.bar_bg, bar_width);
+                    lv_obj_set_width(slot->col.status_line, bar_width);
                 }
 
                 lv_obj_remove_flag(slot->col.container, LV_OBJ_FLAG_HIDDEN);
@@ -546,6 +588,22 @@ void ui_ams_mini_status_refresh(lv_obj_t* obj) {
         lv_timer_set_repeat_count(timer, 1);
         spdlog::debug("[AmsMiniStatus] Deferring refresh (container has zero width)");
     }
+}
+
+void ui_ams_mini_status_set_row_density(lv_obj_t* obj, int widgets_in_row) {
+    auto* data = get_data(obj);
+    if (!data)
+        return;
+
+    if (data->row_density == widgets_in_row)
+        return;
+
+    data->row_density = widgets_in_row;
+    spdlog::debug("[AmsMiniStatus] Row density set to {}", widgets_in_row);
+
+    // Rebuild bars if we already have slots (density affects max bar width)
+    if (data->slot_count > 0)
+        rebuild_bars(data);
 }
 
 bool ui_ams_mini_status_is_valid(lv_obj_t* obj) {

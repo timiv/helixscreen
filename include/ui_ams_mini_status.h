@@ -86,6 +86,18 @@ void ui_ams_mini_status_set_slot(lv_obj_t* obj, int slot_index, uint32_t color_r
 void ui_ams_mini_status_refresh(lv_obj_t* obj);
 
 /**
+ * @brief Set row density hint for responsive sizing
+ *
+ * When the widget is in a home panel row with many other widgets,
+ * this reduces the max bar width so bars don't look oversized.
+ * Similar to FanStackWidget::set_row_density().
+ *
+ * @param obj The ams_mini_status widget
+ * @param widgets_in_row Total widgets sharing this row (e.g. 3, 4, 5)
+ */
+void ui_ams_mini_status_set_row_density(lv_obj_t* obj, int widgets_in_row);
+
+/**
  * @brief Check if this is an ams_mini_status widget
  *
  * @param obj Object to check
