@@ -224,7 +224,31 @@
               flex_flow="column" style_pad_gap="#space_sm">
         <!-- Filament Operations Header -->
         <text_body text="Operations" translation_tag="Operations" align="left_mid"/>
-        <!-- Purge Amount Selector -->
+        <!-- Load/Unload/Purge Row (macro-based, no length selector) -->
+        <lv_obj width="100%"
+                height="#button_height" style_pad_all="0" scrollable="false"
+                flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center"
+                style_pad_gap="#space_sm">
+          <ui_button name="btn_load"
+                     height="#button_height" flex_grow="1" icon="arrow_down" text="Load" translation_tag="Load">
+            <bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
+            <bind_state_if_eq subject="filament_operation_in_progress" state="disabled" ref_value="1"/>
+            <event_cb trigger="clicked" callback="on_filament_load"/>
+          </ui_button>
+          <ui_button name="btn_unload"
+                     height="#button_height" flex_grow="1" icon="arrow_up" text="Unload" translation_tag="Unload">
+            <bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
+            <bind_state_if_eq subject="filament_operation_in_progress" state="disabled" ref_value="1"/>
+            <event_cb trigger="clicked" callback="on_filament_unload"/>
+          </ui_button>
+          <ui_button name="btn_purge"
+                     height="#button_height" flex_grow="1" icon="trash_can_outline" text="Purge" translation_tag="Purge">
+            <bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
+            <bind_state_if_eq subject="filament_operation_in_progress" state="disabled" ref_value="1"/>
+            <event_cb trigger="clicked" callback="on_filament_purge"/>
+          </ui_button>
+        </lv_obj>
+        <!-- Length Selector -->
         <lv_obj name="purge_amount_row"
                 width="100%" height="content" style_pad_all="0"
                 scrollable="false" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
@@ -232,67 +256,40 @@
           <text_small text="Length:" translation_tag="Length:"/>
           <ui_button name="purge_5mm"
                      height="#button_height_sm" flex_grow="1" text="5mm" translation_tag="5mm">
-            <!-- L040: TWO bind_styles (selected/unselected) with boolean subject -->
             <bind_style name="purge_btn_selected" subject="filament_purge_5mm_active" ref_value="1"/>
             <bind_style name="purge_btn_unselected" subject="filament_purge_5mm_active" ref_value="0"/>
             <event_cb trigger="clicked" callback="on_filament_purge_5mm"/>
           </ui_button>
           <ui_button name="purge_10mm"
                      height="#button_height_sm" flex_grow="1" text="10mm" translation_tag="10mm">
-            <!-- L040: TWO bind_styles (selected/unselected) with boolean subject -->
             <bind_style name="purge_btn_selected" subject="filament_purge_10mm_active" ref_value="1"/>
             <bind_style name="purge_btn_unselected" subject="filament_purge_10mm_active" ref_value="0"/>
             <event_cb trigger="clicked" callback="on_filament_purge_10mm"/>
           </ui_button>
           <ui_button name="purge_25mm"
                      height="#button_height_sm" flex_grow="1" text="25mm" translation_tag="25mm">
-            <!-- L040: TWO bind_styles (selected/unselected) with boolean subject -->
             <bind_style name="purge_btn_selected" subject="filament_purge_25mm_active" ref_value="1"/>
             <bind_style name="purge_btn_unselected" subject="filament_purge_25mm_active" ref_value="0"/>
             <event_cb trigger="clicked" callback="on_filament_purge_25mm"/>
           </ui_button>
         </lv_obj>
-        <!-- Action Buttons: Load/Unload side-by-side, Purge below -->
-        <lv_obj name="action_buttons"
-                width="100%" height="content" style_pad_all="0"
-                scrollable="false" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center"
+        <!-- Extrude/Retract Row (length-based operations) -->
+        <lv_obj width="100%"
+                height="#button_height" style_pad_all="0" scrollable="false"
+                flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center"
                 style_pad_gap="#space_sm">
-          <!-- Load/Unload Row -->
-          <lv_obj width="100%"
-                  height="#button_height" style_pad_all="0" scrollable="false"
-                  flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center"
-                  style_pad_gap="#space_sm">
-            <ui_button name="btn_load"
-                       height="#button_height" flex_grow="1" icon="arrow_down" text="Load" translation_tag="Load">
-              <bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
-              <bind_state_if_eq subject="filament_operation_in_progress" state="disabled" ref_value="1"/>
-              <event_cb trigger="clicked" callback="on_filament_load"/>
-            </ui_button>
-            <ui_button name="btn_unload"
-                       height="#button_height" flex_grow="1" icon="arrow_up" text="Unload" translation_tag="Unload">
-              <bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
-              <bind_state_if_eq subject="filament_operation_in_progress" state="disabled" ref_value="1"/>
-              <event_cb trigger="clicked" callback="on_filament_unload"/>
-            </ui_button>
-          </lv_obj>
-          <!-- Extrude/Retract Row -->
-          <lv_obj width="100%"
-                  height="#button_height" style_pad_all="0" scrollable="false"
-                  flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center"
-                  style_pad_gap="#space_sm">
-            <ui_button name="btn_extrude"
-                       height="#button_height" flex_grow="1" icon="arrow_down" text="Extrude" translation_tag="Extrude">
-              <bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
-              <bind_state_if_eq subject="filament_operation_in_progress" state="disabled" ref_value="1"/>
-              <event_cb trigger="clicked" callback="on_filament_extrude"/>
-            </ui_button>
-            <ui_button name="btn_retract"
-                       height="#button_height" flex_grow="1" icon="arrow_up" text="Retract" translation_tag="Retract">
-              <bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
-              <bind_state_if_eq subject="filament_operation_in_progress" state="disabled" ref_value="1"/>
-              <event_cb trigger="clicked" callback="on_filament_retract"/>
-            </ui_button>
-          </lv_obj>
+          <ui_button name="btn_extrude"
+                     height="#button_height" flex_grow="1" icon="arrow_down" text="Extrude" translation_tag="Extrude">
+            <bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
+            <bind_state_if_eq subject="filament_operation_in_progress" state="disabled" ref_value="1"/>
+            <event_cb trigger="clicked" callback="on_filament_extrude"/>
+          </ui_button>
+          <ui_button name="btn_retract"
+                     height="#button_height" flex_grow="1" icon="arrow_up" text="Retract" translation_tag="Retract">
+            <bind_state_if_eq subject="filament_safety_warning_visible" state="disabled" ref_value="1"/>
+            <bind_state_if_eq subject="filament_operation_in_progress" state="disabled" ref_value="1"/>
+            <event_cb trigger="clicked" callback="on_filament_retract"/>
+          </ui_button>
         </lv_obj>
         <!-- Safety Warning (compact inline - shows when cold) -->
         <lv_obj name="safety_warning"
