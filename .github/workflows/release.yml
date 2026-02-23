@@ -24,7 +24,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install bats
-      run: sudo apt-get update -qq && sudo apt-get install -y bats
+      run: sudo npm install -g bats
 
     - name: Verify bundled installers are up-to-date
       run: |

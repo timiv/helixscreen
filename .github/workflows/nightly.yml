@@ -41,7 +41,7 @@ jobs:
             libsdl2-dev clang make python3 python3-venv npm \
             libssl-dev pkg-config libfmt-dev libcairo2-dev \
             libpango1.0-dev libpng-dev libjpeg-dev \
-            libnl-3-dev libnl-genl-3-dev libxml2-utils ccache bats
+            libnl-3-dev libnl-genl-3-dev libxml2-utils ccache
 
     - name: Cache compiled dependencies
       uses: actions/cache@v4
@@ -183,8 +183,7 @@ jobs:
 
     - name: Install bats
       run: |
-        sudo apt-get update
-        sudo apt-get install -y bats
+        sudo npm install -g bats
 
     - name: Run shell tests
       run: bats tests/shell/

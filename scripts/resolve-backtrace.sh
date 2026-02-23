@@ -134,8 +134,7 @@ if [[ -n "$ISSUE_NUMBER" ]]; then
     fi
 
     echo "Fetching issue #${ISSUE_NUMBER} from ${ISSUE_REPO}..." >&2
-    ISSUE_BODY=$(gh issue view "$ISSUE_NUMBER" --repo "$ISSUE_REPO" --json body -q '.body' 2>&1)
-    if [[ $? -ne 0 ]] || [[ -z "$ISSUE_BODY" ]]; then
+    if ! ISSUE_BODY=$(gh issue view "$ISSUE_NUMBER" --repo "$ISSUE_REPO" --json body -q '.body' 2>&1) || [[ -z "$ISSUE_BODY" ]]; then
         echo "Error: Failed to fetch issue #${ISSUE_NUMBER}: ${ISSUE_BODY}" >&2
         exit 1
     fi

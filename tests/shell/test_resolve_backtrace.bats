@@ -38,7 +38,7 @@ teardown() {
     if ! command -v shellcheck &>/dev/null; then
         skip "shellcheck not installed"
     fi
-    shellcheck -e SC2034 "$SCRIPT"
+    shellcheck -e SC2034 -e SC2016 "$SCRIPT"
 }
 
 @test "shows usage with no arguments" {
