@@ -6,6 +6,7 @@
 #include "ui_emergency_stop.h"
 #include "ui_event_safety.h"
 #include "ui_fonts.h"
+#include "ui_keyboard_manager.h"
 #include "ui_panel_base.h"
 #include "ui_update_queue.h"
 
@@ -1241,6 +1242,11 @@ bool NavigationManager::go_back() {
         auto& mgr = NavigationManager::instance();
         spdlog::trace("[NavigationManager] go_back executing, stack depth: {}",
                       mgr.panel_stack_.size());
+
+        // Dismiss keyboard before navigation to restore screen position
+        if (KeyboardManager::instance().is_visible()) {
+            KeyboardManager::instance().hide();
+        }
 
         lv_obj_t* current_top = mgr.panel_stack_.empty() ? nullptr : mgr.panel_stack_.back();
 

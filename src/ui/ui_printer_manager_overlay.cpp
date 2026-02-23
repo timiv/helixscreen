@@ -345,6 +345,9 @@ void PrinterManagerOverlay::cancel_name_edit() {
 
     name_editing_ = false;
 
+    // Hide keyboard (restores screen shift)
+    KeyboardManager::instance().hide();
+
     // Swap back without saving
     if (name_heading_)
         lv_obj_remove_flag(name_heading_, LV_OBJ_FLAG_HIDDEN);
@@ -367,6 +370,16 @@ void PrinterManagerOverlay::on_activate() {
     }
 
     refresh_printer_info();
+}
+
+void PrinterManagerOverlay::on_deactivate() {
+    // Cancel name edit + hide keyboard before overlay closes
+    // (prevents screen staying shifted when dismissed via backdrop click)
+    if (name_editing_) {
+        cancel_name_edit();
+    }
+
+    OverlayBase::on_deactivate();
 }
 
 // =============================================================================

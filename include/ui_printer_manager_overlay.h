@@ -97,6 +97,14 @@ class PrinterManagerOverlay : public OverlayBase {
      */
     void on_activate() override;
 
+    /**
+     * @brief Called when overlay is being closed
+     *
+     * Cancels any in-progress name edit and hides the keyboard
+     * to restore screen position.
+     */
+    void on_deactivate() override;
+
   private:
     //
     // === Internal Methods ===
