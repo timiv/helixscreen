@@ -5,12 +5,11 @@ translations:
   ' left': ' left'
   + Add: + Add
   + Add Preset: + Add Preset
-  + Create New Filament: + Create New Filament
-  + Create New Vendor: + Create New Vendor
   + New: + New
   '- Check [resonance_tester] in printer.cfg': '- Check [resonance_tester] in printer.cfg'
   '- Ensure ADXL345 is connected': '- Ensure ADXL345 is connected'
   '- Try Measure Noise first': '- Try Measure Noise first'
+  --°C: --°C
   0 slots: 0 slots
   0.4-2mm direct drive, 4-6mm bowden: 0.4-2mm direct drive, 4-6mm bowden
   1 more tap to {} beta features: 1 more tap to {} beta features
@@ -29,12 +28,13 @@ translations:
   ABOUT: ABOUT
   ABS: ABS
   ADXL: ADXL
-  AFC abort failed: AFC abort failed
-  AFC homing complete: AFC homing complete
-  AFC homing failed: AFC homing failed
-  AFC operation aborted: AFC operation aborted
+  AFC failure reset complete: AFC failure reset complete
+  AFC failure reset failed: AFC failure reset failed
   AFC recovery complete: AFC recovery complete
   AFC recovery failed: AFC recovery failed
+  AFC reset complete: AFC reset complete
+  AFC reset failed: AFC reset failed
+  ALL DEVICES: ALL DEVICES
   AMS: AMS
   AMS Management: AMS Management
   API not available: API not available
@@ -75,7 +75,6 @@ translations:
   Animations: Animations
   Anonymous data to help improve HelixScreen: Anonymous data to help improve HelixScreen
   Anonymous stats — no personal data, ever.: Anonymous stats — no personal data, ever.
-  Any additional notes...: Any additional notes...
   Any notes...: Any notes...
   App Background: App Background
   Apply: Apply
@@ -83,9 +82,7 @@ translations:
   Applying...: Applying...
   Are you sure you want to cancel this print? All progress will be lost.: Are you sure you want to cancel this print? All progress will be lost.
   Assign Klipper macros to control LEDs via on/off, toggle, or presets: Assign Klipper macros to control LEDs via on/off, toggle, or presets
-  Assign Spool: Assign Spool
   Assign a role to enable sensor monitoring: Assign a role to enable sensor monitoring
-  Assigning to Slot 1: Assigning to Slot 1
   Auto: Auto
   Auto Bed Mesh: Auto Bed Mesh
   Auto-Detect: Auto-Detect
@@ -101,7 +98,6 @@ translations:
   BETA: BETA
   BLTouch Controls: BLTouch Controls
   Back: Back
-  Backup: Backup
   Bed: Bed
   Bed Heater: Bed Heater
   Bed Level: Bed Level
@@ -132,6 +128,7 @@ translations:
   Bypass: Bypass
   Bypass Mode: Bypass Mode
   Bypass controlled by hardware sensor: Bypass controlled by hardware sensor
+  C: C
   CALIBRATION: CALIBRATION
   CAPABILITIES: CAPABILITIES
   CHANGED FROM LAST SESSION: CHANGED FROM LAST SESSION
@@ -153,6 +150,7 @@ translations:
   Cancelled: Cancelled
   Chamber: Chamber
   Chamber Fan: Chamber Fan
+  Chamber Temperature: Chamber Temperature
   Chamber and dryer humidity monitoring: Chamber and dryer humidity monitoring
   'Chamber:': 'Chamber:'
   Change LED color based on printer state: Change LED color based on printer state
@@ -173,10 +171,11 @@ translations:
   Choose rendering mode for bed mesh visualization: Choose rendering mode for bed mesh visualization
   Choose sound style: Choose sound style
   Clean Nozzle: Clean Nozzle
+  Chm: Chm
   Clear: Clear
   Clear All: Clear All
   Clear All Events: Clear All Events
-  Clear Assignment: Clear Assignment
+  Clear Spool: Clear Spool
   Clipboard unavailable - use SSH: Clipboard unavailable - use SSH
   Close: Close
   Closer: Closer
@@ -186,13 +185,13 @@ translations:
   Color: Color
   Color Mismatch: Color Mismatch
   Color Sensors: Color Sensors
-  'Color:': 'Color:'
   Complete: Complete
   Completed: Completed
   Completed in 3 probes: Completed in 3 probes
   Config-defined (read-only): Config-defined (read-only)
   Configuration added successfully.: Configuration added successfully.
   Configuration already present.: Configuration already present.
+  Configure: Configure
   Configure G10/G11 firmware retraction: Configure G10/G11 firmware retraction
   Configure PRINT_START: Configure PRINT_START
   Configure Spoolman integration and weight sync settings.: Configure Spoolman integration and weight sync settings.
@@ -218,6 +217,7 @@ translations:
   Connection successful!: Connection successful!
   Console: Console
   Control optional print start features: Control optional print start features
+  Control power switches and relays: Control power switches and relays
   Controlled by hardware sensor: Controlled by hardware sensor
   Cool Down: Cool Down
   Cooling: Cooling
@@ -294,6 +294,7 @@ translations:
   Edit Theme Colors: Edit Theme Colors
   Edit Theme Colors (Modified): Edit Theme Colors (Modified)
   Effects: Effects
+  Eject: Eject
   Emergency Stop: Emergency Stop
   Emergency Stop (M112): Emergency Stop (M112)
   Emergency Stop?: Emergency Stop?
@@ -331,7 +332,11 @@ translations:
   Exhaust Fan: Exhaust Fan
   Explore how the selected palette shapes text, controls, and status colors.: Explore how the selected palette shapes text, controls, and status colors.
   Explore palette and preview: Explore palette and preview
+  External Spool: External Spool
   Extra prime to compensate ooze: Extra prime to compensate ooze
+  Extrude: Extrude
+  Extrude Speed: Extrude Speed
+  Extrude/retract feedrate (Saved): Extrude/retract feedrate (Saved)
   Extruder: Extruder
   Extruder PID Tuning: Extruder PID Tuning
   Extruder heats automatically based on material: Extruder heats automatically based on material
@@ -373,7 +378,6 @@ translations:
   Filament diameter sensors for flow compensation: Filament diameter sensors for flow compensation
   Filament runout and motion detection sensors: Filament runout and motion detection sensors
   Filament tracking and inventory: Filament tracking and inventory
-  'Filament:': 'Filament:'
   File: File
   File Info: File Info
   Filename: Filename
@@ -394,8 +398,10 @@ translations:
   Got it: Got it
   Gray: Gray
   Guides and reference: Guides and reference
+  H: H
   HELP & SUPPORT: HELP & SUPPORT
   Happy Hare MMU: Happy Hare MMU
+  HE: HE
   Hardware: Hardware
   Hardware Health: Hardware Health
   Hardware Issues: Hardware Issues
@@ -419,6 +425,7 @@ translations:
   Help improve HelixScreen?: Help improve HelixScreen?
   Higher = faster: Higher = faster
   Home: Home
+  Home Widgets: Home Widgets
   Home failed: Home failed
   Homing AFC system...: Homing AFC system...
   Horizontal Progress (Leveling Wizard): Horizontal Progress (Leveling Wizard)
@@ -461,7 +468,6 @@ translations:
   Interactive probe calibration: Interactive probe calibration
   Interactive probe offset adjustment: Interactive probe offset adjustment
   Issue description: Issue description
-  Join us at discord.gg/helixscreen: Join us at discord.gg/helixscreen
   Just now: Just now
   Keep Printing: Keep Printing
   Keep Required: Keep Required
@@ -493,6 +499,7 @@ translations:
   Learn More: Learn More
   'Length:': 'Length:'
   Light: Light
+  Link to Spoolman: Link to Spoolman
   Load: Load
   Load Filament: Load Filament
   Loaded: Loaded
@@ -505,12 +512,13 @@ translations:
   Loading vendors...: Loading vendors...
   Loading...: Loading...
   Locked during print: Locked during print
+  Long press and drag to reorder: Long press and drag to reorder
   'Lot # (optional)': 'Lot # (optional)'
-  Lot Number (optional): Lot Number (optional)
   Lot/Batch Nr: Lot/Batch Nr
   M to toggle: M to toggle
   'MAC:': 'MAC:'
   MACRO DEVICES: MACRO DEVICES
+  MAIN POWER BUTTON: MAIN POWER BUTTON
   MCU, host, and auxiliary temperature monitoring: MCU, host, and auxiliary temperature monitoring
   MDI Icons: MDI Icons
   MISSING CONFIGURED: MISSING CONFIGURED
@@ -547,6 +555,7 @@ translations:
   Max Z Velocity: Max Z Velocity
   Max speed through corners (mm/s): Max speed through corners (mm/s)
   Maximum acceleration (mm/s²): Maximum acceleration (mm/s²)
+  Maximum of 10 widgets can be enabled at once: Maximum of 10 widgets can be enabled at once
   Maximum toolhead speed (mm/s): Maximum toolhead speed (mm/s)
   Measured: Measured
   Memory (MB): Memory (MB)
@@ -579,7 +588,6 @@ translations:
   Network Name (SSID): Network Name (SSID)
   Network Settings: Network Settings
   Network Test: Network Test
-  New Spool: New Spool
   'New Spool: Step ': 'New Spool: Step '
   'New Spool: Step 1 of 3': 'New Spool: Step 1 of 3'
   New Version Available: New Version Available
@@ -615,7 +623,7 @@ translations:
   No printers found: No printers found
   No profiles available: No profiles available
   No sensors detected: No sensors detected
-  No spools available: No spools available
+  No spools found in Spoolman: No spools found in Spoolman
   No timelapse videos found: No timelapse videos found
   No vendors found: No vendors found
   No webcam detected.\nA webcam is required for timelapse.: No webcam detected.\nA webcam is required for timelapse.
@@ -649,15 +657,18 @@ translations:
   Optimizes temperature control for stable, consistent heating.: Optimizes temperature control for stable, consistent heating.
   Or Enter Manually: Or Enter Manually
   Output Mode: Output Mode
+  P: P
   PA: PA
   PETG: PETG
   PLA: PLA
   PLA - Black: PLA - Black
+  POWER: POWER
   PRE-PRINT STEPS: PRE-PRINT STEPS
   PRINTER: PRINTER
   Paper Test Calibration: Paper Test Calibration
   Part Cooling Fan: Part Cooling Fan
   Part Fan: Part Fan
+  Part: Part
   Password: Password
   Password cannot be empty: Password cannot be empty
   Pause: Pause
@@ -689,6 +700,7 @@ translations:
   Position: Position
   Power: Power
   Power Control: Power Control
+  Power Devices: Power Devices
   Preparing Print: Preparing Print
   Preset: Preset
   Presets: Presets
@@ -741,6 +753,7 @@ translations:
   Profiles: Profiles
   Progress Bar Tests: Progress Bar Tests
   Purge: Purge
+  Purging nozzle: Purging nozzle
   QGL: QGL
   QUEUED EVENTS: QUEUED EVENTS
   QUICK BUTTONS: QUICK BUTTONS
@@ -782,6 +795,8 @@ translations:
   Reset to original values: Reset to original values
   Resetting...: Resetting...
   Response (Kp): Response (Kp)
+  Restart: Restart
+  Restart Firmware?: Restart Firmware?
   Restart HelixScreen: Restart HelixScreen
   Restart Klipper: Restart Klipper
   Restart Now: Restart Now
@@ -793,6 +808,7 @@ translations:
   Restarting Moonraker...: Restarting Moonraker...
   Resume: Resume
   Resume Print: Resume Print
+  Retract: Retract
   Retract Length: Retract Length
   Retract Speed: Retract Speed
   Retraction: Retraction
@@ -801,6 +817,8 @@ translations:
   Review detected hardware validation issues: Review detected hardware validation issues
   Review your changes: Review your changes
   'Role:': 'Role:'
+  Run: Run
+  Run Macro: Run Macro
   Runout Sensor: Runout Sensor
   SHIPPED IMAGES: SHIPPED IMAGES
   SOFTWARE: SOFTWARE
@@ -842,11 +860,15 @@ translations:
   Select: Select
   Select 'None' if you don't have a filament sensor, or if you don't want to pause on runout.: Select 'None' if you don't have a filament sensor, or if you don't want to pause on runout.
   Select 'None' if you have a dedicated probe, or don't use bed mesh leveling.: Select 'None' if you have a dedicated probe, or don't use bed mesh leveling.
-  Select Filament: Select Filament
   Select G-Code File: Select G-Code File
+  Select Macro: Select Macro
+  Select Sensor: Select Sensor
+  Select Spool: Select Spool
   Select a material or adjust temperature: Select a material or adjust temperature
   Select macro for first button: Select macro for first button
   Select macro for second button: Select macro for second button
+  Select sensor: Select sensor
+  Select which devices the home screen power button controls: Select which devices the home screen power button controls
   Selecting slot...: Selecting slot...
   Self-Test: Self-Test
   Semantic Size Parameter Tests: Semantic Size Parameter Tests
@@ -860,6 +882,7 @@ translations:
   Set Active: Set Active
   Settings: Settings
   Settings reset to defaults: Settings reset to defaults
+  Settings reset to defaults. Restarting...: Settings reset to defaults. Restarting...
   Setup Timelapse: Setup Timelapse
   Shadow Intensity: Shadow Intensity
   Share Usage Data: Share Usage Data
@@ -883,6 +906,7 @@ translations:
   Speed of prime movement: Speed of prime movement
   Speed of retraction movement: Speed of retraction movement
   Spool: Spool
+  Spool Info: Spool Info
   Spool Visualization (Pseudo-3D Canvas): Spool Visualization (Pseudo-3D Canvas)
   Spool Weight (g): Spool Weight (g)
   Spool created successfully: Spool created successfully
@@ -903,7 +927,6 @@ translations:
   Status: Status
   Status icons: Status icons
   Step: Step
-  'Step ': 'Step '
   Step Progress Widget Test: Step Progress Widget Test
   Stop: Stop
   Stop Drying: Stop Drying
@@ -916,7 +939,6 @@ translations:
   Switch Sensors: Switch Sensors
   Switch Tests: Switch Tests
   Switch between light and dark themes: Switch between light and dark themes
-  Sync to Spoolman: Sync to Spoolman
   Sync with Spoolman: Sync with Spoolman
   Sysfs: Sysfs
   System: System
@@ -966,6 +988,7 @@ translations:
   : This will collect system info, logs, settings, and printer data to help diagnose issues. No passwords or sensitive data will be included.
   This will immediately halt all printer operations. The printer will require a restart to resume.: This will immediately halt all printer operations. The printer will require a restart to resume.
   This will reset all settings to defaults. This action cannot be undone.: This will reset all settings to defaults. This action cannot be undone.
+  This will restart Klipper firmware. Any active operations will be interrupted.: This will restart Klipper firmware. Any active operations will be interrupted.
   This will restart Klipper.: This will restart Klipper.
   Time: Time
   Time Format: Time Format
@@ -982,6 +1005,7 @@ translations:
   Toggle: Toggle
   Toggle (fire-and-forget): Toggle (fire-and-forget)
   Toggle Feature: Toggle Feature
+  Toggle and reorder status widgets: Toggle and reorder status widgets
   Tool: Tool
   Tool Changer: Tool Changer
   Top: Top
@@ -1008,6 +1032,7 @@ translations:
   Unknown: Unknown
   Unknown Spool: Unknown Spool
   Unknown Step: Unknown Step
+  Unlink: Unlink
   Unload: Unload
   Unload Filament: Unload Filament
   Unloading filament...: Unloading filament...
@@ -1043,7 +1068,6 @@ translations:
   View Timelapse: View Timelapse
   View installed plugins and status: View installed plugins and status
   View print statistics and job history: View print statistics and job history
-  Visit docs.helixscreen.org: Visit docs.helixscreen.org
   Volume: Volume
   Volume, themes, and UI sounds: Volume, themes, and UI sounds
   WLED: WLED
@@ -1067,10 +1091,12 @@ translations:
   WiFi hardware unavailable: WiFi hardware unavailable
   Width: Width
   Width Sensors: Width Sensors
+  X: X
   X Axis: X Axis
   X axis applied, but Y axis failed: X axis applied, but Y axis failed
   'X:': 'X:'
   XY: XY
+  Y: Y
   Y Axis: Y Axis
   'Y:': 'Y:'
   Year: Year
@@ -1103,6 +1129,7 @@ translations:
   enabled: enabled
   est: est
   layers: layers
+  not detected: not detected
   of: of
   set to: set to
   started: started

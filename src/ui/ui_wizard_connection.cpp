@@ -181,6 +181,19 @@ void WizardConnectionStep::handle_test_connection_clicked() {
     const char* ip = lv_subject_get_string(&connection_ip_);
     std::string port_clean = sanitize_port(lv_subject_get_string(&connection_port_));
 
+    // Auto-fill default Moonraker port when empty
+    if (port_clean.empty()) {
+        port_clean = "7125";
+        lv_subject_copy_string(&connection_port_, "7125");
+        if (screen_root_) {
+            lv_obj_t* port_input = lv_obj_find_by_name(screen_root_, "port_input");
+            if (port_input) {
+                lv_textarea_set_text(port_input, "7125");
+            }
+        }
+        spdlog::debug("[{}] Port empty, auto-filled default: 7125", get_name());
+    }
+
     spdlog::debug("[{}] Test connection clicked: {}:{}", get_name(), ip, port_clean);
 
     // Clear previous validation state

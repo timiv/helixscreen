@@ -11,6 +11,7 @@
 #include "helix-xml/src/xml/lv_xml.h"
 #include "settings_manager.h"
 #include "theme_manager.h"
+#include "ui/fan_spin_animation.h"
 #include "ui/ui_event_trampoline.h"
 
 #include <spdlog/spdlog.h>
@@ -45,6 +46,7 @@ FanDial::FanDial(lv_obj_t* parent, const std::string& name, const std::string& f
     // Find child widgets by name
     arc_ = lv_obj_find_by_name(root_, "dial_arc");
     speed_label_ = lv_obj_find_by_name(root_, "speed_label");
+    fan_icon_ = lv_obj_find_by_name(root_, "fan_icon");
     btn_off_ = lv_obj_find_by_name(root_, "btn_off");
     btn_on_ = lv_obj_find_by_name(root_, "btn_on");
 
@@ -56,6 +58,12 @@ FanDial::FanDial(lv_obj_t* parent, const std::string& name, const std::string& f
         return;
     }
 
+    // Set rotation pivot on fan icon for spin animation
+    if (fan_icon_) {
+        lv_obj_set_style_transform_pivot_x(fan_icon_, LV_PCT(50), 0);
+        lv_obj_set_style_transform_pivot_y(fan_icon_, LV_PCT(50), 0);
+    }
+
     // Add event callbacks with this pointer as user data
     lv_obj_add_event_cb(arc_, on_arc_value_changed, LV_EVENT_VALUE_CHANGED, this);
     lv_obj_add_event_cb(btn_off_, on_off_clicked, LV_EVENT_CLICKED, this);
@@ -64,10 +72,11 @@ FanDial::FanDial(lv_obj_t* parent, const std::string& name, const std::string& f
     // Attach auto-resize callback for dynamic arc scaling
     helix::ui::fan_arc_attach_auto_resize(root_);
 
-    // Set initial speed display and button states
+    // Set initial speed display, button states, and fan animation
     update_speed_label(initial_speed);
     update_button_states(initial_speed);
     update_knob_glow(initial_speed);
+    update_fan_animation(initial_speed);
 
     spdlog::trace("[FanDial] Created '{}' (id={}) with initial speed {}%", name, fan_id,
                   initial_speed);
@@ -80,19 +89,22 @@ FanDial::~FanDial() {
     // Without this, a pending anim_timer tick will call label_anim_exec_cb
     // on freed memory, crashing in lv_obj_set_style_* → lv_obj_get_parent.
     lv_anim_delete(this, label_anim_exec_cb);
+    // Stop fan icon spin animation (uses icon obj as var, not this)
+    stop_spin(fan_icon_);
     spdlog::trace("[FanDial] Destroyed '{}'", name_);
 }
 
 FanDial::FanDial(FanDial&& other) noexcept
     : root_(other.root_), arc_(other.arc_), speed_label_(other.speed_label_),
-      btn_off_(other.btn_off_), btn_on_(other.btn_on_), name_(std::move(other.name_)),
-      fan_id_(std::move(other.fan_id_)), current_speed_(other.current_speed_),
-      on_speed_changed_(std::move(other.on_speed_changed_)), syncing_(other.syncing_),
-      last_user_input_(other.last_user_input_) {
+      fan_icon_(other.fan_icon_), btn_off_(other.btn_off_), btn_on_(other.btn_on_),
+      name_(std::move(other.name_)), fan_id_(std::move(other.fan_id_)),
+      current_speed_(other.current_speed_), on_speed_changed_(std::move(other.on_speed_changed_)),
+      syncing_(other.syncing_), last_user_input_(other.last_user_input_) {
     // Clear the source pointers
     other.root_ = nullptr;
     other.arc_ = nullptr;
     other.speed_label_ = nullptr;
+    other.fan_icon_ = nullptr;
     other.btn_off_ = nullptr;
     other.btn_on_ = nullptr;
 
@@ -121,6 +133,7 @@ FanDial& FanDial::operator=(FanDial&& other) noexcept {
         root_ = other.root_;
         arc_ = other.arc_;
         speed_label_ = other.speed_label_;
+        fan_icon_ = other.fan_icon_;
         btn_off_ = other.btn_off_;
         btn_on_ = other.btn_on_;
         name_ = std::move(other.name_);
@@ -134,6 +147,7 @@ FanDial& FanDial::operator=(FanDial&& other) noexcept {
         other.root_ = nullptr;
         other.arc_ = nullptr;
         other.speed_label_ = nullptr;
+        other.fan_icon_ = nullptr;
         other.btn_off_ = nullptr;
         other.btn_on_ = nullptr;
 
@@ -185,10 +199,11 @@ void FanDial::set_speed(int percent) {
         lv_arc_set_value(arc_, percent);
     }
 
-    // Update label and button states
+    // Update label, button states, and fan animation
     update_speed_label(percent);
     update_button_states(percent);
     update_knob_glow(percent);
+    update_fan_animation(percent);
 
     syncing_ = false;
 
@@ -283,6 +298,7 @@ void FanDial::handle_arc_changed() {
     update_speed_label(value);
     update_button_states(value);
     update_knob_glow(value);
+    update_fan_animation(value);
 
     if (on_speed_changed_) {
         on_speed_changed_(fan_id_, value);
@@ -342,6 +358,7 @@ void FanDial::handle_off_clicked() {
     int prev_speed = current_speed_;
     current_speed_ = 0;
     animate_speed_label(prev_speed, 0);
+    update_fan_animation(0);
 
     if (on_speed_changed_) {
         on_speed_changed_(fan_id_, 0);
@@ -355,12 +372,44 @@ void FanDial::handle_on_clicked() {
     int prev_speed = current_speed_;
     current_speed_ = 100;
     animate_speed_label(prev_speed, 100);
+    update_fan_animation(100);
 
     if (on_speed_changed_) {
         on_speed_changed_(fan_id_, 100);
     }
 
     spdlog::debug("[FanDial] '{}' On button clicked", name_);
+}
+
+// ============================================================================
+// Fan Icon Spin Animation
+// ============================================================================
+
+void FanDial::refresh_animation() {
+    update_fan_animation(current_speed_);
+}
+
+void FanDial::update_fan_animation(int speed_pct) {
+    if (!fan_icon_)
+        return;
+
+    if (!DisplaySettingsManager::instance().get_animations_enabled() || speed_pct <= 0) {
+        stop_spin(fan_icon_);
+    } else {
+        start_spin(fan_icon_, speed_pct);
+    }
+}
+
+void FanDial::spin_anim_cb(void* var, int32_t value) {
+    helix::ui::fan_spin_anim_cb(var, value);
+}
+
+void FanDial::stop_spin(lv_obj_t* icon) {
+    helix::ui::fan_spin_stop(icon);
+}
+
+void FanDial::start_spin(lv_obj_t* icon, int speed_pct) {
+    helix::ui::fan_spin_start(icon, speed_pct);
 }
 
 // ============================================================================

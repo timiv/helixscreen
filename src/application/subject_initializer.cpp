@@ -66,7 +66,11 @@
 #include <chrono>
 
 SubjectInitializer::SubjectInitializer() = default;
-SubjectInitializer::~SubjectInitializer() = default;
+SubjectInitializer::~SubjectInitializer() {
+    // Invalidate alive guard BEFORE UsbManager destruction — prevents queued
+    // USB callbacks from accessing freed PrintSelectPanel
+    *m_usb_callback_alive = false;
+}
 
 void SubjectInitializer::init_core_and_state() {
     spdlog::debug("[SubjectInitializer] Initializing core and state subjects...");
@@ -315,35 +319,46 @@ void SubjectInitializer::init_usb_manager(const RuntimeConfig& runtime_config) {
         // Track when USB callbacks were set up - suppress toasts for drives at startup
         static auto usb_setup_time = std::chrono::steady_clock::now();
 
-        // Capture print_select_panel for the callback
+        // Capture print_select_panel and alive guard for the callback
         PrintSelectPanel* panel = m_print_select_panel;
+        std::weak_ptr<bool> weak_alive = m_usb_callback_alive;
 
-        m_usb_manager->set_drive_callback([panel](UsbEvent event, const UsbDrive& drive) {
-            (void)drive;
+        m_usb_manager->set_drive_callback(
+            [panel, weak_alive](UsbEvent event, const UsbDrive& drive) {
+                (void)drive;
 
-            // Suppress toast for drives detected within 3 seconds of startup
-            constexpr auto GRACE_PERIOD = std::chrono::seconds(3);
-            auto now = std::chrono::steady_clock::now();
-            bool within_grace_period = (now - usb_setup_time) < GRACE_PERIOD;
+                // Suppress toast for drives detected within 3 seconds of startup
+                constexpr auto GRACE_PERIOD = std::chrono::seconds(3);
+                auto now = std::chrono::steady_clock::now();
+                bool within_grace_period = (now - usb_setup_time) < GRACE_PERIOD;
 
-            if (event == UsbEvent::DRIVE_INSERTED) {
-                if (!within_grace_period) {
-                    NOTIFY_SUCCESS("USB drive connected");
-                } else {
-                    spdlog::debug("[USB] Suppressing toast for drive present at startup");
+                if (event == UsbEvent::DRIVE_INSERTED) {
+                    if (!within_grace_period) {
+                        // Marshal notification to main thread — callback fires from
+                        // USB backend's background thread
+                        helix::ui::queue_update([]() { NOTIFY_SUCCESS("USB drive connected"); });
+                    } else {
+                        spdlog::debug("[USB] Suppressing toast for drive present at startup");
+                    }
+                    if (panel) {
+                        // Marshal to main thread — callback fires from UsbBackendMock's
+                        // demo thread, and panel methods touch LVGL widgets.
+                        // Capture weak_alive to guard against panel destruction.
+                        helix::ui::queue_update([panel, weak_alive]() {
+                            if (!weak_alive.expired())
+                                panel->on_usb_drive_inserted();
+                        });
+                    }
+                } else if (event == UsbEvent::DRIVE_REMOVED) {
+                    helix::ui::queue_update([]() { NOTIFY_INFO("USB drive removed"); });
+                    if (panel) {
+                        helix::ui::queue_update([panel, weak_alive]() {
+                            if (!weak_alive.expired())
+                                panel->on_usb_drive_removed();
+                        });
+                    }
                 }
-                if (panel) {
-                    // Marshal to main thread — callback fires from UsbBackendMock's
-                    // demo thread, and panel methods touch LVGL widgets
-                    helix::ui::queue_update([panel]() { panel->on_usb_drive_inserted(); });
-                }
-            } else if (event == UsbEvent::DRIVE_REMOVED) {
-                NOTIFY_INFO("USB drive removed");
-                if (panel) {
-                    helix::ui::queue_update([panel]() { panel->on_usb_drive_removed(); });
-                }
-            }
-        });
+            });
         // Note: Demo drives are now auto-added by UsbBackendMock::start() after 1.5s delay
     }
 }

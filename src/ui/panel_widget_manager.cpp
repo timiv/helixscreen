@@ -8,6 +8,7 @@
 #include "panel_widget.h"
 #include "panel_widget_config.h"
 #include "panel_widget_registry.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -141,6 +142,7 @@ PanelWidgetManager::populate_widgets(const std::string& panel_id, lv_obj_t* cont
         lv_obj_set_width(row, LV_PCT(100));
         lv_obj_set_flex_grow(row, 1);
         lv_obj_set_style_pad_all(row, 0, 0);
+        lv_obj_set_style_pad_column(row, theme_manager_get_spacing("space_xs"), 0);
         lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
         lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
@@ -167,6 +169,7 @@ PanelWidgetManager::populate_widgets(const std::string& panel_id, lv_obj_t* cont
                     auto hw = def->factory();
                     if (hw) {
                         hw->attach(widget, lv_scr_act());
+                        hw->set_row_density(count);
                         result.push_back(std::move(hw));
                     }
                 }

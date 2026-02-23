@@ -15,8 +15,12 @@
 #include "moonraker_error.h"
 #include "moonraker_types.h"
 
+#include <atomic>
 #include <functional>
+#include <list>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 // Forward declarations
@@ -52,7 +56,7 @@ class MoonrakerTimelapseAPI {
      */
     explicit MoonrakerTimelapseAPI(helix::MoonrakerClient& client,
                                    const std::string& http_base_url);
-    virtual ~MoonrakerTimelapseAPI() = default;
+    virtual ~MoonrakerTimelapseAPI();
 
     // ========================================================================
     // Timelapse Settings (HTTP-based — Moonraker-Timelapse plugin)
@@ -139,4 +143,12 @@ class MoonrakerTimelapseAPI {
   protected:
     helix::MoonrakerClient& client_;
     const std::string& http_base_url_;
+
+  private:
+    /// Launch an HTTP thread with lifecycle tracking (joined on destruction)
+    void launch_http_thread(std::function<void()> func);
+
+    mutable std::mutex http_threads_mutex_;
+    std::list<std::thread> http_threads_;
+    std::atomic<bool> shutting_down_{false};
 };

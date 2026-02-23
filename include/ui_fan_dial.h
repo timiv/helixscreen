@@ -89,6 +89,13 @@ class FanDial {
         return name_;
     }
 
+    /**
+     * @brief Refresh fan icon spin animation based on current speed and animation setting
+     *
+     * Call when the global animations_enabled setting changes.
+     */
+    void refresh_animation();
+
   private:
     void update_speed_label(int percent);
     void update_button_states(int percent);
@@ -106,10 +113,17 @@ class FanDial {
     static void anim_completed_cb(lv_anim_t* anim);
 
     void update_knob_glow(int percent);
+    void update_fan_animation(int speed_pct);
+
+    // Fan icon spin animation (matches FanStackWidget pattern)
+    static void spin_anim_cb(void* var, int32_t value);
+    static void start_spin(lv_obj_t* icon, int speed_pct);
+    static void stop_spin(lv_obj_t* icon);
 
     lv_obj_t* root_ = nullptr;
     lv_obj_t* arc_ = nullptr;
     lv_obj_t* speed_label_ = nullptr;
+    lv_obj_t* fan_icon_ = nullptr;
     lv_obj_t* btn_off_ = nullptr;
     lv_obj_t* btn_on_ = nullptr;
 

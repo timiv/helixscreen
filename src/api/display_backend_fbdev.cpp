@@ -28,6 +28,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+// Optional LVGL extension in some branches/builds; weak symbol allows probing at runtime.
+extern "C" void lv_linux_fbdev_set_skip_unblank(lv_display_t* disp, bool enabled)
+    __attribute__((weak));
+
 namespace {
 
 /**
@@ -129,28 +133,6 @@ bool has_direct_input_prop(int event_num) {
 std::string get_device_phys(int event_num) {
     std::string path = "/sys/class/input/event" + std::to_string(event_num) + "/device/phys";
     return read_sysfs_file(path);
-}
-
-/**
- * @brief Check if an input device is connected via USB
- *
- * Reads the sysfs "phys" property and delegates to helix::is_usb_input_phys().
- *
- * @param device_path Path to input device (e.g., "/dev/input/event4")
- * @return true if the device is USB-connected
- */
-bool is_usb_input_device(const std::string& device_path) {
-    int event_num = -1;
-    if (sscanf(device_path.c_str(), "/dev/input/event%d", &event_num) != 1 || event_num < 0) {
-        return false;
-    }
-
-    std::string phys_path = "/sys/class/input/event" + std::to_string(event_num) + "/device/phys";
-    std::string phys = read_sysfs_file(phys_path);
-
-    bool is_usb = helix::is_usb_input_phys(phys);
-    spdlog::debug("[Fbdev Backend] Device {} phys='{}' is_usb={}", device_path, phys, is_usb);
-    return is_usb;
 }
 
 /**
@@ -292,10 +274,15 @@ lv_display_t* DisplayBackendFbdev::create_display(int width, int height) {
         return nullptr;
     }
 
-    // Skip FBIOBLANK when splash process owns the framebuffer
+    // Skip FBIOBLANK when splash process owns the framebuffer, if LVGL provides the hook.
     if (splash_active_) {
-        lv_linux_fbdev_set_skip_unblank(display_, true);
-        spdlog::debug("[Fbdev Backend] Splash active — FBIOBLANK skip enabled");
+        if (lv_linux_fbdev_set_skip_unblank != nullptr) {
+            lv_linux_fbdev_set_skip_unblank(display_, true);
+            spdlog::debug("[Fbdev Backend] Splash active — FBIOBLANK skip enabled");
+        } else {
+            spdlog::debug(
+                "[Fbdev Backend] Splash active — LVGL skip_unblank hook unavailable in this build");
+        }
     }
 
     // Set the framebuffer device path (opens /dev/fb0 and mmaps it)

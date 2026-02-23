@@ -326,13 +326,10 @@ void render_axis_labels(lv_layer_t* layer, const bed_mesh_renderer_t* renderer, 
     double x_grid_start = std::ceil(x_min_mm / GRID_SPACING_MM) * GRID_SPACING_MM;
     double x_grid_end = std::floor(x_max_mm / GRID_SPACING_MM) * GRID_SPACING_MM;
     double y_grid_start = std::ceil(y_min_mm / GRID_SPACING_MM) * GRID_SPACING_MM;
-    double y_grid_end = std::floor(y_max_mm / GRID_SPACING_MM) * GRID_SPACING_MM;
 
     // Convert grid bounds to world coordinates (must match wall positioning)
     double x_min_world = helix::mesh::printer_x_to_world_x(x_grid_start, bed_center_x, coord_scale);
     double x_max_world = helix::mesh::printer_x_to_world_x(x_grid_end, bed_center_x, coord_scale);
-    double y_min_world =
-        helix::mesh::printer_y_to_world_y(y_grid_end, bed_center_y, coord_scale); // Y inverted
     double y_max_world =
         helix::mesh::printer_y_to_world_y(y_grid_start, bed_center_y, coord_scale); // Y inverted
 
@@ -487,8 +484,7 @@ void render_numeric_axis_ticks(lv_layer_t* layer, const bed_mesh_renderer_t* ren
     // Convert grid bounds to world coordinates (must match wall positioning)
     double x_min_world = helix::mesh::printer_x_to_world_x(x_grid_start, bed_center_x, coord_scale);
     double x_max_world = helix::mesh::printer_x_to_world_x(x_grid_end, bed_center_x, coord_scale);
-    double y_min_world =
-        helix::mesh::printer_y_to_world_y(y_grid_end, bed_center_y, coord_scale); // Y inverted
+    // y_min_world not needed for grid lines — only x_min/x_max and y_max used
     double y_max_world =
         helix::mesh::printer_y_to_world_y(y_grid_start, bed_center_y, coord_scale); // Y inverted
 

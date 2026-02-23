@@ -18,7 +18,7 @@ namespace helix {
 
 /// Home widget displaying part, hotend, and auxiliary fan speeds in a compact stack.
 /// Fan icons spin proportionally to fan speed when animations are enabled.
-/// Read-only display — no click interaction.
+/// Clicking opens the fan control overlay.
 class FanStackWidget : public PanelWidget {
   public:
     explicit FanStackWidget(PrinterState& printer_state);
@@ -26,22 +26,25 @@ class FanStackWidget : public PanelWidget {
 
     void attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) override;
     void detach() override;
+    void set_row_density(size_t widgets_in_row) override;
     const char* id() const override {
         return "fan_stack";
     }
+
+    /// XML event callback — opens fan control overlay
+    static void on_fan_stack_clicked(lv_event_t* e);
 
   private:
     PrinterState& printer_state_;
 
     lv_obj_t* widget_obj_ = nullptr;
+    lv_obj_t* parent_screen_ = nullptr;
+    lv_obj_t* fan_control_panel_ = nullptr;
 
     // Labels, names, and icons for each fan row
     lv_obj_t* part_label_ = nullptr;
     lv_obj_t* hotend_label_ = nullptr;
     lv_obj_t* aux_label_ = nullptr;
-    lv_obj_t* part_name_ = nullptr;
-    lv_obj_t* hotend_name_ = nullptr;
-    lv_obj_t* aux_name_ = nullptr;
     lv_obj_t* aux_row_ = nullptr;
     lv_obj_t* part_icon_ = nullptr;
     lv_obj_t* hotend_icon_ = nullptr;
@@ -72,6 +75,7 @@ class FanStackWidget : public PanelWidget {
 
     bool animations_enabled_ = false;
 
+    void handle_clicked();
     void bind_fans();
     void update_label(lv_obj_t* label, int speed_pct);
     void update_fan_animation(lv_obj_t* icon, int speed_pct);

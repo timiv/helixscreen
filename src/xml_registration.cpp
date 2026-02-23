@@ -271,6 +271,7 @@ void register_xml_components() {
     register_xml("motion_panel.xml");
     register_xml("nozzle_temp_panel.xml");
     register_xml("bed_temp_panel.xml");
+    register_xml("chamber_temp_panel.xml");
     register_xml("fan_dial.xml");
     register_fan_dial_callbacks(); // Register FanDial event callbacks
     register_xml("fan_status_card.xml");
@@ -341,7 +342,6 @@ void register_xml_components() {
     register_xml("bed_mesh_panel.xml");
 
     // Settings overlay panels
-    register_xml("about_overlay.xml");
     register_xml("display_settings_overlay.xml");
     register_xml("panel_widget_row.xml");
     register_xml("panel_widgets_overlay.xml");

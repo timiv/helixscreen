@@ -107,4 +107,17 @@ constexpr int TEMPERATURE_THRESHOLD_CENTI = 5;
 /// Fast animation for quick feedback (button presses, toggles)
 constexpr uint32_t FAST_DURATION_MS = 150;
 } // namespace Animation
+
+/**
+ * @brief Pre-update config backup paths
+ *
+ * During in-app upgrades, config files are backed up to /var/log/ BEFORE
+ * calling install.sh.  These live outside INSTALL_DIR so they survive the
+ * atomic swap (mv INSTALL_DIR → INSTALL_DIR.old).  /var/log is on
+ * ReadWritePaths under systemd's ProtectSystem=strict.
+ */
+namespace Update {
+constexpr const char* PREUPDATE_CONFIG_BACKUP = "/var/log/helixconfig.json.pre-update";
+constexpr const char* PREUPDATE_ENV_BACKUP = "/var/log/helixscreen.env.pre-update";
+} // namespace Update
 } // namespace AppConstants

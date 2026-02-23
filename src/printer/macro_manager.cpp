@@ -94,6 +94,10 @@ std::vector<std::string> parse_macro_names(const std::string& content) {
 MacroManager::MacroManager(MoonrakerAPI& api, const PrinterDiscovery& hardware)
     : api_(api), hardware_(hardware) {}
 
+MacroManager::~MacroManager() {
+    alive_->store(false);
+}
+
 bool MacroManager::is_installed() const {
     return hardware_.has_helix_macros();
 }
@@ -135,14 +139,20 @@ bool MacroManager::update_available() const {
 void MacroManager::install(SuccessCallback on_success, ErrorCallback on_error) {
     spdlog::info("[HelixMacroManager] Starting macro installation...");
 
+    auto alive = alive_;
+
     // Step 1: Upload macro file
     upload_macro_file(
-        [this, on_success, on_error]() {
+        [this, alive, on_success, on_error]() {
+            if (!alive->load())
+                return;
             spdlog::info("[HelixMacroManager] Macro file uploaded, adding include...");
 
             // Step 2: Add include to printer.cfg
             add_include_to_config(
-                [this, on_success, on_error]() {
+                [this, alive, on_success, on_error]() {
+                    if (!alive->load())
+                        return;
                     spdlog::info("[HelixMacroManager] Include added, restarting Klipper...");
 
                     // Step 3: Restart Klipper
@@ -161,20 +171,33 @@ void MacroManager::install(SuccessCallback on_success, ErrorCallback on_error) {
 void MacroManager::update(SuccessCallback on_success, ErrorCallback on_error) {
     spdlog::info("[HelixMacroManager] Starting macro update...");
 
+    auto alive = alive_;
+
     // Just upload the new file and restart
-    upload_macro_file([this, on_success, on_error]() { restart_klipper(on_success, on_error); },
-                      on_error);
+    upload_macro_file(
+        [this, alive, on_success, on_error]() {
+            if (!alive->load())
+                return;
+            restart_klipper(on_success, on_error);
+        },
+        on_error);
 }
 
 void MacroManager::uninstall(SuccessCallback on_success, ErrorCallback on_error) {
     spdlog::info("[HelixMacroManager] Starting macro uninstall...");
 
+    auto alive = alive_;
+
     // Step 1: Remove include from printer.cfg
     remove_include_from_config(
-        [this, on_success, on_error]() {
+        [this, alive, on_success, on_error]() {
+            if (!alive->load())
+                return;
             // Step 2: Delete macro file
             delete_macro_file(
-                [this, on_success, on_error]() {
+                [this, alive, on_success, on_error]() {
+                    if (!alive->load())
+                        return;
                     // Step 3: Restart Klipper
                     restart_klipper(on_success, on_error);
                 },
@@ -237,11 +260,15 @@ void MacroManager::upload_macro_file(SuccessCallback on_success, ErrorCallback o
 void MacroManager::add_include_to_config(SuccessCallback on_success, ErrorCallback on_error) {
     spdlog::info("[HelixMacroManager] Adding include line to printer.cfg");
 
+    auto alive = alive_;
+
     // Download printer.cfg
     api_.transfers().download_file(
         "config", "printer.cfg",
         // Download success
-        [this, on_success, on_error](const std::string& content) {
+        [this, alive, on_success, on_error](const std::string& content) {
+            if (!alive->load())
+                return;
             // Check if include line already exists
             std::string include_line = "[include " + std::string(HELIX_MACROS_FILENAME) + "]";
             if (content.find(include_line) != std::string::npos) {
@@ -316,11 +343,15 @@ void MacroManager::add_include_to_config(SuccessCallback on_success, ErrorCallba
 void MacroManager::remove_include_from_config(SuccessCallback on_success, ErrorCallback on_error) {
     spdlog::info("[HelixMacroManager] Removing include line from printer.cfg");
 
+    auto alive = alive_;
+
     // Download printer.cfg
     api_.transfers().download_file(
         "config", "printer.cfg",
         // Download success
-        [this, on_success, on_error](const std::string& content) {
+        [this, alive, on_success, on_error](const std::string& content) {
+            if (!alive->load())
+                return;
             std::string include_line = "[include " + std::string(HELIX_MACROS_FILENAME) + "]";
 
             // Check if include line exists

@@ -131,7 +131,25 @@ void TemperatureSensorManager::discover(const std::vector<std::string>& klipper_
         }
     }
 
-    // Remove stale dynamic subjects
+    // Remove stale dynamic subjects using explicit two-phase protocol:
+    // Phase 1: Expire lifetime tokens — invalidates ObserverGuard weak_ptrs
+    //          so they won't call lv_observer_remove() on freed observers.
+    // Phase 2: Erase subjects — DynamicIntSubject destructor calls lv_subject_deinit().
+    for (auto& [name, subj] : temp_subjects_) {
+        bool found = false;
+        for (const auto& sensor : sensors_) {
+            if (sensor.klipper_name == name) {
+                found = true;
+                break;
+            }
+        }
+        if (!found && subj) {
+            spdlog::trace("[TemperatureSensorManager] Expiring lifetime token for orphaned "
+                          "sensor: {}",
+                          name);
+            subj->lifetime.reset(); // Phase 1: expire before deinit
+        }
+    }
     for (auto it = temp_subjects_.begin(); it != temp_subjects_.end();) {
         bool found = false;
         for (const auto& sensor : sensors_) {
@@ -141,7 +159,7 @@ void TemperatureSensorManager::discover(const std::vector<std::string>& klipper_
             }
         }
         if (!found) {
-            it = temp_subjects_.erase(it);
+            it = temp_subjects_.erase(it); // Phase 2: deinit via destructor
         } else {
             ++it;
         }
@@ -411,6 +429,20 @@ TemperatureSensorManager::get_sensor_state(const std::string& klipper_name) cons
 // LVGL Subjects
 // ============================================================================
 
+lv_subject_t* TemperatureSensorManager::get_temp_subject(const std::string& klipper_name,
+                                                         SubjectLifetime& lifetime) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+
+    auto it = temp_subjects_.find(klipper_name);
+    if (it == temp_subjects_.end()) {
+        lifetime.reset();
+        return nullptr;
+    }
+
+    lifetime = it->second->lifetime;
+    return &it->second->subject;
+}
+
 lv_subject_t* TemperatureSensorManager::get_temp_subject(const std::string& klipper_name) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
@@ -491,6 +523,7 @@ void TemperatureSensorManager::ensure_sensor_subject(const std::string& klipper_
     auto subj = std::make_unique<DynamicIntSubject>();
     lv_subject_init_int(&subj->subject, 0);
     subj->initialized = true;
+    subj->lifetime = std::make_shared<bool>(true);
 
     spdlog::debug("[TemperatureSensorManager] Created dynamic subject for {}", klipper_name);
     temp_subjects_[klipper_name] = std::move(subj);

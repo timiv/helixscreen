@@ -8,6 +8,7 @@
 #include "ui_nav_manager.h"
 #include "ui_panel_temp_control.h"
 #include "ui_temperature_utils.h"
+#include "ui_utils.h"
 
 #include "app_globals.h"
 #include "observer_factory.h"
@@ -41,19 +42,29 @@ TemperatureWidget::~TemperatureWidget() {
 void TemperatureWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
     widget_obj_ = widget_obj;
     parent_screen_ = parent_screen;
+    *alive_ = true;
 
     // Store this pointer for event callback recovery
     lv_obj_set_user_data(widget_obj_, this);
 
-    // Set up temperature observers
+    // Set up temperature observers with alive guard
     using helix::ui::observe_int_sync;
+    std::weak_ptr<bool> weak_alive = alive_;
 
-    extruder_temp_observer_ = observe_int_sync<TemperatureWidget>(
-        printer_state_.get_active_extruder_temp_subject(), this,
-        [](TemperatureWidget* self, int temp) { self->on_extruder_temp_changed(temp); });
+    extruder_temp_observer_ =
+        observe_int_sync<TemperatureWidget>(printer_state_.get_active_extruder_temp_subject(), this,
+                                            [weak_alive](TemperatureWidget* self, int temp) {
+                                                if (weak_alive.expired())
+                                                    return;
+                                                self->on_extruder_temp_changed(temp);
+                                            });
     extruder_target_observer_ = observe_int_sync<TemperatureWidget>(
         printer_state_.get_active_extruder_target_subject(), this,
-        [](TemperatureWidget* self, int target) { self->on_extruder_target_changed(target); });
+        [weak_alive](TemperatureWidget* self, int target) {
+            if (weak_alive.expired())
+                return;
+            self->on_extruder_target_changed(target);
+        });
 
     // Attach heating icon animator
     lv_obj_t* temp_icon = lv_obj_find_by_name(widget_obj_, "nozzle_icon_glyph");
@@ -71,6 +82,7 @@ void TemperatureWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
 }
 
 void TemperatureWidget::detach() {
+    *alive_ = false;
     temp_icon_animator_.detach();
     extruder_temp_observer_.reset();
     extruder_target_observer_.reset();
@@ -78,8 +90,7 @@ void TemperatureWidget::detach() {
     // Clean up lazily-created overlay (child of parent_screen_, not widget container)
     if (nozzle_temp_panel_) {
         NavigationManager::instance().unregister_overlay_instance(nozzle_temp_panel_);
-        lv_obj_delete(nozzle_temp_panel_);
-        nozzle_temp_panel_ = nullptr;
+        helix::ui::safe_delete(nozzle_temp_panel_);
     }
 
     if (widget_obj_) {

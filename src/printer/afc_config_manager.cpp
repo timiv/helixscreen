@@ -6,7 +6,8 @@
 
 #include <spdlog/spdlog.h>
 
-AfcConfigManager::AfcConfigManager(MoonrakerAPI* api) : api_(api) {}
+AfcConfigManager::AfcConfigManager(MoonrakerAPI* api, std::shared_ptr<std::atomic<bool>> alive)
+    : api_(api), alive_(std::move(alive)) {}
 
 void AfcConfigManager::load(const std::string& filename, Callback on_done) {
     if (!api_) {
@@ -19,10 +20,13 @@ void AfcConfigManager::load(const std::string& filename, Callback on_done) {
 
     spdlog::info("[AfcConfigManager] Loading config file: {}", filename);
 
+    auto alive = alive_;
     api_->transfers().download_file(
         "config", filename,
         // Download success
-        [this, filename, on_done](const std::string& content) {
+        [this, alive, filename, on_done](const std::string& content) {
+            if (alive && !alive->load())
+                return;
             spdlog::debug("[AfcConfigManager] Downloaded '{}' ({} bytes)", filename,
                           content.size());
 
@@ -53,10 +57,13 @@ void AfcConfigManager::save(const std::string& filename, Callback on_done) {
     std::string content = parser_.serialize();
     spdlog::info("[AfcConfigManager] Saving config file: {} ({} bytes)", filename, content.size());
 
+    auto alive_guard = alive_;
     api_->transfers().upload_file(
         "config", filename, content,
         // Upload success
-        [this, filename, content, on_done]() {
+        [this, alive_guard, filename, content, on_done]() {
+            if (alive_guard && !alive_guard->load())
+                return;
             spdlog::info("[AfcConfigManager] Successfully saved '{}'", filename);
 
             // Update baseline so discard would revert to this saved state

@@ -113,24 +113,43 @@ error_handler() {
     log_error "=========================================="
     echo ""
 
-    # Restore backups BEFORE cleaning TMP_DIR — backup files live in TMP_DIR
-    if [ -n "$BACKUP_CONFIG" ] && [ -f "$BACKUP_CONFIG" ]; then
-        log_info "Restoring backed up configuration..."
-        if $(file_sudo "${INSTALL_DIR}") mkdir -p "${INSTALL_DIR}/config" 2>/dev/null; then
+    # Restore backups BEFORE cleaning TMP_DIR — backup files live in TMP_DIR.
+    # Try TMP_DIR backup first, then fall back to .old directory (survives PrivateTmp).
+    $(file_sudo "${INSTALL_DIR}") mkdir -p "${INSTALL_DIR}/config" 2>/dev/null || true
+
+    if [ ! -f "${INSTALL_DIR}/config/helixconfig.json" ]; then
+        local _restored=false
+        # Try TMP_DIR backup
+        if [ -n "$BACKUP_CONFIG" ] && [ -f "$BACKUP_CONFIG" ]; then
+            log_info "Restoring backed up configuration..."
             if $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_CONFIG" "${INSTALL_DIR}/config/helixconfig.json" 2>/dev/null; then
-                log_success "Configuration restored"
-            else
-                log_warn "Could not restore config. Backup saved at: $BACKUP_CONFIG"
+                log_success "Configuration restored from backup"
+                _restored=true
             fi
-        else
-            log_warn "Could not create config directory. Backup saved at: $BACKUP_CONFIG"
+        fi
+        # Fallback: .old directory
+        if [ "$_restored" = false ] && [ -n "${INSTALL_BACKUP:-}" ]; then
+            if [ -f "${INSTALL_BACKUP}/config/helixconfig.json" ]; then
+                if $(file_sudo "${INSTALL_DIR}/config") cp "${INSTALL_BACKUP}/config/helixconfig.json" "${INSTALL_DIR}/config/helixconfig.json" 2>/dev/null; then
+                    log_success "Configuration restored from previous install"
+                    _restored=true
+                fi
+            fi
+        fi
+        if [ "$_restored" = false ]; then
+            log_warn "Could not restore config from any backup source"
         fi
     fi
-    if [ -n "$BACKUP_ENV" ] && [ -f "$BACKUP_ENV" ]; then
-        if $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_ENV" "${INSTALL_DIR}/config/helixscreen.env" 2>/dev/null; then
-            log_success "helixscreen.env restored"
-        else
-            log_warn "Could not restore helixscreen.env. Backup saved at: $BACKUP_ENV"
+
+    if [ ! -f "${INSTALL_DIR}/config/helixscreen.env" ]; then
+        if [ -n "$BACKUP_ENV" ] && [ -f "$BACKUP_ENV" ]; then
+            if $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_ENV" "${INSTALL_DIR}/config/helixscreen.env" 2>/dev/null; then
+                log_success "helixscreen.env restored"
+            fi
+        elif [ -n "${INSTALL_BACKUP:-}" ] && [ -f "${INSTALL_BACKUP}/config/helixscreen.env" ]; then
+            if $(file_sudo "${INSTALL_DIR}/config") cp "${INSTALL_BACKUP}/config/helixscreen.env" "${INSTALL_DIR}/config/helixscreen.env" 2>/dev/null; then
+                log_success "helixscreen.env restored from previous install"
+            fi
         fi
     fi
 

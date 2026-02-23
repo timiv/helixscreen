@@ -10,6 +10,7 @@ LVGL_PATCHED_FILES := \
 	src/drivers/sdl/lv_sdl_window.c \
 	src/themes/default/lv_theme_default.c \
 	src/drivers/display/fb/lv_linux_fbdev.c \
+	src/drivers/display/fb/lv_linux_fbdev.h \
 	src/core/lv_refr.c \
 	src/core/lv_observer.c \
 	src/widgets/slider/lv_slider.c \
@@ -105,6 +106,17 @@ $(PATCHES_STAMP): $(PATCH_FILES) $(LVGL_HEAD) $(LIBHV_HEAD)
 		fi \
 	else \
 		echo "$(GREEN)✓ LVGL fbdev stride bpp detection patch already applied$(RESET)"; \
+	fi
+	$(Q)if git -C $(LVGL_DIR) diff --quiet src/drivers/display/fb/lv_linux_fbdev.h 2>/dev/null; then \
+		echo "$(YELLOW)→ Applying LVGL fbdev skip-unblank patch...$(RESET)"; \
+		if git -C $(LVGL_DIR) apply --check ../../patches/lvgl_fbdev_skip_unblank.patch 2>/dev/null; then \
+			git -C $(LVGL_DIR) apply ../../patches/lvgl_fbdev_skip_unblank.patch && \
+			echo "$(GREEN)✓ Fbdev skip-unblank patch applied$(RESET)"; \
+		else \
+			echo "$(YELLOW)⚠ Cannot apply patch (already applied or conflicts)$(RESET)"; \
+		fi \
+	else \
+		echo "$(GREEN)✓ LVGL fbdev skip-unblank patch already applied$(RESET)"; \
 	fi
 	$(Q)if git -C $(LVGL_DIR) diff --quiet src/core/lv_observer.c 2>/dev/null; then \
 		echo "$(YELLOW)→ Applying LVGL observer debug info patch...$(RESET)"; \

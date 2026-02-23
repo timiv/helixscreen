@@ -5,6 +5,77 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-02-22
+
+A feature-rich release — fan speeds are now a first-class widget with spinning animations and density-aware labels, chamber temperature gets its own full control panel, and the Printer Manager overlay is available to everyone (no longer gated behind beta). Under the hood, dynamic observer lifetime safety prevents use-after-free crashes, and the MoonrakerClient has been decomposed for maintainability.
+
+### Added
+- Chamber temperature panel with graph, presets, and sensor-only monitoring mode — tap the chamber row in the Temperatures widget to open it
+- Fan stack widget enabled by default with density-aware compact labels (P/H/C when space is tight)
+- Spinning fan icon animations on dials, status cards, and home panel widgets
+- Crash history tracking in debug bundles — past crash submissions with GitHub issue references
+- SubjectLifetime tokens for safe observation of dynamic per-fan, per-sensor, and per-extruder subjects
+- Micro layout support (480x272) with compact controls, theme editor, and display overlays
+- Ender-3 V3 KE printer image and hostname detection
+- MoonrakerClient decomposition: RequestTracker and DiscoverySequence extracted as independent modules
+- Translations synced and fan stack labels localized across all languages
+
+### Fixed
+- Printer Manager overlay no longer gated behind beta features — accessible to all users
+- Setup wizard auto-fills default port 7125 when the port field is left empty on Test Connection
+- Printer detection: hostname_exclude heuristic prevents Ender-3 V3/V3 KE model ambiguity
+- Heap corruption during change-host reconnection (double-free in observer cleanup)
+- Stack overflow on Pi from `lv_obj_is_valid()` in hot paths (HeatingIconAnimator crash)
+- HeatingIconAnimator theme observer uses ObserverGuard to prevent heap corruption
+- Config preservation during in-app upgrades (three-layer merge prevents config loss)
+- Factory reset now restarts the app automatically
+- Installer download progress bar and error reporting
+- Release download logic with timeout and speed limits
+- Thermistor picker position and temp stack click targets
+- Printer image snapshot alignment when clearing
+- Home panel widget spacing, fan labels, and click targets
+- Print start toast and phase tracking properly gated behind beta features
+- Various compiler warnings and dead code removed
+
+### Changed
+- MoonrakerClient internals decomposed: discovery callbacks stored as members, stale connection guard added
+- Navigation bar widened at medium and large breakpoints
+- Printer image snapshotted to eliminate per-frame scaling (performance improvement)
+- Install Update row moved under Check for Updates in About section
+- Orphan AboutOverlay removed (was unreachable dead code)
+
+## [0.10.14] - 2026-02-22
+
+### Fixed
+- AFC unload button and context menu now work on AFC firmware versions that don't expose a top-level `filament_loaded` field (e.g., Box Turtle with `lane_data_enabled=false`)
+- AFC `current_load` field parsed as fallback when `current_lane` is absent, fixing loaded lane detection on newer AFC versions
+- Crash-hardened 15 vectors found during 48-hour audit
+
+## [0.10.13] - 2026-02-22
+
+Crash hardening and new features — favorite macro widgets let you pin and run macros from the home panel, filament controls get dedicated Extrude/Retract buttons, and Wi-Fi status updates are now async and responsive. Under the hood, the MoonrakerAPI monolith has been split into domain-specific modules.
+
+### Added
+- Favorite macro panel widgets with macro picker and automatic parameter detection
+- Extrude and Retract buttons replace Purge on filament page, with configurable speed
+- Wi-Fi status updates respond immediately to connect/disconnect events
+
+### Fixed
+- Multiple crash fixes: glyph null guard, use-after-free in async AMS/telemetry callbacks, SIGSEGV in widget cleanup and render thread race
+- AFC Unload button now re-enables after lane scan detects filament state change
+- Observer generation counters prevent stale callbacks after controls repopulate
+- Unknown CLI arguments warn instead of crash-looping
+- Z-offset tune overlay save bug
+- Macro parameter modal no longer stomps across widget slots
+- Widget picker and overlay cleanup uses safe deletion
+- USB drive callbacks marshaled to main thread to prevent crashes
+- Panel widget padding and font clipping on small screens
+
+### Changed
+- MoonrakerAPI split into 8 domain-specific modules (Job, Motion, File, FileTransfer, Advanced, Rest, Timelapse, History)
+- Wi-Fi backend uses async status polling instead of blocking queries
+- Z-offset utilities extracted into shared module
+
 ## [0.10.12] - 2026-02-21
 
 A stability and polish release focused on crash fixes, responsive UI improvements, and internal refactoring. The home panel widget system is now fully decoupled from HomePanel, keyboard input is more reliable, and several threading bugs have been resolved.
@@ -890,6 +961,9 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.11.0]: https://github.com/prestonbrown/helixscreen/compare/v0.10.14...v0.11.0
+[0.10.14]: https://github.com/prestonbrown/helixscreen/compare/v0.10.13...v0.10.14
+[0.10.13]: https://github.com/prestonbrown/helixscreen/compare/v0.10.12...v0.10.13
 [0.10.12]: https://github.com/prestonbrown/helixscreen/compare/v0.10.11...v0.10.12
 [0.10.11]: https://github.com/prestonbrown/helixscreen/compare/v0.10.10...v0.10.11
 [0.10.10]: https://github.com/prestonbrown/helixscreen/compare/v0.10.9...v0.10.10

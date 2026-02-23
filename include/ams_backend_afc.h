@@ -7,6 +7,7 @@
 #include "ams_subscription_backend.h"
 #include "slot_registry.h"
 
+#include <atomic>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -87,6 +88,7 @@ class AmsBackendAfc : public AmsSubscriptionBackend {
      * @note Both pointers must remain valid for the lifetime of this backend.
      */
     AmsBackendAfc(MoonrakerAPI* api, helix::MoonrakerClient* client);
+    ~AmsBackendAfc() override;
 
     // State queries
     [[nodiscard]] AmsSystemInfo get_system_info() const override;
@@ -284,6 +286,9 @@ class AmsBackendAfc : public AmsSubscriptionBackend {
     }
 
   private:
+    /// Alive guard for async callback safety. Shared with AfcConfigManager instances.
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
+
     /**
      * @brief Parse AFC state from Moonraker JSON
      *

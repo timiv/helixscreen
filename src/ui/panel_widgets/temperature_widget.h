@@ -8,6 +8,8 @@
 
 #include "panel_widget.h"
 
+#include <memory>
+
 class TempControlPanel;
 
 namespace helix {
@@ -38,6 +40,8 @@ class TemperatureWidget : public PanelWidget {
     HeatingIconAnimator temp_icon_animator_;
     int cached_extruder_temp_ = 25;
     int cached_extruder_target_ = 0;
+
+    std::shared_ptr<bool> alive_ = std::make_shared<bool>(false);
 
     ObserverGuard extruder_temp_observer_;
     ObserverGuard extruder_target_observer_;

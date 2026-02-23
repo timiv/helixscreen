@@ -362,9 +362,11 @@ void TelemetryManager::set_enabled(bool enabled) {
     enabled_.store(enabled);
     spdlog::info("[TelemetryManager] Telemetry {}", enabled ? "enabled" : "disabled");
 
-    // Update LVGL subject (must be on main thread)
+    // Update LVGL subject via queue to ensure thread safety — set_enabled()
+    // may be called from background threads (telemetry callbacks)
     if (subjects_initialized_) {
-        lv_subject_set_int(&enabled_subject_, enabled ? 1 : 0);
+        helix::ui::queue_update(
+            [this, enabled]() { lv_subject_set_int(&enabled_subject_, enabled ? 1 : 0); });
     }
 
     // Persist to telemetry_config.json

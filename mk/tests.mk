@@ -68,6 +68,9 @@ TEST_LVGL_DEPS := $(LVGL_OBJS) $(HELIX_XML_OBJS) $(THORVG_OBJS)
 # Platform-specific dependencies (Linux wpa_supplicant, macOS frameworks via LDFLAGS)
 TEST_PLATFORM_DEPS := $(WPA_DEPS)
 
+# Tool objects needed by tests (src/tools/ is excluded from APP_OBJS)
+TEST_TOOL_OBJS := $(OBJ_DIR)/tools/xml_attribute_validator.o
+
 # ============================================================================
 # AUTOMATIC APP OBJECT DISCOVERY
 # ============================================================================
@@ -493,6 +496,7 @@ else
 $(TEST_BIN): $(TEST_CORE_DEPS) \
              $(TEST_LVGL_DEPS) \
              $(TEST_APP_OBJS) \
+             $(TEST_TOOL_OBJS) \
              $(MOCK_OBJS) \
              $(LV_MARKDOWN_OBJS) \
              $(FONT_OBJS) \

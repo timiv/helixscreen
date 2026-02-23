@@ -6,6 +6,8 @@
 #include "ams_subscription_backend.h"
 #include "slot_registry.h"
 
+#include <atomic>
+#include <memory>
 #include <string>
 
 /**
@@ -44,6 +46,7 @@ class AmsBackendHappyHare : public AmsSubscriptionBackend {
      * @note Both pointers must remain valid for the lifetime of this backend.
      */
     AmsBackendHappyHare(MoonrakerAPI* api, helix::MoonrakerClient* client);
+    ~AmsBackendHappyHare() override;
 
     // State queries
     [[nodiscard]] AmsSystemInfo get_system_info() const override;
@@ -194,6 +197,9 @@ class AmsBackendHappyHare : public AmsSubscriptionBackend {
      * Called once during start().
      */
     void query_tip_method_from_config();
+
+    // Alive guard for async callback safety
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
 
     // Cached MMU state
     helix::printer::SlotRegistry slots_; ///< Single source of truth for per-slot state

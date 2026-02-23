@@ -36,7 +36,14 @@ AmsBackendHappyHare::AmsBackendHappyHare(MoonrakerAPI* api, MoonrakerClient* cli
     spdlog::debug("[AMS HappyHare] Backend created");
 }
 
-// Destructor not needed -- base class handles subscription cleanup
+AmsBackendHappyHare::~AmsBackendHappyHare() {
+    // Invalidate alive guard FIRST — prevents in-flight async callbacks from
+    // dereferencing this after destruction (e.g., query_tip_method_from_config).
+    // Store false then reset the shared_ptr so weak_ptr::lock() fails for
+    // any callbacks that haven't yet checked the guard.
+    alive_->store(false);
+    alive_.reset();
+}
 
 // ============================================================================
 // Lifecycle Management
@@ -549,9 +556,13 @@ void AmsBackendHappyHare::query_tip_method_from_config() {
     // it's a cutter system (e.g., _MMU_CUT_TIP). Otherwise it's tip-forming.
     nlohmann::json params = {{"objects", nlohmann::json::object({{"configfile", {"settings"}}})}};
 
+    std::weak_ptr<std::atomic<bool>> weak_alive = alive_;
     client_->send_jsonrpc(
         "printer.objects.query", params,
-        [this](nlohmann::json response) {
+        [this, weak_alive](nlohmann::json response) {
+            auto alive_lock = weak_alive.lock();
+            if (!alive_lock || !alive_lock->load())
+                return;
             try {
                 const auto& settings = response["result"]["status"]["configfile"]["settings"];
 

@@ -46,11 +46,13 @@ void MacroParamModal::on_ok() {
         auto values = collect_values();
         on_execute_(values);
     }
+    textareas_.clear(); // Clear before hide() — widgets are about to be deleted
     s_active_instance_ = nullptr;
     hide();
 }
 
 void MacroParamModal::on_cancel() {
+    textareas_.clear(); // Clear before hide() — widgets are about to be deleted
     s_active_instance_ = nullptr;
     hide();
 }
@@ -108,6 +110,9 @@ std::map<std::string, std::string> MacroParamModal::collect_values() const {
     std::map<std::string, std::string> result;
 
     for (size_t i = 0; i < params_.size() && i < textareas_.size(); ++i) {
+        if (!textareas_[i]) {
+            continue;
+        }
         const char* text = lv_textarea_get_text(textareas_[i]);
         if (text && text[0] != '\0') {
             result[params_[i].name] = text;

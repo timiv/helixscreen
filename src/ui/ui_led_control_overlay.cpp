@@ -696,7 +696,6 @@ void LedControlOverlay::handle_custom_color() {
         uint8_t g = (rgb >> 8) & 0xFF;
         uint8_t b = rgb & 0xFF;
         uint8_t max_c = std::max({r, g, b});
-        uint8_t min_c = std::min({r, g, b});
 
         // V = max component (0-255), map to brightness 0-100
         int brightness = (max_c * 100 + 127) / 255;

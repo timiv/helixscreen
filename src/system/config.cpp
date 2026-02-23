@@ -5,7 +5,11 @@
 
 #include "ui_error_reporting.h"
 
+#include "app_constants.h"
 #include "runtime_config.h"
+
+using AppConstants::Update::PREUPDATE_CONFIG_BACKUP;
+using AppConstants::Update::PREUPDATE_ENV_BACKUP;
 
 #include <fstream>
 #include <iomanip>
@@ -150,6 +154,22 @@ bool migrate_display_config(json& data) {
     return true;
 }
 
+/// Erase a value at a JSON pointer path without triggering deprecated
+/// json_pointer implicit string conversion (nlohmann json 3.11+ deprecation)
+void erase_at_pointer(json& data, const json::json_pointer& ptr) {
+    // Navigate to parent, then erase the leaf key
+    auto ptr_str = ptr.to_string();
+    auto last_slash = ptr_str.rfind('/');
+    if (last_slash == 0) {
+        // Top-level key like "/foo"
+        data.erase(ptr_str.substr(1));
+    } else if (last_slash != std::string::npos) {
+        // Nested key like "/foo/bar" — get parent, erase leaf
+        json::json_pointer parent_ptr(ptr_str.substr(0, last_slash));
+        data[parent_ptr].erase(ptr_str.substr(last_slash + 1));
+    }
+}
+
 /// Migrate config keys from old paths to new paths
 /// @param data JSON config data to migrate (modified in place)
 /// @param migrations Vector of {from_path, to_path} pairs (JSON pointer format)
@@ -170,7 +190,7 @@ bool migrate_config_keys(json& data,
         // Skip if target already exists (don't overwrite)
         if (data.contains(to_ptr)) {
             spdlog::debug("[Config] Migration skipped: {} already exists", to_path);
-            data.erase(from_ptr);
+            erase_at_pointer(data, from_ptr);
             any_migrated = true;
             continue;
         }
@@ -188,7 +208,7 @@ bool migrate_config_keys(json& data,
 
         // Copy value to new location and remove from old
         data[to_ptr] = data[from_ptr];
-        data.erase(from_ptr);
+        erase_at_pointer(data, from_ptr);
         spdlog::info("[Config] Migrated {} -> {}", from_path, to_path);
         any_migrated = true;
     }
@@ -343,6 +363,54 @@ void Config::init(const std::string& config_path) {
                     // Fall through to create default config
                 }
                 break;
+            }
+        }
+
+        // Recovery: check for .pre-update backup created by the in-app updater.
+        // Backups live in /var/log/ (outside INSTALL_DIR) so they survive the
+        // atomic swap that moves INSTALL_DIR → INSTALL_DIR.old.
+        if (stat(config_path.c_str(), &buffer) != 0) {
+            if (stat(PREUPDATE_CONFIG_BACKUP, &buffer) == 0) {
+                spdlog::warn("[Config] Config missing after upgrade — restoring from pre-update "
+                             "backup: {}",
+                             PREUPDATE_CONFIG_BACKUP);
+
+                fs::path config_dir = fs::path(config_path).parent_path();
+                if (!config_dir.empty() && !fs::exists(config_dir)) {
+                    std::error_code ec;
+                    fs::create_directories(config_dir, ec);
+                    if (ec) {
+                        spdlog::error("[Config] Failed to create config dir {}: {}",
+                                      config_dir.string(), ec.message());
+                    }
+                }
+
+                try {
+                    fs::copy_file(PREUPDATE_CONFIG_BACKUP, config_path);
+                    spdlog::info("[Config] Restored config from pre-update backup");
+                    fs::remove(PREUPDATE_CONFIG_BACKUP);
+                } catch (const fs::filesystem_error& e) {
+                    spdlog::error("[Config] Failed to restore from pre-update backup: {}",
+                                  e.what());
+                }
+            }
+        }
+
+        // Restore helixscreen.env independently — it can be lost even if config survived
+        {
+            std::string env_path =
+                (fs::path(config_path).parent_path() / "helixscreen.env").string();
+            struct stat env_st{};
+            if (stat(env_path.c_str(), &env_st) != 0 && stat(PREUPDATE_ENV_BACKUP, &env_st) == 0) {
+                spdlog::warn("[Config] helixscreen.env missing after upgrade — restoring from "
+                             "pre-update backup");
+                try {
+                    fs::copy_file(PREUPDATE_ENV_BACKUP, env_path);
+                    spdlog::info("[Config] Restored helixscreen.env from pre-update backup");
+                    fs::remove(PREUPDATE_ENV_BACKUP);
+                } catch (const fs::filesystem_error& e) {
+                    spdlog::error("[Config] Failed to restore helixscreen.env: {}", e.what());
+                }
             }
         }
     }

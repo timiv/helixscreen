@@ -116,14 +116,12 @@ MoonrakerRestAPI::~MoonrakerRestAPI() {
 }
 
 void MoonrakerRestAPI::launch_http_thread(std::function<void()> func) {
+    std::lock_guard<std::mutex> lock(http_threads_mutex_);
+
+    // Check shutdown under lock to prevent race with destructor's move
     if (shutting_down_.load()) {
         return;
     }
-
-    std::lock_guard<std::mutex> lock(http_threads_mutex_);
-
-    // Clean up finished threads
-    http_threads_.remove_if([](std::thread& t) { return !t.joinable(); });
 
     http_threads_.emplace_back([func = std::move(func)]() { func(); });
 }
@@ -368,7 +366,7 @@ void MoonrakerRestAPI::wled_get_strips(RestCallback on_success, ErrorCallback on
         } else {
             spdlog::debug("[MoonrakerRestAPI] WLED get_strips failed: {}", resp.error);
             if (on_error) {
-                on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN, 0, resp.error, "wled"});
+                on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN, 0, resp.error, "wled", {}});
             }
         }
     });
@@ -385,7 +383,7 @@ void MoonrakerRestAPI::wled_get_status(RestCallback on_success, ErrorCallback on
         } else {
             spdlog::debug("[MoonrakerRestAPI] WLED get_status failed: {}", resp.error);
             if (on_error) {
-                on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN, 0, resp.error, "wled"});
+                on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN, 0, resp.error, "wled", {}});
             }
         }
     });
@@ -402,8 +400,8 @@ void MoonrakerRestAPI::get_server_config(RestCallback on_success, ErrorCallback 
         } else {
             spdlog::warn("[MoonrakerRestAPI] get_server_config failed: {}", resp.error);
             if (on_error) {
-                on_error(
-                    MoonrakerError{MoonrakerErrorType::UNKNOWN, 0, resp.error, "server_config"});
+                on_error(MoonrakerError{
+                    MoonrakerErrorType::UNKNOWN, 0, resp.error, "server_config", {}});
             }
         }
     });
@@ -436,7 +434,8 @@ void MoonrakerRestAPI::wled_set_strip(const std::string& strip, const std::strin
                 spdlog::warn("[MoonrakerRestAPI] WLED set_strip '{}' failed: {}", strip,
                              resp.error);
                 if (on_error) {
-                    on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN, 0, resp.error, "wled"});
+                    on_error(
+                        MoonrakerError{MoonrakerErrorType::UNKNOWN, 0, resp.error, "wled", {}});
                 }
             }
         });

@@ -137,6 +137,10 @@ class SubjectInitializer {
     std::unique_ptr<UsbManager> m_usb_manager;
     std::unique_ptr<TempControlPanel> m_temp_control_panel;
 
+    // Alive guard for USB callback — invalidated on destruction to prevent
+    // use-after-free when queued callbacks fire after panel destruction
+    std::shared_ptr<bool> m_usb_callback_alive = std::make_shared<bool>(true);
+
     // Panels that need deferred API injection (not owned)
     PrintSelectPanel* m_print_select_panel = nullptr;
     PrintStatusPanel* m_print_status_panel = nullptr;

@@ -803,6 +803,24 @@
           "pattern": "ender-3-v3",
           "confidence": 95,
           "reason": "Hostname contains 'ender-3-v3'"
+        },
+        {
+          "type": "hostname_exclude",
+          "field": "hostname",
+          "pattern": "v3ke",
+          "reason": "Excluded: hostname suggests V3 KE variant"
+        },
+        {
+          "type": "hostname_exclude",
+          "field": "hostname",
+          "pattern": "v3-ke",
+          "reason": "Excluded: hostname suggests V3 KE variant"
+        },
+        {
+          "type": "hostname_exclude",
+          "field": "hostname",
+          "pattern": "v3_ke",
+          "reason": "Excluded: hostname suggests V3 KE variant"
         }
       ]
     },
@@ -839,6 +857,20 @@
           "pattern": "ender3v3ke",
           "confidence": 95,
           "reason": "Hostname contains 'ender3v3ke'"
+        },
+        {
+          "type": "hostname_match",
+          "field": "hostname",
+          "pattern": "ender3-v3-ke",
+          "confidence": 95,
+          "reason": "Hostname contains 'ender3-v3-ke'"
+        },
+        {
+          "type": "hostname_match",
+          "field": "hostname",
+          "pattern": "ender_3_v3_ke",
+          "confidence": 95,
+          "reason": "Hostname contains 'ender_3_v3_ke'"
         },
         {
           "type": "hostname_match",

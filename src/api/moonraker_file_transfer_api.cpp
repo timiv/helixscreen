@@ -3,14 +3,15 @@
 
 #include "moonraker_file_transfer_api.h"
 
+#include "ui_error_reporting.h"
+#include "ui_notification.h"
+
 #include "hv/hfile.h"
 #include "hv/hurl.h"
 #include "hv/requests.h"
 #include "memory_monitor.h"
 #include "moonraker_api_internal.h"
 #include "spdlog/spdlog.h"
-#include "ui_error_reporting.h"
-#include "ui_notification.h"
 
 #include <chrono>
 #include <filesystem>
@@ -86,15 +87,12 @@ MoonrakerFileTransferAPI::~MoonrakerFileTransferAPI() {
 }
 
 void MoonrakerFileTransferAPI::launch_http_thread(std::function<void()> func) {
-    // Check if we're shutting down - don't spawn new threads
+    std::lock_guard<std::mutex> lock(http_threads_mutex_);
+
+    // Check shutdown under lock to prevent race with destructor's move
     if (shutting_down_.load()) {
         return;
     }
-
-    std::lock_guard<std::mutex> lock(http_threads_mutex_);
-
-    // Clean up any finished threads first (they've set themselves to non-joinable id)
-    http_threads_.remove_if([](std::thread& t) { return !t.joinable(); });
 
     // Launch the new thread
     http_threads_.emplace_back([func = std::move(func)]() {
@@ -194,12 +192,9 @@ void MoonrakerFileTransferAPI::download_file_partial(const std::string& root,
     });
 }
 
-void MoonrakerFileTransferAPI::download_file_to_path(const std::string& root,
-                                                     const std::string& path,
-                                                     const std::string& dest_path,
-                                                     StringCallback on_success,
-                                                     ErrorCallback on_error,
-                                                     ProgressCallback on_progress) {
+void MoonrakerFileTransferAPI::download_file_to_path(
+    const std::string& root, const std::string& path, const std::string& dest_path,
+    StringCallback on_success, ErrorCallback on_error, ProgressCallback on_progress) {
     if (http_base_url_.empty()) {
         spdlog::error("[Moonraker API] HTTP base URL not set - cannot download file");
         report_connection_error(on_error, "download_file_to_path", "HTTP base URL not configured");
@@ -296,12 +291,9 @@ void MoonrakerFileTransferAPI::upload_file(const std::string& root, const std::s
     upload_file_with_name(root, path, path, content, on_success, on_error);
 }
 
-void MoonrakerFileTransferAPI::upload_file_with_name(const std::string& root,
-                                                     const std::string& path,
-                                                     const std::string& filename,
-                                                     const std::string& content,
-                                                     SuccessCallback on_success,
-                                                     ErrorCallback on_error) {
+void MoonrakerFileTransferAPI::upload_file_with_name(
+    const std::string& root, const std::string& path, const std::string& filename,
+    const std::string& content, SuccessCallback on_success, ErrorCallback on_error) {
     // Validate inputs
     if (reject_invalid_path(path, "upload_file", on_error))
         return;
@@ -364,12 +356,9 @@ void MoonrakerFileTransferAPI::upload_file_with_name(const std::string& root,
     });
 }
 
-void MoonrakerFileTransferAPI::upload_file_from_path(const std::string& root,
-                                                     const std::string& dest_path,
-                                                     const std::string& local_path,
-                                                     SuccessCallback on_success,
-                                                     ErrorCallback on_error,
-                                                     ProgressCallback on_progress) {
+void MoonrakerFileTransferAPI::upload_file_from_path(
+    const std::string& root, const std::string& dest_path, const std::string& local_path,
+    SuccessCallback on_success, ErrorCallback on_error, ProgressCallback on_progress) {
     // Validate inputs
     if (reject_invalid_path(dest_path, "upload_file_from_path", on_error))
         return;

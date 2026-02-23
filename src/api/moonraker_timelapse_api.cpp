@@ -21,6 +21,33 @@ MoonrakerTimelapseAPI::MoonrakerTimelapseAPI(MoonrakerClient& client,
                                              const std::string& http_base_url)
     : client_(client), http_base_url_(http_base_url) {}
 
+MoonrakerTimelapseAPI::~MoonrakerTimelapseAPI() {
+    shutting_down_.store(true);
+
+    std::list<std::thread> threads_to_join;
+    {
+        std::lock_guard<std::mutex> lock(http_threads_mutex_);
+        threads_to_join = std::move(http_threads_);
+    }
+
+    for (auto& t : threads_to_join) {
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+}
+
+void MoonrakerTimelapseAPI::launch_http_thread(std::function<void()> func) {
+    std::lock_guard<std::mutex> lock(http_threads_mutex_);
+
+    // Check shutdown under lock to prevent race with destructor's move
+    if (shutting_down_.load()) {
+        return;
+    }
+
+    http_threads_.emplace_back([func = std::move(func)]() { func(); });
+}
+
 // ============================================================================
 // Timelapse Operations (Moonraker-Timelapse Plugin)
 // ============================================================================
@@ -42,7 +69,7 @@ void MoonrakerTimelapseAPI::get_timelapse_settings(TimelapseSettingsCallback on_
     std::string url = http_base_url_ + "/machine/timelapse/settings";
     spdlog::debug("[Timelapse API] Fetching timelapse settings from: {}", url);
 
-    std::thread([url, on_success, on_error]() {
+    launch_http_thread([url, on_success, on_error]() {
         auto resp = requests::get(url.c_str());
 
         if (!resp) {
@@ -102,7 +129,7 @@ void MoonrakerTimelapseAPI::get_timelapse_settings(TimelapseSettingsCallback on_
                 on_error(err);
             }
         }
-    }).detach();
+    });
 }
 
 void MoonrakerTimelapseAPI::set_timelapse_settings(const TimelapseSettings& settings,
@@ -161,7 +188,7 @@ void MoonrakerTimelapseAPI::set_timelapse_settings(const TimelapseSettings& sett
                  settings.mode, settings.output_framerate);
     spdlog::debug("[Timelapse API] Timelapse URL: {}", url_str);
 
-    std::thread([url_str, on_success, on_error]() {
+    launch_http_thread([url_str, on_success, on_error]() {
         auto resp = requests::post(url_str.c_str(), "");
 
         if (!resp) {
@@ -194,7 +221,7 @@ void MoonrakerTimelapseAPI::set_timelapse_settings(const TimelapseSettings& sett
         if (on_success) {
             on_success();
         }
-    }).detach();
+    });
 }
 
 void MoonrakerTimelapseAPI::set_timelapse_enabled(bool enabled, SuccessCallback on_success,
@@ -217,7 +244,7 @@ void MoonrakerTimelapseAPI::set_timelapse_enabled(bool enabled, SuccessCallback 
 
     spdlog::info("[Timelapse API] Setting timelapse enabled={}", enabled);
 
-    std::thread([url, enabled, on_success, on_error]() {
+    launch_http_thread([url, enabled, on_success, on_error]() {
         auto resp = requests::post(url.c_str(), "");
 
         if (!resp) {
@@ -250,7 +277,7 @@ void MoonrakerTimelapseAPI::set_timelapse_enabled(bool enabled, SuccessCallback 
         if (on_success) {
             on_success();
         }
-    }).detach();
+    });
 }
 
 // ============================================================================

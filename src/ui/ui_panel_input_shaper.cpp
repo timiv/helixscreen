@@ -1223,7 +1223,7 @@ void InputShaperPanel::populate_chart(char axis, const InputShaperResult& result
 
     // Clear unused chips
     for (size_t i = chart_data.shaper_curves.size(); i < MAX_SHAPERS; i++) {
-        snprintf(chips[i].label_buf, CHIP_LABEL_BUF, "");
+        chips[i].label_buf[0] = '\0';
         lv_subject_copy_string(&chips[i].label, chips[i].label_buf);
         lv_subject_set_int(&chips[i].active, 0);
     }
@@ -1264,7 +1264,7 @@ void InputShaperPanel::clear_chart(char axis) {
 
     // Clear chip labels
     for (size_t i = 0; i < MAX_SHAPERS; i++) {
-        snprintf(chips[i].label_buf, CHIP_LABEL_BUF, "");
+        chips[i].label_buf[0] = '\0';
         lv_subject_copy_string(&chips[i].label, chips[i].label_buf);
         lv_subject_set_int(&chips[i].active, 0);
     }
@@ -1322,7 +1322,7 @@ void InputShaperPanel::update_legend(char axis) {
         }
     } else {
         // No shaper visible — clear legend label
-        snprintf(legend_label_buf, CHIP_LABEL_BUF, "");
+        legend_label_buf[0] = '\0';
         lv_subject_copy_string(&legend_label, legend_label_buf);
     }
 }

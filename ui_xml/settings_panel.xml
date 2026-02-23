@@ -204,14 +204,6 @@
                         label="Factory Reset" label_tag="Factory Reset" icon="refresh"
                         description="Reset all settings and restart wizard"
                         description_tag="Reset all settings and restart wizard" callback="on_factory_reset_clicked"/>
-    <!-- Install Update (visible only when update available) -->
-    <lv_obj name="container_install_update" width="100%" style_pad_all="0">
-      <bind_flag_if_eq subject="show_update_settings" flag="hidden" ref_value="0"/>
-      <bind_flag_if_not_eq subject="update_status" flag="hidden" ref_value="2"/>
-      <setting_action_row name="row_install_update"
-                          label="Install Update" label_tag="Install Update" icon="download" description=""
-                          description_tag="" callback="on_install_update_clicked"/>
-    </lv_obj>
     <!-- ================================================================== -->
     <!-- HELP & SUPPORT SECTION -->
     <!-- ================================================================== -->
@@ -231,10 +223,21 @@
     <!-- ABOUT SECTION -->
     <!-- ================================================================== -->
     <setting_section_header title="ABOUT" title_tag="ABOUT" icon="info"/>
-    <!-- Printer Name -->
-    <setting_info_row name="row_printer" label="Printer Name" label_tag="Printer Name" icon="printer_3d">
-      <text_muted name="value" bind_text="printer_value"/>
-    </setting_info_row>
+    <!-- Printer Name (7-tap easter egg trigger) -->
+    <ui_button name="row_printer" width="100%" height="content" variant="ghost" style_radius="0" style_pad_all="0">
+      <lv_obj width="100%"
+              height="content" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
+              style_pad_left="#space_lg" style_pad_right="#space_lg" style_pad_top="#space_md"
+              style_pad_bottom="#space_md" style_pad_gap="#space_sm" scrollable="false" clickable="false"
+              event_bubble="true">
+        <icon name="row_icon" src="printer_3d" size="sm" variant="secondary" clickable="false" event_bubble="true"/>
+        <text_body name="label"
+                   text="Printer Name" translation_tag="Printer Name" style_text_color="#text" flex_grow="1"
+                   clickable="false" event_bubble="true"/>
+        <text_muted name="value" bind_text="printer_value" clickable="false" event_bubble="true"/>
+      </lv_obj>
+      <event_cb trigger="clicked" callback="on_printer_name_clicked"/>
+    </ui_button>
     <!-- Current Version - ui_button for native press feedback (7-tap secret to toggle beta features) -->
     <ui_button name="row_version" width="100%" height="content" variant="ghost" style_radius="0" style_pad_all="0">
       <lv_obj width="100%"
@@ -264,6 +267,14 @@
       <setting_action_row name="row_check_updates"
                           label="Check for Updates" label_tag="Check for Updates" icon="refresh"
                           bind_description="update_version_text" callback="on_check_updates_clicked"/>
+    </lv_obj>
+    <!-- Install Update (visible only when update available) -->
+    <lv_obj name="container_install_update" width="100%" style_pad_all="0">
+      <bind_flag_if_eq subject="show_update_settings" flag="hidden" ref_value="0"/>
+      <bind_flag_if_not_eq subject="update_status" flag="hidden" ref_value="2"/>
+      <setting_action_row name="row_install_update"
+                          label="Install Update" label_tag="Install Update" icon="download" description=""
+                          description_tag="" callback="on_install_update_clicked"/>
     </lv_obj>
     <!-- Klipper Version -->
     <setting_info_row name="row_klipper" label="Klipper" label_tag="Klipper" icon="toy_brick_outline">

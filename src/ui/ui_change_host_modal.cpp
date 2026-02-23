@@ -78,11 +78,11 @@ bool ChangeHostModal::show_modal(lv_obj_t* parent) {
             helix::ui::modal_register_keyboard(dialog(), port_input);
         }
 
-        // Observe text input changes to invalidate validation when user edits
-        host_ip_observer_ =
-            lv_subject_add_observer_obj(&host_ip_subject_, on_input_changed_cb, dialog(), nullptr);
-        host_port_observer_ = lv_subject_add_observer_obj(&host_port_subject_, on_input_changed_cb,
-                                                          dialog(), nullptr);
+        // Observe text input changes to invalidate validation when user edits.
+        // Using ObserverGuard for RAII cleanup instead of lv_subject_add_observer_obj
+        // which relies on widget deletion timing (unsafe during exit animation).
+        host_ip_observer_ = ObserverGuard(&host_ip_subject_, on_input_changed_cb, nullptr);
+        host_port_observer_ = ObserverGuard(&host_port_subject_, on_input_changed_cb, nullptr);
     }
 
     return result;
@@ -98,14 +98,18 @@ void ChangeHostModal::on_show() {
 
 void ChangeHostModal::on_hide() {
     // Increment generation to invalidate any pending async callbacks
-    ++test_generation_;
+    ++(*test_generation_);
 
     // Clear active instance
     active_instance_ = nullptr;
 
-    // Observers are auto-removed when dialog is destroyed (lv_subject_add_observer_obj)
-    host_ip_observer_ = nullptr;
-    host_port_observer_ = nullptr;
+    // Remove observers NOW rather than relying on auto-removal when dialog
+    // widget is deleted after exit animation. The 150ms animation window
+    // allows subject notifications (from reconnection flood) to fire these
+    // observers on a widget being destroyed, causing heap corruption.
+    // Applying [L073]: reset() because subjects are still alive at this point.
+    host_ip_observer_.reset();
+    host_port_observer_.reset();
 
     spdlog::debug("[ChangeHostModal] on_hide");
 }
@@ -137,6 +141,11 @@ void ChangeHostModal::init_subjects() {
 void ChangeHostModal::deinit_subjects() {
     if (!subjects_initialized_)
         return;
+
+    // Applying [L073]: release() because subjects are about to be destroyed —
+    // calling reset() (which does lv_observer_remove) on a dead subject = crash.
+    host_ip_observer_.release();
+    host_port_observer_.release();
 
     lv_subject_deinit(&host_ip_subject_);
     lv_subject_deinit(&host_port_subject_);
@@ -188,7 +197,7 @@ void ChangeHostModal::handle_test_connection() {
     client->disconnect();
 
     // Increment generation for stale callback detection
-    uint64_t this_generation = ++test_generation_;
+    uint64_t this_generation = ++(*test_generation_);
 
     // Store values for async callback (thread-safe)
     {
@@ -207,22 +216,30 @@ void ChangeHostModal::handle_test_connection() {
     // Construct WebSocket URL
     std::string ws_url = "ws://" + std::string(ip) + ":" + port_clean + "/websocket";
 
+    // Capture dialog widget for widget-safe async callbacks.
+    // We capture it here (on main thread) because the bg thread lambdas
+    // cannot safely read dialog() which may be cleared by hide().
+    //
+    // Capture shared_ptr to generation counter so bg thread can check
+    // staleness without dereferencing 'this' (which may be destroyed).
     ChangeHostModal* self = this;
+    lv_obj_t* guard_widget = dialog();
+    auto generation = test_generation_;
     int result = client->connect(
         ws_url.c_str(),
-        [self, this_generation]() {
-            if (self->test_generation_.load() != this_generation) {
+        [self, this_generation, guard_widget, generation]() {
+            if (generation->load() != this_generation) {
                 spdlog::debug("[ChangeHostModal] Ignoring stale success callback");
                 return;
             }
-            self->on_test_success();
+            self->on_test_success(guard_widget);
         },
-        [self, this_generation]() {
-            if (self->test_generation_.load() != this_generation) {
+        [self, this_generation, guard_widget, generation]() {
+            if (generation->load() != this_generation) {
                 spdlog::debug("[ChangeHostModal] Ignoring stale failure callback");
                 return;
             }
-            self->on_test_failure();
+            self->on_test_failure(guard_widget);
         });
 
     // Disable automatic reconnection for testing
@@ -235,10 +252,13 @@ void ChangeHostModal::handle_test_connection() {
     }
 }
 
-void ChangeHostModal::on_test_success() {
+void ChangeHostModal::on_test_success(lv_obj_t* guard_widget) {
     spdlog::info("[ChangeHostModal] Test connection successful");
 
+    // Use widget-safe async_call: if dialog is destroyed before this fires
+    // (e.g. user cancelled while test was in flight), the callback is skipped.
     helix::ui::async_call(
+        guard_widget,
         [](void* ctx) {
             auto* self = static_cast<ChangeHostModal*>(ctx);
             if (!self->is_visible())
@@ -253,10 +273,11 @@ void ChangeHostModal::on_test_success() {
         this);
 }
 
-void ChangeHostModal::on_test_failure() {
+void ChangeHostModal::on_test_failure(lv_obj_t* guard_widget) {
     spdlog::warn("[ChangeHostModal] Test connection failed");
 
     helix::ui::async_call(
+        guard_widget,
         [](void* ctx) {
             auto* self = static_cast<ChangeHostModal*>(ctx);
             if (!self->is_visible())
@@ -299,12 +320,17 @@ void ChangeHostModal::handle_save() {
         spdlog::info("[ChangeHostModal] Saved new host: {}:{}", ip, port);
     }
 
-    // Close modal
+    // Close modal first — on_hide() removes observers and clears state
     hide();
 
-    // Fire completion callback
+    // Defer the completion callback so the reconnection flood doesn't
+    // overlap with the modal exit animation. Without this, manager->connect()
+    // triggers a burst of subject notifications while the modal's LVGL
+    // widgets are still alive (150ms exit animation) which can cause
+    // heap corruption via stale observer dispatch.
     if (completion_callback_) {
-        completion_callback_(true);
+        auto callback = completion_callback_;
+        helix::ui::queue_update([callback]() { callback(true); });
     }
 }
 
@@ -312,7 +338,7 @@ void ChangeHostModal::handle_cancel() {
     spdlog::debug("[ChangeHostModal] Cancel clicked");
 
     // Increment generation to invalidate any pending test callbacks
-    ++test_generation_;
+    ++(*test_generation_);
 
     hide();
 

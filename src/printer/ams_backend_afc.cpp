@@ -44,7 +44,10 @@ AmsBackendAfc::AmsBackendAfc(MoonrakerAPI* api, MoonrakerClient* client)
     spdlog::debug("[AMS AFC] Backend created");
 }
 
-// Destructor not needed -- base class handles subscription cleanup
+AmsBackendAfc::~AmsBackendAfc() {
+    // Invalidate alive guard FIRST so in-flight async callbacks bail out
+    alive_->store(false);
+}
 
 // ============================================================================
 // Lifecycle Management
@@ -382,6 +385,16 @@ void AmsBackendAfc::handle_status_update(const nlohmann::json& notification) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
+        // Check if AFC provides an explicit filament_loaded field — if so, the
+        // post-scan should not override it (newer AFC versions are authoritative)
+        bool has_explicit_filament_loaded = false;
+        if (params.contains("AFC") && params["AFC"].is_object()) {
+            has_explicit_filament_loaded = params["AFC"].contains("filament_loaded");
+        }
+        if (!has_explicit_filament_loaded && params.contains("afc") && params["afc"].is_object()) {
+            has_explicit_filament_loaded = params["afc"].contains("filament_loaded");
+        }
+
         // Parse global AFC state if present
         if (params.contains("AFC") && params["AFC"].is_object()) {
             parse_afc_state(params["AFC"], deferred_error_event);
@@ -396,12 +409,14 @@ void AmsBackendAfc::handle_status_update(const nlohmann::json& notification) {
 
         // Parse AFC_stepper lane objects for sensor states
         // Keys like "AFC_stepper lane1", "AFC_stepper lane2", etc.
+        bool lanes_updated = false;
         for (int i = 0; i < slots_.slot_count(); ++i) {
             std::string lane_name = slots_.name_of(i);
             std::string key = "AFC_stepper " + lane_name;
             if (params.contains(key) && params[key].is_object()) {
                 parse_afc_stepper(lane_name, params[key]);
                 state_changed = true;
+                lanes_updated = true;
             }
         }
 
@@ -413,7 +428,27 @@ void AmsBackendAfc::handle_status_update(const nlohmann::json& notification) {
             if (params.contains(key) && params[key].is_object()) {
                 parse_afc_stepper(lane_name, params[key]);
                 state_changed = true;
+                lanes_updated = true;
             }
+        }
+
+        // After processing lane updates, reconcile filament_loaded from slot
+        // statuses. Only needed on AFC versions that lack an explicit
+        // "filament_loaded" field — when present, parse_afc_state() already set
+        // the authoritative value and the post-scan must not override it.
+        if (lanes_updated && slots_.is_initialized() && !has_explicit_filament_loaded) {
+            bool any_loaded = false;
+            int loaded_slot = -1;
+            for (int i = 0; i < slots_.slot_count(); ++i) {
+                const auto* entry = slots_.get(i);
+                if (entry && entry->info.status == SlotStatus::LOADED) {
+                    any_loaded = true;
+                    loaded_slot = i;
+                    break;
+                }
+            }
+            system_info_.filament_loaded = any_loaded;
+            system_info_.current_slot = any_loaded ? loaded_slot : -1;
         }
 
         // Parse AFC_hub objects for hub sensor state
@@ -474,13 +509,20 @@ void AmsBackendAfc::handle_status_update(const nlohmann::json& notification) {
 
 void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data,
                                     std::string& deferred_error_event) {
-    // Parse current lane (AFC reports this as "current_lane")
+    // Parse current lane — try "current_lane" first, fall back to "current_load"
+    // Some AFC versions use "current_load" instead of "current_lane"
+    std::string loaded_lane;
     if (afc_data.contains("current_lane") && afc_data["current_lane"].is_string()) {
-        std::string lane_name = afc_data["current_lane"].get<std::string>();
-        int slot_index = slots_.index_of(lane_name);
+        loaded_lane = afc_data["current_lane"].get<std::string>();
+    } else if (afc_data.contains("current_load") && afc_data["current_load"].is_string()) {
+        loaded_lane = afc_data["current_load"].get<std::string>();
+    }
+
+    if (!loaded_lane.empty()) {
+        int slot_index = slots_.index_of(loaded_lane);
         if (slot_index >= 0) {
             system_info_.current_slot = slot_index;
-            spdlog::trace("[AMS AFC] Current lane: {} (slot {})", lane_name,
+            spdlog::trace("[AMS AFC] Current lane: {} (slot {})", loaded_lane,
                           system_info_.current_slot);
         }
     }
@@ -491,10 +533,20 @@ void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data,
         spdlog::trace("[AMS AFC] Current tool: {}", system_info_.current_tool);
     }
 
-    // Parse filament loaded state
+    // Parse filament loaded state — try explicit field first, derive from current_load
     if (afc_data.contains("filament_loaded") && afc_data["filament_loaded"].is_boolean()) {
         system_info_.filament_loaded = afc_data["filament_loaded"].get<bool>();
         spdlog::trace("[AMS AFC] Filament loaded: {}", system_info_.filament_loaded);
+    } else if (!loaded_lane.empty()) {
+        // AFC versions without "filament_loaded" field: derive from current_load
+        // If a lane is reported as currently loaded, filament is at the toolhead
+        system_info_.filament_loaded = true;
+        spdlog::trace("[AMS AFC] Filament loaded (derived from current_load={})", loaded_lane);
+    } else if (afc_data.contains("current_load") && afc_data["current_load"].is_null()) {
+        // current_load went null (unloaded) — clear filament state
+        system_info_.filament_loaded = false;
+        system_info_.current_slot = -1;
+        spdlog::trace("[AMS AFC] Filament unloaded (current_load=null)");
     }
 
     // Parse action/status
@@ -1238,9 +1290,12 @@ void AmsBackendAfc::detect_afc_version() {
     // Namespace: afc-install (contains {"version": "1.0.0"})
     nlohmann::json params = {{"namespace", "afc-install"}};
 
+    auto alive = alive_;
     client_->send_jsonrpc(
         "server.database.get_item", params,
-        [this](const nlohmann::json& response) {
+        [this, alive](const nlohmann::json& response) {
+            if (!alive->load())
+                return;
             bool should_query_lane_data = false;
 
             if (response.contains("value") && response["value"].is_object()) {
@@ -1285,7 +1340,9 @@ void AmsBackendAfc::detect_afc_version() {
                 query_lane_data();
             }
         },
-        [this](const MoonrakerError& err) {
+        [this, alive](const MoonrakerError& err) {
+            if (!alive->load())
+                return;
             spdlog::warn("[AMS AFC] Could not detect AFC version: {}", err.message);
             std::lock_guard<std::mutex> lock(mutex_);
             afc_version_ = "unknown";
@@ -1379,9 +1436,12 @@ void AmsBackendAfc::query_initial_state() {
 
     spdlog::debug("[AMS AFC] Querying initial state for {} objects", objects_to_query.size());
 
+    auto alive = alive_;
     client_->send_jsonrpc(
         "printer.objects.query", params,
-        [this](const nlohmann::json& response) {
+        [this, alive](const nlohmann::json& response) {
+            if (!alive->load())
+                return;
             // Response structure: {"jsonrpc": "2.0", "result": {"eventtime": ..., "status": {...}},
             // "id": ...}
             if (response.contains("result") && response["result"].contains("status") &&
@@ -1416,9 +1476,12 @@ void AmsBackendAfc::query_lane_data() {
     // Params: { "namespace": "AFC", "key": "lane_data" }
     nlohmann::json params = {{"namespace", "AFC"}, {"key", "lane_data"}};
 
+    auto alive = alive_;
     client_->send_jsonrpc(
         "server.database.get_item", params,
-        [this](const nlohmann::json& response) {
+        [this, alive](const nlohmann::json& response) {
+            if (!alive->load())
+                return;
             if (response.contains("value") && response["value"].is_object()) {
                 {
                     std::lock_guard<std::mutex> lock(mutex_);
@@ -2288,12 +2351,12 @@ void AmsBackendAfc::load_afc_configs() {
 
     configs_loading_ = true;
 
-    // Create managers if not yet created
+    // Create managers if not yet created (share alive guard for callback safety)
     if (!afc_config_) {
-        afc_config_ = std::make_unique<AfcConfigManager>(api_);
+        afc_config_ = std::make_unique<AfcConfigManager>(api_, alive_);
     }
     if (!macro_vars_config_) {
-        macro_vars_config_ = std::make_unique<AfcConfigManager>(api_);
+        macro_vars_config_ = std::make_unique<AfcConfigManager>(api_, alive_);
     }
 
     // Track completion of both loads
@@ -2303,7 +2366,10 @@ void AmsBackendAfc::load_afc_configs() {
     // configs_loaded_ is std::atomic<bool> — the store (release) after both loads complete
     // synchronizes-with the load (acquire) in get_device_actions() on the main thread,
     // ensuring all parser writes are visible before the main thread reads them.
-    auto check_done = [this, loads_remaining]() {
+    auto alive = alive_;
+    auto check_done = [this, alive, loads_remaining]() {
+        if (!alive->load())
+            return;
         if (loads_remaining->fetch_sub(1) == 1) {
             // Both loads complete — release barrier ensures parser state is visible
             configs_loading_.store(false, std::memory_order_relaxed);

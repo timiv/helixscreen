@@ -72,7 +72,7 @@ void AmsDeviceOperationsOverlay::init_subjects() {
     }
 
     // System info text (e.g. "System: AFC · v1.2.3")
-    snprintf(system_info_buf_, sizeof(system_info_buf_), "");
+    system_info_buf_[0] = '\0';
     lv_subject_init_string(&system_info_subject_, system_info_buf_, nullptr,
                            sizeof(system_info_buf_), system_info_buf_);
     lv_xml_register_subject(nullptr, "ams_device_ops_system_info", &system_info_subject_);
@@ -191,7 +191,7 @@ void AmsDeviceOperationsOverlay::update_from_backend() {
         lv_subject_set_int(&bypass_active_subject_, 0);
         lv_subject_set_int(&hw_bypass_sensor_subject_, 0);
         lv_subject_set_int(&supports_auto_heat_subject_, 0);
-        snprintf(system_info_buf_, sizeof(system_info_buf_), "");
+        system_info_buf_[0] = '\0';
         lv_subject_copy_string(&system_info_subject_, system_info_buf_);
         snprintf(status_buf_, sizeof(status_buf_), "No AMS connected");
         lv_subject_copy_string(&status_subject_, status_buf_);

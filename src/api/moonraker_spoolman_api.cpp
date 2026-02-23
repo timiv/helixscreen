@@ -394,9 +394,11 @@ void MoonrakerSpoolmanAPI::create_spoolman_vendor(const nlohmann::json& vendor_d
             } else {
                 spdlog::error("[SpoolmanAPI] create_spoolman_vendor: unexpected response format");
                 if (on_error) {
-                    on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN, 0,
+                    on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN,
+                                            0,
                                             "Unexpected response format",
-                                            "create_spoolman_vendor"});
+                                            "create_spoolman_vendor",
+                                            {}});
                 }
             }
         },
@@ -427,9 +429,11 @@ void MoonrakerSpoolmanAPI::create_spoolman_filament(const nlohmann::json& filame
             } else {
                 spdlog::error("[SpoolmanAPI] create_spoolman_filament: unexpected response format");
                 if (on_error) {
-                    on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN, 0,
+                    on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN,
+                                            0,
                                             "Unexpected response format",
-                                            "create_spoolman_filament"});
+                                            "create_spoolman_filament",
+                                            {}});
                 }
             }
         },
@@ -458,8 +462,11 @@ void MoonrakerSpoolmanAPI::create_spoolman_spool(const nlohmann::json& spool_dat
             } else {
                 spdlog::error("[SpoolmanAPI] create_spoolman_spool: unexpected response format");
                 if (on_error) {
-                    on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN, 0,
-                                            "Unexpected response format", "create_spoolman_spool"});
+                    on_error(MoonrakerError{MoonrakerErrorType::UNKNOWN,
+                                            0,
+                                            "Unexpected response format",
+                                            "create_spoolman_spool",
+                                            {}});
                 }
             }
         },

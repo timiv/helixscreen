@@ -32,14 +32,52 @@ fetch_url() {
 
 # Download a URL to a file
 # Returns 0 on success (file exists and is non-empty), non-zero on failure
+# Sets _DOWNLOAD_HTTP_CODE to the HTTP status (curl only, empty for wget)
+# Args: url dest [max_seconds] [min_speed_bps]
+#   max_seconds:  total transfer timeout (default 300)
+#   min_speed_bps: abort if average speed stays below this for 20s (default 0 = disabled)
+#                  Set to e.g. 51200 (50 KB/s) for CDN attempts so a slow CDN
+#                  fails fast and the caller can fall through to a better source.
+_DOWNLOAD_HTTP_CODE=""
 download_file() {
-    local url=$1 dest=$2
+    local url=$1 dest=$2 max_secs=${3:-300} min_speed=${4:-0}
+    _DOWNLOAD_HTTP_CODE=""
     if command -v curl >/dev/null 2>&1; then
-        local http_code
-        http_code=$(curl -sSL --connect-timeout 30 -w "%{http_code}" -o "$dest" "$url" 2>/dev/null) || true
+        local http_code progress_flag speed_flags
+        if [ -t 2 ]; then
+            progress_flag="--progress-bar"
+        else
+            progress_flag="-s"
+        fi
+        # Speed floor: abort if average speed stays below min_speed for 20 consecutive
+        # seconds. Lets a slow CDN fail fast so we can fall through to GitHub.
+        if [ "${min_speed:-0}" -gt 0 ] 2>/dev/null; then
+            speed_flags="--speed-limit ${min_speed} --speed-time 20"
+        else
+            speed_flags=""
+        fi
+        # Note: progress output goes to stderr naturally (no 2>&1).
+        # The \n before %{http_code} ensures it's on its own line for tail -1.
+        http_code=$(curl -SL \
+            --connect-timeout 30 \
+            --max-time "$max_secs" \
+            $progress_flag \
+            $speed_flags \
+            -w "\n%{http_code}" \
+            -o "$dest" \
+            "$url") || true
+        http_code=$(printf '%s' "$http_code" | tail -1)
+        _DOWNLOAD_HTTP_CODE="$http_code"
         [ "$http_code" = "200" ] && [ -f "$dest" ] && [ -s "$dest" ]
     elif command -v wget >/dev/null 2>&1; then
-        wget -q --timeout=30 -O "$dest" "$url" 2>/dev/null && [ -f "$dest" ] && [ -s "$dest" ]
+        # wget has no built-in speed floor; rely on max_secs being short for CDN calls.
+        if [ -t 2 ]; then
+            wget --timeout="$max_secs" -O "$dest" "$url" && \
+                [ -f "$dest" ] && [ -s "$dest" ]
+        else
+            wget -q --timeout="$max_secs" -O "$dest" "$url" && \
+                [ -f "$dest" ] && [ -s "$dest" ]
+        fi
     else
         return 1
     fi
@@ -232,7 +270,7 @@ download_release() {
     log_info "Downloading HelixScreen ${version} for ${platform}..."
     log_info "URL: $r2_url"
 
-    if download_file "$r2_url" "$dest"; then
+    if download_file "$r2_url" "$dest" 300 51200; then
         # Quick validation — make sure it's actually a gzip file
         if gunzip -t "$dest" 2>/dev/null; then
             local size
@@ -251,37 +289,29 @@ download_release() {
     local gh_url="https://github.com/${GITHUB_REPO}/releases/download/${version}/${filename}"
     log_info "URL: $gh_url"
 
-    local http_code=""
-    if command -v curl >/dev/null 2>&1; then
-        http_code=$(curl -sSL --connect-timeout 30 -w "%{http_code}" -o "$dest" "$gh_url")
-    elif command -v wget >/dev/null 2>&1; then
-        if wget -q --timeout=30 -O "$dest" "$gh_url"; then
-            http_code="200"
-        else
-            http_code="failed"
-        fi
+    if download_file "$gh_url" "$dest"; then
+        validate_tarball "$dest" "Downloaded "
+        local size
+        size=$(ls -lh "$dest" | awk '{print $5}')
+        log_success "Downloaded ${filename} (${size}) from GitHub"
+        return 0
     fi
 
-    if [ ! -f "$dest" ] || [ ! -s "$dest" ]; then
-        log_error "Failed to download release."
-        log_error "Tried: $r2_url"
-        log_error "Tried: $gh_url"
-        if [ -n "$http_code" ] && [ "$http_code" != "200" ]; then
-            log_error "HTTP status: $http_code"
-        fi
-        log_error ""
-        log_error "Possible causes:"
-        log_error "  - Version ${version} may not exist for platform ${platform}"
-        log_error "  - Network connectivity issues"
-        log_error "  - CDN and GitHub may be unavailable"
-        exit 1
+    log_error "Failed to download release."
+    log_error "Tried: $r2_url"
+    log_error "Tried: $gh_url"
+    if [ -n "$_DOWNLOAD_HTTP_CODE" ] && [ "$_DOWNLOAD_HTTP_CODE" != "200" ]; then
+        log_error "HTTP status: $_DOWNLOAD_HTTP_CODE"
     fi
-
-    validate_tarball "$dest" "Downloaded "
-
-    local size
-    size=$(ls -lh "$dest" | awk '{print $5}')
-    log_success "Downloaded ${filename} (${size}) from GitHub"
+    log_error ""
+    log_error "Possible causes:"
+    log_error "  - Version ${version} may not exist for platform ${platform}"
+    log_error "  - Network connectivity issues"
+    log_error "  - CDN and GitHub may be unavailable"
+    log_error ""
+    log_error "To install manually, download on another machine and use:"
+    log_error "  ./install.sh --local /path/to/${filename}"
+    exit 1
 }
 
 # Use a local tarball instead of downloading
@@ -569,15 +599,49 @@ extract_release() {
     fi
 
     # Phase 6: Restore config and settings
-    if [ -n "${BACKUP_CONFIG:-}" ] && [ -f "$BACKUP_CONFIG" ]; then
-        $(file_sudo "${INSTALL_DIR}") mkdir -p "${INSTALL_DIR}/config"
-        $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_CONFIG" "${INSTALL_DIR}/config/helixconfig.json"
-        log_info "Restored existing configuration to config/"
+    # Try TMP_DIR backup first; fall back to the .old directory's copy.
+    # Under systemd's PrivateTmp=true, TMP_DIR lives in a volatile mount that
+    # can disappear if the service restarts.  The .old directory is on the real
+    # filesystem and survives any restart.
+    $(file_sudo "${INSTALL_DIR}") mkdir -p "${INSTALL_DIR}/config" 2>/dev/null || true
+    if [ ! -f "${INSTALL_DIR}/config/helixconfig.json" ]; then
+        if [ -n "${BACKUP_CONFIG:-}" ] && [ -f "$BACKUP_CONFIG" ]; then
+            $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_CONFIG" "${INSTALL_DIR}/config/helixconfig.json" 2>/dev/null && \
+                log_info "Restored configuration from backup" || \
+                log_warn "Failed to restore configuration from TMP_DIR backup"
+        fi
     fi
-    if [ -n "${BACKUP_ENV:-}" ] && [ -f "$BACKUP_ENV" ]; then
-        $(file_sudo "${INSTALL_DIR}") mkdir -p "${INSTALL_DIR}/config"
-        $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_ENV" "${INSTALL_DIR}/config/helixscreen.env"
-        log_info "Restored existing helixscreen.env to config/"
+    # Fallback: restore from .old directory if TMP_DIR backup was lost or failed
+    if [ ! -f "${INSTALL_DIR}/config/helixconfig.json" ] && [ -n "${INSTALL_BACKUP:-}" ]; then
+        if [ -f "${INSTALL_BACKUP}/config/helixconfig.json" ]; then
+            $(file_sudo "${INSTALL_DIR}/config") cp "${INSTALL_BACKUP}/config/helixconfig.json" "${INSTALL_DIR}/config/helixconfig.json" 2>/dev/null && \
+                log_info "Restored configuration from previous install backup" || \
+                log_warn "Failed to restore configuration from .old backup"
+        elif [ -f "${INSTALL_BACKUP}/helixconfig.json" ]; then
+            $(file_sudo "${INSTALL_DIR}/config") cp "${INSTALL_BACKUP}/helixconfig.json" "${INSTALL_DIR}/config/helixconfig.json" 2>/dev/null && \
+                log_info "Restored configuration from previous install backup (legacy location)" || \
+                log_warn "Failed to restore configuration from .old backup"
+        fi
+    fi
+    if [ ! -f "${INSTALL_DIR}/config/helixconfig.json" ] && [ "$ORIGINAL_INSTALL_EXISTS" = true ]; then
+        log_warn "Could not restore helixconfig.json from any backup source!"
+        log_warn "User configuration may have been lost."
+    fi
+
+    # Restore helixscreen.env
+    if [ ! -f "${INSTALL_DIR}/config/helixscreen.env" ]; then
+        if [ -n "${BACKUP_ENV:-}" ] && [ -f "$BACKUP_ENV" ]; then
+            $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_ENV" "${INSTALL_DIR}/config/helixscreen.env" 2>/dev/null && \
+                log_info "Restored helixscreen.env from backup" || \
+                log_warn "Failed to restore helixscreen.env from TMP_DIR backup"
+        fi
+    fi
+    if [ ! -f "${INSTALL_DIR}/config/helixscreen.env" ] && [ -n "${INSTALL_BACKUP:-}" ]; then
+        if [ -f "${INSTALL_BACKUP}/config/helixscreen.env" ]; then
+            $(file_sudo "${INSTALL_DIR}/config") cp "${INSTALL_BACKUP}/config/helixscreen.env" "${INSTALL_DIR}/config/helixscreen.env" 2>/dev/null && \
+                log_info "Restored helixscreen.env from previous install backup" || \
+                log_warn "Failed to restore helixscreen.env from .old backup"
+        fi
     fi
 
     # Cleanup

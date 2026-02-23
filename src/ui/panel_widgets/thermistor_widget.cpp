@@ -6,6 +6,7 @@
 #include "ui_event_safety.h"
 #include "ui_icon.h"
 #include "ui_temperature_utils.h"
+#include "ui_utils.h"
 
 #include "app_globals.h"
 #include "config.h"
@@ -85,15 +86,18 @@ void ThermistorWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
     } else {
         // Re-bind observer to saved sensor
         auto& tsm = helix::sensors::TemperatureSensorManager::instance();
-        lv_subject_t* subject = tsm.get_temp_subject(selected_sensor_);
+        SubjectLifetime lifetime;
+        lv_subject_t* subject = tsm.get_temp_subject(selected_sensor_, lifetime);
         if (subject) {
             std::weak_ptr<bool> weak_alive = alive_;
             temp_observer_ = helix::ui::observe_int_sync<ThermistorWidget>(
-                subject, this, [weak_alive](ThermistorWidget* self, int temp) {
+                subject, this,
+                [weak_alive](ThermistorWidget* self, int temp) {
                     if (weak_alive.expired())
                         return;
                     self->on_temp_changed(temp);
-                });
+                },
+                lifetime);
         }
         update_display();
     }
@@ -147,15 +151,18 @@ void ThermistorWidget::select_sensor(const std::string& klipper_name) {
     strip_temperature_suffix(display_name_);
 
     // Subscribe to this sensor's temperature subject
-    lv_subject_t* subject = tsm.get_temp_subject(klipper_name);
+    SubjectLifetime lifetime;
+    lv_subject_t* subject = tsm.get_temp_subject(klipper_name, lifetime);
     if (subject) {
         std::weak_ptr<bool> weak_alive = alive_;
         temp_observer_ = helix::ui::observe_int_sync<ThermistorWidget>(
-            subject, this, [weak_alive](ThermistorWidget* self, int temp) {
+            subject, this,
+            [weak_alive](ThermistorWidget* self, int temp) {
                 if (weak_alive.expired())
                     return;
                 self->on_temp_changed(temp);
-            });
+            },
+            lifetime);
     } else {
         spdlog::warn("[ThermistorWidget] No subject for sensor: {}", klipper_name);
     }
@@ -265,8 +272,7 @@ void ThermistorWidget::show_sensor_picker() {
     lv_obj_t* sensor_list = lv_obj_find_by_name(picker_backdrop_, "sensor_list");
     if (!sensor_list) {
         spdlog::error("[ThermistorWidget] sensor_list not found in picker XML");
-        lv_obj_delete(picker_backdrop_);
-        picker_backdrop_ = nullptr;
+        helix::ui::safe_delete(picker_backdrop_);
         return;
     }
 
@@ -358,6 +364,33 @@ void ThermistorWidget::show_sensor_picker() {
 
     s_active_picker_ = this;
 
+    // Self-clearing delete callback — if LVGL deletes picker_backdrop_ via parent
+    // deletion (e.g., user navigates away), clear our pointer to prevent dangling access
+    lv_obj_add_event_cb(
+        picker_backdrop_,
+        [](lv_event_t* e) {
+            auto* self = static_cast<ThermistorWidget*>(lv_event_get_user_data(e));
+            if (self) {
+                // Clean up heap-allocated strings before LVGL frees the tree
+                lv_obj_t* backdrop = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+                lv_obj_t* sensor_list = lv_obj_find_by_name(backdrop, "sensor_list");
+                if (sensor_list) {
+                    uint32_t count = lv_obj_get_child_count(sensor_list);
+                    for (uint32_t i = 0; i < count; ++i) {
+                        lv_obj_t* row = lv_obj_get_child(sensor_list, i);
+                        auto* name_ptr = static_cast<std::string*>(lv_obj_get_user_data(row));
+                        delete name_ptr;
+                        lv_obj_set_user_data(row, nullptr);
+                    }
+                }
+                self->picker_backdrop_ = nullptr;
+                if (s_active_picker_ == self) {
+                    s_active_picker_ = nullptr;
+                }
+            }
+        },
+        LV_EVENT_DELETE, this);
+
     // Position the context menu card near the widget
     lv_obj_t* card = lv_obj_find_by_name(picker_backdrop_, "context_menu");
     if (card && widget_obj_) {
@@ -370,18 +403,22 @@ void ThermistorWidget::show_sensor_picker() {
         // Position card below the widget, centered horizontally
         int card_w = std::clamp(screen_w * 3 / 10, 160, 240);
         lv_obj_set_width(card, card_w);
+
+        // Force layout so card gets its content height before positioning
+        lv_obj_update_layout(card);
+        int card_h = lv_obj_get_height(card);
+
         int card_x = (widget_area.x1 + widget_area.x2) / 2 - card_w / 2;
         int card_y = widget_area.y2 + space_xs;
-        int max_card_h = screen_h * 2 / 3;
 
         // Clamp to screen bounds using responsive margin
         if (card_x < space_md)
             card_x = space_md;
         if (card_x + card_w > screen_w - space_md)
             card_x = screen_w - card_w - space_md;
-        if (card_y + max_card_h > screen_h - space_md) {
+        if (card_y + card_h > screen_h - space_md) {
             // Show above widget instead
-            card_y = widget_area.y1 - max_card_h - space_xs;
+            card_y = widget_area.y1 - card_h - space_xs;
             if (card_y < space_md)
                 card_y = space_md;
         }
@@ -397,20 +434,22 @@ void ThermistorWidget::dismiss_sensor_picker() {
         return;
     }
 
-    // Clean up heap-allocated klipper_name strings
-    lv_obj_t* sensor_list = lv_obj_find_by_name(picker_backdrop_, "sensor_list");
-    if (sensor_list) {
-        uint32_t count = lv_obj_get_child_count(sensor_list);
-        for (uint32_t i = 0; i < count; ++i) {
-            lv_obj_t* row = lv_obj_get_child(sensor_list, i);
-            auto* name_ptr = static_cast<std::string*>(lv_obj_get_user_data(row));
-            delete name_ptr;
-            lv_obj_set_user_data(row, nullptr);
+    // Clean up heap-allocated klipper_name strings (only if object is still valid —
+    // parent screen deletion auto-frees children, leaving stale pointers)
+    if (lv_obj_is_valid(picker_backdrop_)) {
+        lv_obj_t* sensor_list = lv_obj_find_by_name(picker_backdrop_, "sensor_list");
+        if (sensor_list) {
+            uint32_t count = lv_obj_get_child_count(sensor_list);
+            for (uint32_t i = 0; i < count; ++i) {
+                lv_obj_t* row = lv_obj_get_child(sensor_list, i);
+                auto* name_ptr = static_cast<std::string*>(lv_obj_get_user_data(row));
+                delete name_ptr;
+                lv_obj_set_user_data(row, nullptr);
+            }
         }
     }
 
-    lv_obj_delete(picker_backdrop_);
-    picker_backdrop_ = nullptr;
+    helix::ui::safe_delete(picker_backdrop_);
     s_active_picker_ = nullptr;
 
     spdlog::debug("[ThermistorWidget] Sensor picker dismissed");

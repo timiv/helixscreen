@@ -34,6 +34,7 @@
 #include "moonraker_api.h"
 #include "observer_factory.h"
 #include "panel_widget_manager.h"
+#include "panel_widgets/fan_stack_widget.h"
 #include "panel_widgets/network_widget.h"
 #include "panel_widgets/power_widget.h"
 #include "panel_widgets/temp_stack_widget.h"
@@ -132,6 +133,7 @@ HomePanel::~HomePanel() {
     // already be freed. Clear unconditionally — deinit_subjects() may have been
     // skipped if subjects_initialized_ was already false from a prior call.
     helix::PanelWidgetManager::instance().clear_gate_observers("home");
+    helix::PanelWidgetManager::instance().unregister_rebuild_callback("home");
 
     // Detach active PanelWidget instances
     for (auto& w : active_widgets_) {
@@ -147,6 +149,10 @@ HomePanel::~HomePanel() {
         tip_animating_ = false;
         lv_anim_delete(this, nullptr);
 
+        if (snapshot_timer_) {
+            lv_timer_delete(snapshot_timer_);
+            snapshot_timer_ = nullptr;
+        }
         if (signal_poll_timer_) {
             lv_timer_delete(signal_poll_timer_);
             signal_poll_timer_ = nullptr;
@@ -154,6 +160,12 @@ HomePanel::~HomePanel() {
         if (tip_rotation_timer_) {
             lv_timer_delete(tip_rotation_timer_);
             tip_rotation_timer_ = nullptr;
+        }
+
+        // Free cached printer image snapshot
+        if (cached_printer_snapshot_) {
+            lv_draw_buf_destroy(cached_printer_snapshot_);
+            cached_printer_snapshot_ = nullptr;
         }
     }
 }
@@ -199,8 +211,10 @@ void HomePanel::init_subjects() {
         {"network_clicked_cb", network_clicked_cb},
         {"printer_manager_clicked_cb", printer_manager_clicked_cb},
         {"ams_clicked_cb", ams_clicked_cb},
+        {"on_fan_stack_clicked", helix::FanStackWidget::on_fan_stack_clicked},
         {"temp_stack_nozzle_cb", helix::TempStackWidget::temp_stack_nozzle_cb},
         {"temp_stack_bed_cb", helix::TempStackWidget::temp_stack_bed_cb},
+        {"temp_stack_chamber_cb", helix::TempStackWidget::temp_stack_chamber_cb},
         {"thermistor_clicked_cb", helix::ThermistorWidget::thermistor_clicked_cb},
         {"thermistor_picker_backdrop_cb", helix::ThermistorWidget::thermistor_picker_backdrop_cb},
         {"favorite_macro_1_clicked_cb", helix::FavoriteMacroWidget::clicked_1_cb},
@@ -321,6 +335,10 @@ void HomePanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Also observe klippy_state for firmware_restart conditional injection.
     setup_widget_gate_observers();
 
+    // Register rebuild callback so settings overlay toggle changes take effect immediately
+    helix::PanelWidgetManager::instance().register_rebuild_callback(
+        "home", [this]() { populate_widgets(); });
+
     // Start tip rotation timer (60 seconds = 60000ms)
     if (!tip_rotation_timer_) {
         tip_rotation_timer_ = lv_timer_create(tip_rotation_timer_cb, 60000, this);
@@ -428,6 +446,12 @@ void HomePanel::on_deactivate() {
     }
 
     AmsState::instance().stop_spoolman_polling();
+
+    // Cancel pending snapshot timer (no point snapshotting while hidden)
+    if (snapshot_timer_) {
+        lv_timer_delete(snapshot_timer_);
+        snapshot_timer_ = nullptr;
+    }
 
     // Cancel any in-flight tip fade animations (var=this, not an lv_obj_t*)
     if (tip_animating_) {
@@ -852,13 +876,6 @@ void HomePanel::handle_network_clicked() {
 }
 
 void HomePanel::handle_printer_manager_clicked() {
-    // Gate behind beta features flag
-    Config* config = Config::get_instance();
-    if (!config || !config->is_beta_features_enabled()) {
-        spdlog::debug("[{}] Printer Manager requires beta features", get_name());
-        return;
-    }
-
     spdlog::info("[{}] Printer image clicked - opening Printer Manager overlay", get_name());
 
     auto& overlay = get_printer_manager_overlay();
@@ -1081,6 +1098,22 @@ void HomePanel::refresh_printer_image() {
     if (!panel_)
         return;
 
+    // Free old snapshot — image source is about to change
+    if (cached_printer_snapshot_) {
+        lv_obj_t* img = lv_obj_find_by_name(panel_, "printer_image");
+        if (img) {
+            // Clear source before destroying buffer it points to
+            // Note: must use NULL, not "" — empty string byte 0x00 gets misclassified
+            // as LV_IMAGE_SRC_VARIABLE by lv_image_src_get_type
+            lv_image_set_src(img, nullptr);
+            // Restore contain alignment so the original image scales correctly
+            // during the ~50ms gap before the new snapshot is taken
+            lv_image_set_inner_align(img, LV_IMAGE_ALIGN_CONTAIN);
+        }
+        lv_draw_buf_destroy(cached_printer_snapshot_);
+        cached_printer_snapshot_ = nullptr;
+    }
+
     lv_display_t* disp = lv_display_get_default();
     int screen_width = disp ? lv_display_get_horizontal_resolution(disp) : 800;
 
@@ -1093,6 +1126,7 @@ void HomePanel::refresh_printer_image() {
             lv_image_set_src(img, custom_path.c_str());
             spdlog::debug("[{}] User-selected printer image: '{}'", get_name(), custom_path);
         }
+        schedule_printer_image_snapshot();
         return;
     }
 
@@ -1106,6 +1140,73 @@ void HomePanel::refresh_printer_image() {
         lv_image_set_src(img, image_path.c_str());
         spdlog::debug("[{}] Printer image: '{}' for '{}'", get_name(), image_path, printer_type);
     }
+    schedule_printer_image_snapshot();
+}
+
+void HomePanel::schedule_printer_image_snapshot() {
+    // Cancel any pending snapshot timer
+    if (snapshot_timer_) {
+        lv_timer_delete(snapshot_timer_);
+        snapshot_timer_ = nullptr;
+    }
+
+    // Defer snapshot until after layout resolves (~50ms)
+    snapshot_timer_ = lv_timer_create(
+        [](lv_timer_t* timer) {
+            auto* self = static_cast<HomePanel*>(lv_timer_get_user_data(timer));
+            if (self) {
+                self->snapshot_timer_ = nullptr; // Timer is one-shot, about to be deleted
+                self->take_printer_image_snapshot();
+            }
+            lv_timer_delete(timer);
+        },
+        50, this);
+    lv_timer_set_repeat_count(snapshot_timer_, 1);
+}
+
+void HomePanel::take_printer_image_snapshot() {
+    if (!panel_)
+        return;
+
+    lv_obj_t* img = lv_obj_find_by_name(panel_, "printer_image");
+    if (!img)
+        return;
+
+    // Only snapshot if the widget has resolved to a non-zero size
+    int32_t w = lv_obj_get_width(img);
+    int32_t h = lv_obj_get_height(img);
+    if (w <= 0 || h <= 0) {
+        spdlog::debug("[{}] Printer image not laid out yet ({}x{}), skipping snapshot", get_name(),
+                      w, h);
+        return;
+    }
+
+    lv_draw_buf_t* snapshot = lv_snapshot_take(img, LV_COLOR_FORMAT_ARGB8888);
+    if (!snapshot) {
+        spdlog::warn("[{}] Failed to take printer image snapshot", get_name());
+        return;
+    }
+
+    // Free previous snapshot if any
+    if (cached_printer_snapshot_) {
+        lv_draw_buf_destroy(cached_printer_snapshot_);
+    }
+    cached_printer_snapshot_ = snapshot;
+
+    // Diagnostic: verify snapshot header before setting as source
+    uint32_t snap_w = snapshot->header.w;
+    uint32_t snap_h = snapshot->header.h;
+    uint32_t snap_magic = snapshot->header.magic;
+    uint32_t snap_cf = snapshot->header.cf;
+    spdlog::debug("[{}] Snapshot header: magic=0x{:02x} cf={} {}x{} data={}", get_name(),
+                  snap_magic, snap_cf, snap_w, snap_h, fmt::ptr(snapshot->data));
+
+    // Swap image source to the pre-scaled snapshot buffer — LVGL blits 1:1, no scaling
+    lv_image_set_src(img, cached_printer_snapshot_);
+    lv_image_set_inner_align(img, LV_IMAGE_ALIGN_CENTER);
+
+    spdlog::debug("[{}] Printer image snapshot cached ({}x{}, {} bytes)", get_name(), snap_w,
+                  snap_h, snap_w * snap_h * 4);
 }
 
 void HomePanel::light_toggle_cb(lv_event_t* e) {
