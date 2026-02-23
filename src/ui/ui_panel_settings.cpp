@@ -343,14 +343,6 @@ static void on_update_download_dismiss(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
-// Static callback to restart after update install
-static void on_update_restart(lv_event_t* /*e*/) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_update_restart");
-    spdlog::info("[SettingsPanel] User requested restart after update");
-    app_request_restart_service();
-    LVGL_SAFE_EVENT_CB_END();
-}
-
 // ============================================================================
 // MODAL DIALOG STATIC CALLBACKS (XML event_cb)
 // ============================================================================
@@ -501,7 +493,6 @@ void SettingsPanel::init_subjects() {
         {"on_update_download_start", on_update_download_start},
         {"on_update_download_cancel", on_update_download_cancel},
         {"on_update_download_dismiss", on_update_download_dismiss},
-        {"on_update_restart", on_update_restart},
 
         // Overlay callbacks
         {"on_restart_later_clicked", on_restart_later_clicked},

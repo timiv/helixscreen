@@ -65,7 +65,7 @@
             style_pad_gap="#space_md" hidden="true">
       <bind_flag_if_not_eq subject="download_status" flag="hidden" ref_value="5"/>
       <icon src="check_circle" size="lg" variant="success"/>
-      <text_heading text="Update Installed" translation_tag="Update Installed"/>
+      <text_heading text="Restarting..." translation_tag="Restarting..."/>
       <text_muted width="100%" bind_text="download_text" long_mode="wrap" style_text_align="center"/>
     </lv_obj>
 
@@ -112,23 +112,7 @@
       </lv_obj>
     </lv_obj>
 
-    <!-- COMPLETE buttons: Later | Restart Now -->
-    <lv_obj name="complete_buttons"
-            width="100%" height="content" flex_flow="column" style_pad_all="0" style_pad_gap="0" style_border_width="0"
-            hidden="true">
-      <bind_flag_if_not_eq subject="download_status" flag="hidden" ref_value="5"/>
-      <divider_horizontal/>
-      <lv_obj width="100%"
-              height="#button_height" flex_flow="row" style_pad_all="0" style_pad_gap="0" style_border_width="0">
-        <ui_button name="btn_later" text="Later" translation_tag="Later" flex_grow="1">
-          <event_cb trigger="clicked" callback="on_update_download_dismiss"/>
-        </ui_button>
-        <divider_vertical/>
-        <ui_button name="btn_restart" text="Restart Now" translation_tag="Restart Now" variant="success" flex_grow="1">
-          <event_cb trigger="clicked" callback="on_update_restart"/>
-        </ui_button>
-      </lv_obj>
-    </lv_obj>
+    <!-- COMPLETE state: auto-restarts via _exit(0) after 3s, no buttons needed -->
 
     <!-- ERROR buttons: Close | Retry -->
     <lv_obj name="error_buttons"
