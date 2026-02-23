@@ -24,6 +24,7 @@ using namespace helix::ui;
 void lv_init_safe() {
     if (!lv_is_initialized()) {
         lv_init();
+        lv_xml_init(); // Must be called after lv_init() — LVGL 9.5 removed XML from core
     }
     // UpdateQueue init is handled by LVGLTestFixture constructor per-test,
     // NOT here. Having it here (called once via call_once) conflicts with

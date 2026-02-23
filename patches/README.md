@@ -1,114 +1,62 @@
 # Submodule Patches
 
-This directory contains patches that modify git submodules. Patches are automatically applied by the build system before compilation.
+Local patches applied to git submodules. Applied manually after submodule checkout.
 
-## Why Patches?
+## Base Version
 
-Git submodules should not have direct commits to maintain clean version control. Instead, we apply patches during the build process.
+**LVGL**: v9.5.0 (commit `85aa60d18`)
 
-## Patch: lvgl_sdl_window_position.patch
+## LVGL Patches
 
-**File**: `lvgl_sdl_window_position.patch`
-**Applies to**: `lvgl` submodule (LVGL 9.3.0)
-**Modified file**: `lvgl/src/drivers/sdl/lv_sdl_window.c`
+Applied in order. The fbdev patches have a dependency: `stride_bpp` must be applied before `skip_unblank`.
 
-### Purpose
+| Patch | File(s) | Purpose |
+|-------|---------|---------|
+| `lvgl_observer_debug.patch` | `lv_observer.c` | Enhanced error logging with pointer/type info |
+| `lvgl_fbdev_stride_bpp.patch` | `lv_linux_fbdev.c` | Fix incorrect bpp on AD5M displays (calculate from stride) |
+| `lvgl_fbdev_skip_unblank.patch` | `lv_linux_fbdev.c`, `.h` | Skip FBIOBLANK during splash handoff |
+| `lvgl_blend_null_guard.patch` | `lv_draw_sw_blend.c` | Null check before layer/draw_buf deref |
+| `lvgl_draw_sw_label_null_guard.patch` | `lv_draw_sw_letter.c` | Null check for font/glyph during draw |
+| `lvgl_slider_scroll_chain.patch` | `lv_slider.c` | Fix perpendicular scroll flag logic |
+| `lvgl-strdup-null-guard.patch` | `lv_string_builtin.c`, `clib/` | NULL input guard for lv_strdup |
+| `lvgl_sdl_window.patch` | `lv_sdl_window.c` | Multi-display positioning, Android support, macOS crash fix |
+| `lvgl_theme_breakpoints.patch` | `lv_theme_default.c` | Custom breakpoint tuning for 480-800px |
 
-Adds multi-display support to LVGL 9's SDL driver by reading environment variables to control window positioning.
+## Dropped Patches (v9.5.0)
 
-### Features
+LVGL 9.5 removed the entire XML system from core. These patches are now in `lib/helix-xml/`:
 
-- **Display-based positioning**: Center window on specific display by number
-- **Coordinate-based positioning**: Position window at exact pixel coordinates
-- **macOS multi-monitor support**: Properly handles displays with different resolutions
+- `lv_xml.c` / `.h` — `lv_xml_get_const_silent()` addition
+- `lv_xml_style.c` — `translate_x`/`translate_y` using `lv_xml_to_size()`
+- `lv_xml_image_parser.c` — image "contain"/"cover" alignment enums
 
-### Environment Variables
+## libhv Patches
 
-The SDL driver reads these environment variables at window creation time:
+| Patch | Purpose |
+|-------|---------|
+| `libhv-dns-resolver-fallback.patch` | DNS resolver fallback for mDNS |
+| `libhv-streaming-upload.patch` | Streaming upload support |
 
-- **`HELIX_SDL_DISPLAY`** - Display number (0, 1, 2...) to center window on
-  - Uses `SDL_GetDisplayBounds()` to query display geometry
-  - Calculates center position automatically
-  - Example: `HELIX_SDL_DISPLAY=1` opens on secondary display
-
-- **`HELIX_SDL_XPOS`** - X coordinate for exact window position (pixels)
-  - Overrides display-based positioning if set
-  - Example: `HELIX_SDL_XPOS=100`
-
-- **`HELIX_SDL_YPOS`** - Y coordinate for exact window position (pixels)
-  - Used with `HELIX_SDL_XPOS` for precise placement
-  - Example: `HELIX_SDL_YPOS=200`
-
-### Implementation Details
-
-The patch modifies the SDL window creation logic to:
-
-1. Read environment variables before creating the window
-2. Calculate center position using `SDL_GetDisplayBounds()` if `HELIX_SDL_DISPLAY` is set
-3. Use explicit coordinates if `HELIX_SDL_XPOS`/`HELIX_SDL_YPOS` are set
-4. Call `SDL_SetWindowPosition()` after window creation (critical for macOS)
-
-### Usage
-
-Environment variables are set by `main.cpp` based on command line arguments:
+## Application
 
 ```bash
-# Display-based (centered)
-./build/bin/helix-screen --display 1
+# Apply all LVGL patches (from project root)
+PATCHES="$PWD/patches"
+for p in lvgl_observer_debug lvgl_fbdev_stride_bpp lvgl_fbdev_skip_unblank \
+         lvgl_blend_null_guard lvgl_draw_sw_label_null_guard \
+         lvgl_slider_scroll_chain lvgl-strdup-null-guard \
+         lvgl_sdl_window lvgl_theme_breakpoints; do
+    git -C lib/lvgl apply "$PATCHES/${p}.patch"
+done
 
-# Coordinate-based
-./build/bin/helix-screen --x-pos 100 --y-pos 200
+# Verify
+git -C lib/lvgl diff --stat
+# Should show 10 files changed
 
-# Both work via environment variables:
-HELIX_SDL_DISPLAY=1 ./build/bin/helix-screen
+# Regenerate a patch after manual edits
+git -C lib/lvgl diff src/path/to/file.c > patches/patch_name.patch
 ```
 
-### Automatic Application
+## Backup
 
-The patch is automatically applied by the Makefile before building:
-
-```makefile
-apply-patches:
-	@if git -C lvgl diff --quiet src/drivers/sdl/lv_sdl_window.c; then \
-		git -C lvgl apply ../patches/lvgl_sdl_window_position.patch; \
-	fi
-```
-
-The check is idempotent - it only applies if the file hasn't been modified.
-
-## Manual Patch Application
-
-If you need to manually apply or revert patches:
-
-```bash
-# Apply patch
-git -C lvgl apply ../patches/lvgl_sdl_window_position.patch
-
-# Check if already applied
-git -C lvgl diff src/drivers/sdl/lv_sdl_window.c
-
-# Revert to clean state
-git -C lvgl checkout src/drivers/sdl/lv_sdl_window.c
-
-# Re-generate patch (after making changes)
-git -C lvgl diff src/drivers/sdl/lv_sdl_window.c > patches/lvgl_sdl_window_position.patch
-```
-
-## Adding New Patches
-
-To add a new submodule patch:
-
-1. **Make changes** in the submodule directory
-2. **Test** that changes work as expected
-3. **Generate patch**:
-   ```bash
-   git -C <submodule> diff <file> > patches/<patch-name>.patch
-   ```
-4. **Update Makefile** to apply patch in `apply-patches` target
-5. **Document** here in this README
-6. **Test** on clean checkout to ensure patch applies correctly
-
-## Related Documentation
-
-- [BUILD_SYSTEM.md](../docs/BUILD_SYSTEM.md) - Build system and patch automation
-- [CLAUDE.md](../CLAUDE.md) - Multi-display support documentation
+`lvgl-local-patches.patch` — combined diff of all LVGL patches (temporary backup, safe to delete).
