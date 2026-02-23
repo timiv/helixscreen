@@ -2535,3 +2535,8 @@ TEST_CASE("AFC get_type returns AFC", "[ams][afc][spoolman]") {
     AmsBackendAfcTestHelper helper;
     REQUIRE(helper.get_type() == AmsType::AFC);
 }
+
+TEST_CASE("AFC backend reports tracks_weight_locally=true", "[ams][afc][spoolman]") {
+    AmsBackendAfcTestHelper helper;
+    REQUIRE(helper.tracks_weight_locally() == true);
+}

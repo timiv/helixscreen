@@ -1456,3 +1456,13 @@ TEST_CASE("Happy Hare manages_active_spool=true when spoolman enabled",
         REQUIRE(helper.manages_active_spool() == false);
     }
 }
+
+// ============================================================================
+// tracks_weight_locally() — Happy Hare does NOT track weight (no extruder
+// position-based weight decrement like AFC). Spoolman is source of truth.
+// ============================================================================
+
+TEST_CASE("Happy Hare does not track weight locally", "[ams][happy_hare][spoolman]") {
+    AmsBackendHappyHareTestHelper helper;
+    REQUIRE(helper.tracks_weight_locally() == false);
+}

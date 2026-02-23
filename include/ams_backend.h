@@ -163,6 +163,20 @@ class AmsBackend {
     }
 
     /**
+     * @brief Whether this backend tracks filament weight locally
+     *
+     * Some backends (e.g., AFC, Happy Hare) track filament consumption via
+     * extruder position and update slot weight in real time. When true,
+     * HelixScreen must NOT overwrite slot weights from Spoolman polling,
+     * because Spoolman's weight is stale (backends don't write back to it).
+     *
+     * @return true if the backend provides live weight tracking
+     */
+    [[nodiscard]] virtual bool tracks_weight_locally() const {
+        return false;
+    }
+
+    /**
      * @brief Get information about a specific slot
      * @param slot_index Slot index (0 to total_slots-1)
      * @return SlotInfo struct (copy, safe for caller to hold)

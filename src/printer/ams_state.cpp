@@ -1230,6 +1230,14 @@ void AmsState::refresh_spoolman_weights() {
         return;
     }
 
+    // Skip Spoolman weight polling when the backend tracks weight locally
+    // (e.g., AFC decrements weight via extruder position every 10s during
+    // printing). Spoolman's weight is stale because these backends never
+    // write back to it, so polling would overwrite accurate live data.
+    if (backend->tracks_weight_locally()) {
+        return;
+    }
+
     int slot_count = backend->get_system_info().total_slots;
     int linked_count = 0;
 

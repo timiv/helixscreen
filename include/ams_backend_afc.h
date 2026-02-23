@@ -96,6 +96,9 @@ class AmsBackendAfc : public AmsSubscriptionBackend {
     [[nodiscard]] bool manages_active_spool() const override {
         return true;
     }
+    [[nodiscard]] bool tracks_weight_locally() const override {
+        return true;
+    }
     [[nodiscard]] SlotInfo get_slot_info(int slot_index) const override;
 
     // Path visualization

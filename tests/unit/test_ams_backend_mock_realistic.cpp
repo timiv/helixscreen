@@ -535,3 +535,8 @@ TEST_CASE("Mock backend in AFC mode still reports manages_active_spool=false",
     backend->set_afc_mode(true);
     REQUIRE(backend->manages_active_spool() == false);
 }
+
+TEST_CASE("Mock backend does not track weight locally", "[ams][mock][spoolman]") {
+    auto backend = std::make_unique<AmsBackendMock>(4);
+    REQUIRE(backend->tracks_weight_locally() == false);
+}
