@@ -265,11 +265,12 @@ export default {
           const crashRow = rateData.data?.[0] ?? { crash_count: 0, session_count: 0 };
           const printRow = printData.data?.[0] ?? { successes: 0, total: 0 };
 
-          // Build cumulative growth: aggregate new devices per first-seen date, then accumulate
+          // Build cumulative growth: count new devices per first-seen date, then accumulate
+          // Each row = one device (GROUP BY blob1), so increment by 1 per row
           const newPerDay = new Map<string, number>();
           for (const row of firstSeenData.data ?? []) {
             const d = row.first_seen;
-            newPerDay.set(d, (newPerDay.get(d) ?? 0) + row.new_devices);
+            newPerDay.set(d, (newPerDay.get(d) ?? 0) + 1);
           }
           const sortedDates = [...newPerDay.keys()].sort();
           let cumulative = 0;
