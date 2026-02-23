@@ -16,6 +16,7 @@
 #include "ui_panel_common.h"
 #include "ui_spool_canvas.h"
 #include "ui_system_path_canvas.h"
+#include "ui_update_queue.h"
 #include "ui_utils.h"
 
 #include "ams_backend.h"
@@ -829,6 +830,14 @@ void AmsOverviewPanel::clear_panel_reference() {
         context_menu_->hide();
     }
 
+    // Destroy detail slot widgets BEFORE the parent tree deletion.
+    // When on_deactivate() → show_overview() starts an animation whose completed
+    // callback calls destroy_detail_slots(), and we cancel that animation above,
+    // the slots are never cleaned up. Their DELETE handlers release() observers
+    // instead of properly removing them, leaving dangling entries in AmsState
+    // subjects. Explicitly destroying them here ensures proper cleanup.
+    destroy_detail_slots();
+
     // Clear observer guards before clearing widget pointers
     slots_version_observer_.reset();
     external_spool_observer_.reset();
@@ -916,7 +925,15 @@ void destroy_ams_overview_panel_ui() {
     if (s_ams_overview_panel_obj) {
         spdlog::info("[AMS Overview] Destroying panel UI to free memory");
 
+        // Drain deferred observer callbacks while all pointers are still valid.
+        // observe_int_sync queues lambdas via queue_update() that capture raw
+        // panel/sidebar pointers. If subject changes fired observers between
+        // the last timer tick and now, those lambdas are pending. Processing
+        // them here prevents use-after-free when the panel is destroyed below.
+        helix::ui::UpdateQueue::instance().drain();
+
         NavigationManager::instance().unregister_overlay_close_callback(s_ams_overview_panel_obj);
+        NavigationManager::instance().unregister_overlay_instance(s_ams_overview_panel_obj);
 
         if (g_ams_overview_panel) {
             g_ams_overview_panel->clear_panel_reference();

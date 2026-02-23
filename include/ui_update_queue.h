@@ -128,6 +128,21 @@ class UpdateQueue {
     }
 
     /**
+     * @brief Process all pending callbacks immediately
+     *
+     * Call before destroying objects that may be referenced by queued callbacks.
+     * Deferred observer callbacks (from observe_int_sync) capture raw panel
+     * pointers; if those callbacks run after the panel is destroyed, they
+     * crash with use-after-free. Draining the queue while pointers are still
+     * valid ensures those callbacks execute safely.
+     *
+     * @note Must be called from the main LVGL thread.
+     */
+    void drain() {
+        process_pending();
+    }
+
+    /**
      * @brief Pause the update queue timer
      *
      * Prevents the timer from firing during lv_timer_handler() calls.

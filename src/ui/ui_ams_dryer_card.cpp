@@ -135,7 +135,12 @@ void AmsDryerCard::cleanup() {
     }
     dryer_modal_ = nullptr;
 
-    // Clear widget references (dryer_card_ is owned by panel)
+    // Clear user_data on the dryer card widget to prevent dangling pointer access
+    // during parent tree deletion (lv_obj_delete traverses children and may trigger
+    // event handlers that look up user_data via parent chain traversal)
+    if (dryer_card_ && lv_is_initialized()) {
+        lv_obj_set_user_data(dryer_card_, nullptr);
+    }
     dryer_card_ = nullptr;
     progress_fill_ = nullptr;
     spdlog::debug("[AmsDryerCard] cleanup()");
