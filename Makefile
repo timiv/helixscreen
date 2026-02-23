@@ -223,6 +223,18 @@ endif
 LVGL_SRCS := $(filter-out $(wildcard $(LVGL_DIR)/src/xml/*.c $(LVGL_DIR)/src/xml/parsers/*.c $(LVGL_DIR)/src/libs/expat/*.c),$(shell find $(LVGL_DIR)/src -name "*.c" 2>/dev/null))
 LVGL_OBJS := $(patsubst $(LVGL_DIR)/%.c,$(OBJ_DIR)/lvgl/%.o,$(LVGL_SRCS))
 
+# When OpenGL ES is enabled, the opengles driver sources contain C++11 raw string
+# literals (R"(...)") that can't compile as C. Filter them from C sources and compile
+# as C++ separately (like ThorVG).
+ifeq ($(ENABLE_OPENGLES),yes)
+    LVGL_OPENGLES_SRCS := $(filter $(LVGL_DIR)/src/drivers/opengles/%,$(LVGL_SRCS))
+    LVGL_SRCS := $(filter-out $(LVGL_DIR)/src/drivers/opengles/%,$(LVGL_SRCS))
+    LVGL_OBJS := $(patsubst $(LVGL_DIR)/%.c,$(OBJ_DIR)/lvgl/%.o,$(LVGL_SRCS))
+    LVGL_OPENGLES_OBJS := $(patsubst $(LVGL_DIR)/%.c,$(OBJ_DIR)/lvgl/%.o,$(LVGL_OPENGLES_SRCS))
+else
+    LVGL_OPENGLES_OBJS :=
+endif
+
 # Helix XML engine (extracted from LVGL, with our patches baked in)
 HELIX_XML_DIR := lib/helix-xml
 HELIX_XML_SRCS := $(wildcard $(HELIX_XML_DIR)/src/xml/*.c $(HELIX_XML_DIR)/src/xml/parsers/*.c $(HELIX_XML_DIR)/src/libs/expat/*.c)
