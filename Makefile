@@ -488,6 +488,10 @@ ifneq ($(CROSS_COMPILE),)
     # DRM backend requires libdrm and libinput for LVGL display/input drivers
     ifeq ($(DISPLAY_BACKEND),drm)
         LDFLAGS += -ldrm -linput
+        # GPU-accelerated rendering via EGL/OpenGL ES
+        ifeq ($(ENABLE_OPENGLES),yes)
+            LDFLAGS += -lEGL -lGLESv2 -lgbm
+        endif
     endif
     PLATFORM := Linux-$(TARGET_ARCH)
     WPA_DEPS := $(WPA_CLIENT_LIB)
