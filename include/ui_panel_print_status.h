@@ -13,6 +13,7 @@
 #include "ui_save_z_offset_modal.h"
 
 #include "overlay_base.h"
+#include "print_lifecycle_state.h"
 #include "printer_state.h"
 #include "subject_managed_panel.h"
 #include "ui/temperature_observer_bundle.h"
@@ -36,18 +37,7 @@ class PrintStatusPanel;
  * speed/flow, and provides pause/tune/cancel buttons.
  */
 
-/**
- * @brief Print state machine states
- */
-enum class PrintState {
-    Idle,      ///< No active print
-    Preparing, ///< Running pre-print operations (homing, leveling, etc.)
-    Printing,  ///< Actively printing
-    Paused,    ///< Print paused
-    Complete,  ///< Print finished successfully
-    Cancelled, ///< Print cancelled by user
-    Error      ///< Print failed with error
-};
+// PrintState enum is now in print_lifecycle_state.h
 
 class PrintStatusPanel : public OverlayBase {
   public:
@@ -216,7 +206,7 @@ class PrintStatusPanel : public OverlayBase {
      * @return Current PrintState
      */
     PrintState get_state() const {
-        return current_state_;
+        return lifecycle_.state();
     }
 
     //
@@ -237,7 +227,7 @@ class PrintStatusPanel : public OverlayBase {
      * @return Progress 0-100
      */
     int get_progress() const {
-        return current_progress_;
+        return lifecycle_.progress();
     }
 
     /**
@@ -316,26 +306,14 @@ class PrintStatusPanel : public OverlayBase {
     /// Shutdown guard for async callbacks - set false in destructor
     /// Captured by lambdas to prevent use-after-free on shutdown [L012]
     std::shared_ptr<std::atomic<bool>> m_alive = std::make_shared<std::atomic<bool>>(true);
-    PrintState current_state_ = PrintState::Idle;
-    int current_progress_ = 0;
+
+    /// Pure-logic state machine (no LVGL deps) — owns all print state variables
+    PrintLifecycleState lifecycle_;
 
     // Thumbnail loading state
     std::string current_print_filename_; ///< Full path to current print file (for metadata fetch)
     std::string cached_thumbnail_path_;  ///< Local cache path for downloaded thumbnail
     uint32_t thumbnail_load_generation_ = 0; ///< Generation counter for async callback safety
-    int current_layer_ = 0;
-    int total_layers_ = 0;
-    int elapsed_seconds_ = 0;
-    int remaining_seconds_ = 0;
-    int preprint_remaining_seconds_ = 0;
-    int preprint_elapsed_seconds_ =
-        0; ///< Pre-print elapsed time (used only during Preparing state)
-    int nozzle_current_ = 0;
-    int nozzle_target_ = 0;
-    int bed_current_ = 0;
-    int bed_target_ = 0;
-    int speed_percent_ = 100;
-    int flow_percent_ = 100;
 
     // Child widgets
     lv_obj_t* progress_bar_ = nullptr;
@@ -419,7 +397,8 @@ class PrintStatusPanel : public OverlayBase {
     void animate_print_error();     ///< Error animation when print fails
     void cleanup_temp_gcode();      ///< Remove temp G-code file downloaded for viewing
     void apply_filament_color_override(
-        uint32_t color_rgb); ///< Apply AMS/Spoolman filament color to gcode viewer
+        uint32_t color_rgb);            ///< Apply AMS/Spoolman filament color to gcode viewer
+    bool build_and_apply_tool_colors(); ///< Build per-tool AMS color map and apply to viewer
 
     static void format_time(int seconds, char* buf, size_t buf_size);
 
