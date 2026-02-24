@@ -1,7 +1,7 @@
 # DRM + GPU (EGL/OpenGL ES) Backend Design
 
 **Date:** 2026-02-23
-**Status:** Approved
+**Status:** Phase 1 implemented (Tasks 1-6, 8 complete — hardware testing pending)
 
 ## Goal
 
@@ -33,28 +33,28 @@ All targets have Mesa runtime libraries (libEGL, libGLESv2, libgbm) available vi
 ### Runtime Fallback Chain
 
 ```
-DRM + EGL/OpenGL ES  (GPU-accelerated)
-        ↓ (EGL init fails)
-DRM + dumb buffers   (CPU + vsync)
-        ↓ (atomic modesetting fails)
+DRM + EGL/OpenGL ES  (GPU-accelerated, when HELIX_ENABLE_OPENGLES compiled in)
+        ↓ (lv_linux_drm_set_file() fails)
 fbdev                (CPU, direct /dev/fb0)
 ```
 
-The binary is compiled with all three backends. `DisplayBackend::create_auto()` already handles DRM→fbdev fallback. The new work adds EGL→dumb buffer fallback inside `DisplayBackendDRM::create_display()`.
+**Implementation note:** `LV_LINUX_DRM_USE_EGL=1` means `lv_linux_drm_create()` is the EGL variant only — dumb buffers are compiled out when OpenGL ES is enabled. So the mid-tier fallback (DRM dumb buffers) is not available within the same binary. If EGL init fails, `create_display()` returns nullptr and `DisplayBackend::create_auto()` falls through to fbdev.
 
-### Display Init Flow (DRM backend)
+For non-GPU builds (Pi without `HELIX_ENABLE_OPENGLES`), the standard DRM dumb buffer path applies:
+```
+DRM + dumb buffers   (CPU + vsync, atomic modesetting)
+        ↓ (DRM init fails)
+fbdev                (CPU, direct /dev/fb0)
+```
+
+### Display Init Flow (DRM backend, GPU build)
 
 ```
 1. Auto-detect DRM device (/dev/dri/card*)
-2. Try EGL path:
-   a. lv_linux_drm_create()  [EGL variant]
-   b. lv_linux_drm_set_file() → drm_device_init() → EGL context creation
-   c. If success → GPU rendering active
-3. If EGL fails, fall back to dumb buffers:
-   a. lv_linux_drm_create()  [non-EGL variant]
-   b. lv_linux_drm_set_file() → drm_setup() → atomic modesetting
-   c. If success → CPU rendering with vsync
-4. If both fail → return nullptr, create_auto() tries fbdev
+2. lv_linux_drm_create()  [EGL variant — only variant when LV_LINUX_DRM_USE_EGL=1]
+3. lv_linux_drm_set_file() → drm_device_init() → EGL context creation
+4a. If success → GPU rendering active (logs "[DRM Backend] GPU-accelerated display active")
+4b. If failure → return nullptr → create_auto() falls through to fbdev
 ```
 
 ### Key Difference: EGL vs Dumb Buffer DRM
@@ -81,18 +81,14 @@ These are small packages (~2MB) and the linker only pulls in what's used.
 
 When `DISPLAY_BACKEND=drm` on Pi targets:
 - Add `-DHELIX_ENABLE_OPENGLES` to CFLAGS/CXXFLAGS/SUBMODULE_*FLAGS
-- Add `-lEGL -lGLESv2 -lgbm` to LDFLAGS
+- Add `-lEGL -lGLESv2 -lgbm -ldl` to LDFLAGS (`-ldl` needed for LVGL's EGL loader which uses `dlopen`/`dlsym`)
 - Include GLAD headers: `-isystem lib/lvgl/src/drivers/opengles/glad/include`
 
 New variable: `ENABLE_OPENGLES=yes` (set automatically for Pi DRM builds).
 
 ### 3. LVGL OpenGL ES Compilation Fix
 
-`lv_opengles_shader.c` uses C++11 raw string literals (`R"(...)"`) which don't compile as C. Fix options:
-- **Option A (preferred):** Compile the `drivers/opengles/` directory sources as C++ via a Makefile rule that uses `$(CXX)` for those specific object files
-- **Option B:** Patch the shader file to use regular C string concatenation (invasive, breaks on LVGL updates)
-
-Option A keeps LVGL unmodified and is a build-system-only change.
+`lv_opengles_shader.c` uses C++11 raw string literals (`R"(...)"`) which don't compile as C. The other opengles `.c` files are plain C and compile fine. Fix: compile **only** `lv_opengles_shader.c` as C++ via a static pattern rule in `mk/rules.mk` that uses `$(CXX) -fpermissive` (`-fpermissive` needed for `void*` implicit casts in C code compiled as C++). This keeps LVGL unmodified and is a build-system-only change.
 
 ### 4. DisplayBackendDRM Changes
 

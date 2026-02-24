@@ -1,6 +1,7 @@
 # DRM + GPU (EGL/OpenGL ES) Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **Status:** Phase 1 complete (Tasks 1-6, 8 implemented; Task 7 = hardware testing, still pending)
+> **Merged:** `feature/drm-gpu-backend` → `main` (2026-02-23)
 
 **Goal:** Enable GPU-accelerated rendering on Pi and BTT CB1 via DRM + EGL + OpenGL ES, with graceful fallback to dumb buffers and fbdev.
 
@@ -12,7 +13,7 @@
 
 ---
 
-### Task 1: Update Docker Toolchain with GPU Libraries
+### Task 1: Update Docker Toolchain with GPU Libraries ✓ DONE
 
 **Files:**
 - Modify: `docker/Dockerfile.pi`
@@ -64,7 +65,7 @@ git commit -m "build(docker): add GPU libraries (EGL, GLES, GBM) to Pi toolchain
 
 ---
 
-### Task 2: Build System — Enable OpenGL ES for Pi DRM Builds
+### Task 2: Build System — Enable OpenGL ES for Pi DRM Builds ✓ DONE
 
 **Files:**
 - Modify: `mk/cross.mk` (lines 30-54 and 56-78)
@@ -115,10 +116,12 @@ In `Makefile` around line 490, expand the DRM linker section:
         LDFLAGS += -ldrm -linput
         # GPU-accelerated rendering via EGL/OpenGL ES
         ifeq ($(ENABLE_OPENGLES),yes)
-            LDFLAGS += -lEGL -lGLESv2 -lgbm
+            LDFLAGS += -lEGL -lGLESv2 -lgbm -ldl
         endif
     endif
 ```
+
+(`-ldl` is needed: LVGL's EGL loader uses `dlopen`/`dlsym` to load `libEGL` at runtime.)
 
 **Step 4: GLAD include path already handled**
 
@@ -140,13 +143,15 @@ git commit -m "build: enable OpenGL ES (EGL/GBM) for Pi DRM builds"
 
 ---
 
-### Task 3: Fix LVGL OpenGL ES Compilation (Raw Strings in .c Files)
+### Task 3: Fix LVGL OpenGL ES Compilation (Raw Strings in .c Files) ✓ DONE
 
 **Files:**
 - Modify: `Makefile` (source filtering and new pattern rule)
 - Modify: `mk/rules.mk` (add C++ compilation rule for opengles sources)
 
-**Problem:** `lv_opengles_shader.c` uses C++11 raw string literals (`R"(...)"`). GCC won't compile these as C. The opengles sources must be compiled as C++ when OpenGL ES is enabled.
+**Problem:** `lv_opengles_shader.c` uses C++11 raw string literals (`R"(...)"`). GCC won't compile these as C. Only this one file needs C++ — all other opengles `.c` files are plain C.
+
+**Implementation note:** The plan originally described filtering the entire `drivers/opengles/` directory for C++ compilation. In practice, only `lv_opengles_shader.c` needs it — the other files compile fine as C. Filtering all of them caused errors (designator order mismatch, `enum operator++`). Fixed by filtering only the shader file and adding `-fpermissive` (for `void*` implicit casts in C code compiled as C++).
 
 **Step 1: Filter opengles sources from LVGL_SRCS when ENABLE_OPENGLES=yes**
 
@@ -218,7 +223,7 @@ git commit -m "build: compile LVGL OpenGL ES sources as C++ for raw string suppo
 
 ---
 
-### Task 4: Update lv_conf.h for OpenGL ES
+### Task 4: Update lv_conf.h for OpenGL ES ✓ DONE
 
 **Files:**
 - Modify: `lv_conf.h` (lines 1169-1172)
@@ -252,7 +257,7 @@ git commit -m "build: gate LV_USE_OPENGLES on HELIX_ENABLE_OPENGLES flag"
 
 ---
 
-### Task 5: Add EGL Fallback to DisplayBackendDRM
+### Task 5: Add EGL Fallback to DisplayBackendDRM ✓ DONE
 
 **Files:**
 - Modify: `src/api/display_backend_drm.cpp`
@@ -399,7 +404,7 @@ git commit -m "feat(display): add EGL/GPU rendering path to DRM backend with fbd
 
 ---
 
-### Task 6: Update Service File — Remove Forced fbdev
+### Task 6: Update Service File — Remove Forced fbdev ✓ DONE
 
 **Files:**
 - Modify: `config/helixscreen.service`
@@ -427,7 +432,7 @@ git commit -m "fix(service): remove forced fbdev override, enable DRM auto-detec
 
 ---
 
-### Task 7: Build and Deploy to Pi for Testing
+### Task 7: Build and Deploy to Pi for Testing ⏳ PENDING
 
 This is a manual testing task — no code changes.
 
@@ -483,7 +488,7 @@ Expected: Falls through to fbdev, logs the fallback clearly.
 
 ---
 
-### Task 8: Install Script — Ensure GPU Runtime Libraries
+### Task 8: Install Script — Ensure GPU Runtime Libraries ✓ DONE
 
 **Files:**
 - Modify: `scripts/install.sh` (or wherever runtime dependencies are checked)
