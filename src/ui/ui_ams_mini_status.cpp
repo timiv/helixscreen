@@ -202,6 +202,8 @@ static void rebuild_bars(AmsMiniStatusData* data) {
     if (effective_height < 20) {
         effective_height = 32; // Minimum fallback height
     }
+    // Cap bars at 80% of container height so they don't fill the entire widget
+    effective_height = effective_height * 80 / 100;
 
     bool is_multi_unit = (data->unit_count >= 2);
 
