@@ -129,6 +129,14 @@ void ui_temp_graph_destroy(ui_temp_graph_t* graph);
 lv_obj_t* ui_temp_graph_get_chart(ui_temp_graph_t* graph);
 
 /**
+ * Check if a graph is valid and ready for updates
+ * Returns false if graph is NULL or the underlying chart widget has been destroyed
+ */
+static inline bool ui_temp_graph_is_valid(ui_temp_graph_t* graph) {
+    return graph && graph->chart;
+}
+
+/**
  * Series Management API
  */
 

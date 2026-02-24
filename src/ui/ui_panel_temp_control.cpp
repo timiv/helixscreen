@@ -236,17 +236,19 @@ void TempControlPanel::on_target_changed(HeaterType type, int target_centi) {
     float target_deg = centi_to_degrees_f(target_centi);
     bool show_target = (target_centi > 0);
 
-    if (h.graph && h.series_id >= 0) {
+    if (ui_temp_graph_is_valid(h.graph) && h.series_id >= 0) {
         ui_temp_graph_set_series_target(h.graph, h.series_id, target_deg, show_target);
         spdlog::trace("[TempPanel] {} target line: {:.1f}°C (visible={})", heater_label(type),
                       target_deg, show_target);
     }
 
     // Also update mini combined graph target line (nozzle/bed only)
-    if (type == HeaterType::Nozzle && mini_graph_ && mini_nozzle_series_id_ >= 0) {
+    if (type == HeaterType::Nozzle && ui_temp_graph_is_valid(mini_graph_) &&
+        mini_nozzle_series_id_ >= 0) {
         ui_temp_graph_set_series_target(mini_graph_, mini_nozzle_series_id_, target_deg,
                                         show_target);
-    } else if (type == HeaterType::Bed && mini_graph_ && mini_bed_series_id_ >= 0) {
+    } else if (type == HeaterType::Bed && ui_temp_graph_is_valid(mini_graph_) &&
+               mini_bed_series_id_ >= 0) {
         ui_temp_graph_set_series_target(mini_graph_, mini_bed_series_id_, target_deg, show_target);
     }
 }
@@ -352,7 +354,7 @@ void TempControlPanel::update_graphs(HeaterType type, float temp_deg, int64_t no
     auto& h = heaters_[idx(type)];
 
     for (const auto& reg : h.temp_graphs) {
-        if (reg.graph && reg.series_id >= 0) {
+        if (ui_temp_graph_is_valid(reg.graph) && reg.series_id >= 0) {
             ui_temp_graph_update_series_with_time(reg.graph, reg.series_id, temp_deg, now_ms);
         }
     }
