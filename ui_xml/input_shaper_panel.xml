@@ -128,15 +128,12 @@
           </spinner>
 
           <!-- Progress bar (invisible until sweep starts, preserves layout) -->
-          <lv_bar name="calibration_progress_bar"
-                  width="80%" height="16"
+          <progress_bar name="calibration_progress_bar"
+                  width="80%"
                   bind_value="is_measuring_progress"
-                  min_value="0" max_value="100"
-                  style_bg_color="#card_bg"
-                  style_radius="#border_radius"
                   style_opa="0" style_opa:checked="255">
             <bind_state_if_not_eq subject="is_measuring_progress" state="checked" ref_value="0"/>
-          </lv_bar>
+          </progress_bar>
         </lv_obj>
         <!-- Abort button (bottom, like PID panel) -->
         <ui_button name="btn_abort" width="25%" text="Abort" translation_tag="Abort" variant="danger">

@@ -182,9 +182,7 @@
             <text_muted name="calibrating_heater"
                         text="Extruder PID Tuning" translation_tag="Extruder PID Tuning"
                         bind_text="pid_calibrating_heater"/>
-            <lv_bar name="pid_progress_bar"
-                    width="80%" height="12" bind_value="pid_cal_progress" min_value="0" max_value="100"
-                    style_bg_color="#card_bg" style_radius="#space_xs"/>
+            <progress_bar name="pid_progress_bar" width="80%" bind_value="pid_cal_progress"/>
             <text_small name="pid_progress_text"
                         bind_text="pid_progress_text" text="Starting..." style_text_color="#text_muted"/>
           </lv_obj>

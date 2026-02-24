@@ -62,9 +62,7 @@
         <lv_obj name="render_progress_container" width="100%" height="content" scrollable="false"
                 style_pad_left="#space_lg" style_pad_right="#space_lg" style_pad_bottom="#space_sm">
           <bind_flag_if_eq subject="timelapse_render_status" flag="hidden" ref_value="idle"/>
-          <lv_bar name="render_progress_bar" width="100%" style_height="8"
-                  bind_value="timelapse_render_progress" range_min="0" range_max="100"
-                  style_bg_color="#overlay_bg" style_radius="4"/>
+          <progress_bar name="render_progress_bar" bind_value="timelapse_render_progress"/>
           <text_small name="render_status_text" bind_text="timelapse_render_status"
                       style_text_color="#text_muted" style_pad_top="#space_xs"/>
         </lv_obj>

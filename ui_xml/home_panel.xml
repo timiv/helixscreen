@@ -111,9 +111,7 @@
           <!-- "Preparing Print" heading -->
           <text_body text="Preparing Print" translation_tag="Preparing Print"/>
           <!-- Progress bar -->
-          <lv_bar name="print_start_bar"
-                  width="90%" height="8" bind_value="print_start_progress" min_value="0" max_value="100"
-                  style_bg_color="#screen_bg" style_radius="4"/>
+          <progress_bar name="print_start_bar" width="90%" bind_value="print_start_progress"/>
           <!-- Phase message -->
           <text_small bind_text="print_start_message"/>
           <!-- Predicted time remaining -->
@@ -153,9 +151,7 @@
                           bind_text="print_display_filename" style_text_color="#text" long_mode="wrap"
                           style_text_align="center"/>
               <!-- Progress bar showing actual print progress -->
-              <lv_bar name="print_progress_bar"
-                      width="90%" height="8" bind_value="print_progress" min_value="0" max_value="100"
-                      style_bg_color="#screen_bg" style_radius="4"/>
+              <progress_bar name="print_progress_bar" width="90%" bind_value="print_progress"/>
               <!-- Progress percentage -->
               <text_small bind_text="print_progress_text"/>
             </lv_obj>

@@ -28,9 +28,7 @@
             style_pad_gap="#space_md" hidden="true">
       <bind_flag_if_not_eq subject="download_status" flag="hidden" ref_value="2"/>
       <text_heading text="Downloading..." translation_tag="Downloading..."/>
-      <lv_bar name="download_bar"
-              width="90%" height="12" bind_value="download_progress" min_value="0" max_value="100"
-              style_bg_color="#card_bg" style_radius="#space_xs"/>
+      <progress_bar name="download_bar" width="90%" bind_value="download_progress"/>
       <text_muted name="download_progress_text" width="100%" bind_text="download_text" style_text_align="center"/>
     </lv_obj>
 
