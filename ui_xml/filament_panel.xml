@@ -67,7 +67,7 @@
                       clickable="false" event_bubble="true">
                 <text_body name="nozzle_target_temp"
                            bind_text="filament_nozzle_target" clickable="false" event_bubble="true"/>
-                <icon src="pencil" size="xs" variant="secondary" clickable="false" event_bubble="true"/>
+                <icon src="pencil" size="xs" variant="tertiary" clickable="false" event_bubble="true"/>
               </lv_obj>
             </lv_obj>
           </lv_obj>
@@ -88,7 +88,7 @@
                       scrollable="false" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_xs"
                       clickable="false" event_bubble="true">
                 <text_body name="bed_target_temp" bind_text="filament_bed_target" clickable="false" event_bubble="true"/>
-                <icon src="pencil" size="xs" variant="secondary" clickable="false" event_bubble="true"/>
+                <icon src="pencil" size="xs" variant="tertiary" clickable="false" event_bubble="true"/>
               </lv_obj>
             </lv_obj>
           </lv_obj>

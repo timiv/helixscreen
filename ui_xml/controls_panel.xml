@@ -147,7 +147,7 @@
                 <temp_display name="nozzle_temp_display"
                               size="md" show_target="true" bind_current="extruder_temp" bind_target="extruder_target"
                               event_cb="on_nozzle_temp_clicked"/>
-                <icon src="pencil" size="xs" variant="secondary" clickable="false" event_bubble="true"/>
+                <icon src="pencil" size="xs" variant="tertiary" clickable="false" event_bubble="true"/>
               </lv_obj>
             </lv_obj>
             <text_small name="nozzle_status"
@@ -176,7 +176,7 @@
                 <temp_display name="bed_temp_display"
                               size="md" show_target="true" bind_current="bed_temp" bind_target="bed_target"
                               event_cb="on_bed_temp_clicked"/>
-                <icon src="pencil" size="xs" variant="secondary" clickable="false" event_bubble="true"/>
+                <icon src="pencil" size="xs" variant="tertiary" clickable="false" event_bubble="true"/>
               </lv_obj>
             </lv_obj>
             <text_small name="bed_status"

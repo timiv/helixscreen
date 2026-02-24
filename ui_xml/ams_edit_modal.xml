@@ -61,7 +61,7 @@
                   style_border_opa="80" scrollable="false" clickable="true">
             <event_cb trigger="clicked" callback="ams_edit_color_clicked_cb"/>
             <!-- Edit overlay hint -->
-            <icon src="pencil" size="sm" variant="secondary" align="bottom_right" style_opa="180"/>
+            <icon src="pencil" size="sm" variant="tertiary" align="bottom_right" style_opa="180"/>
           </lv_obj>
           <!-- Color name label below swatch -->
           <text_small name="color_name_label" text="Gray" translation_tag="Gray" style_text_align="center"/>

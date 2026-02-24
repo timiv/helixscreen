@@ -304,8 +304,8 @@ void LedSettingsOverlay::populate_macro_devices_impl() {
         lv_obj_set_size(edit_btn, 36, 36);
         lv_obj_set_style_bg_opa(edit_btn, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(edit_btn, 0, 0);
-        const char* edit_icon_attrs[] = {"src",     "pencil",    "size", "sm",
-                                         "variant", "secondary", nullptr};
+        const char* edit_icon_attrs[] = {"src",     "pencil",   "size", "sm",
+                                         "variant", "tertiary", nullptr};
         lv_xml_create(edit_btn, "icon", edit_icon_attrs);
 
         // TODO: lv_obj user_data is safe on these buttons because they're
