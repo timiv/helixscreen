@@ -80,10 +80,16 @@ class DisplayBackendDRM : public DisplayBackend {
         drm_device_ = path;
     }
 
+    /// Whether GPU-accelerated rendering (EGL/OpenGL ES) is active
+    bool is_gpu_accelerated() const {
+        return using_egl_;
+    }
+
   private:
     std::string drm_device_ = "/dev/dri/card0";
     lv_display_t* display_ = nullptr;
     lv_indev_t* pointer_ = nullptr;
+    bool using_egl_ = false; ///< Track if GPU-accelerated path is active
 };
 
 #endif // HELIX_DISPLAY_DRM

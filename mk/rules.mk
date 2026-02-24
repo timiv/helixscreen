@@ -165,7 +165,7 @@ endif
 
 # Link binary (SDL2_LIB is empty if using system SDL2)
 # Note: Filter out library archives from $^ to avoid duplicate linking, then add via LDFLAGS
-$(TARGET): $(SDL2_LIB) $(LIBHV_LIB) $(TINYGL_LIB) $(APP_C_OBJS) $(APP_OBJS) $(APP_MODULE_OBJS) $(OBJCPP_OBJS) $(LVGL_OBJS) $(HELIX_XML_OBJS) $(THORVG_OBJS) $(LV_MARKDOWN_OBJS) $(FONT_OBJS) $(TRANS_OBJS) $(WPA_DEPS)
+$(TARGET): $(SDL2_LIB) $(LIBHV_LIB) $(TINYGL_LIB) $(APP_C_OBJS) $(APP_OBJS) $(APP_MODULE_OBJS) $(OBJCPP_OBJS) $(LVGL_OBJS) $(HELIX_XML_OBJS) $(THORVG_OBJS) $(LVGL_OPENGLES_OBJS) $(LV_MARKDOWN_OBJS) $(FONT_OBJS) $(TRANS_OBJS) $(WPA_DEPS)
 	$(Q)mkdir -p $(BIN_DIR)
 	$(ECHO) "$(MAGENTA)$(BOLD)[LD]$(RESET) $@"
 	$(Q)$(CXX) $(CXXFLAGS) $(filter-out %.a,$^) -o $@ $(LDFLAGS) || { \
@@ -315,6 +315,19 @@ endif
 		exit 1; \
 	}
 	$(call emit-compile-command,$(CXX),$(SUBMODULE_CXXFLAGS) $(PCH_FLAGS) $(INCLUDES) $(LV_CONF),$<,$@)
+
+# Compile LVGL OpenGL ES shader assets as C++ (raw string literals require C++11)
+# Only the assets/ subdirectory needs C++ — the rest compiles fine as C.
+# -fpermissive allows void* implicit conversions from C-style LVGL allocations.
+# Only built when ENABLE_OPENGLES=yes (LVGL_OPENGLES_OBJS is empty otherwise).
+$(LVGL_OPENGLES_OBJS): $(OBJ_DIR)/lvgl/%.o: $(LVGL_DIR)/%.c lv_conf.h
+	$(Q)mkdir -p $(dir $@)
+	$(ECHO) "$(CYAN)[CXX/GLES]$(RESET) $<"
+	$(Q)$(CXX) $(SUBMODULE_CXXFLAGS) -fpermissive $(INCLUDES) $(LV_CONF) -c $< -o $@ || { \
+		echo "$(RED)$(BOLD)✗ Compilation failed:$(RESET) $<"; \
+		exit 1; \
+	}
+	$(call emit-compile-command,$(CXX),$(SUBMODULE_CXXFLAGS) -fpermissive $(INCLUDES) $(LV_CONF),$<,$@)
 
 # Compile lv_markdown sources (vendored C library - use SUBMODULE_CFLAGS)
 # Includes both src/*.c and deps/md4c/md4c.c

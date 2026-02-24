@@ -223,6 +223,18 @@ endif
 LVGL_SRCS := $(filter-out $(wildcard $(LVGL_DIR)/src/xml/*.c $(LVGL_DIR)/src/xml/parsers/*.c $(LVGL_DIR)/src/libs/expat/*.c),$(shell find $(LVGL_DIR)/src -name "*.c" 2>/dev/null))
 LVGL_OBJS := $(patsubst $(LVGL_DIR)/%.c,$(OBJ_DIR)/lvgl/%.o,$(LVGL_SRCS))
 
+# When OpenGL ES is enabled, the shader asset file uses C++11 raw string literals
+# (R"(...)") that can't compile as C. Filter only that file from C sources and compile
+# it as C++ separately. All other opengles sources stay as C.
+ifeq ($(ENABLE_OPENGLES),yes)
+    LVGL_OPENGLES_CXX_SRCS := $(filter $(LVGL_DIR)/src/drivers/opengles/assets/%,$(LVGL_SRCS))
+    LVGL_SRCS := $(filter-out $(LVGL_DIR)/src/drivers/opengles/assets/%,$(LVGL_SRCS))
+    LVGL_OBJS := $(patsubst $(LVGL_DIR)/%.c,$(OBJ_DIR)/lvgl/%.o,$(LVGL_SRCS))
+    LVGL_OPENGLES_OBJS := $(patsubst $(LVGL_DIR)/%.c,$(OBJ_DIR)/lvgl/%.o,$(LVGL_OPENGLES_CXX_SRCS))
+else
+    LVGL_OPENGLES_OBJS :=
+endif
+
 # Helix XML engine (extracted from LVGL, with our patches baked in)
 HELIX_XML_DIR := lib/helix-xml
 HELIX_XML_SRCS := $(wildcard $(HELIX_XML_DIR)/src/xml/*.c $(HELIX_XML_DIR)/src/xml/parsers/*.c $(HELIX_XML_DIR)/src/libs/expat/*.c)
@@ -488,6 +500,10 @@ ifneq ($(CROSS_COMPILE),)
     # DRM backend requires libdrm and libinput for LVGL display/input drivers
     ifeq ($(DISPLAY_BACKEND),drm)
         LDFLAGS += -ldrm -linput
+        # GPU-accelerated rendering via EGL/OpenGL ES
+        ifeq ($(ENABLE_OPENGLES),yes)
+            LDFLAGS += -lEGL -lGLESv2 -lgbm
+        endif
     endif
     PLATFORM := Linux-$(TARGET_ARCH)
     WPA_DEPS := $(WPA_CLIENT_LIB)

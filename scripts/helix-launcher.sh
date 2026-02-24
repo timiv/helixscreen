@@ -158,10 +158,9 @@ LOG_FILE="${CLI_LOG_FILE:-${HELIX_LOG_FILE:-}}"
 LOG_LEVEL="${CLI_LOG_LEVEL:-${HELIX_LOG_LEVEL:-}}"
 
 # Default display backend to fbdev on embedded Linux targets.
-# DRM atomic modesetting has compatibility issues with some SoCs and breaks
-# framebuffer-based VNC setups. fbdev works reliably across all Pi hardware.
-# Can be overridden by setting HELIX_DISPLAY_BACKEND in the environment or
-# systemd service file.
+# fbdev works reliably across all hardware and with VNC setups.
+# Set HELIX_DISPLAY_BACKEND=drm for GPU-accelerated rendering via DRM+EGL
+# (supported on Pi 3/4/5 and BTT CB1). Override in systemd service file or env.
 if [ -z "${HELIX_DISPLAY_BACKEND:-}" ]; then
     case "$(uname -s)" in
         Linux)

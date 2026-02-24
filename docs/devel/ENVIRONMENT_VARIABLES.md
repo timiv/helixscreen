@@ -52,31 +52,65 @@ Override the automatic display backend detection.
 | Property | Value |
 |----------|-------|
 | **Values** | `sdl`, `drm`, `fbdev` |
-| **Default** | Auto-detect based on platform |
+| **Default** | `fbdev` (CPU rendering, maximum compatibility) |
 | **File** | `src/display_backend.cpp` |
+
+**Backend comparison:**
+
+| Backend | Rendering | Best for |
+|---------|-----------|----------|
+| `fbdev` | CPU (software) | Maximum compatibility, all hardware, SPI displays |
+| `drm` | GPU-accelerated via DRM+EGL (OpenGL ES) | Pi 3B+, Pi 4, Pi 5, BTT CB1 with HDMI/DSI displays |
+| `sdl` | SDL2 (desktop development) | Development on Linux/macOS desktops |
+
+The `drm` backend uses DRM (Direct Rendering Manager) with EGL/OpenGL ES to offload rendering to the GPU. This reduces CPU usage and can improve frame rates, especially on Pi 4 and Pi 5. The `fbdev` backend is the safe default that works everywhere, including SPI displays that lack DRM support.
 
 ```bash
 # Force SDL backend (useful for debugging on embedded systems)
 HELIX_DISPLAY_BACKEND=sdl ./build/bin/helix-screen
 
-# Force DRM backend
+# Force DRM backend with GPU acceleration
 HELIX_DISPLAY_BACKEND=drm ./build/bin/helix-screen
 ```
 
+**Enabling in production (systemd service):**
+```ini
+# /etc/systemd/system/helixscreen.service (or override)
+[Service]
+Environment="HELIX_DISPLAY_BACKEND=drm"
+```
+
+Then reload and restart:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart helixscreen
+```
+
+**Supported hardware for `drm`:** Raspberry Pi 3B+, Pi 4, Pi 5, BTT CB1 (and other Allwinner H616 boards). Requires a display connected via HDMI or DSI — SPI displays are not supported with `drm`. If the `drm` backend fails to initialize, HelixScreen falls back to `fbdev` automatically.
+
 ### `HELIX_DRM_DEVICE`
 
-Specify which DRM device to use when multiple GPUs are present.
+Specify which DRM device to use when the DRM backend is active. Needed when multiple GPU/display controllers are present (common on Pi 5).
 
 | Property | Value |
 |----------|-------|
 | **Values** | Device path (e.g., `/dev/dri/card0`, `/dev/dri/card1`) |
-| **Default** | Auto-detect (first available) |
+| **Default** | `/dev/dri/card0` (auto-detect scans for first device with a connected display) |
 | **File** | `src/display_backend_drm.cpp` |
 
 ```bash
-# Use secondary GPU
+# Use secondary GPU / display controller
 HELIX_DRM_DEVICE=/dev/dri/card1 ./build/bin/helix-screen
 ```
+
+**Pi 5 DRM device mapping:**
+| Device | Controller | Use |
+|--------|-----------|-----|
+| `/dev/dri/card0` | v3d | 3D rendering only (no display output) |
+| `/dev/dri/card1` | DSI | Official Pi touchscreen |
+| `/dev/dri/card2` | vc4 (HDMI) | HDMI displays |
+
+On Pi 4 and earlier, `/dev/dri/card0` is typically the only device with display output. Auto-detection finds the first device with dumb buffer support and a connected display, so most users do not need to set this variable.
 
 ### `HELIX_TOUCH_DEVICE`
 

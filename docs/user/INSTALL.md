@@ -531,6 +531,45 @@ To rotate the display, add to your `helixconfig.json` (typically at `~/helixscre
 
 Valid values: `0`, `90`, `180`, `270`
 
+### GPU Rendering (Experimental)
+
+By default, HelixScreen uses CPU-based software rendering (`fbdev` backend), which works on all hardware. On supported boards, you can enable GPU-accelerated rendering for lower CPU usage and smoother animations.
+
+**Supported hardware:**
+- Raspberry Pi 3B+, Pi 4, Pi 5
+- BTT CB1 (and other Allwinner H616 boards)
+- Display must be connected via HDMI or DSI (SPI displays are not supported)
+
+**How to enable:**
+
+Edit your systemd service override:
+```bash
+sudo systemctl edit helixscreen
+```
+
+Add the following lines:
+```ini
+[Service]
+Environment="HELIX_DISPLAY_BACKEND=drm"
+```
+
+Then restart:
+```bash
+sudo systemctl restart helixscreen
+```
+
+**How to revert:**
+
+If the display does not work after enabling GPU rendering, SSH into your Pi and remove the override:
+```bash
+sudo systemctl revert helixscreen
+sudo systemctl restart helixscreen
+```
+
+This switches back to the default CPU rendering, which works on all displays.
+
+> **Note:** On Raspberry Pi 5, you may also need to specify the correct display device if auto-detection picks the wrong one. Add `Environment="HELIX_DRM_DEVICE=/dev/dri/card1"` for DSI displays or `Environment="HELIX_DRM_DEVICE=/dev/dri/card2"` for HDMI. See [CONFIGURATION.md](CONFIGURATION.md#display-settings) for details.
+
 ---
 
 ## Starting on Boot

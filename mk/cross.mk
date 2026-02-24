@@ -43,6 +43,7 @@ ifeq ($(PLATFORM_TARGET),pi)
     # the full call stack in crash reports. ~5-10% code size increase, zero runtime cost.
     TARGET_CFLAGS := -march=armv8-a -funwind-tables -I/usr/aarch64-linux-gnu/include -I/usr/include/libdrm -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD
     DISPLAY_BACKEND := drm
+    ENABLE_OPENGLES := yes
     ENABLE_SDL := no
     ENABLE_TINYGL_3D := yes
     ENABLE_EVDEV := yes
@@ -69,6 +70,7 @@ else ifeq ($(PLATFORM_TARGET),pi32)
         -I/usr/arm-linux-gnueabihf/include -I/usr/include/libdrm \
         -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD -DHELIX_PLATFORM_PI32
     DISPLAY_BACKEND := drm
+    ENABLE_OPENGLES := yes
     ENABLE_SDL := no
     ENABLE_TINYGL_3D := yes
     ENABLE_EVDEV := yes
@@ -414,6 +416,13 @@ ifeq ($(DISPLAY_BACKEND),drm)
     CXXFLAGS += -DHELIX_DISPLAY_DRM -DHELIX_DISPLAY_FBDEV
     SUBMODULE_CFLAGS += -DHELIX_DISPLAY_DRM -DHELIX_DISPLAY_FBDEV
     SUBMODULE_CXXFLAGS += -DHELIX_DISPLAY_DRM -DHELIX_DISPLAY_FBDEV
+    # GPU-accelerated rendering via EGL/OpenGL ES (Pi targets)
+    ifeq ($(ENABLE_OPENGLES),yes)
+        CFLAGS += -DHELIX_ENABLE_OPENGLES
+        CXXFLAGS += -DHELIX_ENABLE_OPENGLES
+        SUBMODULE_CFLAGS += -DHELIX_ENABLE_OPENGLES
+        SUBMODULE_CXXFLAGS += -DHELIX_ENABLE_OPENGLES
+    endif
     # DRM backend linker flags are added in Makefile's cross-compile section
 else ifeq ($(DISPLAY_BACKEND),fbdev)
     CFLAGS += -DHELIX_DISPLAY_FBDEV

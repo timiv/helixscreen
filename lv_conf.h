@@ -248,15 +248,10 @@
  * TODO: Investigate SDL draw backend compatibility with LVGL 9.4 */
 #define LV_USE_DRAW_SDL 0
 
-/* Draw using OpenGL ES textures - GPU-accelerated on Pi via DRM+EGL.
- * Uses LVGL's bundled GLAD loader for OpenGL ES function loading.
- * Currently disabled: LVGL's implementation uses C++11 raw strings in .c files. */
-#ifdef HELIX_ENABLE_OPENGLES
-    #define LV_USE_DRAW_OPENGLES 1
-    #define LV_DRAW_OPENGLES_TEXTURE_CACHE_COUNT 64
-#else
-    #define LV_USE_DRAW_OPENGLES 0
-#endif
+/* Draw using OpenGL ES textures (GLAD-based desktop OpenGL ES draw engine).
+ * NOT for DRM+EGL — the DRM EGL driver uses its own rendering path.
+ * This is for the lv_opengles desktop display driver only. */
+#define LV_USE_DRAW_OPENGLES 0
 
 /* Use VG-Lite GPU. */
 #define LV_USE_DRAW_VG_LITE 0
@@ -1112,13 +1107,15 @@
 #ifdef HELIX_DISPLAY_DRM
     #define LV_USE_LINUX_DRM        1
 
-    /* Enable EGL/GBM for GPU-accelerated rendering on Pi */
+    /* GBM buffers for the dumb-buffer DRM driver (requires Mesa 21.1+).
+     * Disabled: Bullseye sysroot has Mesa 20.3, missing gbm_bo_get_fd_for_plane. */
+    #define LV_USE_LINUX_DRM_GBM_BUFFERS 0
+
+    /* EGL rendering via lv_linux_drm_egl.c (GPU-accelerated, legacy modesetting) */
     #ifdef HELIX_ENABLE_OPENGLES
-        #define LV_USE_LINUX_DRM_GBM_BUFFERS 1
-        #define LV_LINUX_DRM_USE_EGL         1
+        #define LV_LINUX_DRM_USE_EGL     1
     #else
-        #define LV_USE_LINUX_DRM_GBM_BUFFERS 0
-        #define LV_LINUX_DRM_USE_EGL         0
+        #define LV_LINUX_DRM_USE_EGL     0
     #endif
 #else
     #define LV_USE_LINUX_DRM        0
@@ -1166,9 +1163,9 @@
 /* LVGL Windows backend */
 #define LV_USE_WINDOWS    0
 
-/* Use OpenGL ES display driver (GLAD-based).
- * Disabled: LVGL's implementation uses C++11 raw strings in .c files and
- * has tight coupling between draw backend and display driver. */
+/* Use OpenGL ES display driver (GLAD-based, desktop only).
+ * NOT for DRM+EGL — the DRM EGL path uses lv_linux_drm_egl.c instead.
+ * This is a desktop display driver that creates its own window. */
 #define LV_USE_OPENGLES   0
 
 /* QNX Screen display and input drivers */
