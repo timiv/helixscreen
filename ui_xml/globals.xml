@@ -13,7 +13,7 @@
     <!-- UI dimensions -->
     <px name="nav_padding" value="16"/>
     <!-- Modal backdrop opacity (0-255) -->
-    <px name="modal_backdrop_opacity" value="200"/>
+    <px name="modal_backdrop_opacity" value="120"/>
     <!-- border_radius is responsive: _small/_medium/_large registered as border_radius based on screen size -->
     <px name="border_radius_small" value="4"/>
     <px name="border_radius_medium" value="9"/>
