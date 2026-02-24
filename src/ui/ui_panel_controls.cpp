@@ -268,6 +268,7 @@ void ControlsPanel::init_subjects() {
         {"on_controls_temperatures", on_temperatures_clicked},
         {"on_nozzle_temp_clicked", on_nozzle_temp_clicked},
         {"on_bed_temp_clicked", on_bed_temp_clicked},
+        {"on_chamber_temp_clicked", on_chamber_temp_clicked},
         {"on_controls_cooling", on_cooling_clicked},
     });
 
@@ -720,7 +721,8 @@ void ControlsPanel::populate_secondary_fans() {
         lv_obj_set_style_border_width(more_row, 0, 0);
         lv_obj_set_style_pad_all(more_row, 0, 0);
         lv_obj_remove_flag(more_row, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_add_flag(more_row, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_remove_flag(more_row, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_flag(more_row, LV_OBJ_FLAG_EVENT_BUBBLE);
         lv_obj_set_flex_flow(more_row, LV_FLEX_FLOW_ROW);
         lv_obj_set_flex_align(more_row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER,
                               LV_FLEX_ALIGN_CENTER);
@@ -945,6 +947,32 @@ void ControlsPanel::handle_bed_temp_clicked() {
 
     if (bed_temp_panel_) {
         NavigationManager::instance().push_overlay(bed_temp_panel_);
+    }
+}
+
+void ControlsPanel::handle_chamber_temp_clicked() {
+    spdlog::debug("[{}] Chamber temp clicked - opening chamber temp panel", get_name());
+
+    if (!temp_control_panel_) {
+        NOTIFY_ERROR("Temperature panel not available");
+        return;
+    }
+
+    if (!chamber_temp_panel_ && parent_screen_) {
+        chamber_temp_panel_ =
+            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "chamber_temp_panel", nullptr));
+        if (chamber_temp_panel_) {
+            temp_control_panel_->setup_chamber_panel(chamber_temp_panel_, parent_screen_);
+            NavigationManager::instance().register_overlay_instance(
+                chamber_temp_panel_, temp_control_panel_->get_chamber_lifecycle());
+        } else {
+            NOTIFY_ERROR("Failed to load chamber temperature panel");
+            return;
+        }
+    }
+
+    if (chamber_temp_panel_) {
+        NavigationManager::instance().push_overlay(chamber_temp_panel_);
     }
 }
 
@@ -1471,6 +1499,7 @@ PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, quick_actions_clicked
 PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, temperatures_clicked)
 PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, nozzle_temp_clicked)
 PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, bed_temp_clicked)
+PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, chamber_temp_clicked)
 PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, cooling_clicked)
 PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, secondary_fans_clicked)
 PANEL_TRAMPOLINE(ControlsPanel, get_global_controls_panel, secondary_temps_clicked)
@@ -1667,7 +1696,8 @@ void ControlsPanel::populate_secondary_temps() {
         lv_obj_set_style_border_width(more_row, 0, 0);
         lv_obj_set_style_pad_all(more_row, 0, 0);
         lv_obj_remove_flag(more_row, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_add_flag(more_row, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_remove_flag(more_row, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_flag(more_row, LV_OBJ_FLAG_EVENT_BUBBLE);
         lv_obj_set_flex_flow(more_row, LV_FLEX_FLOW_ROW);
         lv_obj_set_flex_align(more_row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER,
                               LV_FLEX_ALIGN_CENTER);
