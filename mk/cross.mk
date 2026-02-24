@@ -41,7 +41,7 @@ ifeq ($(PLATFORM_TARGET),pi)
     # -DHELIX_RELEASE_BUILD: Disables debug features like LV_USE_ASSERT_STYLE
     # -funwind-tables: Emit ARM unwind info (.ARM.exidx) so backtrace() can walk
     # the full call stack in crash reports. ~5-10% code size increase, zero runtime cost.
-    TARGET_CFLAGS := -march=armv8-a -funwind-tables -I/usr/aarch64-linux-gnu/include -I/usr/include/libdrm -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD
+    TARGET_CFLAGS := -march=armv8-a -funwind-tables -I/usr/aarch64-linux-gnu/include -I/usr/include/libdrm -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD -DHELIX_BINARY_VARIANT=\"drm\"
     DISPLAY_BACKEND := drm
     ENABLE_OPENGLES := yes
     ENABLE_SDL := no
@@ -52,6 +52,28 @@ ifeq ($(PLATFORM_TARGET),pi)
     HELIX_HAS_SYSTEMD := yes
     BUILD_SUBDIR := pi
     # Strip binary for size - embedded targets don't need debug symbols
+    STRIP_BINARY := yes
+
+else ifeq ($(PLATFORM_TARGET),pi-fbdev)
+    # -------------------------------------------------------------------------
+    # Raspberry Pi (aarch64) - fbdev only, no GL dependencies
+    # Fallback for systems without EGL/GLES2/GBM libraries.
+    # -------------------------------------------------------------------------
+    CROSS_COMPILE ?= aarch64-linux-gnu-
+    TARGET_ARCH := aarch64
+    TARGET_TRIPLE := aarch64-linux-gnu
+    TARGET_CFLAGS := -march=armv8-a -funwind-tables \
+        -I/usr/aarch64-linux-gnu/include \
+        -Wno-error=conversion -Wno-error=sign-conversion \
+        -DHELIX_RELEASE_BUILD -DHELIX_BINARY_VARIANT=\"fbdev\"
+    DISPLAY_BACKEND := fbdev
+    ENABLE_OPENGLES := no
+    ENABLE_SDL := no
+    ENABLE_GLES_3D := no
+    ENABLE_EVDEV := yes
+    ENABLE_SSL := yes
+    HELIX_HAS_SYSTEMD := yes
+    BUILD_SUBDIR := pi-fbdev
     STRIP_BINARY := yes
 
 else ifeq ($(PLATFORM_TARGET),pi32)
@@ -68,7 +90,7 @@ else ifeq ($(PLATFORM_TARGET),pi32)
     # the full call stack in crash reports. ~5-10% code size increase, zero runtime cost.
     TARGET_CFLAGS := -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -funwind-tables \
         -I/usr/arm-linux-gnueabihf/include -I/usr/include/libdrm \
-        -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD -DHELIX_PLATFORM_PI32
+        -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD -DHELIX_PLATFORM_PI32 -DHELIX_BINARY_VARIANT=\"drm\"
     DISPLAY_BACKEND := drm
     ENABLE_OPENGLES := yes
     ENABLE_SDL := no
@@ -77,6 +99,28 @@ else ifeq ($(PLATFORM_TARGET),pi32)
     ENABLE_SSL := yes
     HELIX_HAS_SYSTEMD := yes
     BUILD_SUBDIR := pi32
+    STRIP_BINARY := yes
+
+else ifeq ($(PLATFORM_TARGET),pi32-fbdev)
+    # -------------------------------------------------------------------------
+    # Raspberry Pi 32-bit (armhf) - fbdev only, no GL dependencies
+    # Fallback for systems without EGL/GLES2/GBM libraries.
+    # -------------------------------------------------------------------------
+    CROSS_COMPILE ?= arm-linux-gnueabihf-
+    TARGET_ARCH := armv7-a
+    TARGET_TRIPLE := arm-linux-gnueabihf
+    TARGET_CFLAGS := -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -funwind-tables \
+        -I/usr/arm-linux-gnueabihf/include \
+        -Wno-error=conversion -Wno-error=sign-conversion \
+        -DHELIX_RELEASE_BUILD -DHELIX_PLATFORM_PI32 -DHELIX_BINARY_VARIANT=\"fbdev\"
+    DISPLAY_BACKEND := fbdev
+    ENABLE_OPENGLES := no
+    ENABLE_SDL := no
+    ENABLE_GLES_3D := no
+    ENABLE_EVDEV := yes
+    ENABLE_SSL := yes
+    HELIX_HAS_SYSTEMD := yes
+    BUILD_SUBDIR := pi32-fbdev
     STRIP_BINARY := yes
 
 else ifeq ($(PLATFORM_TARGET),ad5m)
@@ -576,6 +620,19 @@ pi-docker: ensure-docker
 		make PLATFORM_TARGET=pi SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@$(MAKE) --no-print-directory maybe-stop-colima
 
+pi-fbdev-docker: ensure-docker
+	@echo "$(CYAN)$(BOLD)Cross-compiling Pi fbdev fallback via Docker...$(RESET)"
+	@if ! docker image inspect helixscreen/toolchain-pi >/dev/null 2>&1; then \
+		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
+		$(MAKE) docker-toolchain-pi; \
+	fi
+	$(call ensure-ccache-dir,pi-fbdev)
+	$(Q)docker run --platform linux/amd64 --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src $(call docker-ccache-args,pi-fbdev) helixscreen/toolchain-pi \
+		make PLATFORM_TARGET=pi-fbdev SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
+	@$(MAKE) --no-print-directory maybe-stop-colima
+
+pi-all-docker: pi-docker pi-fbdev-docker
+
 pi32-docker: ensure-docker
 	@echo "$(CYAN)$(BOLD)Cross-compiling for Raspberry Pi 32-bit via Docker...$(RESET)"
 	@if ! docker image inspect helixscreen/toolchain-pi32 >/dev/null 2>&1; then \
@@ -586,6 +643,19 @@ pi32-docker: ensure-docker
 	$(Q)docker run --platform linux/amd64 --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src $(call docker-ccache-args,pi32) helixscreen/toolchain-pi32 \
 		make PLATFORM_TARGET=pi32 SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@$(MAKE) --no-print-directory maybe-stop-colima
+
+pi32-fbdev-docker: ensure-docker
+	@echo "$(CYAN)$(BOLD)Cross-compiling Pi 32-bit fbdev fallback via Docker...$(RESET)"
+	@if ! docker image inspect helixscreen/toolchain-pi32 >/dev/null 2>&1; then \
+		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
+		$(MAKE) docker-toolchain-pi32; \
+	fi
+	$(call ensure-ccache-dir,pi32-fbdev)
+	$(Q)docker run --platform linux/amd64 --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src $(call docker-ccache-args,pi32-fbdev) helixscreen/toolchain-pi32 \
+		make PLATFORM_TARGET=pi32-fbdev SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
+	@$(MAKE) --no-print-directory maybe-stop-colima
+
+pi32-all-docker: pi32-docker pi32-fbdev-docker
 
 ad5m-docker: ensure-docker
 	@echo "$(CYAN)$(BOLD)Cross-compiling for Adventurer 5M via Docker...$(RESET)"
@@ -1655,14 +1725,15 @@ define release-clean-assets
 	@find $(1)/assets -name 'mdi-icon-metadata.json.gz' -delete 2>/dev/null || true
 endef
 
-.PHONY: release-pi release-pi32 release-ad5m release-k1 release-k1-dynamic release-k2 release-snapmaker-u1 release-all release-clean
+.PHONY: release-pi release-pi32 release-ad5m release-k1 release-k1-dynamic release-k2 release-snapmaker-u1 release-all release-clean pi-fbdev-docker pi32-fbdev-docker pi-all-docker pi32-all-docker
 
 # Package Pi release
-release-pi: | build/pi/bin/helix-screen build/pi/bin/helix-splash
+release-pi: | build/pi/bin/helix-screen build/pi/bin/helix-splash build/pi-fbdev/bin/helix-screen
 	@echo "$(CYAN)$(BOLD)Packaging Pi release v$(VERSION)...$(RESET)"
 	@mkdir -p $(RELEASE_DIR)/helixscreen/bin
 	@cp build/pi/bin/helix-screen build/pi/bin/helix-splash $(RELEASE_DIR)/helixscreen/bin/
 	@if [ -f build/pi/bin/helix-watchdog ]; then cp build/pi/bin/helix-watchdog $(RELEASE_DIR)/helixscreen/bin/; fi
+	@if [ -f build/pi-fbdev/bin/helix-screen ]; then cp build/pi-fbdev/bin/helix-screen $(RELEASE_DIR)/helixscreen/bin/helix-screen-fbdev; fi
 	@cp scripts/helix-launcher.sh $(RELEASE_DIR)/helixscreen/bin/
 	@cp -r ui_xml config $(RELEASE_DIR)/helixscreen/
 	@# Remove any personal config — release ships template only (installer copies it on first run)
@@ -1695,11 +1766,12 @@ release-pi: | build/pi/bin/helix-screen build/pi/bin/helix-splash
 	@ls -lh $(RELEASE_DIR)/helixscreen-pi-$(RELEASE_VERSION).tar.gz $(RELEASE_DIR)/helixscreen-pi.zip
 
 # Package Pi 32-bit release (same structure as 64-bit Pi)
-release-pi32: | build/pi32/bin/helix-screen build/pi32/bin/helix-splash
+release-pi32: | build/pi32/bin/helix-screen build/pi32/bin/helix-splash build/pi32-fbdev/bin/helix-screen
 	@echo "$(CYAN)$(BOLD)Packaging Pi 32-bit release v$(VERSION)...$(RESET)"
 	@mkdir -p $(RELEASE_DIR)/helixscreen/bin
 	@cp build/pi32/bin/helix-screen build/pi32/bin/helix-splash $(RELEASE_DIR)/helixscreen/bin/
 	@if [ -f build/pi32/bin/helix-watchdog ]; then cp build/pi32/bin/helix-watchdog $(RELEASE_DIR)/helixscreen/bin/; fi
+	@if [ -f build/pi32-fbdev/bin/helix-screen ]; then cp build/pi32-fbdev/bin/helix-screen $(RELEASE_DIR)/helixscreen/bin/helix-screen-fbdev; fi
 	@cp scripts/helix-launcher.sh $(RELEASE_DIR)/helixscreen/bin/
 	@cp -r ui_xml config $(RELEASE_DIR)/helixscreen/
 	@# Remove any personal config — release ships template only (installer copies it on first run)
@@ -1975,8 +2047,8 @@ release-clean:
 .PHONY: package-ad5m package-cc1 package-pi package-pi32 package-k1-dynamic package-k2 package-snapmaker-u1 package-all package-clean
 package-ad5m: ad5m-docker gen-images-ad5m gen-splash-3d-ad5m gen-printer-images release-ad5m
 package-cc1: cc1-docker gen-images gen-printer-images release-cc1
-package-pi: pi-docker gen-images gen-splash-3d gen-printer-images release-pi
-package-pi32: pi32-docker gen-images gen-splash-3d gen-printer-images release-pi32
+package-pi: pi-all-docker gen-images gen-splash-3d gen-printer-images release-pi
+package-pi32: pi32-all-docker gen-images gen-splash-3d gen-printer-images release-pi32
 package-k1-dynamic: k1-dynamic-docker gen-images gen-splash-3d-k1 gen-printer-images release-k1-dynamic
 package-k2: k2-docker gen-images gen-printer-images release-k2
 package-snapmaker-u1: snapmaker-u1-docker gen-images gen-printer-images release-snapmaker-u1

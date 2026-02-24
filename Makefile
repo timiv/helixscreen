@@ -541,9 +541,9 @@ else
     NPROC := $(shell nproc 2>/dev/null || echo 4)
     # Note: -lstdc++fs needed for std::experimental::filesystem on GCC < 9
     LDFLAGS := $(LDFLAGS_COMMON) $(WPA_CLIENT_LIB) $(SYSTEMD_LIBS) -lssl -lcrypto -ldl -lstdc++fs
-    # GPU-accelerated 3D G-code rendering via EGL/OpenGL ES 2.0
+    # GPU-accelerated 3D G-code rendering via OpenGL ES 2.0 (SDL GL context on desktop)
     ifeq ($(ENABLE_GLES_3D),yes)
-        LDFLAGS += -lEGL -lGLESv2 -lgbm
+        LDFLAGS += -lGLESv2
     endif
     PLATFORM := Linux
     WPA_DEPS := $(WPA_CLIENT_LIB)
