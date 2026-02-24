@@ -295,6 +295,18 @@ verify_binary_deps() {
             # Re-check after attempted fixes
             missing_libs=$(ldd "$binary" 2>/dev/null | grep "not found" || true)
             if [ -n "$missing_libs" ]; then
+                # Check if fbdev fallback binary exists and is loadable
+                local fallback="${INSTALL_DIR}/bin/helix-screen-fbdev"
+                if [ -x "$fallback" ]; then
+                    local fb_missing
+                    fb_missing=$(ldd "$fallback" 2>/dev/null | grep "not found" || true)
+                    if [ -z "$fb_missing" ]; then
+                        log_warn "DRM binary has missing GL libraries — fbdev fallback will be used"
+                        log_warn "Install GPU libraries for hardware acceleration: sudo apt install libgbm1 libegl1 libgles2"
+                        return 0
+                    fi
+                fi
+                # No usable fallback — original error behavior
                 log_error "Could not resolve all missing libraries:"
                 echo "$missing_libs" | while IFS= read -r line; do
                     log_error "  $line"

@@ -117,6 +117,16 @@ jobs:
           helixscreen/toolchain-${{ matrix.platform }} \
           make PLATFORM_TARGET=${{ matrix.platform }} SKIP_OPTIONAL_DEPS=1 -j$(nproc)
 
+    - name: Cross-compile fbdev fallback for ${{ matrix.display_name }}
+      if: startsWith(matrix.platform, 'pi')
+      run: |
+        docker run --rm \
+          -v "${{ github.workspace }}":/src \
+          -v /tmp/.ccache-${{ matrix.platform }}:/root/.cache/ccache \
+          -w /src \
+          helixscreen/toolchain-${{ matrix.platform }} \
+          make PLATFORM_TARGET=${{ matrix.platform }}-fbdev SKIP_OPTIONAL_DEPS=1 -j$(nproc)
+
     - name: Show ccache stats
       run: |
         docker run --rm \
@@ -152,6 +162,8 @@ jobs:
         path: |
           build/${{ matrix.platform }}/bin/helix-screen.sym
           build/${{ matrix.platform }}/bin/helix-screen.debug
+          build/${{ matrix.platform }}-fbdev/bin/helix-screen.sym
+          build/${{ matrix.platform }}-fbdev/bin/helix-screen.debug
         retention-days: 30
 
     - name: Move cache

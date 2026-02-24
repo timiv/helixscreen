@@ -94,8 +94,39 @@ else
     exit 1
 fi
 
+# Select the appropriate binary: DRM (primary) or fbdev (fallback)
+# Checks: env override → ldd shared lib resolution → default to primary
+select_binary() {
+    _sb_bin_dir=$1
+    _sb_primary="${_sb_bin_dir}/helix-screen"
+    _sb_fallback="${_sb_bin_dir}/helix-screen-fbdev"
+
+    # No fallback available (non-Pi, dev builds)
+    if [ ! -x "$_sb_fallback" ]; then
+        echo "$_sb_primary"
+        return
+    fi
+
+    # User forced fbdev via env — skip DRM entirely
+    if [ "${HELIX_DISPLAY_BACKEND:-}" = "fbdev" ]; then
+        echo "$_sb_fallback"
+        return
+    fi
+
+    # Check if primary binary's shared libs are all resolvable
+    if command -v ldd >/dev/null 2>&1; then
+        if ldd "$_sb_primary" 2>/dev/null | grep -q "not found"; then
+            echo "$_sb_fallback"
+            return
+        fi
+    fi
+
+    echo "$_sb_primary"
+}
+
 SPLASH_BIN="${BIN_DIR}/helix-splash"
-MAIN_BIN="${BIN_DIR}/helix-screen"
+MAIN_BIN=$(select_binary "${BIN_DIR}")
+FALLBACK_BIN="${BIN_DIR}/helix-screen-fbdev"
 WATCHDOG_BIN="${BIN_DIR}/helix-watchdog"
 
 # Derive the install root (parent of bin/)
@@ -157,14 +188,17 @@ LOG_DEST="${CLI_LOG_DEST:-${HELIX_LOG_DEST:-auto}}"
 LOG_FILE="${CLI_LOG_FILE:-${HELIX_LOG_FILE:-}}"
 LOG_LEVEL="${CLI_LOG_LEVEL:-${HELIX_LOG_LEVEL:-}}"
 
-# Default display backend to fbdev on embedded Linux targets.
-# fbdev works reliably across all hardware and with VNC setups.
-# Set HELIX_DISPLAY_BACKEND=drm for GPU-accelerated rendering via DRM+EGL
-# (supported on Pi 3/4/5 and BTT CB1). Override in systemd service file or env.
+# Default display backend based on which binary was selected.
+# DRM binary = drm backend; fbdev binary = fbdev backend.
+# Override with HELIX_DISPLAY_BACKEND env var or in systemd service file.
 if [ -z "${HELIX_DISPLAY_BACKEND:-}" ]; then
     case "$(uname -s)" in
         Linux)
-            export HELIX_DISPLAY_BACKEND=fbdev
+            if [ "$(basename "${MAIN_BIN}")" = "helix-screen-fbdev" ]; then
+                export HELIX_DISPLAY_BACKEND=fbdev
+            else
+                export HELIX_DISPLAY_BACKEND=drm
+            fi
             ;;
     esac
 fi
@@ -180,6 +214,7 @@ if [ ! -x "${MAIN_BIN}" ]; then
     echo "Error: Cannot find helix-screen binary at ${MAIN_BIN}" >&2
     exit 1
 fi
+log "Selected binary: $(basename "${MAIN_BIN}")"
 
 # Check if watchdog is available (embedded targets only, provides crash recovery)
 USE_WATCHDOG=0
@@ -267,6 +302,23 @@ else
     # shellcheck disable=SC2086
     "${MAIN_BIN}" ${EXTRA_FLAGS} ${PASSTHROUGH_ARGS}
     EXIT_CODE=$?
+fi
+
+# Runtime crash fallback: if DRM binary crashed and fbdev fallback exists, retry
+if [ ${EXIT_CODE} -ne 0 ] && [ "$(basename "${MAIN_BIN}")" = "helix-screen" ] \
+   && [ -x "${FALLBACK_BIN}" ]; then
+    log "DRM binary exited with code ${EXIT_CODE}, retrying with fbdev fallback..."
+    export HELIX_DISPLAY_BACKEND=fbdev
+    if [ "${USE_WATCHDOG}" = "1" ]; then
+        # shellcheck disable=SC2086
+        "${WATCHDOG_BIN}" ${SPLASH_ARGS} -- \
+            "${FALLBACK_BIN}" ${EXTRA_FLAGS} ${PASSTHROUGH_ARGS}
+        EXIT_CODE=$?
+    else
+        # shellcheck disable=SC2086
+        "${FALLBACK_BIN}" ${EXTRA_FLAGS} ${PASSTHROUGH_ARGS}
+        EXIT_CODE=$?
+    fi
 fi
 
 log "Exiting with code ${EXIT_CODE}"
