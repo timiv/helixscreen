@@ -336,10 +336,10 @@
       ]
     },
     {
-      "id": "voron_micron",
-      "name": "Voron Micron",
-      "manufacturer": "Voron",
-      "image": "voron-micron.png",
+      "id": "pfa_micron",
+      "name": "PFA Micron",
+      "manufacturer": "PrintersForAnts",
+      "image": "pfa-micron.png",
       "heuristics": [
         {
           "type": "kinematics_match",
@@ -361,14 +361,7 @@
           "field": "printer_objects",
           "pattern": "neopixel",
           "confidence": 40,
-          "reason": "Neopixel LEDs (common on Vorons)"
-        },
-        {
-          "type": "hostname_match",
-          "field": "hostname",
-          "pattern": "voron",
-          "confidence": 75,
-          "reason": "Hostname contains 'voron'"
+          "reason": "Neopixel LEDs commonly present"
         },
         {
           "type": "hostname_match",
