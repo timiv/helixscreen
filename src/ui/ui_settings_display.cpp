@@ -275,11 +275,22 @@ void DisplaySettingsOverlay::init_gcode_dropdown() {
     if (!overlay_root_)
         return;
 
-    // G-code mode row is hidden by default, but we still initialize it
     lv_obj_t* gcode_row = lv_obj_find_by_name(overlay_root_, "row_gcode_mode");
-    lv_obj_t* gcode_dropdown = gcode_row ? lv_obj_find_by_name(gcode_row, "dropdown") : nullptr;
+    if (!gcode_row)
+        return;
+
+        // The row's parent container is hidden by default in XML.
+        // Show it only when 3D rendering is compiled in.
+#ifdef ENABLE_GLES_3D
+    lv_obj_t* container = lv_obj_get_parent(gcode_row);
+    if (container) {
+        lv_obj_remove_flag(container, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_height(container, LV_SIZE_CONTENT);
+    }
+#endif
+
+    lv_obj_t* gcode_dropdown = lv_obj_find_by_name(gcode_row, "dropdown");
     if (gcode_dropdown) {
-        // Set initial selection based on current setting (options set in XML)
         int current_mode = DisplaySettingsManager::instance().get_gcode_render_mode();
         lv_dropdown_set_selected(gcode_dropdown, current_mode);
 

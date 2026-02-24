@@ -83,9 +83,9 @@ class GCodeViewerState {
                 render_mode_ = GcodeViewerRenderMode::Layer2D;
             }
         } else {
-            // Default: 2D layer renderer (TinyGL is ~3-4 FPS everywhere)
-            render_mode_ = GcodeViewerRenderMode::Layer2D;
-            spdlog::debug("[GCode Viewer] Default render mode: 2D layer");
+            // Default: Auto (uses 3D if GLES available, 2D otherwise)
+            render_mode_ = GcodeViewerRenderMode::Auto;
+            spdlog::debug("[GCode Viewer] Default render mode: Auto");
         }
     }
 
@@ -235,11 +235,14 @@ class GCodeViewerState {
     GcodeViewerRenderMode render_mode_{GcodeViewerRenderMode::Layer2D};
 
     /// Helper to check if currently using 2D layer renderer
-    /// AUTO mode now defaults to 2D (no FPS-based detection)
     bool is_using_2d_mode() const {
-        // Only GcodeViewerRenderMode::Render3D uses 3D renderer
-        // AUTO and 2D_LAYER both use 2D layer renderer
+#ifdef ENABLE_3D_RENDERER
+        // With GPU-accelerated GLES: Auto defaults to 3D, only Layer2D forces 2D
+        return render_mode_ == GcodeViewerRenderMode::Layer2D;
+#else
+        // Without 3D renderer: only explicit Render3D would use 3D (but it's not available)
         return render_mode_ != GcodeViewerRenderMode::Render3D;
+#endif
     }
 
     // FPS tracking kept for debugging/diagnostics but not used for mode selection
