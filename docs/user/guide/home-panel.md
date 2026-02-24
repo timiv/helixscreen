@@ -30,13 +30,13 @@ Below the status area, the Home Panel displays a row of **configurable widgets**
 | **Firmware Restart** | Restart Klipper firmware with one tap. Always shown when Klipper is in SHUTDOWN state, even if disabled. Disabled by default. |
 | **AMS Status** | Mini view of your multi-material spool slots. Only appears if an AMS/MMU system is detected. |
 | **Temperature** | Nozzle temperature readout with animated heating icon. Tap to open the Temperature panel. |
-| **Temperatures** | Stacked view of nozzle, bed, and chamber temperatures in a single widget. Disabled by default. |
+| **Temperatures** | Stacked view of nozzle, bed, and chamber temperatures in a single widget. Supports two display modes: **Stack** (compact rows) and **Carousel** (full-size swipeable pages with large icons). Long-press to toggle between modes. Tap any temperature to open the temperature control panel. Disabled by default. |
 | **LED Light** | Quick toggle for your LEDs. Long-press for the full LED Control Overlay (see [LED Controls](#led-controls) below). |
 | **Humidity** | Enclosure humidity sensor reading. Only appears if a humidity sensor is detected. |
 | **Width Sensor** | Filament width sensor reading. Only appears if a width sensor is detected. |
 | **Probe** | Z probe status and offset. Only appears if a probe is configured. |
 | **Filament Sensor** | Filament runout detection status. Only appears if a filament sensor is detected. |
-| **Fan Speeds** | Part cooling, hotend, and auxiliary fan speeds at a glance. Fan icons spin when the fan is running. When many widgets are active, labels switch to compact abbreviations (P/H/C). Tap to open the Fan Control overlay. |
+| **Fan Speeds** | Part cooling, hotend, and auxiliary fan speeds at a glance. Fan icons spin when the fan is running. When many widgets are active, labels switch to compact abbreviations (P/H/C). Supports two display modes: **Stack** (compact rows) and **Carousel** (swipeable fan dials with 270-degree arc sliders for direct speed control). Long-press to toggle between modes. In stack mode, tap to open the Fan Control overlay. |
 | **Thermistor** | Monitor a custom temperature sensor (e.g., chamber, enclosure heater). Only appears if extra temperature sensors are detected. Disabled by default. |
 | **Notifications** | Pending alerts with severity badge. Tap to open notification history. |
 
@@ -56,6 +56,19 @@ To change which widgets appear and their order:
 4. Changes take effect immediately — widgets appear and disappear in real time as you toggle them
 
 To reset to defaults, disable all widgets and re-enable the ones you want, or edit the config file directly (see [Configuration Reference](../CONFIGURATION.md#panel-widget-settings)).
+
+### Display Modes: Stack vs. Carousel
+
+The **Temperatures** and **Fan Speeds** widgets support two display modes that you can switch between with a **long-press** (press and hold):
+
+- **Stack mode** (default): Compact vertical rows showing all values at once. Best when you want to see everything at a glance.
+- **Carousel mode**: Full-size swipeable pages with one item per page and indicator dots at the bottom. Swipe left/right to move between pages.
+
+**Temperatures carousel** shows each sensor (nozzle, bed, chamber) as a full page with a large icon and temperature display. Tap any page to open the temperature control panel for that sensor.
+
+**Fan Speeds carousel** shows each fan as an interactive dial with a 270-degree arc slider. Drag the arc to change fan speed directly without opening the full Fan Control overlay.
+
+Your display mode preference is saved per widget and persists across restarts.
 
 ---
 

@@ -793,13 +793,13 @@ Located under the `panel_widgets` key, grouped by panel ID:
       {"id": "firmware_restart", "enabled": false},
       {"id": "ams", "enabled": true},
       {"id": "temperature", "enabled": true},
-      {"id": "temp_stack", "enabled": false},
+      {"id": "temp_stack", "enabled": false, "config": {"display_mode": "stack"}},
       {"id": "led", "enabled": true},
       {"id": "humidity", "enabled": true},
       {"id": "width_sensor", "enabled": true},
       {"id": "probe", "enabled": true},
       {"id": "filament", "enabled": true},
-      {"id": "fan_stack", "enabled": true},
+      {"id": "fan_stack", "enabled": true, "config": {"display_mode": "stack"}},
       {"id": "thermistor", "enabled": false},
       {"id": "notifications", "enabled": true}
     ]
@@ -816,6 +816,8 @@ Located under the `panel_widgets` key, grouped by panel ID:
 
 - `id` — Widget identifier (see table below)
 - `enabled` — Whether the widget is shown (`true`/`false`)
+- `config` — (optional) Per-widget settings object. Currently used by `temp_stack` and `fan_stack` for display mode:
+  - `display_mode` — `"stack"` (default) or `"carousel"`. Stack shows compact rows; carousel shows swipeable full-size pages. Toggle via long-press on the widget.
 
 **Available widget IDs:**
 
@@ -826,13 +828,13 @@ Located under the `panel_widgets` key, grouped by panel ID:
 | `firmware_restart` | Klipper firmware restart | Disabled | No |
 | `ams` | Multi-material spool status | Enabled | Yes (requires AMS/MMU) |
 | `temperature` | Nozzle temperature with heating animation | Enabled | No |
-| `temp_stack` | Stacked nozzle, bed, and chamber temps | Disabled | No |
+| `temp_stack` | Stacked nozzle, bed, and chamber temps (supports carousel mode) | Disabled | No |
 | `led` | LED quick toggle | Enabled | Yes (requires LEDs) |
 | `humidity` | Enclosure humidity sensor | Enabled | Yes (requires sensor) |
 | `width_sensor` | Filament width sensor | Enabled | Yes (requires sensor) |
 | `probe` | Z probe status and offset | Enabled | Yes (requires probe) |
 | `filament` | Filament runout detection | Enabled | Yes (requires sensor) |
-| `fan_stack` | Part, hotend, and auxiliary fan speeds | Enabled | No |
+| `fan_stack` | Part, hotend, and auxiliary fan speeds (supports carousel mode with arc dials) | Enabled | No |
 | `thermistor` | Custom temperature sensor (chamber, etc.) | Disabled | Yes (requires sensor) |
 | `notifications` | Pending alerts with severity badge | Enabled | No |
 
