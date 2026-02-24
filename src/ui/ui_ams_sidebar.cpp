@@ -230,6 +230,20 @@ void AmsOperationSidebar::init_observers() {
             self->update_current_loaded_display();
         });
 
+    // Color observer: reactively updates loaded card swatch color
+    color_observer_ = observe_int_sync<AmsOperationSidebar>(
+        AmsState::instance().get_current_color_subject(), this,
+        [](AmsOperationSidebar* self, int color_int) {
+            if (!self->sidebar_root_)
+                return;
+            lv_obj_t* swatch = lv_obj_find_by_name(self->sidebar_root_, "loaded_swatch");
+            if (swatch) {
+                lv_color_t color = lv_color_hex(static_cast<uint32_t>(color_int));
+                lv_obj_set_style_bg_color(swatch, color, 0);
+                lv_obj_set_style_border_color(swatch, color, 0);
+            }
+        });
+
     // Extruder temp observer: checks pending preheat load
     extruder_temp_observer_ = observe_int_sync<AmsOperationSidebar>(
         printer_state_.get_active_extruder_temp_subject(), this,
@@ -248,6 +262,7 @@ void AmsOperationSidebar::cleanup() {
     action_observer_.reset();
     current_slot_observer_.reset();
     bypass_spool_observer_.reset();
+    color_observer_.reset();
 
     if (pending_load_slot_ < 0) {
         extruder_temp_observer_.reset();
@@ -325,18 +340,8 @@ void AmsOperationSidebar::update_current_loaded_display() {
         return;
     }
 
-    // Sync subjects for reactive XML binding
+    // Sync subjects for reactive XML binding (color observer handles swatch update)
     AmsState::instance().sync_current_loaded_from_backend();
-
-    // Color binding not supported in XML — set swatch color via C++
-    lv_obj_t* loaded_swatch = lv_obj_find_by_name(sidebar_root_, "loaded_swatch");
-    if (loaded_swatch) {
-        uint32_t color_rgb = static_cast<uint32_t>(
-            lv_subject_get_int(AmsState::instance().get_current_color_subject()));
-        lv_color_t color = lv_color_hex(color_rgb);
-        lv_obj_set_style_bg_color(loaded_swatch, color, 0);
-        lv_obj_set_style_border_color(loaded_swatch, color, 0);
-    }
 }
 
 // ============================================================================

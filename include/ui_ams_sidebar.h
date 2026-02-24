@@ -116,6 +116,7 @@ class AmsOperationSidebar {
     ObserverGuard action_observer_;
     ObserverGuard current_slot_observer_;
     ObserverGuard extruder_temp_observer_;
+    ObserverGuard color_observer_;
 
     // Bypass-after-unload state
     bool pending_bypass_enable_ = false;
