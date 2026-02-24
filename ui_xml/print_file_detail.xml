@@ -221,11 +221,11 @@
                 width="100%" height="content" style_pad_all="0" style_pad_gap="#button_padding" flex_flow="row">
           <!-- Delete button -->
           <ui_button name="delete_button"
-                     height="#button_height_lg" text="Delete" translation_tag="Delete" variant="danger" flex_grow="1">
+                     height="#button_height_lg" text="Delete" translation_tag="Delete" variant="danger" flex_grow="1" icon="trash_can_outline">
             <event_cb trigger="clicked" callback="on_print_select_delete_button"/>
           </ui_button>
           <!-- Print button - primary action styling (disabled when print in progress) -->
-          <ui_button name="print_button" height="#button_height_lg" text="Print" translation_tag="Print" flex_grow="1">
+          <ui_button name="print_button" height="#button_height_lg" text="Print" translation_tag="Print" flex_grow="1" icon="print">
             <event_cb trigger="clicked" callback="on_print_select_print_button"/>
             <bind_state_if_eq subject="print_select_can_print" state="disabled" ref_value="0"/>
           </ui_button>
