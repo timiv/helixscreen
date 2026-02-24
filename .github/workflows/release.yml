@@ -492,11 +492,23 @@ jobs:
         mkdir -p symbol-files
         for dir in artifacts/symbols-*/; do
           platform=$(basename "$dir" | sed 's/symbols-//')
-          if [ -f "${dir}helix-screen.sym" ]; then
+          # DRM symbols (build/<platform>/bin/)
+          if [ -f "${dir}build/${platform}/bin/helix-screen.sym" ]; then
+            cp "${dir}build/${platform}/bin/helix-screen.sym" "symbol-files/${platform}.sym"
+          elif [ -f "${dir}helix-screen.sym" ]; then
             cp "${dir}helix-screen.sym" "symbol-files/${platform}.sym"
           fi
-          if [ -f "${dir}helix-screen.debug" ]; then
+          if [ -f "${dir}build/${platform}/bin/helix-screen.debug" ]; then
+            cp "${dir}build/${platform}/bin/helix-screen.debug" "symbol-files/${platform}.debug"
+          elif [ -f "${dir}helix-screen.debug" ]; then
             cp "${dir}helix-screen.debug" "symbol-files/${platform}.debug"
+          fi
+          # fbdev symbols (build/<platform>-fbdev/bin/) — Pi only
+          if [ -f "${dir}build/${platform}-fbdev/bin/helix-screen.sym" ]; then
+            cp "${dir}build/${platform}-fbdev/bin/helix-screen.sym" "symbol-files/${platform}-fbdev.sym"
+          fi
+          if [ -f "${dir}build/${platform}-fbdev/bin/helix-screen.debug" ]; then
+            cp "${dir}build/${platform}-fbdev/bin/helix-screen.debug" "symbol-files/${platform}-fbdev.debug"
           fi
         done
         echo "Symbol files:"

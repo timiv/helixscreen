@@ -125,9 +125,8 @@ select_binary() {
 }
 
 SPLASH_BIN="${BIN_DIR}/helix-splash"
-MAIN_BIN=$(select_binary "${BIN_DIR}")
-FALLBACK_BIN="${BIN_DIR}/helix-screen-fbdev"
 WATCHDOG_BIN="${BIN_DIR}/helix-watchdog"
+FALLBACK_BIN="${BIN_DIR}/helix-screen-fbdev"
 
 # Derive the install root (parent of bin/)
 INSTALL_DIR="$(cd "${BIN_DIR}/.." && pwd)"
@@ -188,6 +187,9 @@ LOG_DEST="${CLI_LOG_DEST:-${HELIX_LOG_DEST:-auto}}"
 LOG_FILE="${CLI_LOG_FILE:-${HELIX_LOG_FILE:-}}"
 LOG_LEVEL="${CLI_LOG_LEVEL:-${HELIX_LOG_LEVEL:-}}"
 
+# Select binary AFTER env file is sourced so HELIX_DISPLAY_BACKEND=fbdev in env file works
+MAIN_BIN=$(select_binary "${BIN_DIR}")
+
 # Default display backend based on which binary was selected.
 # DRM binary = drm backend; fbdev binary = fbdev backend.
 # Override with HELIX_DISPLAY_BACKEND env var or in systemd service file.
@@ -244,7 +246,7 @@ fi
 cleanup() {
     log "Shutting down..."
     # Kill watchdog/helix-screen if we started them
-    killall helix-watchdog helix-screen helix-splash 2>/dev/null || true
+    killall helix-watchdog helix-screen helix-screen-fbdev helix-splash 2>/dev/null || true
 }
 
 trap cleanup EXIT INT TERM
@@ -304,8 +306,17 @@ else
     EXIT_CODE=$?
 fi
 
-# Runtime crash fallback: if DRM binary crashed and fbdev fallback exists, retry
-if [ ${EXIT_CODE} -ne 0 ] && [ "$(basename "${MAIN_BIN}")" = "helix-screen" ] \
+# Runtime crash fallback: if DRM binary crashed and fbdev fallback exists, retry.
+# Only retry on genuine crashes, NOT on signal-based exits (SIGTERM=143 from systemctl stop,
+# SIGKILL=137, SIGINT=130, SIGHUP=129). Crash signals: SIGABRT=134, SIGFPE=136, SIGBUS=138, SIGSEGV=139.
+_is_crash_exit() {
+    case "$1" in
+        134|136|138|139) return 0 ;;  # ABRT, FPE, BUS, SEGV
+    esac
+    # Non-signal exits (1-127) are also worth retrying (e.g., GL init failure)
+    [ "$1" -gt 0 ] && [ "$1" -lt 128 ]
+}
+if _is_crash_exit ${EXIT_CODE} && [ "$(basename "${MAIN_BIN}")" = "helix-screen" ] \
    && [ -x "${FALLBACK_BIN}" ]; then
     log "DRM binary exited with code ${EXIT_CODE}, retrying with fbdev fallback..."
     export HELIX_DISPLAY_BACKEND=fbdev
@@ -319,6 +330,7 @@ if [ ${EXIT_CODE} -ne 0 ] && [ "$(basename "${MAIN_BIN}")" = "helix-screen" ] \
         "${FALLBACK_BIN}" ${EXTRA_FLAGS} ${PASSTHROUGH_ARGS}
         EXIT_CODE=$?
     fi
+    log "fbdev fallback exited with code ${EXIT_CODE}"
 fi
 
 log "Exiting with code ${EXIT_CODE}"

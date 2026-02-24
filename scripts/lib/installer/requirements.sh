@@ -301,7 +301,7 @@ verify_binary_deps() {
                     local fb_missing
                     fb_missing=$(ldd "$fallback" 2>/dev/null | grep "not found" || true)
                     if [ -z "$fb_missing" ]; then
-                        log_warn "DRM binary has missing GL libraries — fbdev fallback will be used"
+                        log_warn "DRM binary has missing GL libraries -- fbdev fallback will be used"
                         log_warn "Install GPU libraries for hardware acceleration: sudo apt install libgbm1 libegl1 libgles2"
                         return 0
                     fi
