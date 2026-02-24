@@ -169,17 +169,21 @@ void PowerWidget::refresh_power_state() {
         });
 }
 
+static PowerWidget* find_power_widget_ancestor(lv_obj_t* target) {
+    lv_obj_t* parent = lv_obj_get_parent(target);
+    while (parent) {
+        const char* name = lv_obj_get_name(parent);
+        if (name && strcmp(name, "panel_widget_power") == 0) {
+            return static_cast<PowerWidget*>(lv_obj_get_user_data(parent));
+        }
+        parent = lv_obj_get_parent(parent);
+    }
+    return nullptr;
+}
+
 void PowerWidget::power_toggle_cb(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PowerWidget] power_toggle_cb");
-    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
-    auto* self = static_cast<PowerWidget*>(lv_obj_get_user_data(target));
-    if (!self) {
-        lv_obj_t* parent = lv_obj_get_parent(target);
-        while (parent && !self) {
-            self = static_cast<PowerWidget*>(lv_obj_get_user_data(parent));
-            parent = lv_obj_get_parent(parent);
-        }
-    }
+    auto* self = find_power_widget_ancestor(static_cast<lv_obj_t*>(lv_event_get_target(e)));
     if (self) {
         self->handle_power_toggle();
     } else {
@@ -190,15 +194,7 @@ void PowerWidget::power_toggle_cb(lv_event_t* e) {
 
 void PowerWidget::power_long_press_cb(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PowerWidget] power_long_press_cb");
-    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
-    auto* self = static_cast<PowerWidget*>(lv_obj_get_user_data(target));
-    if (!self) {
-        lv_obj_t* parent = lv_obj_get_parent(target);
-        while (parent && !self) {
-            self = static_cast<PowerWidget*>(lv_obj_get_user_data(parent));
-            parent = lv_obj_get_parent(parent);
-        }
-    }
+    auto* self = find_power_widget_ancestor(static_cast<lv_obj_t*>(lv_event_get_target(e)));
     if (self) {
         self->handle_power_long_press();
     } else {

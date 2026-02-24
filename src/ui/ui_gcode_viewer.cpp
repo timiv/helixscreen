@@ -439,22 +439,18 @@ static void gcode_viewer_draw_cb(lv_event_t* e) {
                 static_cast<int>(st->layer_renderer_2d_->get_ghost_build_progress() * 100.0f);
             // Capture needed data for deferred update
             struct GhostProgressUpdate {
-                lv_obj_t* viewer;
                 int percent;
             };
-            auto update = std::make_unique<GhostProgressUpdate>(GhostProgressUpdate{obj, percent});
+            auto update = std::make_unique<GhostProgressUpdate>(GhostProgressUpdate{percent});
             helix::ui::queue_update<GhostProgressUpdate>(
-                std::move(update), [](GhostProgressUpdate* u) {
-                    if (!lv_obj_is_valid(u->viewer)) {
-                        return;
-                    }
-                    auto* state = static_cast<GCodeViewerState*>(lv_obj_get_user_data(u->viewer));
+                obj, std::move(update), [](lv_obj_t* viewer, GhostProgressUpdate* u) {
+                    auto* state = static_cast<GCodeViewerState*>(lv_obj_get_user_data(viewer));
                     if (!state) {
                         return;
                     }
                     // Create label if needed
                     if (!state->ghost_progress_label_) {
-                        state->ghost_progress_label_ = lv_label_create(u->viewer);
+                        state->ghost_progress_label_ = lv_label_create(viewer);
                         lv_obj_set_style_text_color(state->ghost_progress_label_,
                                                     theme_manager_get_color("text_muted"),
                                                     LV_PART_MAIN);
@@ -820,14 +816,24 @@ static void gcode_viewer_size_changed_cb(lv_event_t* e) {
  */
 static void gcode_viewer_delete_cb(lv_event_t* e) {
     lv_obj_t* obj = lv_event_get_target_obj(e);
-    std::unique_ptr<gcode_viewer_state_t> state(
-        static_cast<gcode_viewer_state_t*>(lv_obj_get_user_data(obj)));
+    auto* state = static_cast<gcode_viewer_state_t*>(lv_obj_get_user_data(obj));
     lv_obj_set_user_data(obj, nullptr);
 
     if (state) {
+        // Delete timer now while LVGL is guaranteed alive (the destructor's
+        // lv_is_initialized() guard might skip this during shutdown)
+        if (state->long_press_timer_) {
+            lv_timer_delete(state->long_press_timer_);
+            state->long_press_timer_ = nullptr;
+        }
+
+        // Stop build thread before state destruction
+        state->cancel_build();
+
         spdlog::trace("[GCode Viewer] Widget destroyed");
-        // state automatically freed when unique_ptr goes out of scope
-        // RAII destructor handles thread cleanup, timers, etc.
+
+        // RAII destruction of remaining members
+        delete state;
     }
 }
 
@@ -897,8 +903,7 @@ lv_obj_t* ui_gcode_viewer_create(lv_obj_t* parent) {
 struct AsyncBuildResult {
     std::unique_ptr<helix::gcode::ParsedGCodeFile> gcode_file;
 #ifdef ENABLE_3D_RENDERER
-    std::unique_ptr<helix::gcode::RibbonGeometry> geometry;        ///< Full detail geometry
-    std::unique_ptr<helix::gcode::RibbonGeometry> coarse_geometry; ///< Coarse LOD for interaction
+    std::unique_ptr<helix::gcode::RibbonGeometry> geometry; ///< Full detail geometry
 #endif
     std::string error_msg;
     bool success{true};
@@ -1158,17 +1163,7 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
                 // PHASE 2: Build 3D geometry (slow, 1-5s for large files)
                 // This is thread-safe - no OpenGL calls, just CPU work
                 // SKIP entirely for 2D mode - 2D renderer uses ParsedGCodeFile directly
-                if (st->render_mode_ == GcodeViewerRenderMode::Render3D) {
-                    // Check if available memory is low (< 64MB available right now)
-                    // When memory is low, ONLY build coarse geometry to save ~50MB
-                    auto mem_info = helix::get_system_memory_info();
-                    bool memory_constrained = mem_info.is_low_memory();
-                    if (memory_constrained) {
-                        spdlog::info("[GCode Viewer] Memory constrained ({}MB available) - "
-                                     "building coarse geometry only",
-                                     mem_info.available_mb());
-                    }
-
+                if (!st->is_using_2d_mode()) {
                     // Helper lambda to configure a builder with common settings
                     auto configure_builder = [&](helix::gcode::GeometryBuilder& builder) {
                         if (!result->gcode_file->tool_color_palette.empty()) {
@@ -1183,56 +1178,20 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
                         builder.set_layer_height(result->gcode_file->layer_height_mm);
                     };
 
-                    // Build full geometry only on non-constrained systems
-                    if (!memory_constrained) {
+                    {
                         helix::gcode::GeometryBuilder builder;
                         configure_builder(builder);
 
-                        // Aggressive simplification: 0.5mm merges more collinear segments
-                        // (still well within 3D printer precision of ~50 microns)
                         helix::gcode::SimplificationOptions opts{.tolerance_mm = 0.5f,
                                                                  .min_segment_length_mm = 0.05f};
 
                         result->geometry = std::make_unique<helix::gcode::RibbonGeometry>(
                             builder.build(*result->gcode_file, opts));
 
-                        spdlog::info(
-                            "[GCode Viewer] Built full geometry: {} vertices, {} triangles",
-                            result->geometry->vertices.size(),
-                            result->geometry->extrusion_triangle_count +
-                                result->geometry->travel_triangle_count);
-                    }
-
-                    // Build coarse LOD geometry for interaction
-                    // More aggressive simplification for better frame rate during drag
-                    // 2.0mm tolerance gives ~55% fewer triangles - good balance of quality/speed
-                    {
-                        helix::gcode::GeometryBuilder coarse_builder;
-                        configure_builder(coarse_builder);
-
-                        helix::gcode::SimplificationOptions coarse_opts{
-                            .tolerance_mm = 2.0f, .min_segment_length_mm = 0.5f};
-
-                        result->coarse_geometry = std::make_unique<helix::gcode::RibbonGeometry>(
-                            coarse_builder.build(*result->gcode_file, coarse_opts));
-
-                        size_t coarse_tris = result->coarse_geometry->extrusion_triangle_count +
-                                             result->coarse_geometry->travel_triangle_count;
-
-                        if (memory_constrained) {
-                            spdlog::info("[GCode Viewer] Built coarse-only geometry: {} triangles",
-                                         coarse_tris);
-                        } else {
-                            size_t full_tris = result->geometry->extrusion_triangle_count +
-                                               result->geometry->travel_triangle_count;
-                            float reduction =
-                                full_tris > 0
-                                    ? 100.0f * (1.0f - float(coarse_tris) / float(full_tris))
-                                    : 0.0f;
-                            spdlog::info("[GCode Viewer] Built coarse LOD: {} triangles ({:.0f}% "
-                                         "reduction from full)",
-                                         coarse_tris, reduction);
-                        }
+                        spdlog::info("[GCode Viewer] Built geometry: {} vertices, {} triangles",
+                                     result->geometry->vertices.size(),
+                                     result->geometry->extrusion_triangle_count +
+                                         result->geometry->travel_triangle_count);
                     }
 
                     // Free parsed segment data - 3D mode doesn't need raw segments
@@ -1300,23 +1259,9 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
                     }
 
                 // Set pre-built geometry on renderer
-                // On memory-constrained systems, we only have coarse geometry
 #ifdef ENABLE_3D_RENDERER
                     if (r->geometry) {
-                        // Normal case: full + coarse geometry
-                        spdlog::debug("[GCode Viewer] Setting full + coarse geometry");
                         st->renderer_->set_prebuilt_geometry(std::move(r->geometry),
-                                                             st->gcode_file->filename);
-                        if (r->coarse_geometry) {
-                            st->renderer_->set_prebuilt_coarse_geometry(
-                                std::move(r->coarse_geometry));
-                        }
-                    } else if (r->coarse_geometry) {
-                        // Memory-constrained: use coarse as primary (no separate LOD)
-                        spdlog::info(
-                            "[GCode Viewer] Memory-constrained mode: using coarse geometry as "
-                            "primary (no LOD switching)");
-                        st->renderer_->set_prebuilt_geometry(std::move(r->coarse_geometry),
                                                              st->gcode_file->filename);
                     }
 #endif
@@ -1327,28 +1272,16 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
                     st->viewer_state = GcodeViewerState::Loaded;
                     spdlog::debug("[GCode Viewer] State set to LOADED");
 
-                // Auto-apply filament color if enabled, but ONLY for single-color prints
-                // Multicolor prints have multiple colors in the geometry's color palette
-#ifdef ENABLE_3D_RENDERER
-                    size_t color_count = st->renderer_->get_geometry_color_count();
-                    bool is_multicolor = (color_count > 1); // >1 means multiple tool colors
-#else
-                size_t color_count = 1; // 2D renderer doesn't track color palette
-                bool is_multicolor = false; // 2D renderer doesn't have color palette
-#endif
-
-                    if (st->use_filament_color && !is_multicolor &&
+                    // Auto-apply filament color from gcode metadata
+                    // Always apply the first filament color — even multi-tool gcodes
+                    // declare colors for all tools but usually only use one
+                    if (st->use_filament_color &&
                         st->gcode_file->filament_color_hex.length() >= 2) {
                         lv_color_t color = lv_color_hex(static_cast<uint32_t>(std::strtol(
                             st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16)));
                         st->renderer_->set_extrusion_color(color);
-                        spdlog::debug("[GCode Viewer] Auto-applied single-color filament: {}",
+                        spdlog::debug("[GCode Viewer] Applied filament color: {}",
                                       st->gcode_file->filament_color_hex);
-                    } else if (is_multicolor) {
-                        spdlog::info(
-                            "[GCode Viewer] Multicolor print detected ({} colors) - preserving "
-                            "per-segment colors",
-                            color_count);
                     }
 
                     // Clear first_render flag to allow actual rendering on next draw
@@ -1489,7 +1422,7 @@ void ui_gcode_viewer_set_render_mode(lv_obj_t* obj, GcodeViewerRenderMode mode) 
     st->fps_sample_count_ = 0;
     st->fps_sample_index_ = 0;
 
-    const char* mode_names[] = {"AUTO (2D)", "3D", "2D_LAYER"};
+    const char* mode_names[] = {"AUTO", "3D", "2D_LAYER"};
     spdlog::debug("[GCode Viewer] Render mode set to {}", mode_names[static_cast<int>(mode)]);
 
     // If using 2D mode (AUTO or 2D_LAYER), ensure the 2D renderer is initialized
