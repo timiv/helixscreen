@@ -33,6 +33,8 @@
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
+#include <functional>
+#include <string>
 
 #ifdef HELIX_DISPLAY_SDL
 #include "app_globals.h" // For app_request_quit()
@@ -211,6 +213,10 @@ bool DisplayManager::init(const Config& config) {
                          "support software rotation (DIRECT render mode). Ignoring on desktop.",
                          rotation_degrees);
 #else
+            // Capture physical dimensions before rotation changes them
+            int phys_w = m_width;
+            int phys_h = m_height;
+
             lv_display_rotation_t lv_rot = degrees_to_lv_rotation(rotation_degrees);
             lv_display_set_rotation(m_display, lv_rot);
 
@@ -218,10 +224,11 @@ bool DisplayManager::init(const Config& config) {
             m_width = lv_display_get_horizontal_resolution(m_display);
             m_height = lv_display_get_vertical_resolution(m_display);
 
+            // Auto-rotate touch coordinates to match display rotation
+            m_backend->set_display_rotation(lv_rot, phys_w, phys_h);
+
             spdlog::info("[DisplayManager] Display rotated {}° — effective resolution: {}x{}",
                          rotation_degrees, m_width, m_height);
-            spdlog::info("[DisplayManager] Touch may need recalibration after rotation "
-                         "(use HELIX_TOUCH_SWAP_AXES=1 or touch calibration wizard)");
 #endif
         }
     }
@@ -279,7 +286,9 @@ bool DisplayManager::init(const Config& config) {
         configure_scroll(config.scroll_throw, config.scroll_limit);
 #ifndef HELIX_DISPLAY_SDL
         // Only install on embedded - SDL's event handler identifies the mouse device
-        // by checking if read_cb == sdl_mouse_read, which our wrapper breaks
+        // by checking if read_cb == sdl_mouse_read, which our wrapper breaks.
+        // Callback chain: sleep_aware_read_cb -> calibrated_read_cb -> evdev_read_cb
+        // (calibrated_read installed by backend, sleep wrapper installed here)
         install_sleep_aware_input_wrapper();
 #endif
     }
@@ -793,6 +802,206 @@ void DisplayManager::install_sleep_aware_input_wrapper() {
     // Install our wrapper
     lv_indev_set_read_cb(m_pointer, sleep_aware_read_cb);
     spdlog::info("[DisplayManager] Sleep-aware input wrapper installed");
+}
+
+// ============================================================================
+// Rotation Probe (first-boot auto-detect)
+// ============================================================================
+
+void DisplayManager::run_rotation_probe() {
+#ifndef HELIX_DISPLAY_FBDEV
+    return; // Only meaningful for fbdev
+#else
+    if (!m_display || !m_pointer) {
+        spdlog::debug("[DisplayManager] Rotation probe skipped: no display or pointer");
+        return;
+    }
+
+    // Fonts for probe UI (compiled-in, available before XML/theme init)
+    extern const lv_font_t noto_sans_24;
+    extern const lv_font_t noto_sans_16;
+
+    // Physical dimensions: m_width/m_height are pre-rotation at this point
+    // because the probe runs before any rotation is applied in init().
+    int phys_w = m_width;
+    int phys_h = m_height;
+
+    const lv_display_rotation_t rotations[] = {LV_DISPLAY_ROTATION_0, LV_DISPLAY_ROTATION_90,
+                                               LV_DISPLAY_ROTATION_180, LV_DISPLAY_ROTATION_270};
+    const int rotation_degrees[] = {0, 90, 180, 270};
+    const int num_rotations = 4;
+    const int probe_timeout_ms = 5000;
+
+    spdlog::info("[DisplayManager] Starting rotation probe (physical={}x{})", phys_w, phys_h);
+
+    // Lambda to create probe screen UI
+    // Lambda to create probe screen UI. subtitle_cb generates the subtitle text
+    // given rotation degrees and seconds remaining.
+    using SubtitleFn = std::function<std::string(int rot_deg, int secs)>;
+
+    auto create_probe_screen = [&](const char* main_text, SubtitleFn subtitle_fn, int rot_deg,
+                                   lv_color_t bg_color) -> std::pair<lv_obj_t*, SubtitleFn> {
+        lv_obj_t* scr = lv_screen_active();
+        lv_obj_clean(scr);
+        lv_obj_set_style_bg_color(scr, bg_color, 0);
+        lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
+
+        // Main text — constrain width for narrow screens
+        lv_obj_t* main_lbl = lv_label_create(scr);
+        lv_label_set_text(main_lbl, main_text);
+        lv_obj_set_width(main_lbl, lv_pct(90));
+        lv_label_set_long_mode(main_lbl, LV_LABEL_LONG_WRAP);
+        lv_obj_set_style_text_color(main_lbl, lv_color_white(), 0);
+        lv_obj_set_style_text_font(main_lbl, &noto_sans_24, 0);
+        lv_obj_set_style_text_align(main_lbl, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_align(main_lbl, LV_ALIGN_CENTER, 0, -20);
+
+        // Subtitle (countdown updated externally)
+        lv_obj_t* sub_lbl = lv_label_create(scr);
+        std::string initial = subtitle_fn(rot_deg, probe_timeout_ms / 1000);
+        lv_label_set_text(sub_lbl, initial.c_str());
+        lv_obj_set_width(sub_lbl, lv_pct(90));
+        lv_label_set_long_mode(sub_lbl, LV_LABEL_LONG_WRAP);
+        lv_obj_set_style_text_color(sub_lbl, lv_color_hex(0xaaaaaa), 0);
+        lv_obj_set_style_text_font(sub_lbl, &noto_sans_16, 0);
+        lv_obj_set_style_text_align(sub_lbl, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_align(sub_lbl, LV_ALIGN_CENTER, 0, 20);
+
+        return {sub_lbl, subtitle_fn};
+    };
+
+    // Disable LVGL's automatic input processing during probe — we read
+    // the touch device directly. Without this, both lv_timer_handler() and
+    // our direct read_cb call would consume evdev events, causing missed taps.
+    lv_indev_enable(m_pointer, false);
+
+    // Lambda for mini event loop that watches for tap
+    auto wait_for_tap = [&](int timeout_ms, lv_obj_t* countdown_lbl, SubtitleFn subtitle_fn,
+                            int rot_deg) -> bool {
+        uint32_t start = get_ticks();
+        int last_sec = -1;
+
+        while (true) {
+            uint32_t elapsed = get_ticks() - start;
+            if (elapsed >= static_cast<uint32_t>(timeout_ms)) {
+                return false;
+            }
+
+            lv_timer_handler();
+            delay(10);
+
+            // Update countdown label
+            int remaining_sec = static_cast<int>((timeout_ms - elapsed) / 1000);
+            if (remaining_sec != last_sec && countdown_lbl) {
+                std::string text = subtitle_fn(rot_deg, remaining_sec);
+                lv_label_set_text(countdown_lbl, text.c_str());
+                last_sec = remaining_sec;
+            }
+
+            // Check for tap via direct indev read (LVGL indev is disabled)
+            lv_indev_data_t data = {};
+            lv_indev_read_cb_t read_cb = lv_indev_get_read_cb(m_pointer);
+            if (read_cb) {
+                read_cb(m_pointer, &data);
+                if (data.state == LV_INDEV_STATE_PRESSED) {
+                    // Wait for release to avoid double-counting
+                    while (true) {
+                        delay(10);
+                        lv_indev_data_t release_data = {};
+                        read_cb(m_pointer, &release_data);
+                        if (release_data.state == LV_INDEV_STATE_RELEASED) {
+                            break;
+                        }
+                        if (get_ticks() - start >= static_cast<uint32_t>(timeout_ms)) {
+                            break;
+                        }
+                    }
+                    return true;
+                }
+            }
+        }
+    };
+
+    int confirmed_rotation = -1;
+
+    // PHASE 1 & 2: Scan and confirm
+    for (int i = 0; i < num_rotations; i++) {
+        // Apply rotation
+        lv_display_set_rotation(m_display, rotations[i]);
+        m_backend->set_display_rotation(rotations[i], phys_w, phys_h);
+        m_width = lv_display_get_horizontal_resolution(m_display);
+        m_height = lv_display_get_vertical_resolution(m_display);
+
+        spdlog::info("[DisplayManager] Rotation probe: testing {}° ({}x{})", rotation_degrees[i],
+                     m_width, m_height);
+
+        // PHASE 1: Show "tap if readable"
+        auto scan_subtitle = [&](int rot_deg, int secs) -> std::string {
+            char buf[128];
+            snprintf(buf, sizeof(buf), "Testing rotation: %d\xc2\xb0 (%d/%d) - %ds remaining",
+                     rot_deg, i + 1, num_rotations, secs);
+            return buf;
+        };
+        auto [sub, sub_fn] = create_probe_screen("Tap anywhere if you can read this", scan_subtitle,
+                                                 rotation_degrees[i], lv_color_hex(0x1a1a2e));
+
+        bool tapped = wait_for_tap(probe_timeout_ms, sub, sub_fn, rotation_degrees[i]);
+
+        if (!tapped) {
+            continue;
+        }
+
+        // PHASE 2: Confirm
+        spdlog::info("[DisplayManager] Rotation probe: {}° tapped, confirming...",
+                     rotation_degrees[i]);
+
+        auto confirm_subtitle = [](int rot_deg, int secs) -> std::string {
+            char buf[128];
+            snprintf(buf, sizeof(buf), "Rotation: %d\xc2\xb0 - %ds remaining (or wait to retry)",
+                     rot_deg, secs);
+            return buf;
+        };
+        auto [confirm_sub, confirm_fn] =
+            create_probe_screen("Tap again to confirm this orientation", confirm_subtitle,
+                                rotation_degrees[i], lv_color_hex(0x1a2e1a));
+
+        bool confirmed =
+            wait_for_tap(probe_timeout_ms, confirm_sub, confirm_fn, rotation_degrees[i]);
+
+        if (confirmed) {
+            confirmed_rotation = rotation_degrees[i];
+            spdlog::info("[DisplayManager] Rotation probe: {}° confirmed!", confirmed_rotation);
+            break;
+        }
+
+        spdlog::info("[DisplayManager] Rotation probe: {}° not confirmed, continuing scan",
+                     rotation_degrees[i]);
+    }
+
+    // Save result
+    helix::Config* cfg = helix::Config::get_instance();
+    cfg->set("/display/rotation_probed", true);
+
+    if (confirmed_rotation >= 0) {
+        cfg->set("/display/rotate", confirmed_rotation);
+        spdlog::info("[DisplayManager] Rotation probe saved: {}°", confirmed_rotation);
+    } else {
+        // No rotation confirmed after full cycle — reset to 0°
+        lv_display_set_rotation(m_display, LV_DISPLAY_ROTATION_0);
+        m_backend->set_display_rotation(LV_DISPLAY_ROTATION_0, phys_w, phys_h);
+        m_width = lv_display_get_horizontal_resolution(m_display);
+        m_height = lv_display_get_vertical_resolution(m_display);
+        spdlog::info("[DisplayManager] Rotation probe: no rotation confirmed, defaulting to 0°");
+    }
+
+    cfg->save();
+
+    // Re-enable LVGL input processing for normal operation
+    lv_indev_enable(m_pointer, true);
+
+    // Clean screen for normal UI init
+    lv_obj_clean(lv_screen_active());
+#endif
 }
 
 // ============================================================================

@@ -26,6 +26,10 @@ struct CalibrationContext {
     lv_indev_read_cb_t original_read_cb = nullptr;
     int screen_width = 800;
     int screen_height = 480;
+    lv_display_rotation_t rotation = LV_DISPLAY_ROTATION_0;
+    int physical_width = 0;                ///< Native panel width (pre-rotation)
+    int physical_height = 0;               ///< Native panel height (pre-rotation)
+    bool apply_rotation_transform = false; ///< false for USB HID devices
 };
 
 /**
@@ -130,6 +134,19 @@ class DisplayBackendFbdev : public DisplayBackend {
     void set_splash_active(bool active) override {
         splash_active_ = active;
     }
+
+    /**
+     * @brief Update touch rotation transform after display rotation changes
+     *
+     * Called by DisplayManager after lv_display_set_rotation() to keep touch
+     * coordinates aligned with the rotated display. Only affects non-USB-HID
+     * devices (USB HID reports logical coordinates that LVGL handles natively).
+     *
+     * @param rot LVGL rotation enum
+     * @param phys_w Native panel width (pre-rotation)
+     * @param phys_h Native panel height (pre-rotation)
+     */
+    void set_display_rotation(lv_display_rotation_t rot, int phys_w, int phys_h) override;
 
   private:
     std::string fb_device_ = "/dev/fb0";

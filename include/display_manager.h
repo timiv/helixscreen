@@ -278,6 +278,18 @@ class DisplayManager {
      */
     bool needs_touch_calibration() const;
 
+    /**
+     * @brief Run rotation probe on first boot (fbdev only)
+     *
+     * Cycles through 0°, 90°, 180°, 270° rotations showing "Tap anywhere
+     * if you can read this" for 5 seconds each. Two-tap confirmation prevents
+     * accidental selection. Saves result to config and returns.
+     *
+     * Only called when no rotation is configured and the probe hasn't run before.
+     * No-op on SDL/DRM backends.
+     */
+    void run_rotation_probe();
+
     // ========================================================================
     // Static Timing Functions (portable across platforms)
     // ========================================================================

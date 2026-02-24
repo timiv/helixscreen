@@ -174,10 +174,12 @@ helix::TouchCalibration load_touch_calibration() {
 }
 
 /**
- * @brief Custom read callback that applies affine calibration
+ * @brief Custom read callback that applies rotation transform and affine calibration
  *
- * Wraps the original evdev read callback, applying the affine transform
- * to touch coordinates after the linear calibration is done.
+ * Wraps the original evdev read callback. First applies rotation transform
+ * (physical evdev coords → logical rotated coords), then affine calibration
+ * if valid. Rotation transform is skipped for USB HID devices which report
+ * logical coordinates natively.
  */
 void calibrated_read_cb(lv_indev_t* indev, lv_indev_data_t* data) {
     auto* ctx = static_cast<CalibrationContext*>(lv_indev_get_user_data(indev));
@@ -188,6 +190,31 @@ void calibrated_read_cb(lv_indev_t* indev, lv_indev_data_t* data) {
     // Call the original evdev read callback first
     if (ctx->original_read_cb) {
         ctx->original_read_cb(indev, data);
+    }
+
+    // Apply rotation transform (physical evdev coords → logical rotated coords)
+    // Skip for USB HID devices — they report logical coordinates natively
+    if (ctx->apply_rotation_transform && ctx->rotation != LV_DISPLAY_ROTATION_0) {
+        int x = data->point.x;
+        int y = data->point.y;
+        int pw = ctx->physical_width - 1;
+        int ph = ctx->physical_height - 1;
+        switch (ctx->rotation) {
+        case LV_DISPLAY_ROTATION_90:
+            data->point.x = y;
+            data->point.y = pw - x;
+            break;
+        case LV_DISPLAY_ROTATION_180:
+            data->point.x = pw - x;
+            data->point.y = ph - y;
+            break;
+        case LV_DISPLAY_ROTATION_270:
+            data->point.x = ph - y;
+            data->point.y = x;
+            break;
+        default:
+            break;
+        }
     }
 
     // Apply affine calibration if valid (for both PRESSED and RELEASED states)
@@ -421,19 +448,25 @@ lv_indev_t* DisplayBackendFbdev::create_input_pointer() {
                      "a={:.4f} b={:.4f} c={:.4f} d={:.4f} e={:.4f} f={:.4f}",
                      calibration_.a, calibration_.b, calibration_.c, calibration_.d, calibration_.e,
                      calibration_.f);
-
-        // Set up the custom read callback to apply affine calibration
-        // We wrap the original evdev callback with our calibrated version
-        calibration_context_.calibration = calibration_;
-        calibration_context_.original_read_cb = lv_indev_get_read_cb(touch_);
-        calibration_context_.screen_width = screen_width_;
-        calibration_context_.screen_height = screen_height_;
-
-        lv_indev_set_user_data(touch_, &calibration_context_);
-        lv_indev_set_read_cb(touch_, calibrated_read_cb);
-
-        spdlog::info("[Fbdev Backend] Affine calibration callback installed");
     }
+
+    // Always install the calibrated read callback — it handles both rotation
+    // transform and affine calibration independently. Without this, rotation
+    // transform wouldn't be applied on devices that don't need affine cal.
+    calibration_context_.calibration = calibration_;
+    calibration_context_.original_read_cb = lv_indev_get_read_cb(touch_);
+    calibration_context_.screen_width = screen_width_;
+    calibration_context_.screen_height = screen_height_;
+
+    // USB HID touchscreens report logical coordinates natively — LVGL handles
+    // rotation for them. Applying our rotation transform would double-rotate.
+    bool is_usb = !dev_phys.empty() && helix::is_usb_input_phys(dev_phys);
+    calibration_context_.apply_rotation_transform = !is_usb;
+    spdlog::info("[Fbdev Backend] Touch rotation transform: {} (usb={})",
+                 calibration_context_.apply_rotation_transform ? "enabled" : "disabled", is_usb);
+
+    lv_indev_set_user_data(touch_, &calibration_context_);
+    lv_indev_set_read_cb(touch_, calibrated_read_cb);
 
     spdlog::info("[Fbdev Backend] Evdev touch input created on {}", touch_path);
     return touch_;
@@ -791,6 +824,16 @@ bool DisplayBackendFbdev::set_calibration(const helix::TouchCalibration& cal) {
     }
 
     return true;
+}
+
+void DisplayBackendFbdev::set_display_rotation(lv_display_rotation_t rot, int phys_w, int phys_h) {
+    // Main thread only — calibrated_read_cb reads these fields from the same thread.
+    // If runtime rotation changes are ever needed, protect with atomic or mutex.
+    calibration_context_.rotation = rot;
+    calibration_context_.physical_width = phys_w;
+    calibration_context_.physical_height = phys_h;
+    spdlog::info("[Fbdev Backend] Touch rotation updated: rot={} physical={}x{}",
+                 static_cast<int>(rot), phys_w, phys_h);
 }
 
 #endif // HELIX_DISPLAY_FBDEV

@@ -679,6 +679,20 @@ bool Application::init_display() {
     m_screen_width = m_display->width();
     m_screen_height = m_display->height();
 
+    // Run rotation probe on first boot if no rotation is configured.
+    // Must happen after display init (touch is ready) but before layout init
+    // (which depends on final rotated dimensions).
+#ifdef HELIX_DISPLAY_FBDEV
+    if (m_args.rotation == 0 && !std::getenv("HELIX_DISPLAY_ROTATION")) {
+        bool probed = m_config->get<bool>("/display/rotation_probed", false);
+        if (!probed) {
+            m_display->run_rotation_probe();
+            m_screen_width = m_display->width();
+            m_screen_height = m_display->height();
+        }
+    }
+#endif
+
     // Initialize layout manager (after display dimensions are known)
     auto& layout_mgr = helix::LayoutManager::instance();
     if (!m_args.layout.empty() && m_args.layout != "auto") {

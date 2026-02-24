@@ -285,6 +285,22 @@ class DisplayBackend {
     }
 
     /**
+     * @brief Update touch rotation transform after display rotation changes
+     *
+     * For fbdev backend, transforms raw evdev touch coordinates to match
+     * the rotated display. No-op for SDL and DRM backends.
+     *
+     * @param rot LVGL rotation enum
+     * @param phys_w Native panel width (pre-rotation)
+     * @param phys_h Native panel height (pre-rotation)
+     */
+    virtual void set_display_rotation(lv_display_rotation_t rot, int phys_w, int phys_h) {
+        (void)rot;
+        (void)phys_w;
+        (void)phys_h;
+    }
+
+    /**
      * @brief Blank the display (turn off backlight via framebuffer ioctl)
      *
      * Blanks the display using the FBIOBLANK ioctl with FB_BLANK_NORMAL.
