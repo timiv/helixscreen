@@ -159,6 +159,7 @@
 
         <!-- Options card - flex_grow ensures it expands to fit all checkboxes -->
         <ui_card name="options_card" width="100%" flex_grow="1" style_pad_ver="0" style_pad_gap="#space_sm" flex_flow="column" style_bg_color="#elevated_bg">
+          <bind_flag_if_eq subject="has_any_preprint_options" flag="hidden" ref_value="0"/>
           <!-- Pre-print G-code modification options -->
           <!-- Visibility: can_show_* = helix_plugin_installed AND printer_has_* -->
           <!-- Toggle rows: label on left, switch on right -->

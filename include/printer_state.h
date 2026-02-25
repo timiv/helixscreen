@@ -1292,6 +1292,13 @@ class PrinterState {
     }
 
     /**
+     * @brief Get aggregate subject: 1 if any preprint option row is visible
+     */
+    lv_subject_t* get_has_any_preprint_options_subject() {
+        return composite_visibility_state_.get_has_any_preprint_options_subject();
+    }
+
+    /**
      * @brief Get visibility subject for timelapse row
      *
      * Returns 1 when printer has timelapse plugin installed, 0 otherwise.
