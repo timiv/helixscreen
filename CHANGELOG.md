@@ -5,6 +5,20 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.1] - 2026-02-25
+
+### Added
+- Robust touch calibration with multi-sample input filtering, ADC saturation rejection, and post-compute validation
+- Smart calibration auto-revert with 10-second timeout and broken-matrix detection
+- DRM plane rotation support for `rotate` config on Raspberry Pi
+
+### Fixed
+- Use-after-free crashes in AMS modal destructor and sidebar (#199, #201)
+- Static-linked OpenSSL for Pi fbdev variants (fixes missing libssl.so.1.1 on some systems)
+- Creality SonicPad/Nebula display backlight no longer killed by display-sleep service
+- OTA update downloads no longer fail for releases larger than 50 MB (limit raised to 150 MB)
+- Touch calibration verify handler simplified with dead wizard callbacks removed
+
 ## [0.13.0] - 2026-02-24
 
 The rendering engine gets a major upgrade — the 3D G-code viewer is ported from TinyGL to OpenGL ES 2.0 with per-pixel Phong shading, and Pi builds gain GPU-accelerated DRM+EGL rendering with automatic framebuffer fallback. A first-boot rotation probe auto-detects display orientation, and the UI gains carousel modes for temperature and fan widgets, frosted-glass modal backdrops, and a new shared progress bar component with gradient indicators.
@@ -1087,6 +1101,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.13.1]: https://github.com/prestonbrown/helixscreen/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/prestonbrown/helixscreen/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/prestonbrown/helixscreen/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/prestonbrown/helixscreen/compare/v0.11.1...v0.12.0
