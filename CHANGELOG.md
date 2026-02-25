@@ -25,6 +25,9 @@ The rendering engine gets a major upgrade — the 3D G-code viewer is ported fro
 - Icons on Delete and Print buttons in print details card
 - SSL enabled for native desktop builds
 - Translation updates with 7 obsolete keys removed
+- External spool widget for printers without AMS
+- Loading spinner overlay and 3D rotate hint icon on print file detail panel
+- AFC tool changer support with proper SELECT_TOOL/UNSELECT_TOOL commands and extruder dropdown
 
 ### Fixed
 - Use-after-free crashes in G-code viewer, power panel, mDNS callbacks, thumbnail loading, and AMS widget cleanup (#182, #192, #193)
@@ -39,6 +42,17 @@ The rendering engine gets a major upgrade — the 3D G-code viewer is ported fro
 - Overflow row click passthrough on controls panel
 - Temperature chart validates widget before updating series data
 - Renamed Voron Micron to PFA Micron in printer database
+- AMS edit modal remaining weight defaults and display
+- Header bar back button click area expanded for better touch targeting
+- 3D viewer camera framing and gesture responsiveness
+- Pinch-to-zoom rendering during gesture
+- DRM flush timeout from glReadPixels on cached frames
+- Print buttons stay at bottom when preprint options are hidden
+- Empty preprint options card hidden when no options available
+- Z-adjust button icons corrected for bed-moving printers
+- Z-adjust button order fixed so down arrow is on bottom
+- 3D viewer crash when loading UI triggers on hidden widgets
+- Timelapse callback registration
 
 ### Changed
 - Tertiary theme color changed from orange to blue-violet
