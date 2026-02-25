@@ -343,6 +343,7 @@ class DisplayManager {
 
   private:
     bool m_initialized = false;
+    bool m_shutting_down = false;
     int m_width = 0;
     int m_height = 0;
 

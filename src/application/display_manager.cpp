@@ -29,6 +29,7 @@
 #include "display_settings_manager.h"
 #include "helix-xml/src/xml/lv_xml.h"
 #include "lvgl/src/others/translation/lv_translation.h"
+#include "lvgl_log_handler.h"
 #include "printer_state.h"
 
 #include <spdlog/spdlog.h>
@@ -95,6 +96,11 @@ bool DisplayManager::init(const Config& config) {
 
     // Initialize LVGL library
     lv_init();
+
+    // Register LVGL log handler immediately after lv_init() so that DRM/fbdev
+    // driver errors are captured via spdlog (lv_init resets callbacks, so this
+    // must come after it but before any display backend setup).
+    helix::logging::register_lvgl_log_handler();
 
     // Initialize helix-xml engine (extracted from LVGL 9.5)
     // Must be called after lv_init() - sets up XML component scopes, widget registry, etc.
@@ -372,6 +378,7 @@ void DisplayManager::shutdown() {
         return;
     }
 
+    m_shutting_down = true;
     s_instance = nullptr;
     spdlog::debug("[DisplayManager] Shutting down");
 
@@ -592,6 +599,10 @@ void DisplayManager::check_display_sleep() {
 }
 
 void DisplayManager::wake_display() {
+    if (m_shutting_down) {
+        return; // Shutdown in progress — avoid touching LVGL objects
+    }
+
     if (!m_display_sleeping && !m_display_dimmed) {
         return; // Already fully awake
     }
@@ -1041,7 +1052,7 @@ void DisplayManager::run_rotation_probe() {
 
 void DisplayManager::resize_timer_cb(lv_timer_t* timer) {
     auto* self = static_cast<DisplayManager*>(lv_timer_get_user_data(timer));
-    if (!self) {
+    if (!self || self->m_shutting_down) {
         return;
     }
 
@@ -1065,7 +1076,7 @@ void DisplayManager::resize_event_cb(lv_event_t* e) {
 
     if (code == LV_EVENT_SIZE_CHANGED) {
         auto* self = static_cast<DisplayManager*>(lv_event_get_user_data(e));
-        if (!self) {
+        if (!self || self->m_shutting_down) {
             return;
         }
 

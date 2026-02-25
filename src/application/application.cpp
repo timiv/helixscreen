@@ -2377,6 +2377,12 @@ void Application::shutdown() {
     // they must unsubscribe while the client's mutex is still alive.
     AmsState::instance().clear_backends();
 
+    // Drain deferred UI callbacks BEFORE destroying panels.
+    // observe_int_sync/observe_string defer via ui_queue_update(), so queued
+    // callbacks may hold 'this' pointers to living panels. Processing them
+    // after m_panels.reset() causes use-after-free (SIGSEGV).
+    helix::ui::update_queue_shutdown();
+
     m_panels.reset();
     m_subjects.reset();
 
@@ -2384,11 +2390,6 @@ void Application::shutdown() {
     if (m_display) {
         m_display->restore_display_on_shutdown();
     }
-
-    // Clear pending async callbacks BEFORE destroying panels.
-    // This prevents use-after-free: async observer callbacks may have been queued
-    // with stale 'self' pointers that will crash if processed after panel destruction.
-    helix::ui::update_queue_shutdown();
 
     // Stop ALL LVGL animations before destroying panels.
     // Animations hold pointers to objects; if panels are destroyed first,
