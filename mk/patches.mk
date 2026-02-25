@@ -18,6 +18,7 @@ LVGL_PATCHED_FILES := \
 	src/stdlib/builtin/lv_string_builtin.c \
 	src/draw/sw/blend/lv_draw_sw_blend.c \
 	src/draw/sw/lv_draw_sw_letter.c \
+	src/drivers/display/drm/lv_linux_drm.c \
 	src/drivers/display/drm/lv_linux_drm.h \
 	src/drivers/display/drm/lv_linux_drm_egl.c
 
@@ -179,7 +180,18 @@ $(PATCHES_STAMP): $(PATCH_FILES) $(LVGL_HEAD) $(LIBHV_HEAD)
 	else \
 		echo "$(GREEN)✓ LVGL label draw NULL font guard patch already applied$(RESET)"; \
 	fi
-	$(Q)if git -C $(LVGL_DIR) diff --quiet src/drivers/display/drm/lv_linux_drm.h 2>/dev/null; then \
+	$(Q)if git -C $(LVGL_DIR) diff --quiet src/drivers/display/drm/lv_linux_drm.c 2>/dev/null; then \
+		echo "$(YELLOW)→ Applying LVGL DRM plane rotation patch...$(RESET)"; \
+		if git -C $(LVGL_DIR) apply --check ../../patches/lvgl-drm-plane-rotation.patch 2>/dev/null; then \
+			git -C $(LVGL_DIR) apply ../../patches/lvgl-drm-plane-rotation.patch && \
+			echo "$(GREEN)✓ DRM plane rotation patch applied$(RESET)"; \
+		else \
+			echo "$(YELLOW)⚠ Cannot apply patch (already applied or conflicts)$(RESET)"; \
+		fi \
+	else \
+		echo "$(GREEN)✓ LVGL DRM plane rotation patch already applied$(RESET)"; \
+	fi
+	$(Q)if git -C $(LVGL_DIR) diff --quiet src/drivers/display/drm/lv_linux_drm_egl.c 2>/dev/null; then \
 		echo "$(YELLOW)→ Applying LVGL DRM EGL getters patch...$(RESET)"; \
 		if git -C $(LVGL_DIR) apply --check ../../patches/lvgl-drm-egl-getters.patch 2>/dev/null; then \
 			git -C $(LVGL_DIR) apply ../../patches/lvgl-drm-egl-getters.patch && \
