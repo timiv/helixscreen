@@ -312,8 +312,10 @@ void PrintTuneOverlay::update_z_offset_icons(lv_obj_t* /*panel*/) {
     bool bed_moves_z = (kin == 1);
 
     // Set icon names via string subjects (bind_icon in XML)
-    const char* closer_icon = bed_moves_z ? "arrow_expand_down" : "arrow_down";
-    const char* farther_icon = bed_moves_z ? "arrow_expand_up" : "arrow_up";
+    // Closer = more squish. On bed-moves-Z (CoreXY): bed rises (expand_up).
+    // On head-moves-Z (Cartesian): head descends (arrow_down).
+    const char* closer_icon = bed_moves_z ? "arrow_expand_up" : "arrow_down";
+    const char* farther_icon = bed_moves_z ? "arrow_expand_down" : "arrow_up";
 
     std::strncpy(z_closer_icon_buf_, closer_icon, sizeof(z_closer_icon_buf_) - 1);
     lv_subject_copy_string(&z_closer_icon_subject_, z_closer_icon_buf_);
