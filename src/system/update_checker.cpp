@@ -1620,8 +1620,16 @@ std::string UpdateChecker::get_platform_key() {
     return "ad5m";
 #elif defined(HELIX_PLATFORM_CC1)
     return "cc1";
-#elif defined(HELIX_PLATFORM_K1)
-    return "k1";
+#elif defined(HELIX_PLATFORM_MIPS)
+    // Same binary runs on K1 and AD5X — detect at runtime.
+    // AD5X has /usr/prog (FlashForge layout), K1 does not.
+    {
+        struct stat st;
+        if (stat("/usr/prog", &st) == 0 && S_ISDIR(st.st_mode)) {
+            return "ad5x";
+        }
+        return "k1";
+    }
 #elif defined(HELIX_PLATFORM_K2)
     return "k2";
 #elif defined(HELIX_PLATFORM_PI32)

@@ -414,7 +414,7 @@ validate_binary_architecture() {
             expected_machine_lo="28"
             expected_desc="ARM 32-bit (armv7l)"
             ;;
-        k1)
+        ad5x|k1)
             expected_class="01"
             expected_machine_lo="08"
             expected_desc="MIPS 32-bit (mipsel)"
@@ -487,7 +487,7 @@ extract_release() {
     mkdir -p "$extract_dir"
     cd "$extract_dir" || exit 1
 
-    if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
+    if [ "$platform" = "ad5m" ] || [ "$platform" = "ad5x" ] || [ "$platform" = "k1" ]; then
         # BusyBox tar doesn't support -z
         if ! gunzip -c "$tarball" | tar xf -; then
             # Check if it was a space issue vs actual corruption

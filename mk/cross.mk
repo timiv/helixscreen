@@ -11,7 +11,9 @@
 #   make PLATFORM_TARGET=pi32-fbdev  # Cross-compile for Pi (armhf, fbdev fallback)
 #   make PLATFORM_TARGET=ad5m  # Cross-compile for Adventurer 5M (armv7-a)
 #   make PLATFORM_TARGET=cc1   # Cross-compile for Centauri Carbon 1 (armv7-a)
-#   make PLATFORM_TARGET=k1    # Cross-compile for Creality K1 series (MIPS32)
+#   make PLATFORM_TARGET=mips  # Cross-compile for MIPS32 devices (K1, AD5X)
+#   make PLATFORM_TARGET=k1    # Alias for mips (Creality K1 series)
+#   make PLATFORM_TARGET=ad5x  # Alias for mips (FlashForge AD5X)
 #   make PLATFORM_TARGET=k2    # Cross-compile for Creality K2 series (ARM)
 #   make PLATFORM_TARGET=snapmaker-u1 # Cross-compile for Snapmaker U1 (aarch64)
 #   make pi-docker             # Docker-based Pi build (64-bit, DRM+GLES)
@@ -22,7 +24,8 @@
 #   make pi32-all-docker       # Docker-based Pi build (both 32-bit variants)
 #   make ad5m-docker           # Docker-based AD5M build
 #   make cc1-docker            # Docker-based CC1 build
-#   make k1-docker             # Docker-based K1 build
+#   make k1-docker             # Docker-based K1/MIPS build
+#   make ad5x-docker           # Docker-based AD5X/MIPS build (same toolchain as K1)
 #   make k2-docker             # Docker-based K2 build
 #   make snapmaker-u1-docker   # Docker-based Snapmaker U1 build
 
@@ -205,10 +208,13 @@ else ifeq ($(PLATFORM_TARGET),cc1)
     # Strip binary for size on memory-constrained device
     STRIP_BINARY := yes
 
-else ifeq ($(PLATFORM_TARGET),k1)
+else ifneq ($(filter mips k1 ad5x,$(PLATFORM_TARGET)),)
     # -------------------------------------------------------------------------
-    # Creality K1 Series - Ingenic X2000E (MIPS32r2)
-    # Specs: 480x400 display (K1/K1C/K1Max), 480x800 (K2), 256MB RAM, musl libc
+    # MIPS32 Devices (Creality K1, FlashForge AD5X) - Ingenic XBurst2
+    # K1: Ingenic X2000E, 480x400, 256MB RAM
+    # AD5X: Ingenic X2600, 800x480, multi-color IFS
+    # Both: MIPS32r2, musl libc, fbdev display, evdev touch
+    # Aliases: k1, ad5x → same binary, different release packages
     # -------------------------------------------------------------------------
     # FULLY STATIC BUILD with musl: Cleaner than glibc static linking.
     # No getaddrinfo warnings, smaller binaries, guaranteed portability.
@@ -216,10 +222,10 @@ else ifeq ($(PLATFORM_TARGET),k1)
     CROSS_COMPILE ?= mipsel-buildroot-linux-musl-
     TARGET_ARCH := mips32r2
     TARGET_TRIPLE := mipsel-buildroot-linux-musl
-    # Optimized build flags for Ingenic X2000E (MIPS32r2):
+    # Optimized build flags for Ingenic MIPS32r2 (XBurst2):
     #
     # Architecture flags:
-    # -march=mips32r2: Target instruction set (X2000E is MIPS32 R5 compatible)
+    # -march=mips32r2: Target instruction set (X2000E/X2600 are MIPS32 R5 compatible)
     # -mtune=mips32r2: Tune for MIPS32r2 pipeline
     #
     # Size optimization:
@@ -240,7 +246,7 @@ else ifeq ($(PLATFORM_TARGET),k1)
         -Os -flto=auto -ffunction-sections -fdata-sections \
         -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables \
         -fmerge-all-constants -fno-ident \
-        -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD -DHELIX_PLATFORM_K1
+        -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD -DHELIX_PLATFORM_MIPS
     # Linker flags:
     # -Wl,--gc-sections: Remove unused sections (works with -ffunction-sections)
     # -flto=auto: Match compiler LTO flag, uses all CPUs
@@ -254,7 +260,7 @@ else ifeq ($(PLATFORM_TARGET),k1)
     ENABLE_SDL := no
     ENABLE_GLES_3D := no
     ENABLE_EVDEV := yes
-    BUILD_SUBDIR := k1
+    BUILD_SUBDIR := mips
     # Strip binary for size on memory-constrained device
     STRIP_BINARY := yes
 
@@ -358,7 +364,7 @@ else ifeq ($(PLATFORM_TARGET),native)
     BUILD_SUBDIR :=
 
 else
-    $(error Unknown PLATFORM_TARGET: $(PLATFORM_TARGET). Valid options: native, pi, pi32, ad5m, cc1, k1, k1-dynamic, k2, snapmaker-u1)
+    $(error Unknown PLATFORM_TARGET: $(PLATFORM_TARGET). Valid options: native, pi, pi32, ad5m, cc1, mips, k1, ad5x, k1-dynamic, k2, snapmaker-u1)
 endif
 
 # =============================================================================
@@ -494,7 +500,7 @@ endif
 # Cross-Compilation Build Targets
 # =============================================================================
 
-.PHONY: pi pi32 ad5m cc1 k1 k1-dynamic k2 snapmaker-u1 pi-docker pi32-docker ad5m-docker cc1-docker k1-docker k1-dynamic-docker k2-docker snapmaker-u1-docker docker-toolchains docker-toolchain-snapmaker-u1 cross-info ensure-docker ensure-buildx maybe-stop-colima
+.PHONY: pi pi32 ad5m cc1 mips k1 ad5x k1-dynamic k2 snapmaker-u1 pi-docker pi32-docker ad5m-docker cc1-docker mips-docker k1-docker ad5x-docker k1-dynamic-docker k2-docker snapmaker-u1-docker docker-toolchains docker-toolchain-snapmaker-u1 cross-info ensure-docker ensure-buildx maybe-stop-colima
 
 # Persistent ccache for Docker builds — bind-mounts a host directory so the
 # cache survives across container runs (the container is --rm).  Per-platform
@@ -521,9 +527,12 @@ cc1:
 	@echo "$(CYAN)$(BOLD)Cross-compiling for Centauri Carbon 1 (armv7-a)...$(RESET)"
 	$(Q)$(MAKE) PLATFORM_TARGET=cc1 -j$(NPROC) all
 
-k1:
-	@echo "$(CYAN)$(BOLD)Cross-compiling for Creality K1 series (MIPS32)...$(RESET)"
-	$(Q)$(MAKE) PLATFORM_TARGET=k1 -j$(NPROC) all
+mips:
+	@echo "$(CYAN)$(BOLD)Cross-compiling for MIPS32 devices (K1, AD5X)...$(RESET)"
+	$(Q)$(MAKE) PLATFORM_TARGET=mips -j$(NPROC) all
+
+k1: mips
+ad5x: mips
 
 k1-dynamic:
 	@echo "$(CYAN)$(BOLD)Cross-compiling for Creality K1 series (MIPS32, dynamic linking)...$(RESET)"
@@ -695,16 +704,19 @@ cc1-docker: ensure-docker
 		|| echo "$(YELLOW)⚠ Could not extract CA certificates (HTTPS may rely on device certs)$(RESET)"
 	@$(MAKE) --no-print-directory maybe-stop-colima
 
-k1-docker: ensure-docker
-	@echo "$(CYAN)$(BOLD)Cross-compiling for Creality K1 series via Docker...$(RESET)"
+mips-docker: ensure-docker
+	@echo "$(CYAN)$(BOLD)Cross-compiling for MIPS32 devices via Docker...$(RESET)"
 	@if ! docker image inspect helixscreen/toolchain-k1 >/dev/null 2>&1; then \
 		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
 		$(MAKE) docker-toolchain-k1; \
 	fi
 	$(call ensure-ccache-dir,k1)
 	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src $(call docker-ccache-args,k1) helixscreen/toolchain-k1 \
-		make PLATFORM_TARGET=k1 SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
+		make PLATFORM_TARGET=mips SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@$(MAKE) --no-print-directory maybe-stop-colima
+
+k1-docker: mips-docker
+ad5x-docker: mips-docker
 
 k1-dynamic-docker: ensure-docker
 	@echo "$(CYAN)$(BOLD)Cross-compiling for Creality K1 series (dynamic) via Docker...$(RESET)"
@@ -776,7 +788,7 @@ docker-toolchain-cc1: ensure-buildx
 	$(Q)docker buildx build -t helixscreen/toolchain-cc1 -f docker/Dockerfile.cc1 docker/
 
 docker-toolchain-k1: ensure-buildx
-	@echo "$(CYAN)Building Creality K1 series toolchain Docker image...$(RESET)"
+	@echo "$(CYAN)Building MIPS32 (K1/AD5X) toolchain Docker image...$(RESET)"
 	$(Q)docker buildx build -t helixscreen/toolchain-k1 -f docker/Dockerfile.k1 docker/
 
 docker-toolchain-k1-dynamic: ensure-buildx
@@ -1449,8 +1461,8 @@ K1_SSH_TARGET := $(K1_USER)@$(K1_HOST)
 
 # Deploy full application to K1 using tar/ssh (K1 BusyBox has no rsync)
 deploy-k1:
-	@test -f build/k1/bin/helix-screen || { echo "$(RED)Error: build/k1/bin/helix-screen not found. Run 'make k1-docker' first.$(RESET)"; exit 1; }
-	@test -f build/k1/bin/helix-splash || { echo "$(RED)Error: build/k1/bin/helix-splash not found. Run 'make k1-docker' first.$(RESET)"; exit 1; }
+	@test -f build/mips/bin/helix-screen || { echo "$(RED)Error: build/mips/bin/helix-screen not found. Run 'make mips-docker' first.$(RESET)"; exit 1; }
+	@test -f build/mips/bin/helix-splash || { echo "$(RED)Error: build/mips/bin/helix-splash not found. Run 'make mips-docker' first.$(RESET)"; exit 1; }
 	@echo "$(CYAN)Deploying HelixScreen to $(K1_SSH_TARGET):$(K1_DEPLOY_DIR)...$(RESET)"
 	@echo "$(YELLOW)NOTE: K1 deployment is UNTESTED - please report issues$(RESET)"
 	@# Generate pre-rendered images if missing
@@ -1470,10 +1482,10 @@ deploy-k1:
 	ssh $(K1_SSH_TARGET) "killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; mkdir -p $(K1_DEPLOY_DIR)/bin"
 	@# Transfer binaries via cat/ssh
 	@echo "$(DIM)Transferring binaries...$(RESET)"
-	cat build/k1/bin/helix-screen | ssh $(K1_SSH_TARGET) "cat > $(K1_DEPLOY_DIR)/bin/helix-screen && chmod +x $(K1_DEPLOY_DIR)/bin/helix-screen"
-	cat build/k1/bin/helix-splash | ssh $(K1_SSH_TARGET) "cat > $(K1_DEPLOY_DIR)/bin/helix-splash && chmod +x $(K1_DEPLOY_DIR)/bin/helix-splash"
-	@if [ -f build/k1/bin/helix-watchdog ]; then \
-		cat build/k1/bin/helix-watchdog | ssh $(K1_SSH_TARGET) "cat > $(K1_DEPLOY_DIR)/bin/helix-watchdog && chmod +x $(K1_DEPLOY_DIR)/bin/helix-watchdog"; \
+	cat build/mips/bin/helix-screen | ssh $(K1_SSH_TARGET) "cat > $(K1_DEPLOY_DIR)/bin/helix-screen && chmod +x $(K1_DEPLOY_DIR)/bin/helix-screen"
+	cat build/mips/bin/helix-splash | ssh $(K1_SSH_TARGET) "cat > $(K1_DEPLOY_DIR)/bin/helix-splash && chmod +x $(K1_DEPLOY_DIR)/bin/helix-splash"
+	@if [ -f build/mips/bin/helix-watchdog ]; then \
+		cat build/mips/bin/helix-watchdog | ssh $(K1_SSH_TARGET) "cat > $(K1_DEPLOY_DIR)/bin/helix-watchdog && chmod +x $(K1_DEPLOY_DIR)/bin/helix-watchdog"; \
 	fi
 	cat scripts/helix-launcher.sh | ssh $(K1_SSH_TARGET) "cat > $(K1_DEPLOY_DIR)/bin/helix-launcher.sh && chmod +x $(K1_DEPLOY_DIR)/bin/helix-launcher.sh"
 	@# Transfer assets via tar
@@ -1496,22 +1508,22 @@ deploy-k1:
 
 # Deploy and run in foreground with verbose logging (for interactive debugging)
 deploy-k1-fg:
-	@test -f build/k1/bin/helix-screen || { echo "$(RED)Error: build/k1/bin/helix-screen not found. Run 'make k1-docker' first.$(RESET)"; exit 1; }
-	@test -f build/k1/bin/helix-splash || { echo "$(RED)Error: build/k1/bin/helix-splash not found. Run 'make k1-docker' first.$(RESET)"; exit 1; }
+	@test -f build/mips/bin/helix-screen || { echo "$(RED)Error: build/mips/bin/helix-screen not found. Run 'make mips-docker' first.$(RESET)"; exit 1; }
+	@test -f build/mips/bin/helix-splash || { echo "$(RED)Error: build/mips/bin/helix-splash not found. Run 'make mips-docker' first.$(RESET)"; exit 1; }
 	@echo "$(YELLOW)NOTE: K1 deployment is UNTESTED - please report issues$(RESET)"
-	$(call deploy-common,$(K1_SSH_TARGET),$(K1_DEPLOY_DIR),build/k1/bin)
+	$(call deploy-common,$(K1_SSH_TARGET),$(K1_DEPLOY_DIR),build/mips/bin)
 	@echo "$(CYAN)Starting helix-screen on $(K1_HOST) (foreground, verbose)...$(RESET)"
 	ssh -t $(K1_SSH_TARGET) "cd $(K1_DEPLOY_DIR) && ./bin/helix-launcher.sh --debug"
 
 # Deploy binaries only (fast, for quick iteration)
 deploy-k1-bin:
-	@test -f build/k1/bin/helix-screen || { echo "$(RED)Error: build/k1/bin/helix-screen not found. Run 'make k1-docker' first.$(RESET)"; exit 1; }
+	@test -f build/mips/bin/helix-screen || { echo "$(RED)Error: build/mips/bin/helix-screen not found. Run 'make mips-docker' first.$(RESET)"; exit 1; }
 	@echo "$(CYAN)Deploying binaries only to $(K1_SSH_TARGET):$(K1_DEPLOY_DIR)/bin...$(RESET)"
 	ssh $(K1_SSH_TARGET) "killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; mkdir -p $(K1_DEPLOY_DIR)/bin"
-	cat build/k1/bin/helix-screen | ssh $(K1_SSH_TARGET) "cat > $(K1_DEPLOY_DIR)/bin/helix-screen && chmod +x $(K1_DEPLOY_DIR)/bin/helix-screen"
-	cat build/k1/bin/helix-splash | ssh $(K1_SSH_TARGET) "cat > $(K1_DEPLOY_DIR)/bin/helix-splash && chmod +x $(K1_DEPLOY_DIR)/bin/helix-splash"
-	@if [ -f build/k1/bin/helix-watchdog ]; then \
-		cat build/k1/bin/helix-watchdog | ssh $(K1_SSH_TARGET) "cat > $(K1_DEPLOY_DIR)/bin/helix-watchdog && chmod +x $(K1_DEPLOY_DIR)/bin/helix-watchdog"; \
+	cat build/mips/bin/helix-screen | ssh $(K1_SSH_TARGET) "cat > $(K1_DEPLOY_DIR)/bin/helix-screen && chmod +x $(K1_DEPLOY_DIR)/bin/helix-screen"
+	cat build/mips/bin/helix-splash | ssh $(K1_SSH_TARGET) "cat > $(K1_DEPLOY_DIR)/bin/helix-splash && chmod +x $(K1_DEPLOY_DIR)/bin/helix-splash"
+	@if [ -f build/mips/bin/helix-watchdog ]; then \
+		cat build/mips/bin/helix-watchdog | ssh $(K1_SSH_TARGET) "cat > $(K1_DEPLOY_DIR)/bin/helix-watchdog && chmod +x $(K1_DEPLOY_DIR)/bin/helix-watchdog"; \
 	fi
 	@echo "$(GREEN)✓ Binaries deployed$(RESET)"
 	@echo "$(CYAN)Restarting helix-screen on $(K1_HOST)...$(RESET)"
@@ -1731,7 +1743,7 @@ define release-clean-assets
 	@find $(1)/assets -name 'mdi-icon-metadata.json.gz' -delete 2>/dev/null || true
 endef
 
-.PHONY: release-pi release-pi32 release-ad5m release-k1 release-k1-dynamic release-k2 release-snapmaker-u1 release-all release-clean pi-fbdev-docker pi32-fbdev-docker pi-all-docker pi32-all-docker
+.PHONY: release-pi release-pi32 release-ad5m release-k1 release-ad5x release-k1-dynamic release-k2 release-snapmaker-u1 release-all release-clean pi-fbdev-docker pi32-fbdev-docker pi-all-docker pi32-all-docker
 
 # Package Pi release
 release-pi: | build/pi/bin/helix-screen build/pi/bin/helix-splash build/pi-fbdev/bin/helix-screen
@@ -1899,11 +1911,11 @@ release-cc1: | build/cc1/bin/helix-screen build/cc1/bin/helix-splash
 	@ls -lh $(RELEASE_DIR)/helixscreen-cc1-$(RELEASE_VERSION).tar.gz $(RELEASE_DIR)/helixscreen-cc1.zip
 
 # Package K1 release
-release-k1: | build/k1/bin/helix-screen build/k1/bin/helix-splash
+release-k1: | build/mips/bin/helix-screen build/mips/bin/helix-splash
 	@echo "$(CYAN)$(BOLD)Packaging K1 release v$(VERSION)...$(RESET)"
 	@mkdir -p $(RELEASE_DIR)/helixscreen/bin
-	@cp build/k1/bin/helix-screen build/k1/bin/helix-splash $(RELEASE_DIR)/helixscreen/bin/
-	@if [ -f build/k1/bin/helix-watchdog ]; then cp build/k1/bin/helix-watchdog $(RELEASE_DIR)/helixscreen/bin/; fi
+	@cp build/mips/bin/helix-screen build/mips/bin/helix-splash $(RELEASE_DIR)/helixscreen/bin/
+	@if [ -f build/mips/bin/helix-watchdog ]; then cp build/mips/bin/helix-watchdog $(RELEASE_DIR)/helixscreen/bin/; fi
 	@cp scripts/helix-launcher.sh $(RELEASE_DIR)/helixscreen/bin/
 	@cp -r ui_xml config $(RELEASE_DIR)/helixscreen/
 	@# Remove any personal config — release ships template only (installer copies it on first run)
@@ -1933,6 +1945,41 @@ release-k1: | build/k1/bin/helix-screen build/k1/bin/helix-splash
 	@rm -rf $(RELEASE_DIR)/helixscreen
 	@echo "$(GREEN)✓ Created $(RELEASE_DIR)/helixscreen-k1-$(RELEASE_VERSION).tar.gz + helixscreen-k1.zip$(RESET)"
 	@ls -lh $(RELEASE_DIR)/helixscreen-k1-$(RELEASE_VERSION).tar.gz $(RELEASE_DIR)/helixscreen-k1.zip
+
+# Package AD5X release (same MIPS binary, different release_info.json for Moonraker update manager)
+release-ad5x: | build/mips/bin/helix-screen build/mips/bin/helix-splash
+	@echo "$(CYAN)$(BOLD)Packaging AD5X release v$(VERSION)...$(RESET)"
+	@mkdir -p $(RELEASE_DIR)/helixscreen/bin
+	@cp build/mips/bin/helix-screen build/mips/bin/helix-splash $(RELEASE_DIR)/helixscreen/bin/
+	@if [ -f build/mips/bin/helix-watchdog ]; then cp build/mips/bin/helix-watchdog $(RELEASE_DIR)/helixscreen/bin/; fi
+	@cp scripts/helix-launcher.sh $(RELEASE_DIR)/helixscreen/bin/
+	@cp -r ui_xml config $(RELEASE_DIR)/helixscreen/
+	@rm -f $(RELEASE_DIR)/helixscreen/config/helixconfig.json $(RELEASE_DIR)/helixscreen/config/helixconfig-test.json
+	@cp scripts/$(INSTALLER_FILENAME) $(RELEASE_DIR)/helixscreen/
+	@chmod +x $(RELEASE_DIR)/helixscreen/$(INSTALLER_FILENAME)
+	@mkdir -p $(RELEASE_DIR)/helixscreen/scripts
+	@cp scripts/uninstall.sh $(RELEASE_DIR)/helixscreen/scripts/
+	@mkdir -p $(RELEASE_DIR)/helixscreen/assets
+	@for asset in $(RELEASE_ASSETS); do \
+		if [ -d "$$asset" ]; then cp -r "$$asset" $(RELEASE_DIR)/helixscreen/assets/; fi; \
+	done
+	@if [ -d "build/assets/images/prerendered" ]; then \
+		mkdir -p $(RELEASE_DIR)/helixscreen/assets/images/prerendered; \
+		cp -r build/assets/images/prerendered/* $(RELEASE_DIR)/helixscreen/assets/images/prerendered/; \
+	fi
+	@if [ -d "build/assets/images/printers/prerendered" ]; then \
+		mkdir -p $(RELEASE_DIR)/helixscreen/assets/images/printers/prerendered; \
+		cp -r build/assets/images/printers/prerendered/* $(RELEASE_DIR)/helixscreen/assets/images/printers/prerendered/; \
+	fi
+	@find $(RELEASE_DIR)/helixscreen -name '.DS_Store' -delete 2>/dev/null || true
+	$(call release-clean-assets,$(RELEASE_DIR)/helixscreen)
+	@xattr -cr $(RELEASE_DIR)/helixscreen 2>/dev/null || true
+	@echo '{"project_name":"helixscreen","project_owner":"prestonbrown","version":"$(RELEASE_VERSION)","asset_name":"helixscreen-ad5x.zip"}' > $(RELEASE_DIR)/helixscreen/release_info.json
+	@cd $(RELEASE_DIR)/helixscreen && zip -qr ../helixscreen-ad5x.zip .
+	@cd $(RELEASE_DIR) && COPYFILE_DISABLE=1 tar -czvf helixscreen-ad5x-$(RELEASE_VERSION).tar.gz helixscreen
+	@rm -rf $(RELEASE_DIR)/helixscreen
+	@echo "$(GREEN)✓ Created $(RELEASE_DIR)/helixscreen-ad5x-$(RELEASE_VERSION).tar.gz + helixscreen-ad5x.zip$(RESET)"
+	@ls -lh $(RELEASE_DIR)/helixscreen-ad5x-$(RELEASE_VERSION).tar.gz $(RELEASE_DIR)/helixscreen-ad5x.zip
 
 # Package K1 Dynamic release
 release-k1-dynamic: | build/k1-dynamic/bin/helix-screen build/k1-dynamic/bin/helix-splash
@@ -2039,7 +2086,7 @@ release-snapmaker-u1: | build/snapmaker-u1/bin/helix-screen
 	@ls -lh $(RELEASE_DIR)/helixscreen-snapmaker-u1-$(RELEASE_VERSION).tar.gz $(RELEASE_DIR)/helixscreen-snapmaker-u1.zip
 
 # Package all releases
-release-all: release-pi release-pi32 release-ad5m release-cc1 release-k1 release-k1-dynamic release-k2
+release-all: release-pi release-pi32 release-ad5m release-cc1 release-k1 release-ad5x release-k1-dynamic release-k2
 	@echo "$(GREEN)$(BOLD)✓ All releases packaged in $(RELEASE_DIR)/$(RESET)"
 	@ls -lh $(RELEASE_DIR)/*.tar.gz $(RELEASE_DIR)/*.zip
 
@@ -2050,15 +2097,17 @@ release-clean:
 
 # Aliases for package-* (matches scripts/package.sh naming)
 # These trigger the full build + package workflow
-.PHONY: package-ad5m package-cc1 package-pi package-pi32 package-k1-dynamic package-k2 package-snapmaker-u1 package-all package-clean
+.PHONY: package-ad5m package-cc1 package-pi package-pi32 package-k1 package-ad5x package-k1-dynamic package-k2 package-snapmaker-u1 package-all package-clean
 package-ad5m: ad5m-docker gen-images-ad5m gen-splash-3d-ad5m gen-printer-images release-ad5m
 package-cc1: cc1-docker gen-images gen-printer-images release-cc1
 package-pi: pi-all-docker gen-images gen-splash-3d gen-printer-images release-pi
 package-pi32: pi32-all-docker gen-images gen-splash-3d gen-printer-images release-pi32
+package-k1: mips-docker gen-images gen-splash-3d-k1 gen-printer-images release-k1
+package-ad5x: mips-docker gen-images gen-splash-3d-k1 gen-printer-images release-ad5x
 package-k1-dynamic: k1-dynamic-docker gen-images gen-splash-3d-k1 gen-printer-images release-k1-dynamic
 package-k2: k2-docker gen-images gen-printer-images release-k2
 package-snapmaker-u1: snapmaker-u1-docker gen-images gen-printer-images release-snapmaker-u1
-package-all: package-ad5m package-cc1 package-pi package-pi32 package-k1-dynamic package-k2
+package-all: package-ad5m package-cc1 package-pi package-pi32 package-k1 package-ad5x package-k1-dynamic package-k2
 package-clean: release-clean
 
 # Convenience aliases (verb-target → target-verb)

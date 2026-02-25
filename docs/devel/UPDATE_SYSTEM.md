@@ -191,7 +191,7 @@ The platform key is determined at compile time via preprocessor defines:
 | Define | Platform Key | Devices |
 |--------|-------------|---------|
 | `HELIX_PLATFORM_AD5M` | `ad5m` | Flashforge Adventurer 5M |
-| `HELIX_PLATFORM_K1` | `k1` | Creality K1 series |
+| `HELIX_PLATFORM_MIPS` | `k1` or `ad5x` | MIPS32 devices (Creality K1, FlashForge AD5X). Runtime detection via `/usr/prog` presence. |
 | `HELIX_PLATFORM_K2` | `k2` | Creality K2 series. **Note:** K2 is supported in the UpdateChecker code but is not yet included in `generate-manifest.sh`. R2 manifests do not currently include K2 binaries. |
 | `HELIX_PLATFORM_PI32` | `pi32` | Raspberry Pi (32-bit) |
 | (default) | `pi` | Raspberry Pi (64-bit) |

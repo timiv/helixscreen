@@ -63,6 +63,7 @@ All developer documentation lives here. When working on features, look up the re
 | `printers/QIDI_SUPPORT.md` | QIDI Q1 Pro/Plus platform |
 | `printers/SNAPMAKER_U1_SUPPORT.md` | Snapmaker U1 toolchanger platform |
 | `printers/CREALITY_K2_SUPPORT.md` | Creality K2 series platform |
+| `printers/FLASHFORGE_AD5X_SUPPORT.md` | FlashForge Adventurer 5X (MIPS, ZMOD) |
 | `ENVIRONMENT_VARIABLES.md` | All runtime and build env vars |
 
 ## Integration

@@ -53,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [pi, pi32, ad5m, cc1, k1, k2]
+        platform: [pi, pi32, ad5m, cc1, k1, ad5x, k2]
         include:
           - platform: pi
             display_name: "Raspberry Pi"
@@ -65,6 +65,12 @@ jobs:
             display_name: "Elegoo Centauri Carbon 1"
           - platform: k1
             display_name: "Creality K1 Series"
+            docker_image: k1
+            build_target: mips
+          - platform: ad5x
+            display_name: "FlashForge AD5X"
+            docker_image: k1
+            build_target: mips
           - platform: k2
             display_name: "Creality K2 Series"
 
@@ -81,41 +87,41 @@ jobs:
       uses: actions/cache@v4
       with:
         path: /tmp/.buildx-cache
-        key: buildx-${{ matrix.platform }}-${{ hashFiles(format('docker/Dockerfile.{0}', matrix.platform)) }}
+        key: buildx-${{ matrix.docker_image || matrix.platform }}-${{ hashFiles(format('docker/Dockerfile.{0}', matrix.docker_image || matrix.platform)) }}
         restore-keys: |
-          buildx-${{ matrix.platform }}-
+          buildx-${{ matrix.docker_image || matrix.platform }}-
 
     - name: Cache ccache
       uses: actions/cache@v4
       with:
-        path: /tmp/.ccache-${{ matrix.platform }}
-        key: ccache-release-${{ matrix.platform }}-${{ github.sha }}
+        path: /tmp/.ccache-${{ matrix.docker_image || matrix.platform }}
+        key: ccache-release-${{ matrix.docker_image || matrix.platform }}-${{ github.sha }}
         restore-keys: |
-          ccache-release-${{ matrix.platform }}-
+          ccache-release-${{ matrix.docker_image || matrix.platform }}-
 
     - name: Configure ccache
       run: |
-        mkdir -p /tmp/.ccache-${{ matrix.platform }}
-        printf 'max_size = 1G\ncompression = true\n' > /tmp/.ccache-${{ matrix.platform }}/ccache.conf
+        mkdir -p /tmp/.ccache-${{ matrix.docker_image || matrix.platform }}
+        printf 'max_size = 1G\ncompression = true\n' > /tmp/.ccache-${{ matrix.docker_image || matrix.platform }}/ccache.conf
 
-    - name: Build ${{ matrix.platform }} toolchain image
+    - name: Build ${{ matrix.docker_image || matrix.platform }} toolchain image
       run: |
         docker buildx build \
           --cache-from type=local,src=/tmp/.buildx-cache \
           --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
           --load \
-          -t helixscreen/toolchain-${{ matrix.platform }} \
-          -f docker/Dockerfile.${{ matrix.platform }} \
+          -t helixscreen/toolchain-${{ matrix.docker_image || matrix.platform }} \
+          -f docker/Dockerfile.${{ matrix.docker_image || matrix.platform }} \
           docker/
 
     - name: Cross-compile for ${{ matrix.display_name }}
       run: |
         docker run --rm \
           -v "${{ github.workspace }}":/src \
-          -v /tmp/.ccache-${{ matrix.platform }}:/root/.cache/ccache \
+          -v /tmp/.ccache-${{ matrix.docker_image || matrix.platform }}:/root/.cache/ccache \
           -w /src \
-          helixscreen/toolchain-${{ matrix.platform }} \
-          make PLATFORM_TARGET=${{ matrix.platform }} SKIP_OPTIONAL_DEPS=1 -j$(nproc)
+          helixscreen/toolchain-${{ matrix.docker_image || matrix.platform }} \
+          make PLATFORM_TARGET=${{ matrix.build_target || matrix.platform }} SKIP_OPTIONAL_DEPS=1 -j$(nproc)
 
     - name: Cross-compile fbdev fallback for ${{ matrix.display_name }}
       if: startsWith(matrix.platform, 'pi')
@@ -130,8 +136,8 @@ jobs:
     - name: Show ccache stats
       run: |
         docker run --rm \
-          -v /tmp/.ccache-${{ matrix.platform }}:/root/.cache/ccache \
-          helixscreen/toolchain-${{ matrix.platform }} \
+          -v /tmp/.ccache-${{ matrix.docker_image || matrix.platform }}:/root/.cache/ccache \
+          helixscreen/toolchain-${{ matrix.docker_image || matrix.platform }} \
           ccache -s
 
     # Symbol extraction and stripping are handled by the 'all' target
@@ -160,10 +166,10 @@ jobs:
       with:
         name: symbols-${{ matrix.platform }}
         path: |
-          build/${{ matrix.platform }}/bin/helix-screen.sym
-          build/${{ matrix.platform }}/bin/helix-screen.debug
-          build/${{ matrix.platform }}-fbdev/bin/helix-screen.sym
-          build/${{ matrix.platform }}-fbdev/bin/helix-screen.debug
+          build/${{ matrix.build_target || matrix.platform }}/bin/helix-screen.sym
+          build/${{ matrix.build_target || matrix.platform }}/bin/helix-screen.debug
+          build/${{ matrix.build_target || matrix.platform }}-fbdev/bin/helix-screen.sym
+          build/${{ matrix.build_target || matrix.platform }}-fbdev/bin/helix-screen.debug
         retention-days: 30
 
     - name: Move cache
