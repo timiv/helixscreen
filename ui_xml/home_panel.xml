@@ -158,7 +158,7 @@
           </lv_obj>
           <!-- Klipper display message (M117) - full width, only visible when non-empty -->
           <text_small name="display_message"
-                      width="100%" bind_text="display_message" variant="muted" style_text_align="center" long_mode="dot"
+                      width="100%" bind_text="display_message" variant="muted" style_text_align="center" long_mode="dots"
                       hidden="true">
             <bind_flag_if_eq subject="display_message_visible" flag="hidden" ref_value="0"/>
           </text_small>

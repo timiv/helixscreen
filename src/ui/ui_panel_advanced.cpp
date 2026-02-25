@@ -73,6 +73,7 @@ void AdvancedPanel::init_subjects() {
         {"on_helix_plugin_uninstall_clicked", on_helix_plugin_uninstall_clicked},
         {"on_phase_tracking_changed", on_phase_tracking_changed},
         {"on_pid_tuning_clicked", on_pid_tuning_clicked},
+        {"on_timelapse_row_clicked", on_timelapse_row_clicked},
         {"on_timelapse_setup_clicked", on_timelapse_setup_clicked},
         {"on_power_row_clicked", on_power_row_clicked},
     });
@@ -237,6 +238,10 @@ void AdvancedPanel::on_phase_tracking_changed(lv_event_t* e) {
 
 void AdvancedPanel::on_pid_tuning_clicked(lv_event_t* /*e*/) {
     get_global_advanced_panel().handle_pid_tuning_clicked();
+}
+
+void AdvancedPanel::on_timelapse_row_clicked(lv_event_t* /*e*/) {
+    open_timelapse_settings();
 }
 
 void AdvancedPanel::on_timelapse_setup_clicked(lv_event_t* /*e*/) {

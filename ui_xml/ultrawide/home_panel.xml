@@ -66,7 +66,7 @@
               style_pad_gap="#space_xs" style_flex_track_place="center" clickable="true">
         <event_cb trigger="clicked" callback="tip_text_clicked_cb"/>
         <text_body text="Tip:" translation_tag="Tip:"/>
-        <text_body name="status_text_label" bind_text="status_text" flex_grow="1" long_mode="dot"/>
+        <text_body name="status_text_label" bind_text="status_text" flex_grow="1" long_mode="dots"/>
         <icon src="help_circle" size="md" variant="muted"/>
       </lv_obj>
 
