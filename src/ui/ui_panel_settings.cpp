@@ -1069,8 +1069,6 @@ void SettingsPanel::handle_touch_calibration_clicked() {
         overlay.create(parent_screen_);
     }
 
-    // Auto-start: skip IDLE state since user explicitly chose to recalibrate
-    overlay.set_auto_start(true);
     overlay.show([this](bool success) {
         if (success) {
             // Update status when calibration completes successfully

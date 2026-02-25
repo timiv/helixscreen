@@ -74,6 +74,21 @@ class TouchCalibrationPanel {
      */
     using FastRevertCallback = std::function<void()>;
 
+    /**
+     * @brief Callback invoked after each sample is added (for UI updates)
+     */
+    using SampleProgressCallback = std::function<void()>;
+
+    /**
+     * @brief Snapshot of calibration progress for UI display
+     */
+    struct Progress {
+        State state;
+        int point_num;      ///< 1-3 for POINT states, 0 otherwise
+        int current_sample; ///< Samples collected for current point (0 to total_samples)
+        int total_samples;  ///< Samples required per point (SAMPLES_REQUIRED)
+    };
+
     TouchCalibrationPanel();
     ~TouchCalibrationPanel();
 
@@ -111,6 +126,11 @@ class TouchCalibrationPanel {
      * @brief Set callback for fast-revert (broken matrix during verify)
      */
     void set_fast_revert_callback(FastRevertCallback cb);
+
+    /**
+     * @brief Set callback for sample progress during point capture
+     */
+    void set_sample_progress_callback(SampleProgressCallback cb);
 
     /**
      * @brief Set verify timeout duration (default: 10 seconds)
@@ -201,6 +221,12 @@ class TouchCalibrationPanel {
     Point get_target_position(int step) const;
 
     /**
+     * @brief Get current calibration progress for UI display
+     * @return Progress snapshot with state, point number, and sample counts
+     */
+    Progress get_progress() const;
+
+    /**
      * @brief Get computed calibration data
      * @return Pointer to calibration if in VERIFY/COMPLETE state, nullptr otherwise
      */
@@ -215,6 +241,7 @@ class TouchCalibrationPanel {
     CountdownCallback countdown_callback_;
     TimeoutCallback timeout_callback_;
     FastRevertCallback fast_revert_callback_;
+    SampleProgressCallback sample_progress_callback_;
     int verify_timeout_seconds_ = 10;
     int countdown_remaining_ = 0;
     lv_timer_t* countdown_timer_ = nullptr;
@@ -267,14 +294,13 @@ class TouchCalibrationPanel {
 
     // Calibration target positions as screen ratios
     // These form a well-distributed triangle for accurate affine transform
-    // Y ratios pushed to 18%-85% for maximum spread within wizard content area
-    // (Content area is ~16%-87% of screen height, between header and footer)
+    // Y ratios at 20%-78% to keep crosshairs clear of header/footer chrome
     static constexpr float TARGET_0_X_RATIO = 0.15f; ///< 15% from left edge
-    static constexpr float TARGET_0_Y_RATIO = 0.18f; ///< 18% from top (near content top)
+    static constexpr float TARGET_0_Y_RATIO = 0.20f; ///< 20% from top
     static constexpr float TARGET_1_X_RATIO = 0.50f; ///< Center X
-    static constexpr float TARGET_1_Y_RATIO = 0.85f; ///< 85% from top (near content bottom)
+    static constexpr float TARGET_1_Y_RATIO = 0.78f; ///< 78% from top (clear of buttons)
     static constexpr float TARGET_2_X_RATIO = 0.85f; ///< 85% from left
-    static constexpr float TARGET_2_Y_RATIO = 0.18f; ///< 18% from top (near content top)
+    static constexpr float TARGET_2_Y_RATIO = 0.20f; ///< 20% from top
 };
 
 } // namespace helix

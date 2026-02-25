@@ -46,6 +46,10 @@ void TouchCalibrationPanel::set_fast_revert_callback(FastRevertCallback cb) {
     fast_revert_callback_ = std::move(cb);
 }
 
+void TouchCalibrationPanel::set_sample_progress_callback(SampleProgressCallback cb) {
+    sample_progress_callback_ = std::move(cb);
+}
+
 void TouchCalibrationPanel::set_verify_timeout_seconds(int seconds) {
     verify_timeout_seconds_ = seconds;
 }
@@ -169,7 +173,37 @@ bool TouchCalibrationPanel::compute_median_point(Point& out) {
     return true;
 }
 
+TouchCalibrationPanel::Progress TouchCalibrationPanel::get_progress() const {
+    Progress p{};
+    p.state = state_;
+    p.current_sample = sample_count_;
+    p.total_samples = SAMPLES_REQUIRED;
+
+    switch (state_) {
+    case State::POINT_1:
+        p.point_num = 1;
+        break;
+    case State::POINT_2:
+        p.point_num = 2;
+        break;
+    case State::POINT_3:
+        p.point_num = 3;
+        break;
+    default:
+        p.point_num = 0;
+        break;
+    }
+    return p;
+}
+
 void TouchCalibrationPanel::add_sample(Point raw) {
+    // Auto-start on first tap if in IDLE state (don't count this tap as a sample —
+    // the crosshair isn't visible yet, so the user's first tap ON the crosshair is touch 1)
+    if (state_ == State::IDLE) {
+        start();
+        return;
+    }
+
     if (state_ != State::POINT_1 && state_ != State::POINT_2 && state_ != State::POINT_3) {
         return;
     }
@@ -177,6 +211,10 @@ void TouchCalibrationPanel::add_sample(Point raw) {
     if (sample_count_ < SAMPLES_REQUIRED) {
         sample_buffer_[sample_count_] = {raw.x, raw.y};
         sample_count_++;
+
+        if (sample_progress_callback_) {
+            sample_progress_callback_();
+        }
     }
 
     if (sample_count_ >= SAMPLES_REQUIRED) {

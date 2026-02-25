@@ -19,13 +19,18 @@ If your screen needs calibration, HelixScreen automatically includes a calibrati
 
 **How it works:**
 
-1. Three crosshair targets appear on screen, one at a time, at different positions
-2. Tap the **center** of each crosshair as precisely as you can — hold your finger steady until the next target appears
-3. After all three points, a **verify screen** appears where you can tap around to test accuracy
-4. If taps land where you expect, tap **Accept** to save the calibration
-5. If something feels off, tap **Retry** to start over
+1. A "Tap anywhere to begin" prompt appears — tap the screen to confirm your touch works
+2. Three crosshair targets appear on screen, one at a time, at different positions
+3. Tap the **center** of each crosshair — each point requires **7 taps** and a progress indicator shows "touch 1 of 7", "touch 2 of 7", etc.
+4. After all three points, a **verify screen** appears where you can tap around to test accuracy
+5. If taps land where you expect, tap **Accept** to save the calibration
+6. If something feels off, tap **Retry** to start over
 
-![Calibration Target](../../images/user/touch-cal-crosshair.png)
+![Tap anywhere to begin](../../images/user/touch-cal-begin.png)
+
+![Calibration in progress](../../images/user/touch-cal-overlay.png)
+
+![Second calibration point](../../images/user/touch-cal-point2.png)
 
 ![Verify Screen](../../images/user/touch-cal-verify.png)
 
@@ -49,10 +54,8 @@ You may need to recalibrate if:
 
 1. Go to **Settings > System > Touch Calibration**
 2. You'll see a status indicator showing **Calibrated** or **Not calibrated**
-3. Tap the option to start calibration
+3. Tap the option — calibration starts immediately
 4. Complete the same 3-point crosshair flow described above
-
-![Settings Touch Calibration](../../images/user/touch-cal-settings.png)
 
 > **Note:** The Touch Calibration option only appears in Settings if HelixScreen detected that your screen needs calibration. If you don't see it, your screen likely doesn't need it — but see the next section if you want to force calibration anyway.
 
@@ -92,6 +95,7 @@ Use this for automation, remote management, or when you can't run the app intera
    |----------|-------------|
    | MainsailOS | `~/helixscreen/config/helixconfig.json` |
    | AD5M Forge-X | `/opt/helixscreen/config/helixconfig.json` |
+   | AD5M Klipper Mod | `/root/printer_software/helixscreen/config/helixconfig.json` |
    | K1 Simple AF | `/usr/data/helixscreen/config/helixconfig.json` |
 
 3. Add `"force_calibration": true` to the `"input"` section:
@@ -142,6 +146,7 @@ This resets **all** settings and re-runs the Setup Wizard from scratch, includin
 |----------|-------------|
 | MainsailOS | `~/helixscreen/config/helixconfig.json` |
 | AD5M Forge-X | `/opt/helixscreen/config/helixconfig.json` |
+| AD5M Klipper Mod | `/root/printer_software/helixscreen/config/helixconfig.json` |
 | K1 Simple AF | `/usr/data/helixscreen/config/helixconfig.json` |
 
 ### Calibration Data (`display.calibration`)
