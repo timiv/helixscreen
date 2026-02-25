@@ -146,7 +146,10 @@ bool validate_calibration_result(const TouchCalibration& cal, const Point screen
         return false;
     }
 
-    // Check 2: Back-transform residuals
+    // Check 2: Back-transform residuals (numerical stability guard)
+    // A 3-point affine is solved exactly, so residuals at calibration points are
+    // mathematically ~0. This check catches NaN/Inf propagation or floating-point
+    // corruption rather than geometric errors.
     for (int i = 0; i < 3; i++) {
         Point transformed = transform_point(cal, touch_points[i]);
         float dx = static_cast<float>(transformed.x - screen_points[i].x);

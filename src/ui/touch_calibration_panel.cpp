@@ -185,7 +185,7 @@ void TouchCalibrationPanel::add_sample(Point raw) {
             capture_point(median);
         } else {
             if (failure_callback_) {
-                failure_callback_("Touch was noisy, please tap again.");
+                failure_callback_("Too much noise — tap the target again with a firm press.");
             }
         }
         reset_samples();
@@ -207,21 +207,13 @@ void TouchCalibrationPanel::accept() {
 }
 
 void TouchCalibrationPanel::retry() {
-    stop_countdown_timer();
-    stop_fast_revert_timer();
-
     if (state_ != State::VERIFY) {
         return;
     }
 
-    state_ = State::POINT_1;
-    calibration_.valid = false;
-    reset_samples();
-
-    // Recalculate screen points using named constants
-    screen_points_[0] = compute_target_position(0);
-    screen_points_[1] = compute_target_position(1);
-    screen_points_[2] = compute_target_position(2);
+    stop_countdown_timer();
+    stop_fast_revert_timer();
+    start(); // Resets state to POINT_1 and recalculates target positions
 }
 
 void TouchCalibrationPanel::cancel() {

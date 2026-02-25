@@ -97,66 +97,9 @@ WizardTouchCalibrationStep::WizardTouchCalibrationStep() {
         }
     });
 
-    // Set up countdown callback to update subtitle
-    panel_->set_countdown_callback([this](int remaining) {
-        char buf[128];
-        snprintf(buf, sizeof(buf), "Test calibration - reverting in %ds if not accepted",
-                 remaining);
-        lv_subject_copy_string(&wizard_subtitle, buf);
-        spdlog::debug("[{}] Countdown: {} seconds remaining", get_name(), remaining);
-    });
-
-    // Set up timeout callback to revert and restart
-    panel_->set_timeout_callback([this]() {
-        spdlog::info("[{}] Calibration timeout - reverting to previous", get_name());
-
-        // Restore backup calibration
-        if (has_backup_) {
-            DisplayManager::instance()->apply_touch_calibration(backup_calibration_);
-            has_backup_ = false;
-        }
-
-        // Show timeout message
-        lv_subject_copy_string(&wizard_subtitle,
-                               "Calibration timed out. Touch the targets to try again.");
-
-        // Reset to pending state
-        has_pending_calibration_ = false;
-
-        // Restart calibration from POINT_1
-        panel_->start();
-        update_crosshair_position();
-        update_button_visibility();
-
-        // Reset button text to "Skip" since we're back to calibrating
-        lv_subject_set_int(&wizard_show_skip, 1);
-    });
-
-    // Set up fast-revert callback for broken matrix detection during verify
-    panel_->set_fast_revert_callback([this]() {
-        spdlog::warn("[{}] Fast-revert: broken matrix detected, reverting", get_name());
-
-        // Restore backup calibration
-        if (has_backup_) {
-            DisplayManager::instance()->apply_touch_calibration(backup_calibration_);
-            has_backup_ = false;
-        }
-
-        // Show failure message
-        lv_subject_copy_string(&wizard_subtitle,
-                               "Calibration produced bad results. Touch the targets to try again.");
-
-        // Reset to pending state
-        has_pending_calibration_ = false;
-
-        // Restart calibration from POINT_1
-        panel_->start();
-        update_crosshair_position();
-        update_button_visibility();
-
-        // Reset button text to "Skip" since we're back to calibrating
-        lv_subject_set_int(&wizard_show_skip, 1);
-    });
+    // Note: No countdown/timeout/fast-revert callbacks needed for wizard mode.
+    // The wizard auto-accepts calibration immediately upon entering VERIFY state
+    // (see handle_screen_touched), so these timers never fire.
 
     spdlog::debug("[{}] Instance created", get_name());
 }
@@ -431,7 +374,10 @@ void WizardTouchCalibrationStep::handle_retry_clicked() {
         return;
     }
 
-    // Use start() to restart calibration (works from any state including COMPLETE)
+    // Use cancel()+start() rather than retry() because the wizard auto-accepts
+    // calibration, so the panel may already be in COMPLETE state where retry()
+    // (which guards on VERIFY) would be a no-op.
+    panel_->cancel();
     panel_->start();
 
     // Clear pending calibration since user is recalibrating
@@ -627,7 +573,7 @@ void WizardTouchCalibrationStep::update_instruction_text() {
 
     // Prepend error message if calibration just failed
     if (calibration_failed_ && state == helix::TouchCalibrationPanel::State::POINT_1) {
-        static char combined[128];
+        char combined[192];
         snprintf(combined, sizeof(combined),
                  "Calibration failed - touch targets more precisely. %s", step_text);
         lv_subject_copy_string(&wizard_subtitle, combined);

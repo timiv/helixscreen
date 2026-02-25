@@ -537,37 +537,23 @@ void TouchCalibrationOverlay::handle_screen_touched(lv_event_t* e) {
     lv_point_t point;
     lv_indev_get_point(lv_indev_active(), &point);
 
-    // Handle VERIFY state - show calibration accuracy visualization with ripple
+    // Handle VERIFY state - show calibration accuracy visualization with ripple.
+    // The new calibration is already applied at the driver level, so lv_indev_get_point
+    // returns calibrated screen coordinates. No additional transform needed.
     if (state == helix::TouchCalibrationPanel::State::VERIFY) {
         spdlog::debug("[{}] Verify touch at ({}, {})", get_name(), point.x, point.y);
 
-        // Get calibration and transform the point
-        const TouchCalibration* cal = panel_->get_calibration();
-        DisplayManager* dm = DisplayManager::instance();
-        if (cal && cal->valid && dm) {
-            // Transform through calibration to show where system thinks touch landed
-            helix::Point raw{point.x, point.y};
-            helix::Point transformed =
-                helix::transform_point(*cal, raw, dm->width() - 1, dm->height() - 1);
-
-            // Create ripple at transformed position
-            // Use overlay_root_ as parent (full screen) with screen coordinates
-            lv_obj_t* content = lv_obj_find_by_name(overlay_root_, "calibration_content");
-            if (content) {
-                create_ripple(content, transformed.x, transformed.y);
-            }
-
-            spdlog::debug("[{}] Verify: raw({},{}) -> transformed({},{})", get_name(), raw.x, raw.y,
-                          transformed.x, transformed.y);
-
-            // Report to panel for fast-revert tracking
-            bool on_screen = (transformed.x >= 0 && transformed.x < dm->width() &&
-                              transformed.y >= 0 && transformed.y < dm->height());
-            panel_->report_verify_touch(on_screen);
-        } else {
-            // No valid calibration/DM — report as off-screen
-            panel_->report_verify_touch(false);
+        // Create ripple at touch position (already calibrated by driver)
+        lv_obj_t* content = lv_obj_find_by_name(overlay_root_, "calibration_content");
+        if (content) {
+            create_ripple(content, point.x, point.y);
         }
+
+        // Report to panel for fast-revert tracking (bounds check against screen size)
+        DisplayManager* dm = DisplayManager::instance();
+        bool on_screen =
+            dm && point.x >= 0 && point.x < dm->width() && point.y >= 0 && point.y < dm->height();
+        panel_->report_verify_touch(on_screen);
         return;
     }
 

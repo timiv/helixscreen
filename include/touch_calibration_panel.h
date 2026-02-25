@@ -81,9 +81,9 @@ class TouchCalibrationPanel {
     TouchCalibrationPanel(const TouchCalibrationPanel&) = delete;
     TouchCalibrationPanel& operator=(const TouchCalibrationPanel&) = delete;
 
-    // Movable
-    TouchCalibrationPanel(TouchCalibrationPanel&&) = default;
-    TouchCalibrationPanel& operator=(TouchCalibrationPanel&&) = default;
+    // Non-movable (LVGL timer user-data holds raw 'this' pointer)
+    TouchCalibrationPanel(TouchCalibrationPanel&&) = delete;
+    TouchCalibrationPanel& operator=(TouchCalibrationPanel&&) = delete;
 
     /**
      * @brief Set the completion callback
