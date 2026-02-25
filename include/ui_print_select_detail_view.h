@@ -304,6 +304,8 @@ class PrintSelectDetailView : public OverlayBase {
 
     // G-code viewer visibility mode (0=thumbnail, 1=3D, 2=2D)
     lv_subject_t detail_gcode_viewer_mode_{};
+    // G-code loading indicator (0=hidden, 1=visible)
+    lv_subject_t detail_gcode_loading_{};
     std::string temp_gcode_path_; // Cached downloaded gcode file path
     bool gcode_loaded_ = false;   // Whether gcode file has been loaded into viewer
 

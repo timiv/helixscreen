@@ -131,6 +131,8 @@ void PrintSelectDetailView::init_subjects() {
 
     // G-code viewer visibility mode (0=thumbnail, 1=3D, 2=2D)
     UI_MANAGED_SUBJECT_INT(detail_gcode_viewer_mode_, 0, "detail_gcode_viewer_mode", subjects_);
+    // G-code loading indicator (0=hidden, 1=visible)
+    UI_MANAGED_SUBJECT_INT(detail_gcode_loading_, 0, "detail_gcode_loading", subjects_);
 
     // Enable switches default ON (1) - "perform this operation"
     // Subject=1 means switch is checked, operation is enabled
@@ -601,6 +603,9 @@ void PrintSelectDetailView::show_gcode_viewer(bool show) {
     }
     lv_subject_set_int(&detail_gcode_viewer_mode_, mode);
 
+    // Hide loading spinner now that viewer state is resolved
+    lv_subject_set_int(&detail_gcode_loading_, 0);
+
     spdlog::trace("[DetailView] G-code viewer mode: {} ({})", mode,
                   mode == 0 ? "thumbnail" : (mode == 1 ? "3D" : "2D"));
 }
@@ -652,11 +657,15 @@ void PrintSelectDetailView::load_gcode_for_preview() {
     // Clear previous model so stale frames don't flash when viewer becomes visible
     ui_gcode_viewer_clear(gcode_viewer_);
 
+    // Show loading spinner over thumbnail
+    lv_subject_set_int(&detail_gcode_loading_, 1);
+
     // Check config option to disable 3D rendering entirely
     auto* cfg = Config::get_instance();
     bool gcode_3d_enabled = cfg->get<bool>("/display/gcode_3d_enabled", true);
     if (!gcode_3d_enabled) {
         spdlog::info("[DetailView] G-code 3D rendering disabled via config - using thumbnail");
+        lv_subject_set_int(&detail_gcode_loading_, 0);
         show_gcode_viewer(false);
         return;
     }
@@ -665,6 +674,7 @@ void PrintSelectDetailView::load_gcode_for_preview() {
     std::string cache_dir = get_helix_cache_dir("gcode_temp");
     if (cache_dir.empty()) {
         spdlog::warn("[DetailView] No writable cache directory - skipping G-code preview");
+        lv_subject_set_int(&detail_gcode_loading_, 0);
         show_gcode_viewer(false);
         return;
     }
