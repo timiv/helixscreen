@@ -26,10 +26,6 @@ struct CalibrationContext {
     lv_indev_read_cb_t original_read_cb = nullptr;
     int screen_width = 800;
     int screen_height = 480;
-    lv_display_rotation_t rotation = LV_DISPLAY_ROTATION_0;
-    int physical_width = 0;                ///< Native panel width (pre-rotation)
-    int physical_height = 0;               ///< Native panel height (pre-rotation)
-    bool apply_rotation_transform = false; ///< false for USB HID devices
 };
 
 /**
@@ -136,15 +132,12 @@ class DisplayBackendFbdev : public DisplayBackend {
     }
 
     /**
-     * @brief Update touch rotation transform after display rotation changes
+     * @brief No-op for fbdev — LVGL handles touch rotation internally
      *
-     * Called by DisplayManager after lv_display_set_rotation() to keep touch
-     * coordinates aligned with the rotated display. Only affects non-USB-HID
-     * devices (USB HID reports logical coordinates that LVGL handles natively).
-     *
-     * @param rot LVGL rotation enum
-     * @param phys_w Native panel width (pre-rotation)
-     * @param phys_h Native panel height (pre-rotation)
+     * LVGL's indev_pointer_proc() calls lv_display_rotate_point() to
+     * transform touch coordinates for the current display rotation.
+     * The DRM backend needs this override for hardware plane rotation,
+     * but fbdev software rotation needs no additional touch transform.
      */
     void set_display_rotation(lv_display_rotation_t rot, int phys_w, int phys_h) override;
 
