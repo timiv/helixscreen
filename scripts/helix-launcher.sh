@@ -38,6 +38,15 @@
 
 set -e
 
+# Stop firmware display-management services that conflict with HelixScreen.
+# Creality SonicPad/Nebula Pad ships display-sleep.sh which polls X11 DPMS via
+# xset. When X isn't running (fbdev mode), xset fails and the script interprets
+# the empty response as "monitor Off", killing the backlight every 2 seconds.
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl stop display-sleep.service 2>/dev/null || true
+fi
+killall display-sleep.sh 2>/dev/null || true
+
 # Hide the Linux console text cursor (visible as a blinking block on fbdev)
 setterm --cursor off 2>/dev/null || printf '\033[?25l' > /dev/tty1 2>/dev/null || true
 
