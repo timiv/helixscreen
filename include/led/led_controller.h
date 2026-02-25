@@ -3,8 +3,10 @@
 
 #include "led/led_backend.h"
 
+#include <atomic>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -456,6 +458,7 @@ class LedController {
     bool initialized_ = false;
     MoonrakerAPI* api_ = nullptr;
     MoonrakerClient* client_ = nullptr;
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
 
     NativeBackend native_;
     LedEffectBackend effects_;

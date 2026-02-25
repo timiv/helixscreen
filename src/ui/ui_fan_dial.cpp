@@ -91,6 +91,16 @@ FanDial::~FanDial() {
     lv_anim_delete(this, label_anim_exec_cb);
     // Stop fan icon spin animation (uses icon obj as var, not this)
     stop_spin(fan_icon_);
+
+    // Remove event callbacks to prevent stale 'this' dispatch if events
+    // are still pending in the LVGL event queue after widget deletion
+    if (arc_)
+        lv_obj_remove_event_cb(arc_, on_arc_value_changed);
+    if (btn_off_)
+        lv_obj_remove_event_cb(btn_off_, on_off_clicked);
+    if (btn_on_)
+        lv_obj_remove_event_cb(btn_on_, on_on_clicked);
+
     spdlog::trace("[FanDial] Destroyed '{}'", name_);
 }
 
@@ -100,7 +110,7 @@ FanDial::FanDial(FanDial&& other) noexcept
       name_(std::move(other.name_)), fan_id_(std::move(other.fan_id_)),
       current_speed_(other.current_speed_), on_speed_changed_(std::move(other.on_speed_changed_)),
       syncing_(other.syncing_), last_user_input_(other.last_user_input_) {
-    // Clear the source pointers
+    // Clear the source pointers so other's destructor is a no-op
     other.root_ = nullptr;
     other.arc_ = nullptr;
     other.speed_label_ = nullptr;
@@ -108,9 +118,11 @@ FanDial::FanDial(FanDial&& other) noexcept
     other.btn_off_ = nullptr;
     other.btn_on_ = nullptr;
 
+    // Re-target label animation var from old instance to this one
+    lv_anim_delete(&other, label_anim_exec_cb);
+
     // Update event callback user_data to point to this instance
     if (arc_) {
-        // Remove old callbacks and add new ones with updated user_data
         lv_obj_remove_event_cb(arc_, on_arc_value_changed);
         lv_obj_add_event_cb(arc_, on_arc_value_changed, LV_EVENT_VALUE_CHANGED, this);
     }
@@ -126,7 +138,16 @@ FanDial::FanDial(FanDial&& other) noexcept
 
 FanDial& FanDial::operator=(FanDial&& other) noexcept {
     if (this != &other) {
-        // Clean up current resources (child widgets are destroyed with root_)
+        // Clean up current resources: stop animations and remove callbacks first
+        lv_anim_delete(this, label_anim_exec_cb);
+        stop_spin(fan_icon_);
+        if (arc_)
+            lv_obj_remove_event_cb(arc_, on_arc_value_changed);
+        if (btn_off_)
+            lv_obj_remove_event_cb(btn_off_, on_off_clicked);
+        if (btn_on_)
+            lv_obj_remove_event_cb(btn_on_, on_on_clicked);
+        // Child widgets are destroyed with root_
         helix::ui::safe_delete(root_);
 
         // Move resources
@@ -143,7 +164,11 @@ FanDial& FanDial::operator=(FanDial&& other) noexcept {
         syncing_ = other.syncing_;
         last_user_input_ = other.last_user_input_;
 
-        // Clear source pointers
+        // Stop animations on the source before clearing its pointers
+        lv_anim_delete(&other, label_anim_exec_cb);
+        stop_spin(other.fan_icon_);
+
+        // Clear source pointers so other's destructor is a no-op
         other.root_ = nullptr;
         other.arc_ = nullptr;
         other.speed_label_ = nullptr;
@@ -151,7 +176,7 @@ FanDial& FanDial::operator=(FanDial&& other) noexcept {
         other.btn_off_ = nullptr;
         other.btn_on_ = nullptr;
 
-        // Update event callback user_data
+        // Update event callback user_data to point to this instance
         if (arc_) {
             lv_obj_remove_event_cb(arc_, on_arc_value_changed);
             lv_obj_add_event_cb(arc_, on_arc_value_changed, LV_EVENT_VALUE_CHANGED, this);

@@ -55,6 +55,7 @@ LedController& LedController::instance() {
 }
 
 void LedController::init(MoonrakerAPI* api, MoonrakerClient* client) {
+    alive_ = std::make_shared<std::atomic<bool>>(true);
     api_ = api;
     client_ = client;
 
@@ -71,6 +72,8 @@ void LedController::init(MoonrakerAPI* api, MoonrakerClient* client) {
 }
 
 void LedController::deinit() {
+    alive_->store(false);
+
     native_.clear();
     effects_.clear();
     wled_.clear();
@@ -284,8 +287,13 @@ void LedController::discover_wled_strips() {
 
     spdlog::debug("[LedController] Starting WLED strip discovery via Moonraker");
 
+    std::weak_ptr<std::atomic<bool>> weak_alive = alive_;
     api_->rest().wled_get_strips(
-        [this](const RestResponse& resp) {
+        [this, weak_alive](const RestResponse& resp) {
+            auto alive = weak_alive.lock();
+            if (!alive || !alive->load())
+                return;
+
             // Response format: {"result": {strip_name: {details...}, ...}}
             if (!resp.data.is_object()) {
                 spdlog::warn("[LedController] WLED strips response is not a JSON object");
@@ -360,7 +368,11 @@ void LedController::discover_wled_strips() {
 
                 // Fetch server config to get WLED device addresses
                 this->api_->rest().get_server_config(
-                    [this](const RestResponse& cfg_resp) {
+                    [this, weak_alive](const RestResponse& cfg_resp) {
+                        auto alive = weak_alive.lock();
+                        if (!alive || !alive->load())
+                            return;
+
                         if (!cfg_resp.data.is_object())
                             return;
 
@@ -384,19 +396,25 @@ void LedController::discover_wled_strips() {
                                 std::string addr = it.value()["address"].get<std::string>();
                                 wled_.set_strip_address(strip_name, addr);
                                 // Attempt to fetch preset names from the WLED device
-                                wled_.fetch_presets_from_device(strip_name, [this, strip_name]() {
-                                    // If fetch didn't populate presets (mock/offline), set defaults
-                                    if (wled_.get_strip_presets(strip_name).empty()) {
-                                        wled_.set_strip_presets(strip_name, {{1, "Preset 1"},
-                                                                             {2, "Preset 2"},
-                                                                             {3, "Preset 3"},
-                                                                             {4, "Preset 4"},
-                                                                             {5, "Preset 5"}});
-                                        spdlog::debug(
-                                            "[LedController] Set default presets for '{}'",
-                                            strip_name);
-                                    }
-                                });
+                                wled_.fetch_presets_from_device(
+                                    strip_name, [this, strip_name, weak_alive]() {
+                                        auto alive = weak_alive.lock();
+                                        if (!alive || !alive->load())
+                                            return;
+
+                                        // If fetch didn't populate presets (mock/offline), set
+                                        // defaults
+                                        if (wled_.get_strip_presets(strip_name).empty()) {
+                                            wled_.set_strip_presets(strip_name, {{1, "Preset 1"},
+                                                                                 {2, "Preset 2"},
+                                                                                 {3, "Preset 3"},
+                                                                                 {4, "Preset 4"},
+                                                                                 {5, "Preset 5"}});
+                                            spdlog::debug(
+                                                "[LedController] Set default presets for '{}'",
+                                                strip_name);
+                                        }
+                                    });
                             }
                         }
                     },
