@@ -538,6 +538,12 @@ void MoonrakerDiscoverySequence::complete_discovery_subscription() {
     // Idle timeout (for printer activity state - Ready/Printing/Idle)
     subscription_objects["idle_timeout"] = nullptr;
 
+    // Happy Hare MMU object (gate status, colors, materials, filament info)
+    if (hardware_.has_mmu()) {
+        subscription_objects["mmu"] = nullptr;
+        spdlog::info("[Moonraker Client] Subscribing to MMU object (Happy Hare)");
+    }
+
     // All discovered AFC objects (AFC, AFC_stepper, AFC_hub, AFC_extruder)
     // These provide lane status, sensor states, and filament info for MMU support
     for (const auto& afc_obj : afc_objects_) {
